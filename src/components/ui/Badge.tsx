@@ -15,7 +15,7 @@ const variantStyles: Record<BadgeVariant, string> = {
   success: "bg-success/10 text-success",
   warning: "bg-warning/10 text-warning",
   error: "bg-error/10 text-error",
-  info: "bg-primary/10 text-primary",
+  info: "bg-accent/10 text-accent",
 };
 
 const sizeStyles: Record<BadgeSize, string> = {

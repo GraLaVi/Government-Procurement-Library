@@ -1007,7 +1007,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                 href={`https://www.dibbs.bsm.dla.mil/Rfp/RfpRec.aspx?sn=${sol.solicitation_number.replace(/-/g, '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline"
+                className="inline-flex items-center gap-1 text-accent hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >
                 {sol.agency_code}
