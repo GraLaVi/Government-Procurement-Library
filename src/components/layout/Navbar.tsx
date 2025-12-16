@@ -46,7 +46,7 @@ export function Navbar() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">G</span>
             </div>
-            <span className="text-xl font-bold text-secondary">Gralavi</span>
+            <span className="text-xl font-bold text-secondary">GPH</span>
           </Link>
 
           {/* Desktop Navigation */}

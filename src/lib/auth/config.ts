@@ -1,8 +1,8 @@
 export const AUTH_CONFIG = {
   API_BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'https://alanapidev.lamlinks.com/api/v1',
   COOKIE_NAMES: {
-    ACCESS_TOKEN: 'gralavi_access_token',
-    REFRESH_TOKEN: 'gralavi_refresh_token',
+    ACCESS_TOKEN: 'govt_proc_hub_access_token',
+    REFRESH_TOKEN: 'govt_proc_hub_refresh_token',
   },
   TOKEN_EXPIRY: {
     ACCESS: 8 * 60 * 60, // 8 hours in seconds

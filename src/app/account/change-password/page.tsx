@@ -216,7 +216,7 @@ export default function ChangePasswordPage() {
           </li>
           <li className="flex items-start gap-2">
             <span className="text-primary mt-0.5">•</span>
-            <span>Never share your password with anyone, including Gralavi support</span>
+            <span>Never share your password with anyone, including GPH support</span>
           </li>
         </ul>
       </div>

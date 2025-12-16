@@ -56,7 +56,7 @@ function VerifyEmailContent() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">G</span>
             </div>
-            <span className="text-2xl font-bold text-secondary">Gralavi</span>
+            <span className="text-2xl font-bold text-secondary">GPH</span>
           </Link>
         </div>
 
@@ -158,7 +158,7 @@ function VerifyEmailContent() {
         {/* Footer */}
         <p className="text-center text-sm text-muted mt-6">
           Need help?{" "}
-          <a href="mailto:support@gralavi.com" className="text-primary hover:underline">
+          <a href="mailto:support@gphusa.com" className="text-primary hover:underline">
             Contact Support
           </a>
         </p>
@@ -176,7 +176,7 @@ function VerifyEmailLoading() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">G</span>
             </div>
-            <span className="text-2xl font-bold text-secondary">Gralavi</span>
+            <span className="text-2xl font-bold text-secondary">GPH</span>
           </Link>
         </div>
         <div className="bg-white rounded-xl border border-border p-8 text-center">

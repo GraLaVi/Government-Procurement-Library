@@ -17,7 +17,7 @@ export function CTA() {
                 Ready to Win More Government Contracts?
               </h2>
               <p className="mt-6 text-lg text-white/80 leading-relaxed">
-                Join thousands of defense contractors using Gralavi to find and win federal opportunities. Start your free trial today.
+                Join thousands of defense contractors using GPH to find and win federal opportunities. Start your free trial today.
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row gap-4">

@@ -1,6 +1,6 @@
 # Layout Standards & Design System
 
-This document defines the layout patterns, UI components, and styling conventions for the Gralavi government procurement library frontend. Follow these standards when building new pages.
+This document defines the layout patterns, UI components, and styling conventions for the GPH government procurement library frontend. Follow these standards when building new pages.
 
 ## Table of Contents
 

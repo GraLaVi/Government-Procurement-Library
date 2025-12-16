@@ -4,8 +4,8 @@
 
 This guide covers deploying the Govt Procurement Library web application to a production server using Docker.
 
-**Production URL:** https://govtlib.gralavi.com
-**API Backend:** https://alanapi.gralavi.com
+**Production URL:** https://www.gphusa.com
+**API Backend:** https://api.gphusa.com
 
 ---
 
@@ -14,7 +14,7 @@ This guide covers deploying the Govt Procurement Library web application to a pr
 ### On Production Server
 - Docker and Docker Compose installed
 - SSL certificates for `*.gralavi.com`
-- DNS record pointing `govtlib.gralavi.com` to the server IP
+- DNS record pointing `www.gphusa.com` to the server IP
 
 ### SSL Certificates Required
 Place these files in `nginx/certs/` on the production server:
@@ -75,7 +75,7 @@ ls -la nginx/certs/
 ./scripts/prod.sh status
 
 # Test the site
-curl -I https://govtlib.gralavi.com
+curl -I https://www.gphusa.com
 ```
 
 ---
@@ -200,7 +200,7 @@ docker inspect govtlib-nginx-prod
                       │
                       ▼
 ┌─────────────────────────────────────────────────────┐
-│              govtlib.gralavi.com                    │
+│              www.gphusa.com                    │
 │                   (DNS)                             │
 └─────────────────────┬───────────────────────────────┘
                       │
@@ -220,7 +220,7 @@ docker inspect govtlib-nginx-prod
                       │
                       ▼ (API calls)
 ┌─────────────────────────────────────────────────────┐
-│          https://alanapi.gralavi.com                │
+│          https://api.gphusa.com                │
 │              (External API server)                  │
 └─────────────────────────────────────────────────────┘
 ```
@@ -230,4 +230,4 @@ docker inspect govtlib-nginx-prod
 ## Related Documentation
 
 - Development setup: `./scripts/dev.sh --help`
-- API documentation: https://alanapi.gralavi.com/docs
+- API documentation: https://api.gphusa.com/docs

@@ -26,7 +26,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             w-full px-3 py-2 rounded-md border border-border
             bg-white text-foreground text-sm placeholder-muted
             transition-colors duration-200
-            focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20
+            focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20
             ${error ? "border-error focus:border-error focus:ring-error/20" : ""}
             ${className}
           `}

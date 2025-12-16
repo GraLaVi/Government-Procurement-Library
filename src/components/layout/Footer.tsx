@@ -34,7 +34,7 @@ export function Footer() {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">G</span>
               </div>
-              <span className="text-xl font-bold">Gralavi</span>
+              <span className="text-xl font-bold">GPH</span>
             </Link>
             <p className="text-white/70 text-sm">
               Your Defense Contracting Intelligence Platform
@@ -63,7 +63,7 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-white/50 text-sm">
-            &copy; {new Date().getFullYear()} Gralavi. All rights reserved.
+            &copy; {new Date().getFullYear()} GPH. All rights reserved.
           </p>
           <div className="flex gap-6">
             <a

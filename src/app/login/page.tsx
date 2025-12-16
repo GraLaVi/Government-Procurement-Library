@@ -98,7 +98,7 @@ function LoginForm() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">G</span>
             </div>
-            <span className="text-2xl font-bold text-white">Gralavi</span>
+            <span className="text-2xl font-bold text-white">GPH</span>
           </Link>
 
           <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight">
@@ -131,7 +131,7 @@ function LoginForm() {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">G</span>
               </div>
-              <span className="text-xl font-bold text-secondary">Gralavi</span>
+              <span className="text-xl font-bold text-secondary">GPH</span>
             </Link>
           </div>
 

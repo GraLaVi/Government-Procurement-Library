@@ -45,7 +45,7 @@ load_env() {
         export $(grep -v '^#' "$PROJECT_DIR/.env.production" | xargs)
         print_success "Loaded .env.production"
         print_status "Environment: PRODUCTION"
-        print_status "Web Domain: https://govtlib.gralavi.com"
+        print_status "Web Domain: https://www.gphusa.com"
         print_status "API URL: $NEXT_PUBLIC_API_URL"
     else
         print_error ".env.production not found!"
@@ -150,8 +150,8 @@ status() {
 
     echo ""
     echo -e "${BLUE}═══ Service URLs ═══${NC}"
-    echo -e "${GREEN}Web:${NC}  https://govtlib.gralavi.com"
-    echo -e "${GREEN}API:${NC}  https://alanapi.gralavi.com"
+    echo -e "${GREEN}Web:${NC}  https://www.gphusa.com"
+    echo -e "${GREEN}API:${NC}  https://api.gphusa.com"
     echo ""
     echo -e "${BLUE}═══ Health Status ═══${NC}"
 
@@ -314,11 +314,11 @@ ${YELLOW}Prerequisites:${NC}
   - SSL certificates for *.gralavi.com in nginx/certs/:
     - star_gralavi_com_fullchain.crt
     - star_gralavi_com.key
-  - DNS record: govtlib.gralavi.com -> server IP
+  - DNS record: www.gphusa.com -> server IP
 
 ${YELLOW}URLs:${NC}
-  Web:  https://govtlib.gralavi.com
-  API:  https://alanapi.gralavi.com (external)
+  Web:  https://www.gphusa.com
+  API:  https://api.gphusa.com (external)
 
 ${YELLOW}Configuration:${NC}
   Environment:  .env.production

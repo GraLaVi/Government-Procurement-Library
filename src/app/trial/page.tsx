@@ -54,7 +54,7 @@ export default function TrialPage() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">G</span>
             </div>
-            <span className="text-2xl font-bold text-white">Gralavi</span>
+            <span className="text-2xl font-bold text-white">GPH</span>
           </Link>
 
           <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight">
@@ -79,7 +79,7 @@ export default function TrialPage() {
           {/* Testimonial */}
           <div className="mt-12 bg-white/10 backdrop-blur-sm rounded-xl p-6">
             <p className="text-white/90 italic">
-              &quot;Gralavi helped us find and win our first $2M DoD contract within 3 months of signing up.&quot;
+              &quot;GPH helped us find and win our first $2M DoD contract within 3 months of signing up.&quot;
             </p>
             <div className="mt-4 flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/30 rounded-full flex items-center justify-center">
@@ -103,7 +103,7 @@ export default function TrialPage() {
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">G</span>
               </div>
-              <span className="text-xl font-bold text-secondary">Gralavi</span>
+              <span className="text-xl font-bold text-secondary">GPH</span>
             </Link>
           </div>
 

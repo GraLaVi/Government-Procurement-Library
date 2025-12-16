@@ -236,5 +236,5 @@ export function getSearchTypeLabel(searchType: EntitySearchType): string {
 }
 
 // Search History localStorage key
-export const SEARCH_HISTORY_KEY = "gralavi_entity_search_history";
+export const SEARCH_HISTORY_KEY = "govt_proc_hub_entity_search_history";
 export const MAX_SEARCH_HISTORY = 10;

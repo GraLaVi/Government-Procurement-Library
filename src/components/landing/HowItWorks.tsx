@@ -28,7 +28,7 @@ export function HowItWorks() {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-bold text-secondary">
-            How Gralavi Works
+            How GPH Works
           </h2>
           <p className="mt-4 text-lg text-muted">
             Get started in minutes and find your first matched opportunities today

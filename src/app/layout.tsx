@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gralavi - Win More Government Bids",
+  title: "GPH - Win More Government Bids",
   description:
     "Your Defense Contracting Intelligence Platform. Find, track, and win federal contracts with AI-powered bid matching and real-time market intelligence.",
   keywords: [
