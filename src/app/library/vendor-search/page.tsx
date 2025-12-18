@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { VendorSearchForm, VendorSearchFormRef } from "@/components/library/VendorSearchForm";
 import { VendorResultsList } from "@/components/library/VendorResultsList";
 import { VendorDetail } from "@/components/library/VendorDetail";
+import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import {
   VendorSearchType,
   VendorSearchResult,
@@ -15,7 +16,7 @@ import {
 } from "@/lib/library/types";
 
 export default function VendorSearchPage() {
-  const { isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading, hasProductAccess } = useAuth();
 
   // Search state
   const [isSearching, setIsSearching] = useState(false);
@@ -139,6 +140,23 @@ export default function VendorSearchPage() {
       <div className="flex items-center justify-center py-12">
         <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  // Check if user has access to vendor search
+  if (!hasProductAccess("library_vendor_search")) {
+    return (
+      <AccessDeniedPage
+        featureName="Vendor Search"
+        featureKey="library_vendor_search"
+        description="Search and explore government vendor information including CAGE codes, UEI, business details, recent awards, contracts, and open solicitations."
+        benefits={[
+          "Find vendors by CAGE code, UEI, DUNS, or business name",
+          "View detailed vendor profiles with contact information",
+          "Track vendor contract awards and bookings",
+          "Discover open solicitations from specific vendors",
+        ]}
+      />
     );
   }
 
