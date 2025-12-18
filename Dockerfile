@@ -50,12 +50,6 @@ RUN mkdir -p /app/logs && chown -R node:node /app/logs
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
-# Install Cloudflare Origin CA for SSL verification
-COPY certs/cloudflare-origin-ca-rsa.crt /usr/local/share/ca-certificates/
-RUN apk add --no-cache ca-certificates && update-ca-certificates
-
-ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/cloudflare-origin-ca-rsa.crt
-
 USER node
 
 EXPOSE 3000
