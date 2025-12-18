@@ -5,19 +5,21 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-        NEXT_PUBLIC_ENV: ${NEXT_PUBLIC_ENV}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_ENV: ${NEXT_PUBLIC_ENV:-}
     container_name: govtlib-web-prod
     restart: unless-stopped
     env_file:
       - .env.production
     environment:
       - NODE_ENV=production
-      - HOSTNAME=0.0.0.0
+      # - LOG_HOST=${HOSTNAME}
     networks:
-      - govtlib_network
+      - alan_network
     ports:
       - "3000:3000"
+    volumes:
+      - /mnt/shared/alan/logs/${LOG_HOST:-gph-alanweb01}:/app/logs
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
       interval: 30s
@@ -36,12 +38,12 @@ services:
     volumes:
       - ./nginx/nginx.production.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
-      - /var/log/nginx/govtlib:/var/log/nginx
+      - /mnt/shared/alan/logs/${LOG_HOST:-production}:/var/log/nginx
     networks:
-      - govtlib_network
+      - alan_network
     depends_on:
       - web
 
 networks:
-  govtlib_network:
+  alan_network:
     driver: bridge

@@ -17,8 +17,8 @@ COPY . .
 FROM base AS builder
 
 # Accept build arguments for Next.js public environment variables
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_ENV
+ARG NEXT_PUBLIC_API_URL=""
+ARG NEXT_PUBLIC_ENV=""
 
 # Make them available as environment variables during build
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
@@ -33,21 +33,30 @@ WORKDIR /app
 
 ENV NODE_ENV production
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Use existing "node" user (UID 1000) which is built into node:alpine images
+# This matches typical host user UID for proper file permissions with volume mounts
 
 COPY --from=builder /app/public ./public
 
 # Set the correct permission for prerender cache
 RUN mkdir .next
-RUN chown nextjs:nodejs .next
+RUN chown node:node .next
+
+# Create logs directory with proper permissions for file writes
+RUN mkdir -p /app/logs && chown -R node:node /app/logs
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
-USER nextjs
+# Install Cloudflare Origin CA for SSL verification
+COPY certs/cloudflare-origin-ca-rsa.crt /usr/local/share/ca-certificates/
+RUN apk add --no-cache ca-certificates && update-ca-certificates
+
+ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/cloudflare-origin-ca-rsa.crt
+
+USER node
 
 EXPOSE 3000
 

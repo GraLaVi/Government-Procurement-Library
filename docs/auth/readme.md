@@ -5,7 +5,7 @@ Customer-facing REST API for self-service operations.
 ## Base URL
 
 ```
-Production: https://alanapi.lamlinks.com/api/v1
+Production: https://api.gphusa.com/api/v1
 Development: https://alanapidev.lamlinks.com/api/v1
 ```
 
