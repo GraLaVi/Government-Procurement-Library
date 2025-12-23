@@ -13,6 +13,23 @@ get_pid() {
     lsof -ti:$PORT 2>/dev/null
 }
 
+# Function to check if dependencies are installed
+check_dependencies() {
+    cd "$PROJECT_DIR"
+    
+    # Check if node_modules directory exists
+    if [ ! -d "node_modules" ]; then
+        echo "Error: Dependencies not found. Please run 'npm install' first."
+        exit 1
+    fi
+    
+    # Check if next is available
+    if [ ! -f "node_modules/.bin/next" ] && ! command -v next &> /dev/null; then
+        echo "Error: Next.js not found. Please run 'npm install' to install dependencies."
+        exit 1
+    fi
+}
+
 # Function to start the dev server
 start_server() {
     PID=$(get_pid)
@@ -20,6 +37,9 @@ start_server() {
         echo "Dev server is already running on port $PORT (PID: $PID)"
         exit 1
     fi
+
+    # Check dependencies before starting
+    check_dependencies
 
     echo "Starting $APP_NAME dev server on port $PORT..."
     cd "$PROJECT_DIR"
@@ -79,8 +99,22 @@ server_status() {
     fi
 }
 
+# Function to show help message
+show_help() {
+    echo "Usage: $0 {start|stop|restart|status}"
+    echo ""
+    echo "Commands:"
+    echo "  start   - Start the development server"
+    echo "  stop    - Stop the development server"
+    echo "  restart - Restart the development server"
+    echo "  status  - Check if the server is running"
+    echo ""
+    echo "Environment variables:"
+    echo "  DEV_PORT - Port to run the server on (default: 3001)"
+}
+
 # Main script logic
-case "${1:-start}" in
+case "${1:-help}" in
     start)
         start_server
         ;;
@@ -93,17 +127,13 @@ case "${1:-start}" in
     status)
         server_status
         ;;
+    help|--help|-h)
+        show_help
+        ;;
     *)
-        echo "Usage: $0 {start|stop|restart|status}"
+        echo "Error: Unknown command '$1'"
         echo ""
-        echo "Commands:"
-        echo "  start   - Start the development server (default)"
-        echo "  stop    - Stop the development server"
-        echo "  restart - Restart the development server"
-        echo "  status  - Check if the server is running"
-        echo ""
-        echo "Environment variables:"
-        echo "  DEV_PORT - Port to run the server on (default: 3001)"
+        show_help
         exit 1
         ;;
 esac

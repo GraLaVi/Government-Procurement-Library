@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  /* Purple primary color palette */
-  --primary: #7C3AED;
-  --primary-hover: #6D28D9;
-  --primary-light: #EDE9FE;
-  --secondary: #1a365d;
-  --accent: #14B8A6;
-  --accent-light: #CCFBF1;
+  /* Navy blue primary color palette */
+  --primary: #1C2C54;
+  --primary-hover: #152440;
+  --primary-light: #E8EBF0;
+  --secondary: #2D3748;
+  --accent: #5B8FA8;
+  --accent-light: #E0F2F6;
 
   /* Neutrals with cool undertones */
   --background: #FFFFFF;
-  --foreground: #1a365d;
+  --foreground: #1C2C54;
   --muted: #64748B;
   --muted-light: #F1F5F9;
   --border: #CBD5E1;
