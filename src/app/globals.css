@@ -15,11 +15,41 @@
   --muted: #64748B;
   --muted-light: #F1F5F9;
   --border: #CBD5E1;
+  
+  /* Card/white background - same as background in light mode */
+  --card-bg: #FFFFFF;
+  --card-foreground: #1C2C54;
 
   /* Semantic */
   --success: #10B981;
   --warning: #F59E0B;
   --error: #EF4444;
+}
+
+:root[data-theme="dark"] {
+  /* Dark mode primary color palette - bright and vibrant for visibility */
+  --primary: #60A5FA;
+  --primary-hover: #93C5FD;
+  --primary-light: #1E3A5F;
+  --secondary: #F3F4F6;
+  --accent: #06B6D4;
+  --accent-light: #155E75;
+
+  /* Dark mode neutrals - high contrast palette */
+  --background: #111827;
+  --foreground: #FFFFFF;
+  --muted: #D1D5DB;
+  --muted-light: #374151;
+  --border: #4B5563;
+  
+  /* Card background - much lighter than page background for clear distinction */
+  --card-bg: #1F2937;
+  --card-foreground: #FFFFFF;
+
+  /* Semantic colors (bright and visible) */
+  --success: #34D399;
+  --warning: #FBBF24;
+  --error: #F87171;
 }
 
 @theme inline {
@@ -35,6 +65,8 @@
   --color-muted: var(--muted);
   --color-muted-light: var(--muted-light);
   --color-border: var(--border);
+  --color-card-bg: var(--card-bg);
+  --color-card-foreground: var(--card-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-error: var(--error);
@@ -72,6 +104,19 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Dark mode scrollbar */
+:root[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--muted-light);
+}
+
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
 

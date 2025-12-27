@@ -179,7 +179,7 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
   ];
 
   return (
-    <div className="bg-white rounded-lg border border-border overflow-hidden">
+    <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border bg-muted-light">
         <div className="flex items-start justify-between gap-3">
@@ -303,7 +303,7 @@ function DemographicsPanel({
       {/* Left Column: Identifiers + Registration */}
       <div className="space-y-4">
         {/* Identifiers Card */}
-        <div className="bg-gray-50 rounded-lg p-3">
+        <div className="bg-muted-light rounded-lg p-3">
           <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
             Identifiers
           </h3>
@@ -321,7 +321,7 @@ function DemographicsPanel({
 
         {/* Registration Card */}
         {registration.length > 0 && (
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-muted-light rounded-lg p-3">
             <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
               Registration
             </h3>
@@ -340,7 +340,7 @@ function DemographicsPanel({
       {/* Middle Column: Business Info */}
       <div className="space-y-4">
         {businessInfo.length > 0 && (
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-muted-light rounded-lg p-3">
             <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
               Business Details
             </h3>
@@ -370,7 +370,7 @@ function DemographicsPanel({
 
         {/* DBA Name if different */}
         {vendor.dba_name && vendor.dba_name !== vendor.legal_business_name && (
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-muted-light rounded-lg p-3">
             <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-1">
               DBA Name
             </h3>
@@ -382,7 +382,7 @@ function DemographicsPanel({
       {/* Right Column: Address */}
       <div className="space-y-4">
         {physicalAddress && (
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-muted-light rounded-lg p-3">
             <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
               Physical Address
             </h3>
@@ -391,7 +391,7 @@ function DemographicsPanel({
         )}
 
         {mailingAddress && mailingAddress !== physicalAddress && (
-          <div className="bg-gray-50 rounded-lg p-3">
+          <div className="bg-muted-light rounded-lg p-3">
             <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
               Mailing Address
             </h3>

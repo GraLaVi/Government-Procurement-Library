@@ -53,7 +53,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
   const userInitial = user?.first_name?.[0] || user?.email?.[0] || "U";
 
   return (
-    <header className="bg-white border-b border-border">
+    <header className="bg-card-bg border-b border-border">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -61,7 +61,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">G</span>
             </div>
-            <span className="text-xl font-bold text-secondary">GPH</span>
+            <span className="text-xl font-bold text-card-foreground">GPH</span>
           </Link>
 
           {/* Mobile hamburger button */}
@@ -84,14 +84,14 @@ export function Header({ showAccountLink = true }: HeaderProps) {
           {/* Desktop Nav Links + User menu (right-justified) */}
           <div className="hidden md:flex items-center gap-6">
             <nav className="flex items-center gap-6">
-              <Link href="/dashboard" className="text-muted hover:text-foreground transition-colors">
+              <Link href="/dashboard" className="text-card-foreground hover:text-foreground transition-colors">
                 Dashboard
               </Link>
               {/* Library Search Dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsLibraryDropdownOpen(!isLibraryDropdownOpen)}
-                  className="flex items-center gap-1 text-muted hover:text-foreground transition-colors"
+                  className="flex items-center gap-1 text-card-foreground hover:text-foreground transition-colors"
                 >
                   Library Search
                   <svg
@@ -105,12 +105,12 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   </svg>
                 </button>
                 {isLibraryDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-border py-2 z-[100]">
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-card-bg rounded-lg shadow-xl border border-border py-2 z-[100]">
                     {librarySearchItems.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
-                        className="block px-4 py-2 text-sm text-muted hover:text-foreground hover:bg-muted-light transition-colors"
+                        className="block px-4 py-2 text-sm text-card-foreground hover:text-foreground hover:bg-muted-light transition-colors"
                         onClick={() => setIsLibraryDropdownOpen(false)}
                       >
                         {item.label}
@@ -119,13 +119,13 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   </div>
                 )}
               </div>
-              <Link href="/opportunities" className="text-muted hover:text-foreground transition-colors">
+              <Link href="/opportunities" className="text-card-foreground hover:text-foreground transition-colors">
                 Opportunities
               </Link>
-              <Link href="/competitors" className="text-muted hover:text-foreground transition-colors">
+              <Link href="/competitors" className="text-card-foreground hover:text-foreground transition-colors">
                 Competitors
               </Link>
-              <Link href="/analytics" className="text-muted hover:text-foreground transition-colors">
+              <Link href="/analytics" className="text-card-foreground hover:text-foreground transition-colors">
                 Analytics
               </Link>
             </nav>
@@ -161,7 +161,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="px-4 py-3 text-muted hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
+                  className="px-4 py-3 text-card-foreground hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
                   onClick={closeMobileMenu}
                 >
                   {item.label}
@@ -171,7 +171,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               {/* Library Search expandable section */}
               <button
                 onClick={() => setIsMobileLibraryOpen(!isMobileLibraryOpen)}
-                className="flex items-center justify-between px-4 py-3 text-muted hover:text-foreground hover:bg-muted-light rounded-lg transition-colors w-full text-left"
+                className="flex items-center justify-between px-4 py-3 text-card-foreground hover:text-foreground hover:bg-muted-light rounded-lg transition-colors w-full text-left"
               >
                 <span>Library Search</span>
                 <svg
@@ -190,7 +190,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="block px-4 py-2 text-sm text-muted hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
+                      className="block px-4 py-2 text-sm text-card-foreground hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
                       onClick={closeMobileMenu}
                     >
                       {item.label}
@@ -204,7 +204,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 {showAccountLink ? (
                   <Link
                     href="/account"
-                    className="flex items-center gap-3 px-4 py-3 text-muted hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
+                    className="flex items-center gap-3 px-4 py-3 text-card-foreground hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
                     onClick={closeMobileMenu}
                   >
                     <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
@@ -220,7 +220,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                       closeMobileMenu();
                       logout();
                     }}
-                    className="w-full px-4 py-3 text-left text-muted hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
+                    className="w-full px-4 py-3 text-left text-card-foreground hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
                   >
                     Sign Out
                   </button>

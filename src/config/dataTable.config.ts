@@ -75,11 +75,11 @@ export interface DataTableConfig {
 export const dataTableConfig: DataTableConfig = {
   styling: {
     stripedRows: true,
-    stripeClass: "bg-gray-50",
+    stripeClass: "bg-muted-light",
     hoverHighlight: true,
-    hoverClass: "hover:bg-blue-50",
+    hoverClass: "hover:bg-muted-light",
     compactMode: true,
-    headerBgClass: "bg-gray-100",
+    headerBgClass: "bg-muted-light",
     borderClass: "border-border",
   },
 

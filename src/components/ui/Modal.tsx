@@ -92,7 +92,7 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
         aria-labelledby="modal-title"
         className={`
           relative w-full mx-4 ${sizeStyles[size]}
-          bg-white rounded-xl border border-border shadow-xl
+          bg-card-bg rounded-xl border border-border shadow-xl
           transform transition-all
         `}
       >

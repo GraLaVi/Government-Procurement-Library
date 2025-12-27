@@ -45,7 +45,7 @@ export function Tabs({ tabs, activeTab, onTabChange, className = "" }: TabsProps
               focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
               ${
                 isActive
-                  ? "bg-white text-foreground shadow-sm"
+                  ? "bg-card-bg text-foreground shadow-sm"
                   : "text-muted hover:text-foreground"
               }
               ${tab.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}

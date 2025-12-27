@@ -38,7 +38,7 @@ export function Navbar() {
   }, []);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-card-bg/95 backdrop-blur-sm border-b border-border">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -46,7 +46,7 @@ export function Navbar() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">G</span>
             </div>
-            <span className="text-xl font-bold text-secondary">GPH</span>
+            <span className="text-xl font-bold text-card-foreground">GPH</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -56,7 +56,7 @@ export function Navbar() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsLibraryDropdownOpen(!isLibraryDropdownOpen)}
-                  className="flex items-center gap-1 text-muted hover:text-foreground transition-colors duration-200"
+                  className="flex items-center gap-1 text-card-foreground hover:text-foreground transition-colors duration-200"
                 >
                   Library Search
                   <svg
@@ -70,12 +70,12 @@ export function Navbar() {
                   </svg>
                 </button>
                 {isLibraryDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-border py-2 z-[100]">
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-card-bg rounded-lg shadow-xl border border-border py-2 z-[100]">
                     {librarySearchItems.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
-                        className="block px-4 py-2 text-sm text-muted hover:text-foreground hover:bg-muted-light transition-colors"
+                        className="block px-4 py-2 text-sm text-card-foreground hover:text-foreground hover:bg-muted-light transition-colors"
                         onClick={() => setIsLibraryDropdownOpen(false)}
                       >
                         {item.label}
@@ -89,7 +89,7 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-muted hover:text-foreground transition-colors duration-200"
+                className="text-card-foreground hover:text-foreground transition-colors duration-200"
               >
                 {link.label}
               </Link>
@@ -129,7 +129,7 @@ export function Navbar() {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 text-muted hover:text-foreground transition-colors"
+            className="md:hidden p-2 text-card-foreground hover:text-foreground transition-colors"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -146,7 +146,7 @@ export function Navbar() {
                 <div>
                   <button
                     onClick={() => setIsMobileLibraryOpen(!isMobileLibraryOpen)}
-                    className="flex items-center justify-between w-full text-muted hover:text-foreground transition-colors duration-200 py-2"
+                    className="flex items-center justify-between w-full text-card-foreground hover:text-foreground transition-colors duration-200 py-2"
                   >
                     <span>Library Search</span>
                     <svg
@@ -165,7 +165,7 @@ export function Navbar() {
                         <Link
                           key={item.href}
                           href={item.href}
-                          className="block text-sm text-muted hover:text-foreground transition-colors py-1"
+                          className="block text-sm text-card-foreground hover:text-foreground transition-colors py-1"
                           onClick={() => {
                             setIsMenuOpen(false);
                             setIsMobileLibraryOpen(false);
@@ -182,7 +182,7 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-muted hover:text-foreground transition-colors duration-200 py-2"
+                  className="text-card-foreground hover:text-foreground transition-colors duration-200 py-2"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {link.label}

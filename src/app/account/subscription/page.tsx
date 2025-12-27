@@ -134,7 +134,7 @@ export default function SubscriptionPage() {
       )}
 
       {/* Summary card */}
-      <div className="bg-white rounded-xl border border-border p-6 mb-8">
+      <div className="bg-card-bg rounded-xl border border-border p-6 mb-8">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
             <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -158,7 +158,7 @@ export default function SubscriptionPage() {
 
       {/* Products by category */}
       {products.length === 0 ? (
-        <div className="bg-white rounded-xl border border-border p-12 text-center">
+        <div className="bg-card-bg rounded-xl border border-border p-12 text-center">
           <div className="w-16 h-16 bg-muted-light rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -172,7 +172,7 @@ export default function SubscriptionPage() {
       ) : (
         <div className="space-y-6">
           {categories.map((category) => (
-            <div key={category} className="bg-white rounded-xl border border-border overflow-hidden">
+            <div key={category} className="bg-card-bg rounded-xl border border-border overflow-hidden">
               <div className="px-6 py-4 bg-muted-light/50 border-b border-border">
                 <h3 className="text-base font-semibold text-secondary">
                   {formatCategory(category)}

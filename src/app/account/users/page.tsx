@@ -410,7 +410,7 @@ export default function UsersPage() {
 
       {/* Organization Products Section */}
       {orgProducts.length > 0 && (
-        <div className="mb-6 bg-white rounded-xl border border-border">
+        <div className="mb-6 bg-card-bg rounded-xl border border-border">
           <button
             onClick={() => setIsOrgProductsExpanded(!isOrgProductsExpanded)}
             className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-muted-light/50 transition-colors rounded-xl"
@@ -482,7 +482,7 @@ export default function UsersPage() {
             </svg>
             <div>
               <p className="text-sm font-medium text-warning">Temporary Password for {tempPasswordUser}</p>
-              <p className="text-sm text-foreground mt-1 font-mono bg-white px-2 py-1 rounded border border-border inline-block">
+              <p className="text-sm text-foreground mt-1 font-mono bg-card-bg px-2 py-1 rounded border border-border inline-block">
                 {tempPassword}
               </p>
               <p className="text-xs text-muted mt-2">
@@ -525,7 +525,7 @@ export default function UsersPage() {
       </div>
 
       {/* Users table */}
-      <div className="bg-white rounded-xl border border-border">
+      <div className="bg-card-bg rounded-xl border border-border">
         <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full">
             <thead className="bg-muted-light border-b border-border">
@@ -621,7 +621,7 @@ export default function UsersPage() {
       {openMenuId && menuPosition && (
         <div
           ref={menuRef}
-          className="fixed w-48 bg-white rounded-lg shadow-xl border border-border py-1 z-50"
+          className="fixed w-48 bg-card-bg rounded-lg shadow-xl border border-border py-1 z-50"
           style={{ top: menuPosition.top, left: menuPosition.left }}
         >
           {(() => {

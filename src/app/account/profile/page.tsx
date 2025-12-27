@@ -129,7 +129,7 @@ export default function ProfilePage() {
       )}
 
       {/* Profile Form */}
-      <div className="bg-white rounded-xl border border-border p-6">
+      <div className="bg-card-bg rounded-xl border border-border p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Avatar section */}
           <div className="flex items-center gap-4 pb-6 border-b border-border">

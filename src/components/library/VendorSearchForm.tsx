@@ -14,6 +14,8 @@ interface VendorSearchFormProps {
   onSearch: (type: VendorSearchType, query: string) => void;
   isSearching: boolean;
   autoFocus?: boolean;
+  initialSearchType?: VendorSearchType | null;
+  initialSearchQuery?: string;
 }
 
 export interface VendorSearchFormRef {
@@ -21,11 +23,21 @@ export interface VendorSearchFormRef {
 }
 
 export const VendorSearchForm = forwardRef<VendorSearchFormRef, VendorSearchFormProps>(
-  function VendorSearchForm({ onSearch, isSearching, autoFocus = false }, ref) {
-  const [searchType, setSearchType] = useState<VendorSearchType>("cage");
-  const [searchQuery, setSearchQuery] = useState("");
+  function VendorSearchForm({ onSearch, isSearching, autoFocus = false, initialSearchType, initialSearchQuery }, ref) {
+  const [searchType, setSearchType] = useState<VendorSearchType>(initialSearchType || "cage");
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery || "");
   const [validationError, setValidationError] = useState<string | undefined>();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Update form when initial values change
+  useEffect(() => {
+    if (initialSearchType) {
+      setSearchType(initialSearchType);
+    }
+    if (initialSearchQuery) {
+      setSearchQuery(initialSearchQuery);
+    }
+  }, [initialSearchType, initialSearchQuery]);
 
   // Expose focusInput method to parent
   useImperativeHandle(ref, () => ({

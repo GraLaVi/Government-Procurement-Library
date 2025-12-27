@@ -6,6 +6,8 @@ import { VendorSearchForm, VendorSearchFormRef } from "@/components/library/Vend
 import { VendorResultsList } from "@/components/library/VendorResultsList";
 import { VendorDetail } from "@/components/library/VendorDetail";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
+import { RecentSearchesChips } from "@/components/library/RecentSearchesChips";
+import { useRecentActions, useLastAction } from "@/lib/hooks/useRecentActions";
 import {
   VendorSearchType,
   VendorSearchResult,
@@ -14,9 +16,14 @@ import {
   buildSearchParams,
   getSearchTypeConfig,
 } from "@/lib/library/types";
+import { VendorSearchActionData } from "@/lib/preferences/types";
 
 export default function VendorSearchPage() {
   const { isLoading: authLoading, hasProductAccess } = useAuth();
+
+  // Recent actions hook
+  const { actions: recentActions, addAction, deleteAction, isLoading: isLoadingActions } = useRecentActions('vendor_search');
+  const { lastAction } = useLastAction('vendor_search');
 
   // Search state
   const [isSearching, setIsSearching] = useState(false);
@@ -36,55 +43,27 @@ export default function VendorSearchPage() {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
+  // Initial search state from last action
+  const [initialSearchType, setInitialSearchType] = useState<VendorSearchType | null>(null);
+  const [initialSearchQuery, setInitialSearchQuery] = useState<string>("");
+
   // Ref for search form to control focus
   const searchFormRef = useRef<VendorSearchFormRef>(null);
+
+  // Load last search on mount
+  useEffect(() => {
+    if (lastAction && lastAction.action_data) {
+      const actionData = lastAction.action_data as VendorSearchActionData;
+      setInitialSearchType(actionData.query_type as VendorSearchType);
+      setInitialSearchQuery(actionData.query);
+    }
+  }, [lastAction]);
 
   // Focus search input on mount
   useEffect(() => {
     searchFormRef.current?.focusInput();
   }, []);
 
-  // Handle search
-  const handleSearch = useCallback(async (type: VendorSearchType, query: string) => {
-    setIsSearching(true);
-    setSearchError(null);
-    setHasSearched(true);
-    setSelectedCageCode(null);
-    setVendorDetail(null);
-    setLastSearchType(type);
-    setLastSearchQuery(query);
-
-    try {
-      const params = buildSearchParams(type, query);
-      const response = await fetch(`/api/library/vendor/search?${params.toString()}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Search failed");
-      }
-
-      const searchResponse = data as VendorSearchResponse;
-      setSearchResults(searchResponse.results);
-      setTotalResults(searchResponse.total);
-
-      // Collapse search form after successful search with results
-      if (searchResponse.results.length > 0) {
-        setIsSearchExpanded(false);
-      }
-
-      // If only one result and it's an exact match search (CAGE, UEI), auto-select it
-      if (searchResponse.results.length === 1 && (type === "cage" || type === "uei")) {
-        handleSelectVendor(searchResponse.results[0].cage_code);
-      }
-    } catch (error) {
-      console.error("Search error:", error);
-      setSearchError(error instanceof Error ? error.message : "An unexpected error occurred");
-      setSearchResults([]);
-      setTotalResults(0);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
 
   // Handle vendor selection
   const handleSelectVendor = useCallback(async (cageCode: string) => {
@@ -111,6 +90,60 @@ export default function VendorSearchPage() {
       setIsLoadingDetail(false);
     }
   }, [selectedCageCode]);
+
+  // Handle search
+  const handleSearch = useCallback(async (type: VendorSearchType, query: string) => {
+    setIsSearching(true);
+    setSearchError(null);
+    setHasSearched(true);
+    setSelectedCageCode(null);
+    setVendorDetail(null);
+    setLastSearchType(type);
+    setLastSearchQuery(query);
+
+    try {
+      const params = buildSearchParams(type, query);
+      const response = await fetch(`/api/library/vendor/search?${params.toString()}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Search failed");
+      }
+
+      const searchResponse = data as VendorSearchResponse;
+      setSearchResults(searchResponse.results);
+      setTotalResults(searchResponse.total);
+
+      // Save search to recent actions
+      try {
+        const actionData: VendorSearchActionData = {
+          query_type: type,
+          query: query.trim(),
+        };
+        await addAction(actionData);
+      } catch (err) {
+        // Don't fail the search if saving to recent actions fails
+        console.error('Failed to save search to recent actions:', err);
+      }
+
+      // Collapse search form after successful search with results
+      if (searchResponse.results.length > 0) {
+        setIsSearchExpanded(false);
+      }
+
+      // If only one result and it's an exact match search (CAGE, UEI), auto-select it
+      if (searchResponse.results.length === 1 && (type === "cage" || type === "uei")) {
+        await handleSelectVendor(searchResponse.results[0].cage_code);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchError(error instanceof Error ? error.message : "An unexpected error occurred");
+      setSearchResults([]);
+      setTotalResults(0);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [addAction, handleSelectVendor]);
 
   // Handle back to results
   const handleBackToResults = useCallback(() => {
@@ -163,46 +196,59 @@ export default function VendorSearchPage() {
   return (
     <div className="space-y-4">
       {/* Search Section - Collapsible */}
-      <div className="bg-white rounded-lg border border-border overflow-hidden">
+      <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
         {/* Collapsed State - Compact Summary Bar */}
         {hasSearched && !isSearchExpanded && !searchError && (
-          <div
-            className="px-4 py-2.5 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
-            onClick={handleNewSearch}
-          >
-            <div className="flex items-center gap-3">
-              <svg
-                className="w-4 h-4 text-muted"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted">{getSearchLabel()}:</span>
-                <span className="font-medium text-foreground">{lastSearchQuery}</span>
-                <span className="text-muted">({totalResults} result{totalResults !== 1 ? 's' : ''})</span>
-              </div>
-            </div>
-            <button
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary hover:text-primary/80 border border-primary/30 rounded hover:bg-primary/5 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleNewSearch();
-              }}
+          <>
+            <div
+              className="px-4 py-2.5 flex items-center justify-between cursor-pointer hover:bg-muted-light transition-colors"
+              onClick={handleNewSearch}
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              New Search
-            </button>
-          </div>
+              <div className="flex items-center gap-3">
+                <svg
+                  className="w-4 h-4 text-muted"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted">{getSearchLabel()}:</span>
+                  <span className="font-medium text-foreground">{lastSearchQuery}</span>
+                  <span className="text-muted">({totalResults} result{totalResults !== 1 ? 's' : ''})</span>
+                </div>
+              </div>
+              <button
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary hover:text-primary/80 border border-primary/30 rounded hover:bg-primary/5 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNewSearch();
+                }}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                New Search
+              </button>
+            </div>
+            {/* Recent Searches Chips - Also shown when collapsed */}
+            {recentActions.length > 0 && (
+              <div className="px-4 py-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
+                <RecentSearchesChips
+                  actions={recentActions}
+                  onSelectSearch={handleSearch}
+                  onDelete={deleteAction}
+                  isLoading={isLoadingActions}
+                />
+              </div>
+            )}
+          </>
         )}
 
         {/* Expanded State - Full Search Form */}
@@ -223,7 +269,25 @@ export default function VendorSearchPage() {
                 </button>
               </div>
             )}
-            <VendorSearchForm ref={searchFormRef} onSearch={handleSearch} isSearching={isSearching} />
+            <VendorSearchForm 
+              ref={searchFormRef} 
+              onSearch={handleSearch} 
+              isSearching={isSearching}
+              initialSearchType={initialSearchType}
+              initialSearchQuery={initialSearchQuery}
+            />
+            
+            {/* Recent Searches Chips - Below search form */}
+            {recentActions.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <RecentSearchesChips
+                  actions={recentActions}
+                  onSelectSearch={handleSearch}
+                  onDelete={deleteAction}
+                  isLoading={isLoadingActions}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -272,14 +336,14 @@ export default function VendorSearchPage() {
 
               {/* Vendor Detail - Full Width */}
               {isLoadingDetail ? (
-                <div className="bg-white rounded-lg border border-border p-6">
+                <div className="bg-card-bg rounded-lg border border-border p-6">
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
                     <span className="text-sm text-muted">Loading details...</span>
                   </div>
                 </div>
               ) : detailError ? (
-                <div className="bg-white rounded-lg border border-border p-6">
+                <div className="bg-card-bg rounded-lg border border-border p-6">
                   <div className="text-center">
                     <svg
                       className="w-8 h-8 text-error mx-auto mb-2"
@@ -319,7 +383,7 @@ export default function VendorSearchPage() {
 
       {/* Initial State (no search yet) */}
       {!hasSearched && !searchError && (
-        <div className="bg-white rounded-lg border border-border p-8 text-center">
+        <div className="bg-card-bg rounded-lg border border-border p-8 text-center">
           <svg
             className="w-10 h-10 text-muted/50 mx-auto mb-3"
             fill="none"

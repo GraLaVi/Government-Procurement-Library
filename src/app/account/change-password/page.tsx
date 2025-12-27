@@ -115,7 +115,7 @@ export default function ChangePasswordPage() {
       )}
 
       {/* Form */}
-      <div className="bg-white rounded-xl border border-border p-6">
+      <div className="bg-card-bg rounded-xl border border-border p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
             label="Current Password"

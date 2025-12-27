@@ -58,6 +58,17 @@ const accountSections = [
     ),
   },
   {
+    title: "Preferences",
+    description: "Customize theme and app settings",
+    href: "/account/preferences",
+    icon: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+  {
     title: "Change Password",
     description: "Update your account password",
     href: "/account/change-password",
@@ -123,14 +134,14 @@ export default function AccountPage() {
     <>
       {/* Page header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-secondary">My Account</h1>
+        <h1 className="text-2xl font-bold text-foreground">My Account</h1>
         <p className="text-muted mt-1">
           Manage your account settings and preferences
         </p>
       </div>
 
       {/* User info card */}
-      <div className="bg-white rounded-xl border border-border p-6 mb-8">
+      <div className="bg-card-bg rounded-xl border border-border p-6 mb-8">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
             <span className="text-2xl font-bold text-primary uppercase">
@@ -138,7 +149,7 @@ export default function AccountPage() {
             </span>
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-semibold text-secondary">
+            <h2 className="text-xl font-semibold text-card-foreground">
               {userName}
             </h2>
             <p className="text-muted">{user?.email}</p>
@@ -168,7 +179,7 @@ export default function AccountPage() {
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-secondary">
+              <h3 className="text-lg font-semibold text-foreground">
                 Verify Your Email Address
               </h3>
               <p className="text-muted mt-1">
@@ -212,7 +223,7 @@ export default function AccountPage() {
       )}
 
       {/* Account sections grid */}
-      <h2 className="text-lg font-semibold text-secondary mb-4">
+      <h2 className="text-lg font-semibold text-foreground mb-4">
         Account Settings
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -222,12 +233,12 @@ export default function AccountPage() {
             <Link
               key={section.href}
               href={section.href}
-              className="bg-white rounded-xl border border-border p-6 hover:border-primary/50 hover:shadow-lg transition-all duration-200 group"
+              className="bg-card-bg rounded-xl border border-border p-6 hover:border-primary/50 hover:shadow-lg transition-all duration-200 group"
             >
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
                 {section.icon}
               </div>
-              <h3 className="text-lg font-semibold text-secondary group-hover:text-primary transition-colors">
+              <h3 className="text-lg font-semibold text-card-foreground group-hover:text-primary transition-colors">
                 {section.title}
               </h3>
               <p className="text-muted mt-2 text-sm">
@@ -239,32 +250,32 @@ export default function AccountPage() {
 
       {/* Quick stats */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-border p-6">
+        <div className="bg-card-bg rounded-xl border border-border p-6">
           <div className="text-sm text-muted mb-1">Account Status</div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-success rounded-full"></span>
-            <span className="text-lg font-semibold text-secondary">Active</span>
+            <span className="text-lg font-semibold text-card-foreground">Active</span>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-border p-6">
+        <div className="bg-card-bg rounded-xl border border-border p-6">
           <div className="text-sm text-muted mb-1">Email Status</div>
           <div className="flex items-center gap-2">
             {user?.email_verified ? (
               <>
                 <span className="w-2 h-2 bg-success rounded-full"></span>
-                <span className="text-lg font-semibold text-secondary">Verified</span>
+                <span className="text-lg font-semibold text-card-foreground">Verified</span>
               </>
             ) : (
               <>
                 <span className="w-2 h-2 bg-warning rounded-full"></span>
-                <span className="text-lg font-semibold text-secondary">Not Verified</span>
+                <span className="text-lg font-semibold text-card-foreground">Not Verified</span>
               </>
             )}
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-border p-6">
+        <div className="bg-card-bg rounded-xl border border-border p-6">
           <div className="text-sm text-muted mb-1">Member Since</div>
-          <div className="text-lg font-semibold text-secondary">
+          <div className="text-lg font-semibold text-card-foreground">
             {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
           </div>
         </div>

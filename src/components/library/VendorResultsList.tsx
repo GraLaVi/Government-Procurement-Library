@@ -112,7 +112,7 @@ export function VendorResultsList({
 
   // Custom empty state
   const emptyComponent = (
-    <div className="bg-white rounded-lg border border-border p-6 text-center">
+    <div className="bg-card-bg rounded-lg border border-border p-6 text-center">
       <svg
         className="w-10 h-10 text-muted mx-auto mb-3"
         fill="none"
@@ -133,7 +133,7 @@ export function VendorResultsList({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-border p-4">
+      <div className="bg-card-bg rounded-lg border border-border p-4">
         <div className="flex items-center justify-center gap-2">
           <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
           <span className="text-sm text-muted">Searching...</span>
@@ -147,7 +147,7 @@ export function VendorResultsList({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-border overflow-hidden">
+    <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
       {/* Header */}
       <div className="px-4 py-2 bg-muted-light border-b border-border flex items-center justify-between">
         <span className="text-xs font-medium text-muted">

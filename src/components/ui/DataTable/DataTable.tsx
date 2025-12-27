@@ -224,7 +224,7 @@ export function DataTable<T>({
                           )}
                       {/* Sort indicator */}
                       {header.column.getCanSort() && (
-                        <span className={header.column.getIsSorted() ? "text-primary" : "text-gray-400"}>
+                        <span className={header.column.getIsSorted() ? "text-primary" : "text-muted"}>
                           {header.column.getIsSorted() === "asc" ? (
                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
@@ -257,7 +257,7 @@ export function DataTable<T>({
                   key={row.id}
                   onClick={() => onRowClick?.(row.original)}
                   className={`
-                    ${isStriped ? config.styling.stripeClass : ""}
+                    ${isStriped ? config.styling.stripeClass : "bg-card-bg"}
                     ${config.styling.hoverHighlight ? config.styling.hoverClass : ""}
                     ${onRowClick ? "cursor-pointer" : ""}
                     ${isCopied ? "bg-success/10" : ""}
