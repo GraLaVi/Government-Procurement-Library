@@ -38,7 +38,7 @@ const accountSections = [
     ),
   },
   {
-    title: "Saved Searches",
+    title: "Bid-Matching Filters",
     description: "View and manage your contract search filters",
     href: "/account/searches",
     icon: (

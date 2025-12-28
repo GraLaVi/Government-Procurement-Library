@@ -36,10 +36,10 @@ export function AccessDeniedPage({
           </svg>
         </div>
 
-        {/* Access Denied Title */}
-        <h1 className="text-2xl font-bold text-foreground mb-2">Access Denied</h1>
+        {/* Not Authorized Title */}
+        <h1 className="text-2xl font-bold text-foreground mb-2">Not Authorized</h1>
         <p className="text-muted">
-          You don't have permission to access {featureName}
+          You don't currently have access to {featureName}
         </p>
       </div>
 
