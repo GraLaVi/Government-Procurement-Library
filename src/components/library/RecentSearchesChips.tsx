@@ -42,7 +42,7 @@ export function RecentSearchesChips({ actions, onSelectSearch, onDelete, isLoadi
           return (
             <div
               key={action.id}
-              className="group relative inline-flex items-center gap-1.5 bg-muted-light hover:bg-muted border border-border rounded-md px-2 py-1 text-xs transition-colors"
+              className="group relative inline-flex items-center gap-1.5 bg-muted-light dark:bg-muted-light hover:bg-muted dark:hover:bg-card-bg border border-border rounded-md px-2 py-1 text-xs transition-colors"
             >
               <button
                 onClick={() => onSelectSearch(queryType, query)}

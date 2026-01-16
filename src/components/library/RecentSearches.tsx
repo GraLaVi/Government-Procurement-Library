@@ -42,7 +42,7 @@ export function RecentSearches({ actions, onSelectSearch, onDelete, isLoading }:
           return (
             <div
               key={action.id}
-              className="flex items-center justify-between gap-3 p-2 rounded border border-border hover:bg-muted-light transition-colors group"
+              className="flex items-center justify-between gap-3 p-2 rounded border border-border hover:bg-muted-light dark:hover:bg-muted-light/80 transition-colors group"
             >
               <button
                 onClick={() => onSelectSearch(queryType, query)}

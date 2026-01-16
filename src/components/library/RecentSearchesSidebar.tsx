@@ -82,7 +82,7 @@ export function RecentSearchesSidebar({ actions, onSelectSearch, onDelete, isLoa
       {/* Sidebar Panel */}
       <div
         ref={sidebarRef}
-        className={`fixed right-0 top-0 h-full w-64 bg-white shadow-xl z-40 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed right-0 top-0 h-full w-64 bg-white dark:bg-card-bg shadow-xl z-40 transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
@@ -122,7 +122,7 @@ export function RecentSearchesSidebar({ actions, onSelectSearch, onDelete, isLoa
                   return (
                     <div
                       key={action.id}
-                      className="group flex items-center justify-between gap-1.5 p-1.5 rounded hover:bg-muted-light transition-colors"
+                      className="group flex items-center justify-between gap-1.5 p-1.5 rounded hover:bg-muted-light dark:hover:bg-muted-light/80 transition-colors"
                     >
                       <button
                         onClick={() => {

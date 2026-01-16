@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Configure dark mode to use data-theme attribute */
+@variant dark (&:where([data-theme="dark"] *));
+
 :root {
   /* Navy blue primary color palette */
   --primary: #1C2C54;
@@ -139,3 +142,4 @@ html {
 *[class*="rounded-2xl"] { border-radius: 6px !important; }
 *[class*="rounded-3xl"] { border-radius: 8px !important; }
 *[class~="rounded"] { border-radius: 2px !important; }
+

@@ -85,9 +85,9 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen bg-muted-light flex">
+    <div className="min-h-screen bg-muted-light dark:bg-background flex">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-secondary relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-secondary dark:bg-[#1C2C54] relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-2xl" />

@@ -21,11 +21,11 @@ export function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
           <div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-secondary leading-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-secondary dark:text-foreground leading-tight">
               Win More{" "}
               <span className="text-primary">Government Bids</span>
             </h1>
-            <p className="mt-6 text-lg sm:text-xl text-muted leading-relaxed">
+            <p className="mt-6 text-lg sm:text-xl text-muted dark:text-foreground/70 leading-relaxed">
               Your Defense Contracting Intelligence Platform. Find, track, and win federal contracts with AI-powered bid matching and real-time market intelligence.
             </p>
 
@@ -52,18 +52,18 @@ export function Hero() {
             </div>
 
             {/* Trust indicator */}
-            <p className="mt-6 text-sm text-muted">
+            <p className="mt-6 text-sm text-muted dark:text-foreground/70">
               No credit card required. 14-day free trial.
             </p>
           </div>
 
           {/* Visual */}
           <div className="relative lg:pl-8">
-            <div className="relative bg-white rounded-2xl shadow-2xl shadow-primary/10 border border-border p-6 lg:p-8">
+            <div className="relative bg-white dark:bg-card-bg rounded-2xl shadow-2xl shadow-primary/10 border border-border p-6 lg:p-8">
               {/* Mock Dashboard Preview */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-secondary">Today&apos;s Matches</h3>
+                  <h3 className="font-semibold text-secondary dark:text-card-foreground">Today&apos;s Matches</h3>
                   <span className="text-xs bg-success/10 text-success px-2 py-1 rounded-full font-medium">
                     12 New
                   </span>
@@ -81,8 +81,8 @@ export function Hero() {
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="font-medium text-foreground text-sm">{opp.title}</h4>
-                        <p className="text-xs text-muted mt-1">{opp.agency}</p>
+                        <h4 className="font-medium text-foreground dark:text-card-foreground text-sm">{opp.title}</h4>
+                        <p className="text-xs text-muted dark:text-card-foreground/70 mt-1">{opp.agency}</p>
                       </div>
                       <span className="text-primary font-semibold text-sm">{opp.value}</span>
                     </div>
@@ -98,9 +98,9 @@ export function Hero() {
             </div>
 
             {/* Floating stats */}
-            <div className="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-lg border border-border p-4">
+            <div className="absolute -bottom-4 -left-4 bg-white dark:bg-card-bg rounded-xl shadow-lg border border-border p-4">
               <div className="text-2xl font-bold text-primary">$4.2B+</div>
-              <div className="text-xs text-muted">Contracts Tracked</div>
+              <div className="text-xs text-muted dark:text-card-foreground/70">Contracts Tracked</div>
             </div>
           </div>
         </div>

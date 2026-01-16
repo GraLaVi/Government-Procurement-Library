@@ -3,7 +3,7 @@ import { ShieldIcon, ZapIcon } from "@/components/icons";
 
 export function CTA() {
   return (
-    <section className="py-20 lg:py-32 bg-secondary">
+    <section className="py-20 lg:py-32 bg-secondary dark:bg-[#1C2C54]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative rounded-3xl bg-gradient-to-br from-primary to-primary-hover p-8 lg:p-16 overflow-hidden">
           {/* Background decoration */}

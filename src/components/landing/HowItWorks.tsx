@@ -27,10 +27,10 @@ export function HowItWorks() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-secondary">
+          <h2 className="text-3xl sm:text-4xl font-bold text-secondary dark:text-foreground">
             How GPH Works
           </h2>
-          <p className="mt-4 text-lg text-muted">
+          <p className="mt-4 text-lg text-muted dark:text-foreground/70">
             Get started in minutes and find your first matched opportunities today
           </p>
         </div>
@@ -45,16 +45,16 @@ export function HowItWorks() {
               {steps.map((step, index) => (
                 <div key={index} className="relative">
                   {/* Step card */}
-                  <div className="bg-white rounded-2xl p-8 border border-border hover:shadow-xl transition-shadow duration-300">
+                  <div className="bg-white dark:bg-card-bg rounded-2xl p-8 border border-border hover:shadow-xl transition-shadow duration-300">
                     {/* Number badge */}
                     <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold text-lg mb-6">
                       {step.number}
                     </div>
 
-                    <h3 className="text-xl font-semibold text-secondary">
+                    <h3 className="text-xl font-semibold text-secondary dark:text-card-foreground">
                       {step.title}
                     </h3>
-                    <p className="mt-3 text-muted leading-relaxed">
+                    <p className="mt-3 text-muted dark:text-card-foreground/80 leading-relaxed">
                       {step.description}
                     </p>
                   </div>

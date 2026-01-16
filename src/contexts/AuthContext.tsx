@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { User, Product, AuthState, LoginResult } from '@/lib/auth/types';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 
@@ -22,7 +22,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: false,
     isLoading: true,
   });
+  const [hasInitialized, setHasInitialized] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   const refreshUser = useCallback(async () => {
     try {
@@ -50,21 +52,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isAuthenticated: true,
           isLoading: false,
         });
+        setHasInitialized(true);
       } else {
+        // Authentication failed - clear state
         setState({
           user: null,
           products: null,
           isAuthenticated: false,
           isLoading: false,
         });
+        setHasInitialized(true);
       }
     } catch {
+      // Network error - clear state
       setState({
         user: null,
         products: null,
         isAuthenticated: false,
         isLoading: false,
       });
+      setHasInitialized(true);
     }
   }, []);
 
@@ -72,6 +79,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
+
+  // Redirect to login when authentication fails after initial load
+  useEffect(() => {
+    if (hasInitialized && !state.isAuthenticated && !state.isLoading) {
+      const isPublicRoute = AUTH_CONFIG.ROUTES.PUBLIC.some(
+        (route) => pathname === route || pathname?.startsWith(`${route}/`)
+      );
+
+      if (!isPublicRoute && pathname !== AUTH_CONFIG.ROUTES.LOGIN) {
+        const loginUrl = `${AUTH_CONFIG.ROUTES.LOGIN}?redirect=${encodeURIComponent(pathname || '/')}`;
+        router.push(loginUrl);
+      }
+    }
+  }, [hasInitialized, state.isAuthenticated, state.isLoading, pathname, router]);
 
   const login = async (email: string, password: string): Promise<LoginResult> => {
     try {

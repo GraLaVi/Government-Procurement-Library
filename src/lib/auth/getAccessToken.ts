@@ -10,11 +10,6 @@ export async function getAccessToken(): Promise<string | null> {
   const accessToken = cookieStore.get(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN)?.value;
   const refreshToken = cookieStore.get(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN)?.value;
 
-  // Debug logging
-  console.log('getAccessToken - Cookie names:', AUTH_CONFIG.COOKIE_NAMES);
-  console.log('getAccessToken - Access token exists:', !!accessToken);
-  console.log('getAccessToken - Refresh token exists:', !!refreshToken);
-
   // If we have an access token, return it (we'll handle 401s at the call site if needed)
   if (accessToken) {
     return accessToken;
@@ -22,7 +17,6 @@ export async function getAccessToken(): Promise<string | null> {
 
   // No access token - try to refresh
   if (!refreshToken) {
-    console.log('getAccessToken - No tokens available');
     return null;
   }
 

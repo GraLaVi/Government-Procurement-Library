@@ -52,10 +52,10 @@ export function Features() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-secondary">
+          <h2 className="text-3xl sm:text-4xl font-bold text-secondary dark:text-foreground">
             Everything You Need to Win Government Contracts
           </h2>
-          <p className="mt-4 text-lg text-muted">
+          <p className="mt-4 text-lg text-muted dark:text-foreground/70">
             Powerful tools designed specifically for defense contractors and government vendors
           </p>
         </div>
@@ -65,15 +65,15 @@ export function Features() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="bg-white rounded-xl p-6 lg:p-8 border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+              className="bg-white dark:bg-card-bg rounded-xl p-6 lg:p-8 border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
             >
               <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center">
                 <feature.icon className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="mt-4 text-xl font-semibold text-secondary">
+              <h3 className="mt-4 text-xl font-semibold text-secondary dark:text-card-foreground">
                 {feature.title}
               </h3>
-              <p className="mt-2 text-muted leading-relaxed">
+              <p className="mt-2 text-muted dark:text-card-foreground/80 leading-relaxed">
                 {feature.description}
               </p>
             </div>
