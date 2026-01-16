@@ -28,7 +28,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     try {
-      const response = await fetch('/api/auth/me');
+      const response = await fetch('/api/auth/me', {
+        // Add cache control to prevent stale responses
+        cache: 'no-store',
+      });
 
       if (response.ok) {
         const user: User = await response.json();
@@ -36,7 +39,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Fetch user products
         let products: Product[] | null = null;
         try {
-          const productsResponse = await fetch('/api/auth/me/products');
+          const productsResponse = await fetch('/api/auth/me/products', {
+            cache: 'no-store',
+          });
           if (productsResponse.ok) {
             const productsData = await productsResponse.json();
             products = productsData.products || [];
@@ -54,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         setHasInitialized(true);
       } else {
-        // Authentication failed - clear state
+        // Authentication failed (401 or other error) - immediately clear state
         setState({
           user: null,
           products: null,

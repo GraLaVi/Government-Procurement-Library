@@ -14,18 +14,34 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
 
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading, refreshUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [redirectAttempted, setRedirectAttempted] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || AUTH_CONFIG.ROUTES.ACCOUNT;
 
-  // Redirect if already authenticated
+  // Force refresh auth state when landing on login page
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.replace(redirect);
+    if (!authLoading) {
+      refreshUser();
     }
-  }, [isAuthenticated, authLoading, router, redirect]);
+  }, [authLoading, refreshUser]);
+
+  // Redirect if already authenticated (with timeout fallback)
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && !redirectAttempted) {
+      setRedirectAttempted(true);
+      router.replace(redirect);
+      
+      // Fallback: if redirect doesn't happen within 2 seconds, show login form
+      const timeout = setTimeout(() => {
+        setRedirectAttempted(false);
+      }, 2000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [isAuthenticated, authLoading, router, redirect, redirectAttempted]);
 
   // Rate limit countdown
   useEffect(() => {
@@ -75,11 +91,15 @@ function LoginForm() {
     );
   }
 
-  // Don't render login form if already authenticated (will redirect)
-  if (isAuthenticated) {
+  // Don't render login form if already authenticated and redirect is in progress
+  // But show login form if redirect has been attempted and failed
+  if (isAuthenticated && !redirectAttempted) {
     return (
-      <div className="min-h-screen bg-muted-light flex items-center justify-center">
-        <div className="text-muted">Redirecting...</div>
+      <div className="min-h-screen bg-muted-light dark:bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-muted">Redirecting...</p>
+        </div>
       </div>
     );
   }
