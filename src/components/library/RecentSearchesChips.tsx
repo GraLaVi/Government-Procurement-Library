@@ -1,11 +1,11 @@
 "use client";
 
-import { RecentActionEntry, VendorSearchActionData } from '@/lib/preferences/types';
-import { getSearchTypeConfig, VendorSearchType } from '@/lib/library/types';
+import { RecentActionEntry, VendorSearchActionData, PartsSearchActionData } from '@/lib/preferences/types';
+import { getSearchTypeConfig, VendorSearchType, getPartsSearchTypeConfig, PartsSearchType } from '@/lib/library/types';
 
 interface RecentSearchesChipsProps {
   actions: RecentActionEntry[];
-  onSelectSearch: (searchType: VendorSearchType, query: string) => void;
+  onSelectSearch: ((action: RecentActionEntry) => void) | ((searchType: VendorSearchType | PartsSearchType, query: string) => void);
   onDelete?: (actionId: number) => void;
   isLoading?: boolean;
 }
@@ -34,10 +34,24 @@ export function RecentSearchesChips({ actions, onSelectSearch, onDelete, isLoadi
       </div>
       <div className="flex flex-wrap gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
         {actions.map((action) => {
-          const actionData = action.action_data as VendorSearchActionData;
-          const queryType = actionData.query_type as VendorSearchType;
+          // Try to determine if this is a vendor or parts search
+          const actionData = action.action_data as VendorSearchActionData | PartsSearchActionData;
+          const queryType = actionData.query_type;
           const query = actionData.query;
-          const config = getSearchTypeConfig(queryType);
+          
+          // Try vendor search config first
+          let config;
+          try {
+            config = getSearchTypeConfig(queryType as VendorSearchType);
+          } catch {
+            // If that fails, try parts search config
+            try {
+              config = getPartsSearchTypeConfig(queryType as PartsSearchType);
+            } catch {
+              // Fallback if neither works
+              config = { label: queryType, value: queryType };
+            }
+          }
 
           return (
             <div
@@ -45,7 +59,14 @@ export function RecentSearchesChips({ actions, onSelectSearch, onDelete, isLoadi
               className="group relative inline-flex items-center gap-1.5 bg-muted-light dark:bg-muted-light hover:bg-muted dark:hover:bg-card-bg border border-border rounded-md px-2 py-1 text-xs transition-colors"
             >
               <button
-                onClick={() => onSelectSearch(queryType, query)}
+                onClick={() => {
+                  // Support both function signatures
+                  if (onSelectSearch.length === 1) {
+                    (onSelectSearch as (action: RecentActionEntry) => void)(action);
+                  } else {
+                    (onSelectSearch as (searchType: VendorSearchType | PartsSearchType, query: string) => void)(queryType, query);
+                  }
+                }}
                 className="flex items-center gap-1.5 min-w-0"
               >
                 <span className="font-medium text-primary whitespace-nowrap flex-shrink-0">

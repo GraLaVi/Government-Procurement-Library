@@ -350,3 +350,313 @@ export function formatAwardDate(dateStr: string | null | undefined): string {
     year: 'numeric',
   });
 }
+
+// ============================================================================
+// Parts Search Types
+// ============================================================================
+
+export type PartsSearchType = 'nsn' | 'niin' | 'fsc' | 'description' | 'keyword';
+
+export interface PartSearchResult {
+  id: number;
+  nsn: string;
+  niin: string | null;
+  fsc: string | null;
+  description: string | null;
+  unit_of_issue: string | null;
+  unit_price: number | null;
+}
+
+export interface PartSearchResponse {
+  results: PartSearchResult[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface PartDetail {
+  id: number;
+  nsn: string;
+  niin: string | null;
+  fsc: string | null;
+  description: string | null;
+  unit_of_issue: string | null;
+  unit_price: number | null;
+}
+
+export interface PartDetailResponse {
+  part: PartDetail;
+}
+
+export interface PartProcurementRecord {
+  id: number;
+  contract_number: string | null;
+  contract_date: string | null;
+  cage_code: string | null;
+  vendor_name: string | null;
+  quantity: number | null;
+  unit_price: number | null;
+  total_value: number | null;
+  delivery_code: string | null;
+  source_code: string | null;
+}
+
+export interface PartProcurementHistoryResponse {
+  nsn: string;
+  records: PartProcurementRecord[];
+  total_count: number;
+}
+
+export interface PartSolicitation {
+  solicitation_id: number;
+  solicitation_number: string;
+  agency_code: string | null;
+  close_date: string | null;
+  status: string | null;
+  set_aside: string | null;
+  quantity: number | null;
+  unit_price: number | null;
+  estimated_value: number | null;
+}
+
+export interface PartSolicitationsResponse {
+  nsn: string;
+  solicitations: PartSolicitation[];
+  total_count: number;
+}
+
+export interface PartManufacturer {
+  cage_code: string;
+  vendor_name: string | null;
+  part_number: string | null;
+  rncc: string | null;
+  rnvc: string | null;
+  source_code: string | null;
+}
+
+export interface PartManufacturersResponse {
+  nsn: string;
+  manufacturers: PartManufacturer[];
+  total_count: number;
+}
+
+export interface PartTechnicalCharacteristic {
+  name: string;
+  value: string | null;
+  unit: string | null;
+}
+
+export interface PartTechnicalCharacteristicsResponse {
+  nsn: string;
+  characteristics: PartTechnicalCharacteristic[];
+  total_count: number;
+}
+
+export interface EndUseDescription {
+  description: string;
+}
+
+export interface PartEndUseDescriptionResponse {
+  nsn: string;
+  descriptions: EndUseDescription[];
+  total_count: number;
+}
+
+export interface PartPackaging {
+  qup: string | null;
+  pres_mthd: string | null;
+  clng_dry: string | null;
+  presv_mat: string | null;
+  wrap_mat: string | null;
+  cush_dunn_mat: string | null;
+  cush_dunn_thkness: string | null;
+  unit_cont: string | null;
+  opi: string | null;
+  intrcdte_cont: string | null;
+  intrcdte_cont_qty: string | null;
+  special_marking_code: string | null;
+  packaging_data: string | null;
+  marking_text: string | null;
+}
+
+export interface PartPackagingResponse {
+  nsn: string;
+  packaging: PartPackaging | null;
+  code_definitions: Record<string, string>;
+  marking_code_definitions: Record<string, string>;
+}
+
+// Parts search type configuration
+export interface PartsSearchTypeConfig {
+  value: PartsSearchType;
+  label: string;
+  description: string;
+  placeholder: string;
+  minLength: number;
+  maxLength: number;
+  pattern?: RegExp;
+  patternError?: string;
+}
+
+export const PARTS_SEARCH_TYPE_CONFIGS: PartsSearchTypeConfig[] = [
+  {
+    value: 'nsn',
+    label: 'NSN',
+    description: 'National Stock Number (FSC + NIIN)',
+    placeholder: 'Enter NSN (e.g., 5306-001234567 or 5340-00-000-0060)',
+    minLength: 4,
+    maxLength: 25,
+    // Allow flexible dash placement - NSN can have dashes anywhere
+    // Backend will parse and extract FSC (4) + NIIN (9) from any format
+    // Pattern allows alphanumeric with optional dashes anywhere
+    pattern: /^[A-Za-z0-9\-]+$/,
+    patternError: 'NSN must contain only alphanumeric characters and dashes',
+  },
+  {
+    value: 'niin',
+    label: 'NIIN',
+    description: 'National Item Identification Number',
+    placeholder: 'Enter 9-character NIIN',
+    minLength: 9,
+    maxLength: 9,
+    pattern: /^[A-Za-z0-9]{9}$/,
+    patternError: 'NIIN must be exactly 9 alphanumeric characters',
+  },
+  {
+    value: 'fsc',
+    label: 'FSC',
+    description: 'Federal Supply Classification',
+    placeholder: 'Enter 4-character FSC',
+    minLength: 4,
+    maxLength: 4,
+    pattern: /^[A-Za-z0-9]{4}$/,
+    patternError: 'FSC must be exactly 4 alphanumeric characters',
+  },
+  {
+    value: 'description',
+    label: 'Description',
+    description: 'Part description text',
+    placeholder: 'Enter part description (min 3 chars)',
+    minLength: 3,
+    maxLength: 255,
+  },
+  {
+    value: 'keyword',
+    label: 'Keyword',
+    description: 'Search NSN, NIIN, FSC, or description',
+    placeholder: 'Enter keyword (min 3 chars)',
+    minLength: 3,
+    maxLength: 255,
+  },
+];
+
+// Helper function to get config for a parts search type
+export function getPartsSearchTypeConfig(type: PartsSearchType): PartsSearchTypeConfig {
+  const config = PARTS_SEARCH_TYPE_CONFIGS.find((c) => c.value === type);
+  if (!config) {
+    throw new Error(`Unknown parts search type: ${type}`);
+  }
+  return config;
+}
+
+// Helper function to validate parts search input
+export function validatePartsSearchInput(
+  type: PartsSearchType,
+  value: string
+): { valid: boolean; error?: string } {
+  const config = getPartsSearchTypeConfig(type);
+  const trimmed = value.trim();
+
+  if (trimmed.length < config.minLength) {
+    return {
+      valid: false,
+      error: `Minimum ${config.minLength} characters required`,
+    };
+  }
+
+  if (trimmed.length > config.maxLength) {
+    return {
+      valid: false,
+      error: `Maximum ${config.maxLength} characters allowed`,
+    };
+  }
+
+  if (config.pattern && !config.pattern.test(trimmed)) {
+    return {
+      valid: false,
+      error: config.patternError || 'Invalid format',
+    };
+  }
+
+  return { valid: true };
+}
+
+// Helper function to build parts search params for API call
+export function buildPartsSearchParams(
+  type: PartsSearchType,
+  query: string,
+  limit: number = 50,
+  offset: number = 0
+): URLSearchParams {
+  const params = new URLSearchParams();
+
+  // Map search type to API parameter
+  switch (type) {
+    case 'nsn':
+      // Normalize NSN format (remove dashes, spaces)
+      const nsnClean = query.trim().replace(/[- ]/g, '').toUpperCase();
+      params.set('nsn', nsnClean);
+      break;
+    case 'niin':
+      // Normalize NIIN by removing dashes and spaces
+      const niinClean = query.trim().replace(/[- ]/g, '').toUpperCase();
+      params.set('niin', niinClean);
+      break;
+    case 'fsc':
+      params.set('fsc', query.trim().toUpperCase());
+      break;
+    case 'description':
+      params.set('q', query.trim());
+      break;
+    case 'keyword':
+      params.set('q', query.trim());
+      break;
+  }
+
+  params.set('limit', limit.toString());
+  params.set('offset', offset.toString());
+
+  return params;
+}
+
+// Format NSN for display: "5306-001234567" or "5306001234567" → "5306-001234567"
+export function formatNSN(nsn: string | null | undefined): string | null {
+  if (!nsn) return null;
+  
+  // Remove existing dashes and spaces
+  const clean = nsn.replace(/[- ]/g, '').toUpperCase();
+  
+  // If it's 13 characters, format as FSC-NIIN
+  if (clean.length === 13) {
+    return `${clean.slice(0, 4)}-${clean.slice(4)}`;
+  }
+  
+  // If it already has a dash in the right place, return as-is
+  if (nsn.includes('-') && nsn.length === 14) {
+    return nsn.toUpperCase();
+  }
+  
+  // Otherwise return cleaned version
+  return clean;
+}
+
+// Format contract date
+export function formatContractDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}

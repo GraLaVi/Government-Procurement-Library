@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { VendorSearchForm, VendorSearchFormRef } from "@/components/library/VendorSearchForm";
 import { VendorResultsList } from "@/components/library/VendorResultsList";
@@ -50,14 +51,46 @@ export default function VendorSearchPage() {
   // Ref for search form to control focus
   const searchFormRef = useRef<VendorSearchFormRef>(null);
 
-  // Load last search on mount
+  // Get URL search params
+  const searchParams = useSearchParams();
+
+  // Auto-execute search from URL parameters on mount
   useEffect(() => {
-    if (lastAction && lastAction.action_data) {
+    const cageCode = searchParams.get('cage_code');
+    const uei = searchParams.get('uei');
+    const duns = searchParams.get('duns');
+    const contactEmail = searchParams.get('contact_email');
+    const query = searchParams.get('q');
+
+    // Auto-execute search if URL params exist
+    if (cageCode) {
+      setInitialSearchType('cage');
+      setInitialSearchQuery(cageCode);
+      handleSearch('cage', cageCode);
+    } else if (uei) {
+      setInitialSearchType('uei');
+      setInitialSearchQuery(uei);
+      handleSearch('uei', uei);
+    } else if (duns) {
+      setInitialSearchType('duns');
+      setInitialSearchQuery(duns);
+      handleSearch('duns', duns);
+    } else if (contactEmail) {
+      setInitialSearchType('contact_email');
+      setInitialSearchQuery(contactEmail);
+      handleSearch('contact_email', contactEmail);
+    } else if (query) {
+      setInitialSearchType('entity_name');
+      setInitialSearchQuery(query);
+      handleSearch('entity_name', query);
+    } else if (lastAction && lastAction.action_data) {
+      // Fall back to last action if no URL params
       const actionData = lastAction.action_data as VendorSearchActionData;
       setInitialSearchType(actionData.query_type as VendorSearchType);
       setInitialSearchQuery(actionData.query);
     }
-  }, [lastAction]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   // Focus search input on mount
   useEffect(() => {
@@ -144,6 +177,30 @@ export default function VendorSearchPage() {
       setIsSearching(false);
     }
   }, [addAction, handleSelectVendor]);
+
+  // Auto-execute search from URL parameters (separate effect to avoid dependency issues)
+  useEffect(() => {
+    const cageCode = searchParams.get('cage_code');
+    const uei = searchParams.get('uei');
+    const duns = searchParams.get('duns');
+    const contactEmail = searchParams.get('contact_email');
+    const query = searchParams.get('q');
+
+    // Only auto-execute if we haven't searched yet and URL params exist
+    if (!hasSearched) {
+      if (cageCode) {
+        handleSearch('cage', cageCode);
+      } else if (uei) {
+        handleSearch('uei', uei);
+      } else if (duns) {
+        handleSearch('duns', duns);
+      } else if (contactEmail) {
+        handleSearch('contact_email', contactEmail);
+      } else if (query) {
+        handleSearch('entity_name', query);
+      }
+    }
+  }, [searchParams, hasSearched, handleSearch]);
 
   // Handle back to results
   const handleBackToResults = useCallback(() => {
