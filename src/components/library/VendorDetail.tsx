@@ -1,5 +1,17 @@
 "use client";
 
+// ============================================================================
+// Typography Standards - Applied consistently across all tabs
+// ============================================================================
+// These classes should be used consistently throughout the component:
+// - Labels: "text-xs text-muted font-medium"
+// - Values (regular): "text-xs font-medium text-foreground"
+// - Values (monospace/codes): "text-xs font-mono font-semibold"
+// - Table cells: "text-xs" (base size for all table content)
+// - Count/status text: "text-xs text-muted"
+// - Loading/error messages: "text-xs text-muted" or "text-xs text-error"
+// - Empty states: "text-xs text-muted"
+// ============================================================================
 import { useState, useCallback, useMemo } from "react";
 import {
   VendorDetail as VendorDetailType,
@@ -181,10 +193,10 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
   return (
     <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border bg-muted-light">
+      <div className="px-3 py-2 border-b border-border bg-muted-light">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-foreground truncate">
+            <h2 className="text-xs font-semibold text-foreground truncate">
               {vendor.legal_business_name || "Unknown Vendor"}
             </h2>
             {vendor.dba_name && vendor.dba_name !== vendor.legal_business_name && (
@@ -217,7 +229,7 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
       </div>
 
       {/* Tab Panels */}
-      <div className="p-4">
+      <div className="p-3">
         <TabPanel tabId="demographics" activeTab={activeTab}>
           <DemographicsPanel
             vendor={vendor}
@@ -310,26 +322,26 @@ function DemographicsPanel({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Hero Card - Company Name */}
-      <div className="bg-gradient-to-br from-blue-500/5 to-blue-600/10 rounded-xl p-6 border border-blue-500/10">
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-blue-500/10 rounded-lg flex-shrink-0">
-            <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <div className="bg-gradient-to-br from-blue-500/5 to-blue-600/10 rounded-xl p-4 border border-blue-500/10">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-blue-500/10 rounded-lg flex-shrink-0">
+            <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m2.25-18h15.75m-15.75 0v3.75M21 12H10.5m10.5 4.5H10.5M21 18H10.5m-7.5-6.75V12m0 4.5v1.5m0-6V9.75A2.25 2.25 0 019 7.5h1.5A2.25 2.25 0 0112.75 9.75V12m-3.75 3.75V18A2.25 2.25 0 009 20.25H7.5A2.25 2.25 0 015.25 18v-2.25" />
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-foreground mb-2 leading-tight">
+            <h2 className="text-xs font-semibold text-foreground mb-2 leading-tight">
               {vendor.legal_business_name}
             </h2>
             {vendor.dba_name && vendor.dba_name !== vendor.legal_business_name && (
-              <div className="mb-3">
-                <span className="text-sm text-muted">DBA: </span>
-                <span className="text-sm font-medium text-foreground">{vendor.dba_name}</span>
+              <div className="mb-2">
+                <span className="text-xs text-muted">DBA: </span>
+                <span className="text-xs font-medium text-foreground">{vendor.dba_name}</span>
               </div>
             )}
-            <div className="flex flex-wrap items-center gap-3 text-sm">
+            <div className="flex flex-wrap items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                 <span className="font-mono font-medium text-blue-600">{vendor.cage_code}</span>
@@ -352,22 +364,22 @@ function DemographicsPanel({
       </div>
 
       {/* Information Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {/* Identifiers Card */}
         <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-b border-border">
-            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <div className="px-3 py-2 bg-muted-light border-b border-border">
+            <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
               <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0z" />
               </svg>
               Identifiers
             </h3>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-3 space-y-2">
             {identifiers.map((item) => (
               <div key={item.label} className="flex items-center justify-between">
-                <span className="text-sm text-muted font-medium">{item.label}</span>
-                <span className="text-sm font-mono font-semibold text-blue-600 bg-blue-600/5 px-2 py-1 rounded">
+                <span className="text-xs text-muted font-medium">{item.label}</span>
+                <span className="text-xs font-mono font-semibold text-blue-600 bg-blue-600/5 px-2 py-1 rounded">
                   {item.value}
                 </span>
               </div>
@@ -377,29 +389,29 @@ function DemographicsPanel({
 
         {/* Business Information Card */}
         <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-b border-border">
-            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <div className="px-3 py-2 bg-muted-light border-b border-border">
+            <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
               <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
               </svg>
               Business Details
             </h3>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-3 space-y-2">
             {businessInfo.map((item) => (
               <div key={item.label} className="flex items-start justify-between gap-2">
-                <span className="text-sm text-muted font-medium">{item.label}</span>
+                <span className="text-xs text-muted font-medium">{item.label}</span>
                 {item.isLink && item.value ? (
                   <a
                     href={item.value.startsWith("http") ? item.value : `https://${item.value}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium text-right max-w-[160px] break-words"
+                    className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium text-right max-w-[160px] break-words"
                   >
                     {item.value}
                   </a>
                 ) : (
-                  <span className="text-sm font-medium text-foreground text-right max-w-[160px] break-words">
+                  <span className="text-xs font-medium text-foreground text-right max-w-[160px] break-words">
                     {item.value}
                   </span>
                 )}
@@ -410,19 +422,19 @@ function DemographicsPanel({
 
         {/* Registration & Status Card */}
         <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-b border-border">
-            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <div className="px-3 py-2 bg-muted-light border-b border-border">
+            <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
               <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
               </svg>
               Registration
             </h3>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-3 space-y-2">
             {registration.map((item) => (
               <div key={item.label} className="flex items-center justify-between gap-2">
-                <span className="text-sm text-muted font-medium">{item.label}</span>
-                <span className={`text-sm font-medium ${
+                <span className="text-xs text-muted font-medium">{item.label}</span>
+                <span className={`text-xs font-medium ${
                   item.label === "SAM Status" && item.value === "Active" ? "text-green-700" :
                   item.label === "Exclusion" && item.value === "Excluded" ? "text-red-700" :
                   "text-foreground"
@@ -437,11 +449,11 @@ function DemographicsPanel({
 
       {/* Address Section */}
       {(physicalAddress || mailingAddress) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {physicalAddress && (
             <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
-              <div className="px-4 py-3 bg-slate-50 border-b border-border">
-                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <div className="px-3 py-2 bg-muted-light border-b border-border">
+                <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
                   <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
@@ -449,7 +461,7 @@ function DemographicsPanel({
                   Physical Address
                 </h3>
               </div>
-              <div className="p-4">
+              <div className="p-3">
                 <AddressDisplay address={physicalAddress} />
               </div>
             </div>
@@ -457,15 +469,15 @@ function DemographicsPanel({
 
           {mailingAddress && mailingAddress !== physicalAddress && (
             <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
-              <div className="px-4 py-3 bg-slate-50 border-b border-border">
-                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <div className="px-3 py-2 bg-muted-light border-b border-border">
+                <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
                   <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                   </svg>
                   Mailing Address
                 </h3>
               </div>
-              <div className="p-4">
+              <div className="p-3">
                 <AddressDisplay address={mailingAddress} />
               </div>
             </div>
@@ -575,7 +587,7 @@ function ContactsPanel({ contacts }: ContactsPanelProps) {
             d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
           />
         </svg>
-        <h3 className="text-sm font-medium text-foreground mb-1">No Contacts Available</h3>
+        <h3 className="text-xs font-medium text-foreground mb-1">No Contacts Available</h3>
         <p className="text-xs text-muted">No contact information is available for this vendor</p>
       </div>
     );
@@ -628,7 +640,7 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
         accessorKey: "contract_number",
         header: "Contract #",
         cell: ({ row }) => (
-          <span className="font-mono">{row.original.contract_number}</span>
+          <span className="text-xs font-mono">{row.original.contract_number}</span>
         ),
       },
       {
@@ -659,7 +671,7 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
         accessorKey: "award_quantity",
         header: () => <span className="w-full text-right block">Qty</span>,
         cell: ({ row }) => (
-          <span className="text-right block">
+          <span className="text-xs text-right block">
             {formatNumber(row.original.award_quantity)}
           </span>
         ),
@@ -670,7 +682,7 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
         accessorKey: "unit_price",
         header: () => <span className="w-full text-right block">Unit Price</span>,
         cell: ({ row }) => (
-          <span className="text-right block">
+          <span className="text-xs text-right block">
             {formatCurrency(row.original.unit_price)}
           </span>
         ),
@@ -681,7 +693,7 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
         accessorKey: "total_value",
         header: () => <span className="w-full text-right block">Total</span>,
         cell: ({ row }) => (
-          <span className="font-medium text-right block">
+          <span className="text-xs font-medium text-right block">
             {formatCurrency(row.original.total_value)}
           </span>
         ),
@@ -692,7 +704,7 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
         accessorKey: "agency_code",
         header: "Agency",
         cell: ({ row }) => (
-          <span className="text-muted">{row.original.agency_code || "—"}</span>
+          <span className="text-xs text-muted">{row.original.agency_code || "—"}</span>
         ),
         meta: { className: "hidden sm:table-cell" },
       },
@@ -717,7 +729,7 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <h3 className="text-sm font-medium text-foreground mb-1">Error Loading Awards</h3>
+        <h3 className="text-xs font-medium text-foreground mb-1">Error Loading Awards</h3>
         <p className="text-xs text-muted mb-3">{error}</p>
         <button
           onClick={onRetry}
@@ -745,7 +757,7 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
           d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
         />
       </svg>
-      <h3 className="text-sm font-medium text-foreground mb-1">No Awards Found</h3>
+      <h3 className="text-xs font-medium text-foreground mb-1">No Awards Found</h3>
       <p className="text-xs text-muted">No recent contract awards are available for this vendor</p>
     </div>
   );
@@ -795,7 +807,7 @@ function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPa
         accessorKey: "month_label",
         header: "Month",
         cell: ({ row }) => (
-          <span className="font-medium whitespace-nowrap">
+          <span className="text-xs font-medium whitespace-nowrap">
             {row.original.month_label}
           </span>
         ),
@@ -806,7 +818,7 @@ function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPa
         header: () => <span className="w-full text-right block">DSCP</span>,
         cell: ({ row }) => (
           <div className="text-right">
-            <div>{row.original.dscp_booked > 0 ? formatCurrency(row.original.dscp_booked) : "—"}</div>
+            <div className="text-xs">{row.original.dscp_booked > 0 ? formatCurrency(row.original.dscp_booked) : "—"}</div>
             {row.original.dscp_rank && <div className="text-[10px] text-muted">Rank {row.original.dscp_rank}</div>}
           </div>
         ),
@@ -818,7 +830,7 @@ function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPa
         header: () => <span className="w-full text-right block">DSCR</span>,
         cell: ({ row }) => (
           <div className="text-right">
-            <div>{row.original.dscr_booked > 0 ? formatCurrency(row.original.dscr_booked) : "—"}</div>
+            <div className="text-xs">{row.original.dscr_booked > 0 ? formatCurrency(row.original.dscr_booked) : "—"}</div>
             {row.original.dscr_rank && <div className="text-[10px] text-muted">Rank {row.original.dscr_rank}</div>}
           </div>
         ),
@@ -830,7 +842,7 @@ function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPa
         header: () => <span className="w-full text-right block">DSCC</span>,
         cell: ({ row }) => (
           <div className="text-right">
-            <div>{row.original.dscc_booked > 0 ? formatCurrency(row.original.dscc_booked) : "—"}</div>
+            <div className="text-xs">{row.original.dscc_booked > 0 ? formatCurrency(row.original.dscc_booked) : "—"}</div>
             {row.original.dscc_rank && <div className="text-[10px] text-muted">Rank {row.original.dscc_rank}</div>}
           </div>
         ),
@@ -842,7 +854,7 @@ function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPa
         header: () => <span className="w-full text-right block">Other</span>,
         cell: ({ row }) => (
           <div className="text-right">
-            <div>{row.original.other_booked > 0 ? formatCurrency(row.original.other_booked) : "—"}</div>
+            <div className="text-xs">{row.original.other_booked > 0 ? formatCurrency(row.original.other_booked) : "—"}</div>
             {row.original.other_rank && <div className="text-[10px] text-muted">Rank {row.original.other_rank}</div>}
           </div>
         ),
@@ -853,7 +865,7 @@ function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPa
         accessorKey: "month_total",
         header: () => <span className="w-full text-right block">Total</span>,
         cell: ({ row }) => (
-          <span className="font-medium text-right block">
+          <span className="text-xs font-medium text-right block">
             {formatCurrency(row.original.month_total)}
           </span>
         ),
@@ -880,11 +892,11 @@ function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPa
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <h3 className="text-sm font-medium text-foreground mb-1">Error Loading Bookings</h3>
+        <h3 className="text-xs font-medium text-foreground mb-1">Error Loading Bookings</h3>
         <p className="text-xs text-muted mb-3">{error}</p>
         <button
           onClick={onRetry}
-          className="text-xs text-primary hover:underline"
+          className="text-sm text-primary hover:underline"
         >
           Try again
         </button>
@@ -908,7 +920,7 @@ function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPa
           d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
         />
       </svg>
-      <h3 className="text-sm font-medium text-foreground mb-1">No Booking Data</h3>
+      <h3 className="text-xs font-medium text-foreground mb-1">No Booking Data</h3>
       <p className="text-xs text-muted">No contract booking data is available for this vendor</p>
     </div>
   );
@@ -924,23 +936,23 @@ function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPa
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div>
               <p className="text-[10px] text-muted uppercase">DSCP</p>
-              <p className="text-sm font-medium text-foreground">{formatCurrency(totals.dscp_total)}</p>
+              <p className="text-xs font-medium text-foreground">{formatCurrency(totals.dscp_total)}</p>
             </div>
             <div>
               <p className="text-[10px] text-muted uppercase">DSCR</p>
-              <p className="text-sm font-medium text-foreground">{formatCurrency(totals.dscr_total)}</p>
+              <p className="text-xs font-medium text-foreground">{formatCurrency(totals.dscr_total)}</p>
             </div>
             <div>
               <p className="text-[10px] text-muted uppercase">DSCC</p>
-              <p className="text-sm font-medium text-foreground">{formatCurrency(totals.dscc_total)}</p>
+              <p className="text-xs font-medium text-foreground">{formatCurrency(totals.dscc_total)}</p>
             </div>
             <div>
               <p className="text-[10px] text-muted uppercase">Other</p>
-              <p className="text-sm font-medium text-foreground">{formatCurrency(totals.other_total)}</p>
+              <p className="text-xs font-medium text-foreground">{formatCurrency(totals.other_total)}</p>
             </div>
             <div>
               <p className="text-[10px] text-muted uppercase">Grand Total</p>
-              <p className="text-sm font-bold text-primary">{formatCurrency(totals.grand_total)}</p>
+              <p className="text-xs font-bold text-primary">{formatCurrency(totals.grand_total)}</p>
             </div>
           </div>
         </div>
@@ -995,7 +1007,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           const closeDate = new Date(row.original.close_date);
           const isExpired = closeDate.getTime() < Date.now();
           return (
-            <span className={`whitespace-nowrap ${isExpired ? 'text-muted italic' : ''}`}>
+            <span className={`text-xs whitespace-nowrap ${isExpired ? 'text-muted italic' : ''}`}>
               {formatAwardDate(row.original.close_date)}
               {isExpired && <span className="ml-1 text-[10px] not-italic">(closed)</span>}
             </span>
@@ -1007,7 +1019,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorKey: "solicitation_number",
         header: "Solicitation #",
         cell: ({ row }) => (
-          <span className="font-mono">{row.original.solicitation_number}</span>
+          <span className="text-xs font-mono">{row.original.solicitation_number}</span>
         ),
       },
       {
@@ -1015,7 +1027,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorFn: (row) => row.fsc && row.niin ? `${row.fsc}-${row.niin}` : row.niin,
         header: "NSN",
         cell: ({ row }) => (
-          <span className="font-mono text-muted">
+          <span className="text-xs font-mono text-muted">
             {row.original.fsc && row.original.niin
               ? `${row.original.fsc}-${formatNiin(row.original.niin)}`
               : formatNiin(row.original.niin) || "—"}
@@ -1028,7 +1040,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorKey: "description",
         header: "Description",
         cell: ({ row }) => (
-          <span className="max-w-[200px] truncate block" title={row.original.description || undefined}>
+          <span className="text-xs max-w-[200px] truncate block" title={row.original.description || undefined}>
             {row.original.description || "—"}
           </span>
         ),
@@ -1038,7 +1050,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorKey: "quantity",
         header: () => <span className="w-full text-right block">Qty</span>,
         cell: ({ row }) => (
-          <span className="text-right block">
+          <span className="text-xs text-right block">
             {formatNumber(row.original.quantity)}
           </span>
         ),
@@ -1049,7 +1061,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorKey: "estimated_value",
         header: () => <span className="w-full text-right block">Est. Value</span>,
         cell: ({ row }) => (
-          <span className="text-right block">
+          <span className="text-xs text-right block">
             {row.original.estimated_value ? formatCurrency(row.original.estimated_value) : "—"}
           </span>
         ),
@@ -1090,7 +1102,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
               </a>
             );
           }
-          return <span className="text-muted">{sol.agency_code || "—"}</span>;
+          return <span className="text-xs text-muted">{sol.agency_code || "—"}</span>;
         },
         meta: { className: "hidden lg:table-cell" },
       },
@@ -1115,11 +1127,11 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <h3 className="text-sm font-medium text-foreground mb-1">Error Loading Solicitations</h3>
+        <h3 className="text-xs font-medium text-foreground mb-1">Error Loading Solicitations</h3>
         <p className="text-xs text-muted mb-3">{error}</p>
         <button
           onClick={onRetry}
-          className="text-xs text-primary hover:underline"
+          className="text-sm text-primary hover:underline"
         >
           Try again
         </button>
@@ -1143,7 +1155,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
         />
       </svg>
-      <h3 className="text-sm font-medium text-foreground mb-1">No Open Solicitations</h3>
+      <h3 className="text-xs font-medium text-foreground mb-1">No Open Solicitations</h3>
       <p className="text-xs text-muted">No open solicitations are available for this vendor&apos;s parts</p>
     </div>
   );
