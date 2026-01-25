@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/contexts/AuthContext";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
@@ -44,7 +45,7 @@ export default function ProfilePage() {
     setSuccess(false);
 
     try {
-      const response = await fetch("/api/auth/profile", {
+      const response = await fetchWithAuth("/api/auth/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

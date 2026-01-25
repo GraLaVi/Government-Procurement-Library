@@ -85,14 +85,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser();
   }, [refreshUser]);
 
-  // Redirect to login when authentication fails after initial load
+  // Only redirect to login on initial page load when user is not authenticated
+  // Session expiration during active use will be handled by the modal
   useEffect(() => {
+    // Only redirect if:
+    // 1. Auth has been initialized (we've checked the user)
+    // 2. User is not authenticated
+    // 3. Not currently loading
+    // 4. Not on a public route
+    // 5. Not already on the login page
+    // 6. This is the initial load (hasInitialized was just set to true)
     if (hasInitialized && !state.isAuthenticated && !state.isLoading) {
       const isPublicRoute = AUTH_CONFIG.ROUTES.PUBLIC.some(
         (route) => pathname === route || pathname?.startsWith(`${route}/`)
       );
 
       if (!isPublicRoute && pathname !== AUTH_CONFIG.ROUTES.LOGIN) {
+        // Only redirect on initial page load, not on subsequent auth failures
+        // This prevents redirect loops when session expires during active use
         const loginUrl = `${AUTH_CONFIG.ROUTES.LOGIN}?redirect=${encodeURIComponent(pathname || '/')}`;
         router.push(loginUrl);
       }

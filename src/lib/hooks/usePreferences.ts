@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { UserPreferences, UserPreferencesResponse } from '@/lib/preferences/types';
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
 
 export function usePreferences() {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
@@ -10,7 +11,7 @@ export function usePreferences() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch('/api/auth/me/preferences', {
+      const response = await fetchWithAuth('/api/auth/me/preferences', {
         credentials: 'include',
       });
 
@@ -32,7 +33,7 @@ export function usePreferences() {
   const updatePreferences = useCallback(async (newPreferences: Partial<UserPreferences>) => {
     try {
       setError(null);
-      const response = await fetch('/api/auth/me/preferences', {
+      const response = await fetchWithAuth('/api/auth/me/preferences', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -1,7 +1,20 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
+
+// ============================================================================
+// Typography Standards - Applied consistently across all tabs
+// ============================================================================
+// These classes should be used consistently throughout the component:
+// - Labels: "text-xs text-muted font-medium"
+// - Values (regular): "text-xs font-medium text-foreground"
+// - Values (monospace/codes): "text-xs font-mono font-semibold"
+// - Table cells: "text-xs" (base size for all table content)
+// - Count/status text: "text-xs text-muted"
+// - Loading/error messages: "text-xs text-muted" or "text-xs text-error"
+// - Empty states: "text-xs text-muted"
+// ============================================================================
 import {
   PartDetail as PartDetailType,
   PartProcurementRecord,
@@ -16,7 +29,10 @@ import {
   PartEndUseDescriptionResponse,
   PartPackaging,
   PartPackagingResponse,
+  ProcurementItemDescription,
+  ProcurementItemDescriptionResponse,
   formatNSN,
+  formatNiin,
   formatCurrency,
   formatNumber,
   formatContractDate,
@@ -24,14 +40,200 @@ import {
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 
+// ============================================================================
+// CodeTooltip Component - Shared tooltip for code definitions
+// ============================================================================
+// This component provides consistent tooltip styling across the application.
+// It matches the look and feel of tooltips on the packaging information tab.
+//
+// Usage:
+//   <CodeTooltip
+//     code="20"
+//     title="Acquisition Method Code (AMC)"
+//     content="Description of the code..."
+//     codeType="AMC"
+//   >
+//     <span>20</span>
+//   </CodeTooltip>
+//
+// Props:
+//   - code: The code value (e.g., "20", "1", "A")
+//   - title: The tooltip title/header (e.g., "Acquisition Method Code (AMC)")
+//   - content: The tooltip content/description
+//   - codeType: The code type (e.g., "AMC", "SLC", "PIC") - used to build "learn more" link
+//   - children: The element that triggers the tooltip (typically the code value)
+//
+// Features:
+//   - Smart positioning (above/below, left/right/center based on available space)
+//   - Content truncation at 150 characters with "Click to learn more" link
+//   - Clickable link to code definitions page when codeType is provided
+//   - Styled with header section and content section
+//   - Fixed positioning to avoid overflow clipping
+// ============================================================================
+
+interface CodeTooltipProps {
+  code: string;
+  title: string;
+  content: string;
+  codeType: string | null;
+  children: React.ReactNode;
+}
+
+function CodeTooltip({ code, title, content, codeType, children }: CodeTooltipProps) {
+  // Truncate content at 150 characters
+  const TRUNCATE_LENGTH = 150;
+  const shouldTruncate = content.length > TRUNCATE_LENGTH;
+  const truncatedContent = shouldTruncate 
+    ? content.substring(0, TRUNCATE_LENGTH) + '...'
+    : content;
+
+  // Build learn more URL if we have codeType
+  const learnMoreUrl = codeType 
+    ? `/library/code-definitions?code_type=${encodeURIComponent(codeType)}&code_value=${encodeURIComponent(code)}`
+    : null;
+
+  // Format tooltip text for native title attribute (plain text, no HTML)
+  // Format: "Title\nContent" (newline separates title and content)
+  const tooltipText = title && content
+    ? `${title}\n${truncatedContent}`
+    : title || truncatedContent || '';
+
+  // Use state for hover-based tooltip
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const tooltipRef = useRef<HTMLSpanElement>(null);
+
+  // Calculate tooltip position based on available space (using fixed positioning to avoid overflow clipping)
+  useEffect(() => {
+    if (showTooltip && triggerRef.current && tooltipRef.current) {
+      const triggerRect = triggerRef.current.getBoundingClientRect();
+      const tooltipRect = tooltipRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const tooltipWidth = tooltipRect.width || 288; // w-72 = 18rem = 288px
+      const tooltipHeight = tooltipRect.height || 200;
+      const spacing = 8; // mb-2 = 0.5rem = 8px
+      
+      // Calculate space on left and right
+      const spaceOnLeft = triggerRect.left;
+      const spaceOnRight = viewportWidth - triggerRect.right;
+      const spaceOnTop = triggerRect.top;
+      const spaceOnBottom = viewportHeight - triggerRect.bottom;
+      
+      // Calculate horizontal position
+      let left: number;
+      if (spaceOnLeft < tooltipWidth && spaceOnRight >= tooltipWidth) {
+        // Not enough space on left, use right alignment
+        left = triggerRect.right - tooltipWidth;
+      } else if (spaceOnRight < tooltipWidth && spaceOnLeft >= tooltipWidth) {
+        // Not enough space on right, use left alignment
+        left = triggerRect.left;
+      } else if (spaceOnLeft >= tooltipWidth / 2 && spaceOnRight >= tooltipWidth / 2) {
+        // Center the tooltip
+        left = triggerRect.left + (triggerRect.width / 2) - (tooltipWidth / 2);
+      } else {
+        // Default to left if we can't determine, but ensure it doesn't overflow
+        left = spaceOnRight > spaceOnLeft 
+          ? Math.max(8, triggerRect.right - tooltipWidth) // Right align with margin
+          : Math.min(triggerRect.left, viewportWidth - tooltipWidth - 8); // Left align with margin
+      }
+      
+      // Ensure tooltip doesn't go off-screen horizontally
+      left = Math.max(8, Math.min(left, viewportWidth - tooltipWidth - 8));
+      
+      // Calculate vertical position - prefer above, fallback to below if not enough space
+      let top: number;
+      if (spaceOnTop >= tooltipHeight + spacing) {
+        // Show above the trigger
+        top = triggerRect.top - tooltipHeight - spacing;
+      } else if (spaceOnBottom >= tooltipHeight + spacing) {
+        // Show below the trigger
+        top = triggerRect.bottom + spacing;
+      } else {
+        // Not enough space above or below, show above but adjust to fit
+        top = Math.max(8, triggerRect.top - tooltipHeight - spacing);
+      }
+      
+      setTooltipStyle({
+        position: 'fixed',
+        left: `${left}px`,
+        top: `${top}px`,
+        zIndex: 9999,
+      });
+    }
+  }, [showTooltip]);
+
+  // If no tooltip content at all, just return children without styling
+  if (!tooltipText) {
+    return <>{children}</>;
+  }
+
+  // Render children as link if codeType is available, otherwise just the children
+  const codeElement = codeType && learnMoreUrl ? (
+    <Link
+      href={learnMoreUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary cursor-pointer underline decoration-dotted hover:decoration-solid"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {children}
+    </Link>
+  ) : (
+    children
+  );
+
+  return (
+    <span
+      ref={triggerRef}
+      className={`relative inline-block ${codeType && learnMoreUrl ? '' : 'text-primary cursor-help underline decoration-dotted hover:decoration-solid'}`}
+      aria-label={title ? `${title}: ${truncatedContent}` : truncatedContent}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      {codeElement}
+      {/* Custom tooltip on hover - show if we have content */}
+      {showTooltip && tooltipText && (
+        <span 
+          ref={tooltipRef}
+          style={tooltipStyle}
+          className="fixed w-72 max-w-[90vw] text-xs rounded shadow-lg pointer-events-auto whitespace-normal break-words overflow-hidden bg-card-bg border border-border text-foreground"
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+        >
+          {title && (
+            <div className="font-bold px-2 py-1.5 bg-muted-light text-foreground">
+              {title}
+            </div>
+          )}
+          <div className="p-2">
+            {truncatedContent}
+            {shouldTruncate && codeType && (
+              <div className="mt-2 pt-2 border-t border-border text-muted text-[11px]">
+                Click to learn more
+              </div>
+            )}
+          </div>
+        </span>
+      )}
+    </span>
+  );
+}
+
 interface PartDetailProps {
   part: PartDetailType;
 }
 
-type TabId = "overview" | "procurement" | "solicitations" | "manufacturers" | "technical" | "enduse" | "packaging";
+type TabId = "overview" | "procurement" | "solicitations" | "manufacturers" | "technical" | "enduse" | "packaging" | "procurementitemdesc";
 
 export function PartDetail({ part }: PartDetailProps) {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
+  
+  // Code definitions for tooltips
+  const [codeDefinitions, setCodeDefinitions] = useState<Record<string, string>>({});
+  // Code type names mapping (e.g., "AMC" -> "Acquisition Method Code")
+  const [codeTypeNames, setCodeTypeNames] = useState<Record<string, string>>({});
 
   // Procurement history state
   const [procurementRecords, setProcurementRecords] = useState<PartProcurementRecord[]>([]);
@@ -75,6 +277,88 @@ export function PartDetail({ part }: PartDetailProps) {
   const [isLoadingPackaging, setIsLoadingPackaging] = useState(false);
   const [packagingError, setPackagingError] = useState<string | null>(null);
   const [packagingFetched, setPackagingFetched] = useState(false);
+
+  // Procurement item description state
+  const [procurementItemDescription, setProcurementItemDescription] = useState<ProcurementItemDescription | null>(null);
+  const [isLoadingProcurementItemDesc, setIsLoadingProcurementItemDesc] = useState(false);
+  const [procurementItemDescError, setProcurementItemDescError] = useState<string | null>(null);
+  const [procurementItemDescFetched, setProcurementItemDescFetched] = useState(false);
+
+  // Fetch code definitions on component mount for overview tooltips
+  useEffect(() => {
+    const fetchCodeDefinitions = async () => {
+      try {
+        const response = await fetch('/api/library/code-definitions');
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Build a flat dictionary of code definitions
+          const definitions: Record<string, string> = {};
+          // Build a mapping of code types to their display names
+          const typeNames: Record<string, string> = {};
+          
+          // Fallback to hardcoded names - set these first as defaults
+          const CODE_TYPE_NAMES_FALLBACK: Record<string, string> = {
+            'AMC': 'Acquisition Method Code',
+            'IDS': 'Item Description Segment',
+            'PIC': 'Procurement Info Code',
+            'SLC': 'Shelf Life Code',
+            'PMC': 'Preservation Method Codes',
+            'CPMC': 'Contact Preservative Material Codes',
+            'WMC': 'Wrapping Material Codes',
+            'CDMC': 'Critical Design Manufacturing Code',
+            'TCDC': 'Thickness of Cushioning or Dunnage Codes',
+            'UICC': 'Unit and Intermediate Container Codes',
+            'OPIC': 'Optional Procedure Indicator Codes',
+            'CPC': 'Cleaning Procedure Codes',
+            'QUPC': 'Quantity Per Unit Pack Codes',
+          };
+          
+          // Initialize with fallback names
+          Object.assign(typeNames, CODE_TYPE_NAMES_FALLBACK);
+          
+          data.code_types.forEach((codeType: any) => {
+            // Store code type name (e.g., "AMC" -> "Acquisition Method Code")
+            // Use code_name from API if available, otherwise keep fallback
+            if (codeType.code_name) {
+              typeNames[codeType.code_type] = codeType.code_name;
+            }
+            // If no code_name from API, the fallback name is already set
+            
+            codeType.codes.forEach((code: any) => {
+              // Create keys like "AMC:20", "SLC:1", etc. for easy lookup
+              // code.code_value is already extracted (without type prefix) by backend
+              const codeValue = String(code.code_value || '').trim();
+              if (!codeValue) return;
+              
+              const key = `${codeType.code_type}:${codeValue}`;
+              definitions[key] = code.description;
+              
+              // Also add uppercase/lowercase variations for case-insensitive lookup
+              definitions[`${codeType.code_type}:${codeValue.toUpperCase()}`] = code.description;
+              definitions[`${codeType.code_type}:${codeValue.toLowerCase()}`] = code.description;
+              
+              // For AMC codes, also create AQM and AMS keys (AMC codes are 2 chars: first=AQM, second=AMS)
+              if (codeType.code_type === 'AMC' && codeValue.length === 2) {
+                definitions[`AQM:${codeValue[0]}`] = code.description;
+                definitions[`AMS:${codeValue[1]}`] = code.description;
+              }
+            });
+          });
+          
+          console.log('Code definitions loaded. Total keys:', Object.keys(definitions).length);
+          console.log('Code type names:', typeNames);
+          
+          setCodeDefinitions(definitions);
+          setCodeTypeNames(typeNames);
+        }
+      } catch (error) {
+        console.error('Failed to fetch code definitions:', error);
+      }
+    };
+
+    fetchCodeDefinitions();
+  }, []);
 
   // Fetch procurement history when tab is clicked (lazy loading)
   const fetchProcurementHistory = useCallback(async () => {
@@ -239,6 +523,32 @@ export function PartDetail({ part }: PartDetailProps) {
     }
   }, [part.nsn, packagingFetched, isLoadingPackaging]);
 
+  // Fetch procurement item description when tab is clicked (lazy loading)
+  const fetchProcurementItemDescription = useCallback(async () => {
+    if (procurementItemDescFetched || isLoadingProcurementItemDesc) return;
+
+    setIsLoadingProcurementItemDesc(true);
+    setProcurementItemDescError(null);
+
+    try {
+      const response = await fetch(`/api/library/parts/${encodeURIComponent(part.nsn)}/procurement-item-description`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load procurement item description');
+      }
+
+      const descriptionResponse = data as ProcurementItemDescriptionResponse;
+      setProcurementItemDescription(descriptionResponse.description);
+      setProcurementItemDescFetched(true);
+    } catch (error) {
+      console.error('Procurement item description fetch error:', error);
+      setProcurementItemDescError(error instanceof Error ? error.message : 'Failed to load procurement item description');
+    } finally {
+      setIsLoadingProcurementItemDesc(false);
+    }
+  }, [part.nsn, procurementItemDescFetched, isLoadingProcurementItemDesc]);
+
   // Handle tab change with lazy loading
   const handleTabChange = useCallback((tabId: string) => {
     setActiveTab(tabId as TabId);
@@ -254,8 +564,10 @@ export function PartDetail({ part }: PartDetailProps) {
       fetchEndUseDescriptions();
     } else if (tabId === 'packaging' && !packagingFetched) {
       fetchPackaging();
+    } else if (tabId === 'procurementitemdesc' && !procurementItemDescFetched) {
+      fetchProcurementItemDescription();
     }
-  }, [procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging]);
+  }, [procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
 
   // Build tabs dynamically with counts
   const tabs = [
@@ -290,6 +602,11 @@ export function PartDetail({ part }: PartDetailProps) {
       label: "Packaging Information",
       disabled: false
     },
+    {
+      id: "procurementitemdesc" as TabId,
+      label: "Procurement Item Description",
+      disabled: false
+    },
   ];
 
   return (
@@ -298,7 +615,7 @@ export function PartDetail({ part }: PartDetailProps) {
       <div className="px-4 py-3 border-b border-border bg-muted-light">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-foreground">
+            <h2 className="text-xs font-semibold text-foreground">
               {formatNSN(part.nsn) || part.nsn}
             </h2>
             {part.description && (
@@ -318,9 +635,9 @@ export function PartDetail({ part }: PartDetailProps) {
       </div>
 
       {/* Tab Panels */}
-      <div className="p-4">
+      <div className="p-3">
         <TabPanel tabId="overview" activeTab={activeTab}>
-          <OverviewPanel part={part} />
+          <OverviewPanel part={part} codeDefinitions={codeDefinitions} codeTypeNames={codeTypeNames} />
         </TabPanel>
 
         <TabPanel tabId="procurement" activeTab={activeTab}>
@@ -383,6 +700,15 @@ export function PartDetail({ part }: PartDetailProps) {
             onRetry={fetchPackaging}
           />
         </TabPanel>
+
+        <TabPanel tabId="procurementitemdesc" activeTab={activeTab}>
+          <ProcurementItemDescriptionPanel
+            description={procurementItemDescription}
+            isLoading={isLoadingProcurementItemDesc}
+            error={procurementItemDescError}
+            onRetry={fetchProcurementItemDescription}
+          />
+        </TabPanel>
       </div>
     </div>
   );
@@ -391,54 +717,195 @@ export function PartDetail({ part }: PartDetailProps) {
 // Overview Panel
 interface OverviewPanelProps {
   part: PartDetailType;
+  codeDefinitions: Record<string, string>;
+  codeTypeNames: Record<string, string>;
 }
 
-function OverviewPanel({ part }: OverviewPanelProps) {
+function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelProps) {
   const identifiers = [
     { label: "NSN", value: formatNSN(part.nsn), mono: true },
-    { label: "NIIN", value: part.niin, mono: true },
+    { label: "NIIN", value: formatNiin(part.niin), mono: true },
     { label: "FSC", value: part.fsc, mono: true },
   ].filter(item => item.value);
+
+
+  // Helper function to render code with tooltip (handles null values)
+  const renderCodeWithTooltip = (code: string | null, codeType: string, label: string) => {
+    let definition = 'No code available';
+    let definitionKey = null;
+    
+    if (code) {
+      // Try multiple lookup formats to match PHP logic
+      const codeStr = code.trim();
+      
+      // Primary lookup: "CODE_TYPE:code_value"
+      definitionKey = `${codeType}:${codeStr}`;
+      definition = codeDefinitions[definitionKey] || '';
+      
+      // Try uppercase/lowercase variations
+      if (!definition) {
+        definition = codeDefinitions[`${codeType}:${codeStr.toUpperCase()}`] || 
+                     codeDefinitions[`${codeType}:${codeStr.toLowerCase()}`] || '';
+      }
+      
+      // For AMC codes, try splitting (AMC codes are 2 characters, first char = AQM, second = AMS)
+      // PHP logic: splits AMC code and looks up "AQM {first}" and "AMS {second}"
+      if (!definition && codeType === 'AMC' && codeStr.length === 2) {
+        const aqmKey = `AQM:${codeStr[0]}`;
+        const amsKey = `AMS:${codeStr[1]}`;
+        const aqmDef = codeDefinitions[aqmKey];
+        const amsDef = codeDefinitions[amsKey];
+        if (aqmDef || amsDef) {
+          const parts = [];
+          if (aqmDef) parts.push(`AQM ${codeStr[0]}: ${aqmDef}`);
+          if (amsDef) parts.push(`AMS ${codeStr[1]}: ${amsDef}`);
+          definition = parts.join(' / ');
+        }
+      }
+      
+      // For DLA/IDS, also try 'DLA' code type as fallback
+      if (!definition && codeType === 'IDS') {
+        const dlaKey = `DLA:${codeStr}`;
+        definition = codeDefinitions[dlaKey] || '';
+      }
+      
+      if (!definition) {
+        definition = 'Code definition not available';
+        console.log(`No definition found for ${codeType}:${codeStr}. Available keys:`, 
+          Object.keys(codeDefinitions).filter(k => k.startsWith(codeType)).slice(0, 10));
+      }
+    }
+    
+    // Build title in format: "CODE_TYPE - Code Name" (e.g., "AMC - Acquisition Method Code")
+    const codeTypeName = codeTypeNames[codeType] || codeType;
+    const title = `${codeType} - ${codeTypeName}`;
+    const content = definition;
+    const displayValue = code || '—';
+    
+    return (
+      <div key={codeType} className="flex items-center justify-between">
+        <span className="text-xs text-muted font-medium">{label}</span>
+        <span className="text-xs font-mono font-semibold">
+          {code ? (
+            <CodeTooltip
+              code={code}
+              title={title}
+              content={content}
+              codeType={codeType}
+            >
+              <span className="text-primary underline decoration-dotted hover:decoration-solid">
+                {displayValue}
+              </span>
+            </CodeTooltip>
+          ) : (
+            <span className="text-muted">{displayValue}</span>
+          )}
+        </span>
+      </div>
+    );
+  };
+
+  // Always show these 4 codes, even if null
+  // Code types match library_code_definitions table
+  const codesToDisplay = [
+    { code: part.idsind, type: 'IDS', label: 'DLA' },  // ids_indicator uses 'IDS' code type
+    { code: part.amcode, type: 'AMC', label: 'AMC' },  // acquisition_method_code uses 'AMC' code type
+    { code: part.picode, type: 'PIC', label: 'PIC' },  // pi_code uses 'PIC' code type
+    { code: part.slc, type: 'SLC', label: 'SLC' },     // shelf_life_code uses 'SLC' code type
+  ];
 
   const partInfo = [
     { label: "Description", value: part.description },
     { label: "Unit of Issue", value: part.unit_of_issue },
-    { label: "Unit Price", value: part.unit_price ? formatCurrency(part.unit_price) : null },
-  ].filter(item => item.value);
+    { label: "Standard Cost", value: part.gac != null ? formatCurrency(part.gac) : null },
+  ].filter(item => item.value != null && item.value !== "");
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {/* Left Column: Identifiers */}
-      <div className="bg-muted-light rounded-lg p-3">
-        <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
-          Identifiers
-        </h3>
-        <div className="space-y-1.5">
-          {identifiers.map((item) => (
-            <div key={item.label} className="flex items-center justify-between">
-              <span className="text-xs text-muted">{item.label}</span>
-              <span className={`text-xs font-medium ${item.mono ? "font-mono text-primary" : "text-foreground"}`}>
-                {item.value}
-              </span>
+    <div className="space-y-4">
+      {/* Hero Card - Part Description */}
+      <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-6 border border-primary/10">
+        <div className="flex items-start gap-4">
+          <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+            <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m18 0A2.25 2.25 0 0119.5 19.5h-15A2.25 2.25 0 012.25 17.25m18 0V9a2.25 2.25 0 00-2.25-2.25h-15A2.25 2.25 0 002.25 9v8.25" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold text-foreground mb-2 leading-tight">
+              {part.description || "Part Description Not Available"}
+            </h2>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                <span className="font-mono font-medium text-primary">{formatNSN(part.nsn)}</span>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
       </div>
 
-      {/* Right Column: Part Info */}
-      <div className="bg-muted-light rounded-lg p-3">
-        <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
-          Part Information
-        </h3>
-        <div className="space-y-1.5">
-          {partInfo.map((item) => (
-            <div key={item.label} className="flex items-start justify-between gap-2">
-              <span className="text-xs text-muted flex-shrink-0">{item.label}</span>
-              <span className="text-xs font-medium text-foreground text-right">
-                {item.value}
-              </span>
-            </div>
-          ))}
+      {/* Information Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {/* Identifiers Card */}
+        <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-muted-light border-b border-border">
+            <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
+              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.627 2.707-3.227V6.741c0-1.6-1.123-2.994-2.707-3.227A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.514C3.373 3.747 2.25 5.141 2.25 6.741v6.018z" />
+              </svg>
+              Identifiers
+            </h3>
+          </div>
+          <div className="p-4 space-y-3">
+            {identifiers.map((item) => (
+              <div key={item.label} className="flex items-center justify-between">
+                <span className="text-xs text-muted font-medium">{item.label}</span>
+                <span className="text-xs font-mono font-semibold text-primary bg-primary/5 px-2 py-1 rounded">
+                  {item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Part Details Card */}
+        <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-muted-light border-b border-border">
+            <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
+              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+              </svg>
+              Part Details
+            </h3>
+          </div>
+          <div className="p-4 space-y-3">
+            {partInfo.map((item) => (
+              <div key={item.label} className="flex items-start justify-between gap-2">
+                <span className="text-xs text-muted font-medium">{item.label}</span>
+                <span className="text-xs font-medium text-foreground text-right max-w-[200px] break-words">
+                  {item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Codes Card - Always show the 4 required codes */}
+        <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-muted-light border-b border-border">
+            <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
+              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+              </svg>
+              Part Codes
+            </h3>
+          </div>
+          <div className="p-4 space-y-3">
+            {codesToDisplay.map((item) => 
+              renderCodeWithTooltip(item.code, item.type, item.label)
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -462,7 +929,7 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
         accessorKey: "contract_number",
         header: "Contract #",
         cell: ({ row }) => (
-          <span className="font-mono text-xs">{row.original.contract_number || "—"}</span>
+          <span className="text-xs font-mono font-semibold">{row.original.contract_number || "—"}</span>
         ),
       },
       {
@@ -470,7 +937,7 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
         accessorKey: "contract_date",
         header: "Date",
         cell: ({ row }) => (
-          <span className="text-xs">{formatContractDate(row.original.contract_date)}</span>
+          <span className="text-xs font-medium text-foreground">{formatContractDate(row.original.contract_date)}</span>
         ),
       },
       {
@@ -478,7 +945,7 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
         accessorKey: "cage_code",
         header: "CAGE",
         cell: ({ row }) => (
-          <span className="font-mono text-xs text-primary">
+          <span className="text-xs font-mono font-semibold text-primary">
             {row.original.cage_code || "—"}
           </span>
         ),
@@ -489,7 +956,7 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
         accessorKey: "vendor_name",
         header: "Vendor",
         cell: ({ row }) => (
-          <span className="text-xs truncate max-w-[200px]">
+          <span className="text-xs font-medium text-foreground truncate max-w-[200px]">
             {row.original.vendor_name || "—"}
           </span>
         ),
@@ -500,7 +967,7 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
         accessorKey: "quantity",
         header: () => <span className="w-full text-right block">Qty</span>,
         cell: ({ row }) => (
-          <span className="text-right block text-xs">
+          <span className="text-right block text-xs font-medium text-foreground">
             {formatNumber(row.original.quantity)}
           </span>
         ),
@@ -510,7 +977,7 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
         accessorKey: "unit_price",
         header: () => <span className="w-full text-right block">Unit Price</span>,
         cell: ({ row }) => (
-          <span className="text-right block text-xs">
+          <span className="text-right block text-xs font-medium text-foreground">
             {formatCurrency(row.original.unit_price)}
           </span>
         ),
@@ -521,7 +988,7 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
         accessorKey: "total_value",
         header: () => <span className="w-full text-right block">Total</span>,
         cell: ({ row }) => (
-          <span className="text-right block text-xs font-medium">
+          <span className="text-right block text-xs font-semibold text-foreground">
             {formatCurrency(row.original.total_value)}
           </span>
         ),
@@ -535,7 +1002,7 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
       <div className="flex items-center justify-center py-8">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <span className="text-sm text-muted">Loading procurement history...</span>
+          <span className="text-xs text-muted">Loading procurement history...</span>
         </div>
       </div>
     );
@@ -543,8 +1010,8 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-error mb-2">{error}</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-error mb-2">{error}</p>
         <button
           onClick={onRetry}
           className="text-xs text-primary hover:underline"
@@ -557,8 +1024,8 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
 
   if (records.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-muted">No procurement history found</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-muted">No procurement history found</p>
       </div>
     );
   }
@@ -580,6 +1047,9 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
             rowSelection: false,
             copyRow: true,
             export: false,
+            exportFormats: ["csv"],
+            columnResize: false,
+            columnVisibility: false,
           },
         }}
       />
@@ -604,7 +1074,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorKey: "close_date",
         header: "Close Date",
         cell: ({ row }) => (
-          <span className="text-xs">{formatContractDate(row.original.close_date)}</span>
+          <span className="text-xs font-medium text-foreground">{formatContractDate(row.original.close_date)}</span>
         ),
       },
       {
@@ -612,7 +1082,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorKey: "solicitation_number",
         header: "Solicitation #",
         cell: ({ row }) => (
-          <span className="font-mono text-xs">{row.original.solicitation_number}</span>
+          <span className="text-xs font-mono font-semibold">{row.original.solicitation_number}</span>
         ),
       },
       {
@@ -620,7 +1090,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorKey: "agency_code",
         header: "Agency",
         cell: ({ row }) => (
-          <span className="text-xs">{row.original.agency_code || "—"}</span>
+          <span className="text-xs font-medium text-foreground">{row.original.agency_code || "—"}</span>
         ),
         meta: { className: "hidden md:table-cell" },
       },
@@ -639,7 +1109,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorKey: "estimated_value",
         header: () => <span className="w-full text-right block">Est. Value</span>,
         cell: ({ row }) => (
-          <span className="text-right block text-xs font-medium">
+          <span className="text-right block text-xs font-semibold text-foreground">
             {formatCurrency(row.original.estimated_value)}
           </span>
         ),
@@ -650,7 +1120,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorKey: "set_aside",
         header: "Set-Aside",
         cell: ({ row }) => (
-          <span className="text-xs">{row.original.set_aside || "—"}</span>
+          <span className="text-xs font-medium text-foreground">{row.original.set_aside || "—"}</span>
         ),
         meta: { className: "hidden lg:table-cell" },
       },
@@ -663,7 +1133,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
       <div className="flex items-center justify-center py-8">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <span className="text-sm text-muted">Loading solicitations...</span>
+          <span className="text-xs text-muted">Loading solicitations...</span>
         </div>
       </div>
     );
@@ -671,8 +1141,8 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-error mb-2">{error}</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-error mb-2">{error}</p>
         <button
           onClick={onRetry}
           className="text-xs text-primary hover:underline"
@@ -685,8 +1155,8 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
 
   if (solicitations.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-muted">No recent solicitations found</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-muted">No recent solicitations found</p>
       </div>
     );
   }
@@ -708,6 +1178,9 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
             rowSelection: false,
             copyRow: true,
             export: false,
+            exportFormats: ["csv"],
+            columnResize: false,
+            columnVisibility: false,
           },
         }}
       />
@@ -736,7 +1209,7 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
             href={`/library/vendor-search?cage_code=${encodeURIComponent(row.original.cage_code)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono font-semibold text-primary text-xs hover:underline cursor-pointer"
+            className="text-xs font-mono font-semibold text-primary hover:underline cursor-pointer"
             onClick={(e) => e.stopPropagation()}
           >
             {row.original.cage_code}
@@ -748,7 +1221,7 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
         accessorKey: "vendor_name",
         header: "Vendor Name",
         cell: ({ row }) => (
-          <span className="text-xs truncate max-w-[300px]">
+          <span className="text-xs font-medium text-foreground truncate max-w-[300px]">
             {row.original.vendor_name || "—"}
           </span>
         ),
@@ -758,7 +1231,7 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
         accessorKey: "part_number",
         header: "Part Number",
         cell: ({ row }) => (
-          <span className="font-mono text-xs text-muted">
+          <span className="text-xs font-mono font-semibold text-muted">
             {row.original.part_number || "—"}
           </span>
         ),
@@ -769,7 +1242,7 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
         accessorKey: "rncc",
         header: "RNCC",
         cell: ({ row }) => (
-          <span className="text-xs text-muted">
+          <span className="text-xs font-medium text-muted">
             {row.original.rncc || "—"}
           </span>
         ),
@@ -780,7 +1253,7 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
         accessorKey: "rnvc",
         header: "RNVC",
         cell: ({ row }) => (
-          <span className="text-xs text-muted">
+          <span className="text-xs font-medium text-muted">
             {row.original.rnvc || "—"}
           </span>
         ),
@@ -795,7 +1268,7 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
       <div className="flex items-center justify-center py-8">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <span className="text-sm text-muted">Loading manufacturers...</span>
+          <span className="text-xs text-muted">Loading manufacturers...</span>
         </div>
       </div>
     );
@@ -803,8 +1276,8 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-error mb-2">{error}</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-error mb-2">{error}</p>
         <button
           onClick={onRetry}
           className="text-xs text-primary hover:underline"
@@ -817,8 +1290,8 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
 
   if (manufacturers.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-muted">No manufacturers found</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-muted">No manufacturers found</p>
       </div>
     );
   }
@@ -840,6 +1313,9 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
             rowSelection: false,
             copyRow: true,
             export: false,
+            exportFormats: ["csv"],
+            columnResize: false,
+            columnVisibility: false,
           },
         }}
       />
@@ -862,7 +1338,7 @@ function TechnicalCharacteristicsPanel({ characteristics, totalCount, isLoading,
       <div className="flex items-center justify-center py-8">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <span className="text-sm text-muted">Loading technical characteristics...</span>
+          <span className="text-xs text-muted">Loading technical characteristics...</span>
         </div>
       </div>
     );
@@ -870,8 +1346,8 @@ function TechnicalCharacteristicsPanel({ characteristics, totalCount, isLoading,
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-error mb-2">{error}</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-error mb-2">{error}</p>
         <button
           onClick={onRetry}
           className="text-xs text-primary hover:underline"
@@ -884,17 +1360,17 @@ function TechnicalCharacteristicsPanel({ characteristics, totalCount, isLoading,
 
   if (characteristics.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-muted">No technical characteristics found</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-muted">No technical characteristics found</p>
       </div>
     );
   }
 
   return (
-    <div className="text-xs text-foreground py-2 px-3 rounded border border-border/50 bg-card">
+    <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card">
       {characteristics.map((char, index) => (
         <span key={`${char.name}-${index}`}>
-          {char.name} - {char.value || "—"}
+          <span className="font-medium text-muted">{char.name}</span> - <span className="font-medium text-foreground">{char.value || "—"}</span>
           {index < characteristics.length - 1 && <br />}
         </span>
       ))}
@@ -917,7 +1393,7 @@ function EndUseDescriptionPanel({ descriptions, totalCount, isLoading, error, on
       <div className="flex items-center justify-center py-8">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <span className="text-sm text-muted">Loading end use descriptions...</span>
+          <span className="text-xs text-muted">Loading end use descriptions...</span>
         </div>
       </div>
     );
@@ -925,8 +1401,8 @@ function EndUseDescriptionPanel({ descriptions, totalCount, isLoading, error, on
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-error mb-2">{error}</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-error mb-2">{error}</p>
         <button
           onClick={onRetry}
           className="text-xs text-primary hover:underline"
@@ -939,16 +1415,16 @@ function EndUseDescriptionPanel({ descriptions, totalCount, isLoading, error, on
 
   if (descriptions.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-muted">No end use descriptions found</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-muted">No end use descriptions found</p>
       </div>
     );
   }
 
   return (
-    <div className="text-xs text-foreground py-2 px-3 rounded border border-border/50 bg-card">
+    <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card">
       {descriptions.map((desc, index) => (
-        <span key={`${desc.description}-${index}`}>
+        <span key={`${desc.description}-${index}`} className="font-medium">
           {desc.description}
           {index < descriptions.length - 1 && <br />}
         </span>
@@ -968,12 +1444,23 @@ interface PackagingPanelProps {
 }
 
 function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoading, error, onRetry }: PackagingPanelProps) {
+  // Debug: Log received definitions
+  useEffect(() => {
+    if (Object.keys(codeDefinitions).length > 0) {
+      console.log('PackagingPanel received codeDefinitions:', Object.keys(codeDefinitions).slice(0, 20));
+      console.log('Sample definitions:', Object.entries(codeDefinitions).slice(0, 5));
+    }
+    if (Object.keys(markingDefinitions).length > 0) {
+      console.log('PackagingPanel received markingDefinitions:', Object.keys(markingDefinitions));
+    }
+  }, [codeDefinitions, markingDefinitions]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <span className="text-sm text-muted">Loading packaging information...</span>
+          <span className="text-xs text-muted">Loading packaging information...</span>
         </div>
       </div>
     );
@@ -981,8 +1468,8 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-error mb-2">{error}</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-error mb-2">{error}</p>
         <button
           onClick={onRetry}
           className="text-xs text-primary hover:underline"
@@ -995,45 +1482,114 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
 
   if (!packaging) {
     return (
-      <div className="text-center py-8">
-        <p className="text-sm text-muted">No packaging information found</p>
+      <div className="text-center py-6">
+        <p className="text-xs text-muted">No packaging information found</p>
       </div>
     );
   }
 
-  // Helper function to get code definition
-  const getCodeDefinition = (code: string | null): string | null => {
-    if (!code) return null;
-    // Try exact match first, then try trimmed, then try uppercase
-    const trimmedCode = code.trim();
-    const upperCode = code.toUpperCase().trim();
-    return codeDefinitions[code] || 
-           codeDefinitions[trimmedCode] || 
-           codeDefinitions[upperCode] ||
-           markingDefinitions[code] || 
-           markingDefinitions[trimmedCode] || 
-           markingDefinitions[upperCode] || 
-           null;
+  // Map field names to code types (matching PHP production code)
+  const CODE_TYPE_MAP: Record<string, string> = {
+    'pres_mthd': 'PMC',  // Preservation Method Codes
+    'presv_mat': 'CPMC',  // Contact Preservative Material Codes
+    'wrap_mat': 'WMC',  // Wrapping Material Codes
+    'cush_dunn_mat': 'CDMC',  // Cushioning and Dunnage Material Codes
+    'cush_dunn_thkness': 'TCDC',  // Thickness of Cushioning or Dunnage Codes
+    'unit_cont': 'UICC',  // Unit and Intermediate Container Codes
+    'intrcdte_cont': 'UICC',  // Unit and Intermediate Container Codes
+    'opi': 'OPIC',  // Optional Procedure Indicator Codes
+    'clng_dry': 'CPC',  // Cleaning Procedure Codes
+    'qup': 'QUPC',  // Quantity Per Unit Pack Codes
+    'intrcdte_cont_qty': 'QUPC',  // Quantity Per Unit Pack Codes
   };
+
+  // Map code types to their display titles (matching PHP production code)
+  const CODE_TYPE_TITLES: Record<string, string> = {
+    'CPC': 'Cleaning Procedure Codes (CPC)',
+    'QUPC': 'Quantity Per Unit Pack Codes (QUPC)',
+    'PMC': 'Preservation Method Codes (PMC)',
+    'CPMC': 'Contact Preservative Material Codes (CPMC)',
+    'WMC': 'Wrapping Material Codes (WMC)',
+    'CDMC': 'Cushioning and Dunnage Material Codes (CDMC)',
+    'TCDC': 'Thickness of Cushioning or Dunnage Codes (TCDC)',
+    'UICC': 'Unit and Intermediate Container Codes (UICC)',
+    'OPIC': 'Optional Procedure Indicator Codes (OPIC)',
+  };
+
+  // Helper function to get code definition using code_type:code format
+  // NOTE: Do NOT fallback to markingDefinitions for regular codes - only use for special_marking_code field
+  const getCodeDefinition = (code: string | null, codeType: string | null): string | null => {
+    if (!code) return null;
+    
+    const codeStr = String(code).trim();
+    const codeUpper = codeStr.toUpperCase();
+    const codeLower = codeStr.toLowerCase();
+    
+    // Try composite key first: "code_type:code" with various case variations
+    if (codeType) {
+      const keys = [
+        `${codeType}:${codeStr}`,
+        `${codeType}:${codeUpper}`,
+        `${codeType}:${codeLower}`,
+        `${codeType}:${codeStr.padStart(2, '0')}`,  // Try zero-padded (e.g., "1" -> "01")
+        `${codeType}:${codeStr.padStart(3, '0')}`,  // Try zero-padded (e.g., "1" -> "001")
+      ];
+      
+      for (const key of keys) {
+        if (codeDefinitions[key]) {
+          return codeDefinitions[key];
+        }
+      }
+      
+      // Debug logging for missing definitions
+      if (Object.keys(codeDefinitions).length > 0) {
+        console.log(`[PackagingTooltip] Looking for code: ${code}, type: ${codeType}, tried keys:`, keys);
+        console.log(`[PackagingTooltip] Available keys (first 20):`, Object.keys(codeDefinitions).slice(0, 20));
+      }
+    }
+    
+    // Fallback: try without code_type (for backward compatibility) - but NOT markingDefinitions
+    const fallbackKeys = [codeStr, codeUpper, codeLower, codeStr.padStart(2, '0'), codeStr.padStart(3, '0')];
+    for (const key of fallbackKeys) {
+      if (codeDefinitions[key]) return codeDefinitions[key];
+      // Do NOT check markingDefinitions here - only for special_marking_code field
+    }
+    
+    return null;
+  };
+
+  // Helper function to get marking code definition (only for special_marking_code field)
+  const getMarkingDefinition = (code: string | null): string | null => {
+    if (!code) return null;
+    const codeStr = String(code).trim();
+    return markingDefinitions[codeStr] || markingDefinitions[codeStr.toUpperCase()] || markingDefinitions[codeStr.toLowerCase()] || null;
+  };
+
+  // CodeTooltip is defined at the top level of the file - use the shared component
 
   // Helper function to render a code with tooltip
   const renderCode = (code: string | null, fieldName: string, uniqueId: number) => {
     if (!code) return "—";
     
-    const definition = getCodeDefinition(code);
-    const hasDefinition = !!definition;
+    const codeType = CODE_TYPE_MAP[fieldName] || null;
+    const definition = getCodeDefinition(code, codeType);
+    const title = codeType ? CODE_TYPE_TITLES[codeType] || '' : '';
+    // Format content as: "{code_type} {code_value}: {definition}" (matching production format)
+    const content = definition && codeType 
+      ? `${codeType} ${code}: ${definition}`
+      : definition || '';
 
-    if (hasDefinition) {
+    if (definition) {
       return (
-        <span
+        <CodeTooltip
           key={`${fieldName}-code-${uniqueId}`}
-          className="text-primary cursor-help underline decoration-dotted hover:decoration-solid"
-          title={definition || undefined}
-          data-tooltip={definition || undefined}
-          aria-label={definition ? `${code}: ${definition}` : code}
+          code={code}
+          title={title}
+          content={content}
+          codeType={codeType}
         >
-          {code}
-        </span>
+          <span>{code}</span>
+        </CodeTooltip>
       );
     }
     // Still show as blue/underlined even without definition for consistency
@@ -1047,16 +1603,50 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
     );
   };
 
+  // Helper to check if QUP should have tooltip
+  // PHP logic: if ( ($qupValue > 0) && ($qupValue <= 999) ) -> NO tooltip, else -> tooltip
+  // So show tooltip when: non-numeric (like "AAA"), or value <= 0, or value > 999
+  const shouldShowQUPTooltip = (qupValue: string | null): boolean => {
+    if (!qupValue) return false;
+    const numValue = parseInt(qupValue, 10);
+    // If not a valid number (NaN), show tooltip (e.g., "AAA")
+    if (isNaN(numValue)) return true;
+    // If value is <= 0 or > 999, show tooltip
+    return numValue <= 0 || numValue > 999;
+  };
+
   // Build the packaging information text
   const buildPackagingText = () => {
-    const parts: JSX.Element[] = [];
+    const parts: React.ReactElement[] = [];
     let lineIndex = 0;
     let codeIndex = 0;
 
     // Line 1: QUP, PRES MTHD, CLNG/DRY, PRESV MAT
-    const line1Parts: (string | JSX.Element)[] = [];
+    const line1Parts: (string | React.ReactElement)[] = [];
     if (packaging.qup) {
-      line1Parts.push("QUP = ", renderCode(packaging.qup, 'qup', codeIndex++), ": ");
+      // QUP: only show tooltip if > 999 (per PHP logic)
+      const qupCodeType = shouldShowQUPTooltip(packaging.qup) ? 'QUPC' : null;
+      const qupDefinition = qupCodeType ? getCodeDefinition(packaging.qup, qupCodeType) : null;
+      const qupTitle = qupCodeType ? CODE_TYPE_TITLES[qupCodeType] || '' : '';
+      const qupContent = qupDefinition && qupCodeType 
+        ? `${qupCodeType} ${packaging.qup}: ${qupDefinition}`
+        : qupDefinition || '';
+      
+      if (qupDefinition) {
+        line1Parts.push("QUP = ", 
+          <CodeTooltip
+            key={`qup-code-${codeIndex++}`}
+            code={packaging.qup}
+            title={qupTitle}
+            content={qupContent}
+            codeType={qupCodeType}
+          >
+            <span>{packaging.qup}</span>
+          </CodeTooltip>, 
+          ": ");
+      } else {
+        line1Parts.push("QUP = ", <span key={`qup-code-${codeIndex++}`} className="text-primary">{packaging.qup}</span>, ": ");
+      }
     }
     if (packaging.pres_mthd) {
       line1Parts.push("PRES MTHD = ", renderCode(packaging.pres_mthd, 'pres_mthd', codeIndex++), ": ");
@@ -1073,7 +1663,7 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
     }
 
     // Line 2: WRAP MAT, CUSH/DUNN MAT, CUSH/DUNN THKNESS
-    const line2Parts: (string | JSX.Element)[] = [];
+    const line2Parts: (string | React.ReactElement)[] = [];
     if (packaging.wrap_mat) {
       line2Parts.push("WRAP MAT = ", renderCode(packaging.wrap_mat, 'wrap_mat', codeIndex++), ": ");
     }
@@ -1089,7 +1679,7 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
     }
 
     // Line 3: UNIT CONT, OPI
-    const line3Parts: (string | JSX.Element)[] = [];
+    const line3Parts: (string | React.ReactElement)[] = [];
     if (packaging.unit_cont) {
       line3Parts.push("UNIT CONT = ", renderCode(packaging.unit_cont, 'unit_cont', codeIndex++), ": ");
     }
@@ -1102,12 +1692,34 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
     }
 
     // Line 4: INTRMDTE CONT, INTRMDTE CONT QTY
-    const line4Parts: (string | JSX.Element)[] = [];
+    const line4Parts: (string | React.ReactElement)[] = [];
     if (packaging.intrcdte_cont) {
       line4Parts.push("INTRMDTE CONT = ", renderCode(packaging.intrcdte_cont, 'intrcdte_cont', codeIndex++), ": ");
     }
     if (packaging.intrcdte_cont_qty) {
-      line4Parts.push("INTRMDTE CONT QTY = ", renderCode(packaging.intrcdte_cont_qty, 'intrcdte_cont_qty', codeIndex++), ": ");
+      // INTRCDTE CONT QTY: only show tooltip if > 999 (per PHP logic)
+      const intqtyCodeType = shouldShowQUPTooltip(packaging.intrcdte_cont_qty) ? 'QUPC' : null;
+      const intqtyDefinition = intqtyCodeType ? getCodeDefinition(packaging.intrcdte_cont_qty, intqtyCodeType) : null;
+      const intqtyTitle = intqtyCodeType ? CODE_TYPE_TITLES[intqtyCodeType] || '' : '';
+      const intqtyContent = intqtyDefinition && intqtyCodeType 
+        ? `${intqtyCodeType} ${packaging.intrcdte_cont_qty}: ${intqtyDefinition}`
+        : intqtyDefinition || '';
+      
+      if (intqtyDefinition) {
+        line4Parts.push("INTRMDTE CONT QTY = ", 
+          <CodeTooltip
+            key={`intrcdte_cont_qty-code-${codeIndex++}`}
+            code={packaging.intrcdte_cont_qty}
+            title={intqtyTitle}
+            content={intqtyContent}
+            codeType={intqtyCodeType}
+          >
+            <span>{packaging.intrcdte_cont_qty}</span>
+          </CodeTooltip>, 
+          ": ");
+      } else {
+        line4Parts.push("INTRMDTE CONT QTY = ", <span key={`intrcdte_cont_qty-code-${codeIndex++}`} className="text-primary">{packaging.intrcdte_cont_qty}</span>, ": ");
+      }
     }
     if (line4Parts.length > 0) {
       parts.push(<span key={`line-${lineIndex++}`}>{line4Parts}</span>);
@@ -1134,10 +1746,25 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
       if (parts.length > 0) {
         parts.push(<br key="br-marking" />);
       }
-      const markingDef = markingDefinitions[packaging.special_marking_code];
-      const markingParts: (string | JSX.Element)[] = ["SPECIAL MARKING CODE: ", renderCode(packaging.special_marking_code, 'special_marking_code', codeIndex++)];
+      // Special marking code with definition - use markingDefinitions, not codeDefinitions
+      const markingDef = getMarkingDefinition(packaging.special_marking_code);
+      const markingParts: (string | React.ReactElement)[] = [];
       if (markingDef) {
-        markingParts.push(" - ", markingDef);
+        markingParts.push("SPECIAL MARKING CODE: ", 
+          <CodeTooltip
+            key={`marking-code-${codeIndex++}`}
+            code={packaging.special_marking_code}
+            title="Special Marking Code"
+            content={markingDef}
+            codeType={null}
+          >
+            <span className="text-primary cursor-help underline decoration-dotted hover:decoration-solid">{packaging.special_marking_code}</span>
+          </CodeTooltip>,
+          " - ",
+          <span key={`marking-text-${codeIndex++}`}>{markingDef}</span>
+        );
+      } else {
+        markingParts.push("SPECIAL MARKING CODE: ", <span key={`marking-code-${codeIndex++}`} className="text-primary">{packaging.special_marking_code}</span>);
       }
       parts.push(<span key="special-marking">{markingParts}</span>);
     }
@@ -1145,9 +1772,61 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
     return parts;
   };
 
+    return (
+      <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card">
+        {buildPackagingText()}
+      </div>
+    );
+  }
+
+// Procurement Item Description Panel
+interface ProcurementItemDescriptionPanelProps {
+  description: ProcurementItemDescription | null;
+  isLoading: boolean;
+  error: string | null;
+  onRetry: () => void;
+}
+
+function ProcurementItemDescriptionPanel({ description, isLoading, error, onRetry }: ProcurementItemDescriptionPanelProps) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-6">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+          <span className="text-xs text-muted">Loading procurement item description...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-6">
+        <p className="text-xs text-error mb-2">{error}</p>
+        <button
+          onClick={onRetry}
+          className="text-xs text-primary hover:underline"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!description || !description.has_description || !description.description) {
+    return (
+      <div className="text-center py-6">
+        <p className="text-xs text-muted">No procurement item description found</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="text-xs text-foreground py-2 px-3 rounded border border-border/50 bg-card">
-      {buildPackagingText()}
+    <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card">
+      <div
+        className="procurement-description [&_a.sddt-link]:text-primary [&_a.sddt-link]:underline [&_a.sddt-link]:decoration-dotted [&_a.sddt-link]:hover:decoration-solid [&_a.sddt-link]:cursor-pointer"
+        dangerouslySetInnerHTML={{ __html: description.description }}
+      />
     </div>
   );
 }

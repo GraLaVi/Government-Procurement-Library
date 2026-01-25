@@ -298,20 +298,76 @@ function DemographicsPanel({
     { label: "Reg. Expires", value: vendor.registration_expiration_date },
   ].filter(item => item.value);
 
+  // Format the address for display
+  const formatAddress = (address: VendorDetailType["addresses"][0] | undefined) => {
+    if (!address) return null;
+    return [
+      address.address_line_1,
+      address.address_line_2,
+      [address.city, address.state, address.postal_code].filter(Boolean).join(", "),
+      address.country_code !== "USA" ? address.country_code : null,
+    ].filter(Boolean).join("\n");
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Left Column: Identifiers + Registration */}
-      <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Hero Card - Company Name */}
+      <div className="bg-gradient-to-br from-blue-500/5 to-blue-600/10 rounded-xl p-6 border border-blue-500/10">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-blue-500/10 rounded-lg flex-shrink-0">
+            <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m2.25-18h15.75m-15.75 0v3.75M21 12H10.5m10.5 4.5H10.5M21 18H10.5m-7.5-6.75V12m0 4.5v1.5m0-6V9.75A2.25 2.25 0 019 7.5h1.5A2.25 2.25 0 0112.75 9.75V12m-3.75 3.75V18A2.25 2.25 0 009 20.25H7.5A2.25 2.25 0 015.25 18v-2.25" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold text-foreground mb-2 leading-tight">
+              {vendor.legal_business_name}
+            </h2>
+            {vendor.dba_name && vendor.dba_name !== vendor.legal_business_name && (
+              <div className="mb-3">
+                <span className="text-sm text-muted">DBA: </span>
+                <span className="text-sm font-medium text-foreground">{vendor.dba_name}</span>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                <span className="font-mono font-medium text-blue-600">{vendor.cage_code}</span>
+              </div>
+              {vendor.small_business === true && (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                  <span className="text-green-700 font-medium">Small Business</span>
+                </div>
+              )}
+              {vendor.sam_status && (
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${vendor.sam_status === 'Active' ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                  <span className="text-muted font-medium">{formatSamStatus(vendor.sam_status)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Information Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {/* Identifiers Card */}
-        <div className="bg-muted-light rounded-lg p-3">
-          <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
-            Identifiers
-          </h3>
-          <div className="space-y-1.5">
+        <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
+          <div className="px-4 py-3 bg-slate-50 border-b border-border">
+            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0z" />
+              </svg>
+              Identifiers
+            </h3>
+          </div>
+          <div className="p-4 space-y-3">
             {identifiers.map((item) => (
               <div key={item.label} className="flex items-center justify-between">
-                <span className="text-xs text-muted">{item.label}</span>
-                <span className={`text-xs font-medium ${item.mono ? "font-mono text-primary" : "text-foreground"}`}>
+                <span className="text-sm text-muted font-medium">{item.label}</span>
+                <span className="text-sm font-mono font-semibold text-blue-600 bg-blue-600/5 px-2 py-1 rounded">
                   {item.value}
                 </span>
               </div>
@@ -319,86 +375,103 @@ function DemographicsPanel({
           </div>
         </div>
 
-        {/* Registration Card */}
-        {registration.length > 0 && (
-          <div className="bg-muted-light rounded-lg p-3">
-            <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
-              Registration
-            </h3>
-            <div className="space-y-1.5">
-              {registration.map((item) => (
-                <div key={item.label} className="flex items-center justify-between">
-                  <span className="text-xs text-muted">{item.label}</span>
-                  <span className="text-xs font-medium text-foreground">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Middle Column: Business Info */}
-      <div className="space-y-4">
-        {businessInfo.length > 0 && (
-          <div className="bg-muted-light rounded-lg p-3">
-            <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
+        {/* Business Information Card */}
+        <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
+          <div className="px-4 py-3 bg-slate-50 border-b border-border">
+            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" />
+              </svg>
               Business Details
             </h3>
-            <div className="space-y-1.5">
-              {businessInfo.map((item) => (
-                <div key={item.label} className="flex items-start justify-between gap-2">
-                  <span className="text-xs text-muted flex-shrink-0">{item.label}</span>
-                  {item.isLink && item.value ? (
-                    <a
-                      href={item.value.startsWith("http") ? item.value : `https://${item.value}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline truncate text-right"
-                    >
-                      {item.value}
-                    </a>
-                  ) : (
-                    <span className="text-xs font-medium text-foreground text-right truncate">
-                      {item.value}
-                    </span>
-                  )}
-                </div>
-              ))}
+          </div>
+          <div className="p-4 space-y-3">
+            {businessInfo.map((item) => (
+              <div key={item.label} className="flex items-start justify-between gap-2">
+                <span className="text-sm text-muted font-medium">{item.label}</span>
+                {item.isLink && item.value ? (
+                  <a
+                    href={item.value.startsWith("http") ? item.value : `https://${item.value}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium text-right max-w-[160px] break-words"
+                  >
+                    {item.value}
+                  </a>
+                ) : (
+                  <span className="text-sm font-medium text-foreground text-right max-w-[160px] break-words">
+                    {item.value}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Registration & Status Card */}
+        <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
+          <div className="px-4 py-3 bg-slate-50 border-b border-border">
+            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+              </svg>
+              Registration
+            </h3>
+          </div>
+          <div className="p-4 space-y-3">
+            {registration.map((item) => (
+              <div key={item.label} className="flex items-center justify-between gap-2">
+                <span className="text-sm text-muted font-medium">{item.label}</span>
+                <span className={`text-sm font-medium ${
+                  item.label === "SAM Status" && item.value === "Active" ? "text-green-700" :
+                  item.label === "Exclusion" && item.value === "Excluded" ? "text-red-700" :
+                  "text-foreground"
+                }`}>
+                  {item.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Address Section */}
+      {(physicalAddress || mailingAddress) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {physicalAddress && (
+            <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
+              <div className="px-4 py-3 bg-slate-50 border-b border-border">
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                  </svg>
+                  Physical Address
+                </h3>
+              </div>
+              <div className="p-4">
+                <AddressDisplay address={physicalAddress} />
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* DBA Name if different */}
-        {vendor.dba_name && vendor.dba_name !== vendor.legal_business_name && (
-          <div className="bg-muted-light rounded-lg p-3">
-            <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-1">
-              DBA Name
-            </h3>
-            <p className="text-xs font-medium text-foreground">{vendor.dba_name}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Right Column: Address */}
-      <div className="space-y-4">
-        {physicalAddress && (
-          <div className="bg-muted-light rounded-lg p-3">
-            <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
-              Physical Address
-            </h3>
-            <AddressDisplay address={physicalAddress} />
-          </div>
-        )}
-
-        {mailingAddress && mailingAddress !== physicalAddress && (
-          <div className="bg-muted-light rounded-lg p-3">
-            <h3 className="text-[10px] font-semibold text-muted uppercase tracking-wide mb-2">
-              Mailing Address
-            </h3>
-            <AddressDisplay address={mailingAddress} />
-          </div>
-        )}
-      </div>
+          {mailingAddress && mailingAddress !== physicalAddress && (
+            <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
+              <div className="px-4 py-3 bg-slate-50 border-b border-border">
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                  </svg>
+                  Mailing Address
+                </h3>
+              </div>
+              <div className="p-4">
+                <AddressDisplay address={mailingAddress} />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

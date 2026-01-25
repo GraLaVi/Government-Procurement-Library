@@ -29,10 +29,23 @@ export function proxy(request: NextRequest) {
   }
 
   if (!accessToken) {
-    // Redirect to login with return URL
-    const loginUrl = new URL(AUTH_CONFIG.ROUTES.LOGIN, request.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+    // Only redirect on initial page loads (direct navigation or page refresh)
+    // For subsequent requests during active use, let the client-side handle 401s
+    // Check if this is likely an initial load by checking for navigation headers
+    const isNavigationRequest = 
+      request.headers.get('sec-fetch-mode') === 'navigate' ||
+      request.headers.get('sec-fetch-dest') === 'document' ||
+      !request.headers.get('referer')?.startsWith(request.nextUrl.origin);
+
+    if (isNavigationRequest) {
+      // Redirect to login with return URL only on initial page loads
+      const loginUrl = new URL(AUTH_CONFIG.ROUTES.LOGIN, request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    
+    // For non-navigation requests (API calls, etc.), allow them to proceed
+    // The client-side fetch interceptor will handle 401s
   }
 
   return NextResponse.next();

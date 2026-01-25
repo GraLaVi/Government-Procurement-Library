@@ -365,6 +365,10 @@ export interface PartSearchResult {
   description: string | null;
   unit_of_issue: string | null;
   unit_price: number | null;
+  
+  // Key code fields for search results
+  psclas: string | null;  // Product or Service Class
+  nscode: string | null;  // NSN Status Code
 }
 
 export interface PartSearchResponse {
@@ -382,6 +386,52 @@ export interface PartDetail {
   description: string | null;
   unit_of_issue: string | null;
   unit_price: number | null;
+  gac: number | null;  // Group Acquisition Code
+  
+  // Additional code fields from j01_tab schema
+  psclas: string | null;  // Product or Service Class
+  amcode: string | null;  // Acquisition Method Code
+  picode: string | null;  // Place of Inspection Code
+  pmi: string | null;     // Precious Metals Indicator Code
+  cc: string | null;      // Criticality Code
+  adp: string | null;     // ADPE Identification Code
+  esdc: string | null;    // Electrostatic Discharge Code
+  hmic: string | null;    // Hazardous Material Indicator Code
+  dmil: string | null;    // Demilitarization Code
+  sa: string | null;      // Storage Activity
+  sos: string | null;     // Source of Supply
+  aac: string | null;     // Activity Address Code
+  qup: string | null;     // Quality Assurance Purchase
+  slc: string | null;     // Source of Supply Code
+  ciic: string | null;    // Controlled Item Inventory Code
+  rc: string | null;      // Retention Code
+  nscode: string | null;  // NSN Status Code
+  nsdate: string | null;  // NSN Status Date
+  nadate: string | null;  // Date Added
+  idsind: string | null;  // DLA Buy Type Indicator
+}
+
+// ============================================================================
+// Procurement Item Description Types
+// ============================================================================
+
+export interface SDDTBlock {
+  id: number;
+  title: string;
+  text_content: string;
+  sequence_number: number;
+}
+
+export interface ProcurementItemDescription {
+  description: string | null;
+  pid_type: string | null;
+  has_description: boolean;
+  sddt_blocks: SDDTBlock[] | null;
+}
+
+export interface ProcurementItemDescriptionResponse {
+  nsn: string;
+  description: ProcurementItemDescription | null;
 }
 
 export interface PartDetailResponse {
@@ -636,13 +686,16 @@ export function formatNSN(nsn: string | null | undefined): string | null {
   // Remove existing dashes and spaces
   const clean = nsn.replace(/[- ]/g, '').toUpperCase();
   
-  // If it's 13 characters, format as FSC-NIIN
+  // If it's 13 characters, format as FSC-NIIN with dashes in NIIN: FSC-XXXX-XX-XXX
   if (clean.length === 13) {
-    return `${clean.slice(0, 4)}-${clean.slice(4)}`;
+    const fsc = clean.slice(0, 4);
+    const niin = clean.slice(4);
+    const formattedNiin = formatNiin(niin);
+    return `${fsc}-${formattedNiin}`;
   }
   
-  // If it already has a dash in the right place, return as-is
-  if (nsn.includes('-') && nsn.length === 14) {
+  // If it already has proper formatting, return as-is
+  if (nsn.includes('-')) {
     return nsn.toUpperCase();
   }
   

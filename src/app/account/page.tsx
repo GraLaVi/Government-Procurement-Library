@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { Button } from "@/components/ui/Button";
 
 const accountSections = [
@@ -102,7 +103,7 @@ export default function AccountPage() {
     setVerificationMessage(null);
 
     try {
-      const response = await fetch('/api/auth/resend-verification', {
+      const response = await fetchWithAuth('/api/auth/resend-verification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

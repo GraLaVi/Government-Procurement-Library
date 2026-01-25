@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { RecentActionsResponse, RecentActionEntry, CreateRecentActionRequest } from '@/lib/preferences/types';
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
 
 export function useRecentActions(actionType: string) {
   const [actions, setActions] = useState<RecentActionEntry[]>([]);
@@ -15,7 +16,7 @@ export function useRecentActions(actionType: string) {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await fetch(`/api/auth/me/recent-actions?action_type=${encodeURIComponent(actionType)}`, {
+      const response = await fetchWithAuth(`/api/auth/me/recent-actions?action_type=${encodeURIComponent(actionType)}`, {
         credentials: 'include',
       });
 
@@ -42,7 +43,7 @@ export function useRecentActions(actionType: string) {
         action_data: actionData,
       };
 
-      const response = await fetch('/api/auth/me/recent-actions', {
+      const response = await fetchWithAuth('/api/auth/me/recent-actions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +74,7 @@ export function useRecentActions(actionType: string) {
   const deleteAction = useCallback(async (actionId: number) => {
     try {
       setError(null);
-      const response = await fetch(`/api/auth/me/recent-actions/${actionId}`, {
+      const response = await fetchWithAuth(`/api/auth/me/recent-actions/${actionId}`, {
         method: 'DELETE',
         credentials: 'include',
       });

@@ -17,20 +17,30 @@ const librarySearchItems = [
   { href: "/library/parts", label: "Parts Search" },
 ];
 
+const helpItems = [
+  { href: "/library/code-definitions", label: "Code Definitions" },
+];
+
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLibraryDropdownOpen, setIsLibraryDropdownOpen] = useState(false);
+  const [isHelpDropdownOpen, setIsHelpDropdownOpen] = useState(false);
   const [isMobileLibraryOpen, setIsMobileLibraryOpen] = useState(false);
+  const [isMobileHelpOpen, setIsMobileHelpOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const helpDropdownRef = useRef<HTMLDivElement>(null);
   const { user, isAuthenticated, isLoading } = useAuth();
 
   const userInitial = user?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || "U";
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsLibraryDropdownOpen(false);
+      }
+      if (helpDropdownRef.current && !helpDropdownRef.current.contains(event.target as Node)) {
+        setIsHelpDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -77,6 +87,40 @@ export function Navbar() {
                         href={item.href}
                         className="block px-4 py-2 text-sm text-card-foreground hover:text-foreground hover:bg-muted-light transition-colors"
                         onClick={() => setIsLibraryDropdownOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Help Dropdown - Only for authenticated users */}
+            {!isLoading && isAuthenticated && (
+              <div className="relative" ref={helpDropdownRef}>
+                <button
+                  onClick={() => setIsHelpDropdownOpen(!isHelpDropdownOpen)}
+                  className="flex items-center gap-1 text-card-foreground hover:text-foreground transition-colors duration-200"
+                >
+                  Help
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${isHelpDropdownOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isHelpDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-card-bg rounded-lg shadow-xl border border-border py-2 z-[9999]">
+                    {helpItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className="block px-4 py-2 text-sm text-card-foreground hover:text-foreground hover:bg-muted-light transition-colors"
+                        onClick={() => setIsHelpDropdownOpen(false)}
                       >
                         {item.label}
                       </Link>
@@ -169,6 +213,43 @@ export function Navbar() {
                           onClick={() => {
                             setIsMenuOpen(false);
                             setIsMobileLibraryOpen(false);
+                          }}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Mobile Help - Only for authenticated users */}
+              {!isLoading && isAuthenticated && (
+                <div>
+                  <button
+                    onClick={() => setIsMobileHelpOpen(!isMobileHelpOpen)}
+                    className="flex items-center justify-between w-full text-card-foreground hover:text-foreground transition-colors duration-200 py-2"
+                  >
+                    <span>Help</span>
+                    <svg
+                      className={`w-4 h-4 transition-transform duration-200 ${isMobileHelpOpen ? "rotate-180" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isMobileHelpOpen && (
+                    <div className="pl-4 mt-2 space-y-2 border-l-2 border-border">
+                      {helpItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="block text-sm text-card-foreground hover:text-foreground transition-colors py-1"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsMobileHelpOpen(false);
                           }}
                         >
                           {item.label}

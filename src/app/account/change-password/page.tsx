@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -36,7 +37,7 @@ export default function ChangePasswordPage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/auth/change-password", {
+      const response = await fetchWithAuth("/api/auth/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

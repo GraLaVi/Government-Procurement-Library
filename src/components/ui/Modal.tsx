@@ -10,6 +10,7 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   size?: ModalSize;
+  preventClose?: boolean; // If true, prevents closing via backdrop click or escape key
 }
 
 const sizeStyles: Record<ModalSize, string> = {
@@ -19,11 +20,13 @@ const sizeStyles: Record<ModalSize, string> = {
   xl: "max-w-xl",
 };
 
-export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = "md", preventClose = false }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Handle escape key
   useEffect(() => {
+    if (preventClose) return;
+    
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
         onClose();
@@ -32,7 +35,7 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, preventClose]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -80,7 +83,7 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 transition-opacity"
-        onClick={onClose}
+        onClick={preventClose ? undefined : onClose}
         aria-hidden="true"
       />
 
@@ -101,15 +104,17 @@ export function Modal({ isOpen, onClose, title, children, size = "md" }: ModalPr
           <h2 id="modal-title" className="text-lg font-semibold text-foreground">
             {title}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-1 text-muted hover:text-foreground transition-colors rounded-lg hover:bg-muted-light"
-            aria-label="Close modal"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          {!preventClose && (
+            <button
+              onClick={onClose}
+              className="p-1 text-muted hover:text-foreground transition-colors rounded-lg hover:bg-muted-light"
+              aria-label="Close modal"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Content */}
