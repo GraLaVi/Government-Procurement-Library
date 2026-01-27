@@ -17,7 +17,7 @@ import {
   buildSearchParams,
   getSearchTypeConfig,
 } from "@/lib/library/types";
-import { VendorSearchActionData } from "@/lib/preferences/types";
+import { VendorSearchActionData, RecentActionEntry } from "@/lib/preferences/types";
 
 export default function VendorSearchPage() {
   const { isLoading: authLoading, hasProductAccess } = useAuth();
@@ -299,7 +299,10 @@ export default function VendorSearchPage() {
               <div className="px-4 py-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
                 <RecentSearchesChips
                   actions={recentActions}
-                  onSelectSearch={handleSearch}
+                  onSelectSearch={(action: RecentActionEntry) => {
+                    const actionData = action.action_data as VendorSearchActionData;
+                    handleSearch(actionData.query_type as VendorSearchType, actionData.query);
+                  }}
                   onDelete={deleteAction}
                   isLoading={isLoadingActions}
                 />
@@ -339,7 +342,10 @@ export default function VendorSearchPage() {
               <div className="mt-3 pt-3 border-t border-border">
                 <RecentSearchesChips
                   actions={recentActions}
-                  onSelectSearch={handleSearch}
+                  onSelectSearch={(action: RecentActionEntry) => {
+                    const actionData = action.action_data as VendorSearchActionData;
+                    handleSearch(actionData.query_type as VendorSearchType, actionData.query);
+                  }}
                   onDelete={deleteAction}
                   isLoading={isLoadingActions}
                 />
