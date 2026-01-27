@@ -64,7 +64,10 @@ export function RecentSearchesChips({ actions, onSelectSearch, onDelete, isLoadi
                   if (onSelectSearch.length === 1) {
                     (onSelectSearch as (action: RecentActionEntry) => void)(action);
                   } else {
-                    (onSelectSearch as (searchType: VendorSearchType | PartsSearchType, query: string) => void)(queryType, query);
+                    (onSelectSearch as (searchType: VendorSearchType | PartsSearchType, query: string) => void)(
+                      queryType as VendorSearchType | PartsSearchType,
+                      query
+                    );
                   }
                 }}
                 className="flex items-center gap-1.5 min-w-0"
