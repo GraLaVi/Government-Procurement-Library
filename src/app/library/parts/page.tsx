@@ -16,7 +16,7 @@ import {
   buildPartsSearchParams,
   getPartsSearchTypeConfig,
 } from "@/lib/library/types";
-import { PartsSearchActionData } from "@/lib/preferences/types";
+import { PartsSearchActionData, RecentActionEntry } from "@/lib/preferences/types";
 
 export default function PartsSearchPage() {
   const { isLoading: authLoading, hasProductAccess } = useAuth();
@@ -242,7 +242,7 @@ export default function PartsSearchPage() {
               <div className="px-4 py-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
                 <RecentSearchesChips
                   actions={recentActions}
-                  onSelectSearch={(action) => {
+                  onSelectSearch={(action: RecentActionEntry) => {
                     const actionData = action.action_data as PartsSearchActionData;
                     handleSearch(actionData.query_type as PartsSearchType, actionData.query);
                   }}
@@ -285,7 +285,7 @@ export default function PartsSearchPage() {
               <div className="mt-3 pt-3 border-t border-border">
                 <RecentSearchesChips
                   actions={recentActions}
-                  onSelectSearch={(action) => {
+                  onSelectSearch={(action: RecentActionEntry) => {
                     const actionData = action.action_data as PartsSearchActionData;
                     handleSearch(actionData.query_type as PartsSearchType, actionData.query);
                   }}
