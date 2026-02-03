@@ -86,16 +86,25 @@ function redirectToLogin(): void {
     return;
   }
 
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  // Don't redirect if we're already on the login page to prevent loops
+  const currentPath = window.location.pathname;
+  if (currentPath === AUTH_CONFIG.ROUTES.LOGIN) {
+    return;
+  }
+
   hasRedirected = true;
   
-  // Get current path for redirect query param
-  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
-  const loginUrl = `${AUTH_CONFIG.ROUTES.LOGIN}?redirect=${encodeURIComponent(currentPath)}`;
+  // Don't use auth-related routes as redirect targets
+  const authRoutes = [AUTH_CONFIG.ROUTES.LOGIN, '/forgot-password', '/trial'];
+  const redirectPath = authRoutes.includes(currentPath) ? AUTH_CONFIG.ROUTES.ACCOUNT : currentPath;
+  const loginUrl = `${AUTH_CONFIG.ROUTES.LOGIN}?redirect=${encodeURIComponent(redirectPath)}`;
   
   // Use window.location for a full page redirect
-  if (typeof window !== 'undefined') {
-    window.location.href = loginUrl;
-  }
+  window.location.href = loginUrl;
 }
 
 /**

@@ -15,6 +15,12 @@ export function usePreferences() {
         credentials: 'include',
       });
 
+      // Handle 401 gracefully - user is not authenticated, just clear preferences
+      if (response.status === 401) {
+        setPreferences(null);
+        return;
+      }
+
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to fetch preferences');

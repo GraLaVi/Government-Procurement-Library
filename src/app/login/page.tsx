@@ -14,19 +14,18 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
 
-  const { login, isAuthenticated, isLoading: authLoading, refreshUser } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [redirectAttempted, setRedirectAttempted] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || AUTH_CONFIG.ROUTES.ACCOUNT;
-
-  // Force refresh auth state when landing on login page
-  useEffect(() => {
-    if (!authLoading) {
-      refreshUser();
-    }
-  }, [authLoading, refreshUser]);
+  
+  // Validate redirect parameter - don't allow redirecting to auth pages to prevent loops
+  const rawRedirect = searchParams.get("redirect");
+  const authRoutes = [AUTH_CONFIG.ROUTES.LOGIN, '/forgot-password', '/trial'];
+  const redirect = rawRedirect && !authRoutes.includes(rawRedirect) 
+    ? rawRedirect 
+    : AUTH_CONFIG.ROUTES.ACCOUNT;
 
   // Redirect if already authenticated (with timeout fallback)
   useEffect(() => {

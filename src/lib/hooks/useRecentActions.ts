@@ -20,6 +20,12 @@ export function useRecentActions(actionType: string) {
         credentials: 'include',
       });
 
+      // Handle 401 gracefully - user is not authenticated, just clear actions
+      if (response.status === 401) {
+        setActions([]);
+        return;
+      }
+
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to fetch recent actions');
