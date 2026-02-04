@@ -38,7 +38,7 @@ services:
     volumes:
       - ./nginx/nginx.production.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
-      - /mnt/shared/alan/logs/${LOG_HOST:-production}:/var/log/nginx
+      - /mnt/shared/alan/logs/${LOG_HOST:-gph-alanweb01}:/var/log/nginx
     networks:
       - alan_network
     depends_on:

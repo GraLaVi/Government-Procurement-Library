@@ -43,6 +43,7 @@ check_docker() {
 load_env() {
     if [ -f "$PROJECT_DIR/.env.production" ]; then
         export $(grep -v '^#' "$PROJECT_DIR/.env.production" | xargs)
+        export LOG_HOST=${LOG_HOST:-$(hostname)}
         print_success "Loaded .env.production"
         print_status "Environment: PRODUCTION"
         print_status "Web Domain: https://www.gphusa.com"
@@ -126,6 +127,7 @@ start() {
 stop() {
     print_status "Stopping production services..."
     check_docker
+    load_env
 
     docker compose -f "$COMPOSE_FILE" down
     print_success "All services stopped"
@@ -142,6 +144,7 @@ restart() {
 # Show status
 status() {
     check_docker
+    load_env
 
     echo -e "${BLUE}═══ Govt Procurement Library Production Status ═══${NC}"
     echo ""
@@ -173,6 +176,7 @@ status() {
 # View logs
 logs() {
     check_docker
+    load_env
 
     local service=${1:-}
     local follow=${2:--f}
@@ -201,6 +205,7 @@ logs() {
 pull() {
     print_status "Pulling latest images..."
     check_docker
+    load_env
 
     docker compose -f "$COMPOSE_FILE" pull
     print_success "Images updated"
@@ -219,6 +224,7 @@ cleanup() {
 # Execute command in container
 exec_cmd() {
     check_docker
+    load_env
 
     local service=$1
     shift
