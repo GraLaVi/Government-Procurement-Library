@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const queryParams = new URLSearchParams();
 
     // Forward all search parameters
-    const paramNames = ['nsn', 'niin', 'fsc', 'q', 'limit', 'offset'];
+    const paramNames = ['nsn', 'niin', 'q', 'solicitation', 'mfg_part_number', 'contract_number', 'limit', 'offset'];
     for (const param of paramNames) {
       const value = searchParams.get(param);
       if (value) {

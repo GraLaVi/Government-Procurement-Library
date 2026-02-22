@@ -24,15 +24,16 @@ export interface PartsSearchFormRef {
 
 export const PartsSearchForm = forwardRef<PartsSearchFormRef, PartsSearchFormProps>(
   function PartsSearchForm({ onSearch, isSearching, autoFocus = false, initialSearchType, initialSearchQuery }, ref) {
-  const [searchType, setSearchType] = useState<PartsSearchType>(initialSearchType || "nsn");
+  const [searchType, setSearchType] = useState<PartsSearchType>(initialSearchType || "nsn_niin");
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || "");
   const [validationError, setValidationError] = useState<string | undefined>();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Update form when initial values change
+  // Update form when initial values change (normalize legacy 'nsn'/'niin' to 'nsn_niin')
   useEffect(() => {
     if (initialSearchType) {
-      setSearchType(initialSearchType);
+      const type = initialSearchType === 'nsn' || initialSearchType === 'niin' ? 'nsn_niin' : initialSearchType;
+      setSearchType(type);
     }
     if (initialSearchQuery) {
       setSearchQuery(initialSearchQuery);

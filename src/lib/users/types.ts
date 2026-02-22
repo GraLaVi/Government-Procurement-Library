@@ -9,13 +9,21 @@ export interface ManagedUser {
   email: string;
   first_name: string;
   last_name: string;
-  phone?: string;
-  job_title?: string;
+  phone: string | null;
+  job_title: string | null;
   roles: string[];  // Array of roles from customer_user_roles table
   is_active: boolean;
   email_verified: boolean;
+  email_verified_at: string | null;
+  must_change_password: boolean;
+  last_login: string | null;
+  failed_login_attempts: number;
+  locked_until: string | null;
   customer_id: number;
   created_at: string;
+  updated_at: string;
+  created_by: number | null;
+  created_by_type: string | null;
 }
 
 // Request type for creating a new user

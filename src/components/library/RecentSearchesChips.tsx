@@ -56,7 +56,7 @@ export function RecentSearchesChips({ actions, onSelectSearch, onDelete, isLoadi
           return (
             <div
               key={action.id}
-              className="group relative inline-flex items-center gap-1.5 bg-muted-light dark:bg-muted-light hover:bg-muted dark:hover:bg-card-bg border border-border rounded-md px-2 py-1 text-xs transition-colors"
+              className="group relative inline-flex items-center gap-1 bg-muted-light dark:bg-muted-light hover:bg-muted/5 dark:hover:bg-muted/15 border border-border rounded-md pl-1.5 pr-0.5 py-0.5 text-[11px] transition-colors cursor-pointer"
             >
               <button
                 onClick={() => {
@@ -70,7 +70,7 @@ export function RecentSearchesChips({ actions, onSelectSearch, onDelete, isLoadi
                     );
                   }
                 }}
-                className="flex items-center gap-1.5 min-w-0"
+                className="flex items-center gap-1 min-w-0 cursor-pointer"
               >
                 <span className="font-medium text-primary whitespace-nowrap flex-shrink-0">
                   {config.label}:

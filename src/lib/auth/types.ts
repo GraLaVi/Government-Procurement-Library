@@ -16,11 +16,19 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
+  phone: string | null;
+  job_title: string | null;
   customer_id: number;
   roles: string[];  // Array of roles from customer_user_roles table
-  must_change_password: boolean;
+  is_active: boolean;
   email_verified: boolean;
-  email_verification_token: string | null;
+  email_verified_at: string | null;
+  must_change_password: boolean;
+  last_login: string | null;
+  failed_login_attempts: number;
+  locked_until: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // Product from /api/v1/auth/me/products

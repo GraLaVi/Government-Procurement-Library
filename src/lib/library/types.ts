@@ -117,7 +117,7 @@ export interface VendorDetail {
   uei: string | null;
   duns: string | null;
   dodaac: string | null;
-  legal_business_name: string | null;
+  legal_business_name: string;
   dba_name: string | null;
   entity_structure: string | null;
   entity_url: string | null;
@@ -128,6 +128,10 @@ export interface VendorDetail {
   country_of_incorporation: string | null;
   small_business: boolean | null;
   fiscal_year_end: string | null;
+  data_source: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  last_sam_sync: string | null;
   addresses: VendorAddress[];
   contacts: VendorContact[];
 }
@@ -318,10 +322,10 @@ export function formatContactType(type: string | null | undefined): string {
   return CONTACT_TYPE_MAP[type] || type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-// Format NIIN with dashes: 012345678 → 0123-45-678
+// Format NIIN with dashes: 000010882 → 00-001-0882 (XX-XXX-XXXX)
 export function formatNiin(niin: string | null | undefined): string | null {
   if (!niin || niin.length !== 9) return niin || null;
-  return `${niin.slice(0, 4)}-${niin.slice(4, 6)}-${niin.slice(6)}`;
+  return `${niin.slice(0, 2)}-${niin.slice(2, 5)}-${niin.slice(5)}`;
 }
 
 // Format currency
@@ -355,7 +359,7 @@ export function formatAwardDate(dateStr: string | null | undefined): string {
 // Parts Search Types
 // ============================================================================
 
-export type PartsSearchType = 'nsn' | 'niin' | 'fsc' | 'description' | 'keyword';
+export type PartsSearchType = 'nsn_niin' | 'solicitation' | 'mfg_part_number' | 'contract_number' | 'description' | 'keyword';
 
 export interface PartSearchResult {
   id: number;
@@ -387,28 +391,61 @@ export interface PartDetail {
   unit_of_issue: string | null;
   unit_price: number | null;
   gac: number | null;  // Group Acquisition Code
-  
-  // Additional code fields from j01_tab schema
-  psclas: string | null;  // Product or Service Class
-  amcode: string | null;  // Acquisition Method Code
-  picode: string | null;  // Place of Inspection Code
-  pmi: string | null;     // Precious Metals Indicator Code
-  cc: string | null;      // Criticality Code
-  adp: string | null;     // ADPE Identification Code
-  esdc: string | null;    // Electrostatic Discharge Code
-  hmic: string | null;    // Hazardous Material Indicator Code
-  dmil: string | null;    // Demilitarization Code
-  sa: string | null;      // Storage Activity
-  sos: string | null;     // Source of Supply
-  aac: string | null;     // Activity Address Code
-  qup: string | null;     // Quality Assurance Purchase
-  slc: string | null;     // Source of Supply Code
-  ciic: string | null;    // Controlled Item Inventory Code
-  rc: string | null;      // Retention Code
-  nscode: string | null;  // NSN Status Code
-  nsdate: string | null;  // NSN Status Date
-  nadate: string | null;  // Date Added
-  idsind: string | null;  // DLA Buy Type Indicator
+
+  // Status and classification codes
+  status_code: string | null;
+  pmi_code: string | null;      // Precious Metals Indicator
+  hazmat_code: string | null;   // Hazardous Material Indicator Code (hmic)
+  demil_code: string | null;    // Demilitarization Code
+  ciic_code: string | null;     // Controlled Inventory Item Code
+  criticality_code: string | null;
+  adp_code: string | null;      // Automatic Data Processing Code
+  esdc: string | null;          // Essential Support Data Code
+
+  // Manufacturer info
+  mfg_cage: string | null;
+  mfg_part_number: string | null;
+  product_class: string | null;
+
+  // Supply chain codes
+  service_agency: string | null;
+  source_of_supply: string | null;  // sos
+  acquisition_advice_code: string | null;  // aac
+  quantity_unit_pack: string | null;  // qup
+  shelf_life_code: string | null;   // slc
+  repairability_code: string | null;
+  acquisition_method_code: string | null;  // amcode
+  pi_code: string | null;       // Place of Inspection Code (picode)
+  ids_indicator: string | null; // DLA Buy Type Indicator (idsind)
+
+  // NIIN dates
+  niin_assignment_date: string | null;  // nadate
+  niin_status_date: string | null;      // nsdate
+
+  // Legacy compatibility aliases (some UI might use old names)
+  psclas?: string | null;  // Product or Service Class
+  amcode?: string | null;  // Acquisition Method Code (same as acquisition_method_code)
+  picode?: string | null;  // Place of Inspection Code (same as pi_code)
+  pmi?: string | null;     // Precious Metals Indicator (same as pmi_code)
+  cc?: string | null;      // Criticality Code (same as criticality_code)
+  adp?: string | null;     // ADPE Identification Code (same as adp_code)
+  hmic?: string | null;    // Hazardous Material Indicator (same as hazmat_code)
+  dmil?: string | null;    // Demilitarization Code (same as demil_code)
+  sa?: string | null;      // Storage Activity (same as service_agency)
+  sos?: string | null;     // Source of Supply (same as source_of_supply)
+  aac?: string | null;     // Activity Address Code (same as acquisition_advice_code)
+  qup?: string | null;     // Quality Assurance Purchase (same as quantity_unit_pack)
+  slc?: string | null;     // Source of Supply Code (same as shelf_life_code)
+  ciic?: string | null;    // Controlled Item Inventory Code (same as ciic_code)
+  rc?: string | null;      // Retention Code (same as repairability_code)
+  nscode?: string | null;  // NSN Status Code (same as status_code)
+  nsdate?: string | null;  // NSN Status Date (same as niin_status_date)
+  nadate?: string | null;  // Date Added (same as niin_assignment_date)
+  idsind?: string | null;  // DLA Buy Type Indicator (same as ids_indicator)
+
+  // Audit fields
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 // ============================================================================
@@ -449,6 +486,8 @@ export interface PartProcurementRecord {
   total_value: number | null;
   delivery_code: string | null;
   source_code: string | null;
+  has_pdf?: boolean;
+  order_detail_id?: number | null;
 }
 
 export interface PartProcurementHistoryResponse {
@@ -465,8 +504,13 @@ export interface PartSolicitation {
   status: string | null;
   set_aside: string | null;
   quantity: number | null;
+  quantity_unit: string | null;
   unit_price: number | null;
   estimated_value: number | null;
+  buyer_name: string | null;
+  buyer_contact: string | null;
+  purchase_req: string | null;
+  has_pdf?: boolean;
 }
 
 export interface PartSolicitationsResponse {
@@ -550,37 +594,38 @@ export interface PartsSearchTypeConfig {
 
 export const PARTS_SEARCH_TYPE_CONFIGS: PartsSearchTypeConfig[] = [
   {
-    value: 'nsn',
-    label: 'NSN',
-    description: 'National Stock Number (FSC + NIIN)',
-    placeholder: 'Enter NSN (e.g., 5306-001234567 or 5340-00-000-0060)',
-    minLength: 4,
-    maxLength: 25,
-    // Allow flexible dash placement - NSN can have dashes anywhere
-    // Backend will parse and extract FSC (4) + NIIN (9) from any format
-    // Pattern allows alphanumeric with optional dashes anywhere
-    pattern: /^[A-Za-z0-9\-]+$/,
-    patternError: 'NSN must contain only alphanumeric characters and dashes',
-  },
-  {
-    value: 'niin',
-    label: 'NIIN',
-    description: 'National Item Identification Number',
-    placeholder: 'Enter 9-character NIIN',
+    value: 'nsn_niin',
+    label: 'NSN/NIIN',
+    description: 'National Stock Number (13 chars) or NIIN (9 chars); auto-detected',
+    placeholder: 'Enter NSN or NIIN (e.g. 5306-001234567 or 00-001-0882)',
     minLength: 9,
-    maxLength: 9,
-    pattern: /^[A-Za-z0-9]{9}$/,
-    patternError: 'NIIN must be exactly 9 alphanumeric characters',
+    maxLength: 25,
+    pattern: /^[A-Za-z0-9\- ]+$/,
+    patternError: 'Enter a 9-digit NIIN or 13-character NSN (dashes optional)',
   },
   {
-    value: 'fsc',
-    label: 'FSC',
-    description: 'Federal Supply Classification',
-    placeholder: 'Enter 4-character FSC',
-    minLength: 4,
-    maxLength: 4,
-    pattern: /^[A-Za-z0-9]{4}$/,
-    patternError: 'FSC must be exactly 4 alphanumeric characters',
+    value: 'solicitation',
+    label: 'Solicitation number',
+    description: 'Find parts by solicitation number (dashes, spaces optional; case-insensitive)',
+    placeholder: 'Enter solicitation number (dashes/spaces optional)',
+    minLength: 3,
+    maxLength: 60,
+  },
+  {
+    value: 'mfg_part_number',
+    label: 'Mfg Part Number',
+    description: 'Manufacturer part number; search is case-insensitive and ignores extra spaces',
+    placeholder: 'Enter manufacturer part number',
+    minLength: 2,
+    maxLength: 50,
+  },
+  {
+    value: 'contract_number',
+    label: 'Contract number',
+    description: 'Find parts by contract/order number (dashes, spaces optional; case-insensitive)',
+    placeholder: 'Enter contract number (dashes/spaces optional)',
+    minLength: 2,
+    maxLength: 50,
   },
   {
     value: 'description',
@@ -593,16 +638,18 @@ export const PARTS_SEARCH_TYPE_CONFIGS: PartsSearchTypeConfig[] = [
   {
     value: 'keyword',
     label: 'Keyword',
-    description: 'Search NSN, NIIN, FSC, or description',
-    placeholder: 'Enter keyword (min 3 chars)',
+    description: 'Searches part description; if the term looks like an NSN (13 chars) or NIIN (9 chars), those are matched too.',
+    placeholder: 'e.g. NSN, NIIN, or description words (min 3 chars)',
     minLength: 3,
     maxLength: 255,
   },
 ];
 
 // Helper function to get config for a parts search type
-export function getPartsSearchTypeConfig(type: PartsSearchType): PartsSearchTypeConfig {
-  const config = PARTS_SEARCH_TYPE_CONFIGS.find((c) => c.value === type);
+export function getPartsSearchTypeConfig(type: PartsSearchType | string): PartsSearchTypeConfig {
+  // Backward compatibility: old saved recent actions may have 'nsn' or 'niin'
+  const normalized = type === 'nsn' || type === 'niin' ? 'nsn_niin' : type;
+  const config = PARTS_SEARCH_TYPE_CONFIGS.find((c) => c.value === normalized);
   if (!config) {
     throw new Error(`Unknown parts search type: ${type}`);
   }
@@ -631,6 +678,24 @@ export function validatePartsSearchInput(
     };
   }
 
+  // NSN/NIIN: validate after normalizing (strip dashes/spaces); must be 9 (NIIN) or 13 (NSN) alphanumeric
+  if (type === 'nsn_niin') {
+    const normalized = trimmed.replace(/[- ]/g, '');
+    if (normalized.length !== 9 && normalized.length !== 13) {
+      return {
+        valid: false,
+        error: config.patternError || 'Enter a 9-digit NIIN or 13-character NSN (dashes optional)',
+      };
+    }
+    if (!/^[A-Za-z0-9]{9}$/.test(normalized) && !/^[A-Za-z0-9]{13}$/.test(normalized)) {
+      return {
+        valid: false,
+        error: config.patternError || 'Enter only alphanumeric characters (dashes optional)',
+      };
+    }
+    return { valid: true };
+  }
+
   if (config.pattern && !config.pattern.test(trimmed)) {
     return {
       valid: false,
@@ -652,18 +717,23 @@ export function buildPartsSearchParams(
 
   // Map search type to API parameter
   switch (type) {
-    case 'nsn':
-      // Normalize NSN format (remove dashes, spaces)
-      const nsnClean = query.trim().replace(/[- ]/g, '').toUpperCase();
-      params.set('nsn', nsnClean);
+    case 'nsn_niin': {
+      const normalized = query.trim().replace(/[- ]/g, '').toUpperCase();
+      if (normalized.length === 13) {
+        params.set('nsn', normalized);
+      } else {
+        params.set('niin', normalized);
+      }
       break;
-    case 'niin':
-      // Normalize NIIN by removing dashes and spaces
-      const niinClean = query.trim().replace(/[- ]/g, '').toUpperCase();
-      params.set('niin', niinClean);
+    }
+    case 'solicitation':
+      params.set('solicitation', query.trim());
       break;
-    case 'fsc':
-      params.set('fsc', query.trim().toUpperCase());
+    case 'mfg_part_number':
+      params.set('mfg_part_number', query.trim());
+      break;
+    case 'contract_number':
+      params.set('contract_number', query.trim());
       break;
     case 'description':
       params.set('q', query.trim());
@@ -686,7 +756,7 @@ export function formatNSN(nsn: string | null | undefined): string | null {
   // Remove existing dashes and spaces
   const clean = nsn.replace(/[- ]/g, '').toUpperCase();
   
-  // If it's 13 characters, format as FSC-NIIN with dashes in NIIN: FSC-XXXX-XX-XXX
+  // If it's 13 characters, format as FSC-NIIN with dashes in NIIN: FSC-XX-XXX-XXXX
   if (clean.length === 13) {
     const fsc = clean.slice(0, 4);
     const niin = clean.slice(4);

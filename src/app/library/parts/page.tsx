@@ -131,8 +131,8 @@ export default function PartsSearchPage() {
         setIsSearchExpanded(false);
       }
 
-      // If only one result and it's an exact match search (NSN, NIIN, FSC), auto-select it
-      if (searchResponse.results.length === 1 && (type === "nsn" || type === "niin" || type === "fsc")) {
+      // If only one result and it's an exact match search (NSN/NIIN, solicitation, etc.), auto-select it
+      if (searchResponse.results.length === 1 && (type === "nsn_niin" || type === "solicitation" || type === "mfg_part_number" || type === "contract_number")) {
         await handleSelectPart(searchResponse.results[0].nsn);
       }
     } catch (error) {
@@ -184,7 +184,7 @@ export default function PartsSearchPage() {
         featureKey="library_parts_search"
         description="Search the parts library to find National Stock Numbers (NSN), part descriptions, pricing information, and related contract data."
         benefits={[
-          "Search parts by NSN, NIIN, FSC, description, or keywords",
+          "Search parts by NSN/NIIN, solicitation, mfg part number, contract number, description, or keywords",
           "View pricing and availability information",
           "Find related contracts and solicitations",
           "Access comprehensive parts master data",
@@ -244,7 +244,8 @@ export default function PartsSearchPage() {
                   actions={recentActions}
                   onSelectSearch={(action: RecentActionEntry) => {
                     const actionData = action.action_data as PartsSearchActionData;
-                    handleSearch(actionData.query_type as PartsSearchType, actionData.query);
+                    const type = actionData.query_type === 'nsn' || actionData.query_type === 'niin' ? 'nsn_niin' : (actionData.query_type as PartsSearchType);
+                    handleSearch(type, actionData.query);
                   }}
                   onDelete={deleteAction}
                   isLoading={isLoadingActions}
@@ -287,7 +288,8 @@ export default function PartsSearchPage() {
                   actions={recentActions}
                   onSelectSearch={(action: RecentActionEntry) => {
                     const actionData = action.action_data as PartsSearchActionData;
-                    handleSearch(actionData.query_type as PartsSearchType, actionData.query);
+                    const type = actionData.query_type === 'nsn' || actionData.query_type === 'niin' ? 'nsn_niin' : (actionData.query_type as PartsSearchType);
+                    handleSearch(type, actionData.query);
                   }}
                   onDelete={deleteAction}
                   isLoading={isLoadingActions}
@@ -407,7 +409,7 @@ export default function PartsSearchPage() {
             Search for Parts
           </h3>
           <p className="text-xs text-muted max-w-sm mx-auto">
-            Search by NSN, NIIN, FSC, description, or keywords
+            Search by NSN/NIIN, solicitation, mfg part number, contract number, description, or keywords
           </p>
         </div>
       )}

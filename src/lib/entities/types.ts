@@ -76,6 +76,10 @@ export interface VendorDetail {
   country_of_incorporation: string | null;
   small_business: boolean | null;
   fiscal_year_end: string | null;
+  data_source: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  last_sam_sync: string | null;
   addresses: VendorAddress[];
   contacts: VendorContact[];
 }
@@ -124,38 +128,177 @@ export interface EntityContact {
   title?: string | null;
 }
 
-// Main Entity Model (matches backend CageEntity)
+// Main Entity Model (matches backend CageEntity - 146 columns)
 export interface CageEntity {
+  // Primary identifiers
   cage_code: string;
   uei: string | null;
   duns: string | null;
   dodaac: string | null;
+
+  // Status and flags
+  sam_extract_code: string | null;
+  purpose_of_registration: string | null;
+  entity_eft_indicator: string | null;
+  exclusion_status_flag: boolean | null;
+  no_public_display_flag: boolean | null;
+  dnb_open_data_flag: boolean | null;
+
+  // Dates
+  initial_registration_date: string | null;
+  registration_expiration_date: string | null;
+  last_update_date: string | null;
+  activation_date: string | null;
+  entity_start_date: string | null;
+
+  // Business Identity
   legal_business_name: string;
   dba_name: string | null;
+  entity_division: string | null;
+  entity_division_number: string | null;
 
-  // Address fields
+  // Physical Address
   physical_address_line_1: string | null;
   physical_address_line_2: string | null;
   physical_address_city: string | null;
   physical_address_state: string | null;
   physical_address_zip: string | null;
+  physical_address_zip_p4: string | null;
   physical_address_country_code: string | null;
+  physical_congressional_district: string | null;
 
-  // Contact fields
-  phone?: string | null;
-  fax?: string | null;
+  // Mailing Address
+  mailing_address_line_1: string | null;
+  mailing_address_line_2: string | null;
+  mailing_address_city: string | null;
+  mailing_address_zip: string | null;
+  mailing_address_zip_p4: string | null;
+  mailing_address_country: string | null;
+  mailing_address_state: string | null;
+
+  // Corporate Info
+  entity_structure: string | null;
+  state_of_incorporation: string | null;
+  country_of_incorporation: string | null;
+  fiscal_year_end_close_date: string | null;
   entity_url: string | null;
+
+  // Business Type classifications
+  business_type_counter: number | null;
+  business_type_string: string | null;
+
+  // NAICS codes
+  primary_naics: string | null;
+  naics_code_counter: number | null;
+  naics_code_string: string | null;
+
+  // PSC codes
+  psc_code_counter: number | null;
+  psc_code_string: string | null;
+
+  // NAICS exceptions
+  naics_exception_counter: number | null;
+  naics_exception_string: string | null;
+
+  // SBA business types
+  sba_business_types_counter: number | null;
+  sba_business_types_string: string | null;
+
+  // Disaster response
+  disaster_response_counter: number | null;
+  disaster_response_string: string | null;
+
+  // Financial info
+  credit_card_usage: string | null;
+  debt_subject_offset_flag: boolean | null;
 
   // Government Business POC
   govt_bus_poc_first_name: string | null;
+  govt_bus_poc_middle_initial: string | null;
   govt_bus_poc_last_name: string | null;
   govt_bus_poc_title: string | null;
+  govt_bus_poc_st_add_1: string | null;
+  govt_bus_poc_st_add_2: string | null;
+  govt_bus_poc_city: string | null;
+  govt_bus_poc_zip: string | null;
+  govt_bus_poc_zip_p4: string | null;
+  govt_bus_poc_country_code: string | null;
+  govt_bus_poc_state: string | null;
 
-  // Status fields
-  sam_extract_code: string | null;
-  registration_expiration_date: string | null;
-  exclusion_status_flag: boolean | null;
-  last_update_date?: string | null;
+  // Alternate Government Business POC
+  alt_govt_bus_poc_first_name: string | null;
+  alt_govt_bus_poc_middle_initial: string | null;
+  alt_govt_bus_poc_last_name: string | null;
+  alt_govt_bus_poc_title: string | null;
+  alt_govt_bus_poc_st_add_1: string | null;
+  alt_govt_bus_poc_st_add_2: string | null;
+  alt_govt_bus_poc_city: string | null;
+  alt_govt_bus_poc_zip: string | null;
+  alt_govt_bus_poc_zip_p4: string | null;
+  alt_govt_bus_poc_country_code: string | null;
+  alt_govt_bus_poc_state: string | null;
+
+  // Electronic Business POC
+  elec_bus_poc_first_name: string | null;
+  elec_bus_poc_middle_initial: string | null;
+  elec_bus_poc_last_name: string | null;
+  elec_bus_poc_title: string | null;
+  elec_bus_poc_st_add_1: string | null;
+  elec_bus_poc_st_add_2: string | null;
+  elec_bus_poc_city: string | null;
+  elec_bus_poc_zip: string | null;
+  elec_bus_poc_zip_p4: string | null;
+  elec_bus_poc_country_code: string | null;
+  elec_bus_poc_state: string | null;
+
+  // Alternate Electronic Business POC
+  alt_elec_bus_poc_first_name: string | null;
+  alt_elec_bus_poc_middle_initial: string | null;
+  alt_elec_bus_poc_last_name: string | null;
+  alt_elec_bus_poc_title: string | null;
+  alt_elec_bus_poc_st_add_1: string | null;
+  alt_elec_bus_poc_st_add_2: string | null;
+  alt_elec_bus_poc_city: string | null;
+  alt_elec_bus_poc_zip: string | null;
+  alt_elec_bus_poc_zip_p4: string | null;
+  alt_elec_bus_poc_country_code: string | null;
+  alt_elec_bus_poc_state: string | null;
+
+  // Past Performance POC
+  past_perf_poc_first_name: string | null;
+  past_perf_poc_middle_initial: string | null;
+  past_perf_poc_last_name: string | null;
+  past_perf_poc_title: string | null;
+  past_perf_poc_st_add_1: string | null;
+  past_perf_poc_st_add_2: string | null;
+  past_perf_poc_city: string | null;
+  past_perf_poc_zip: string | null;
+  past_perf_poc_zip_p4: string | null;
+  past_perf_poc_country_code: string | null;
+  past_perf_poc_state: string | null;
+
+  // Alternate Past Performance POC
+  alt_past_perf_poc_first_name: string | null;
+  alt_past_perf_poc_middle_initial: string | null;
+  alt_past_perf_poc_last_name: string | null;
+  alt_past_perf_poc_title: string | null;
+  alt_past_perf_poc_st_add_1: string | null;
+  alt_past_perf_poc_st_add_2: string | null;
+  alt_past_perf_poc_city: string | null;
+  alt_past_perf_poc_zip: string | null;
+  alt_past_perf_poc_zip_p4: string | null;
+  alt_past_perf_poc_country_code: string | null;
+  alt_past_perf_poc_state: string | null;
+
+  // Correspondence
+  correspondence_flag: string | null;
+
+  // Audit fields
+  created_at: string | null;
+  updated_at: string | null;
+  last_sam_sync: string | null;
+  import_source: string | null;
+  data_quality_score: number | null;
 }
 
 // Search History Item (stored in localStorage)

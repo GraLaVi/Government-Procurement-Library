@@ -39,6 +39,7 @@ import {
 } from "@/lib/library/types";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
+import { Modal } from "@/components/ui/Modal";
 
 // ============================================================================
 // CodeTooltip Component - Shared tooltip for code definitions
@@ -549,6 +550,18 @@ export function PartDetail({ part }: PartDetailProps) {
     }
   }, [part.nsn, procurementItemDescFetched, isLoadingProcurementItemDesc]);
 
+  // Eager-load all tab data when part is selected so counts show on tabs before click
+  useEffect(() => {
+    if (!part?.nsn) return;
+    fetchProcurementHistory();
+    fetchSolicitations();
+    fetchManufacturers();
+    fetchTechnicalCharacteristics();
+    fetchEndUseDescriptions();
+    fetchPackaging();
+    fetchProcurementItemDescription();
+  }, [part?.nsn, fetchProcurementHistory, fetchSolicitations, fetchManufacturers, fetchTechnicalCharacteristics, fetchEndUseDescriptions, fetchPackaging, fetchProcurementItemDescription]);
+
   // Handle tab change with lazy loading
   const handleTabChange = useCallback((tabId: string) => {
     setActiveTab(tabId as TabId);
@@ -569,42 +582,42 @@ export function PartDetail({ part }: PartDetailProps) {
     }
   }, [procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
 
-  // Build tabs dynamically with counts
+  // Build tabs dynamically with counts (show count when fetched, including 0)
   const tabs = [
     { id: "overview" as TabId, label: "Overview", disabled: false },
     {
       id: "procurement" as TabId,
-      label: procurementFetched && procurementTotal > 0 ? `Procurement History (${procurementTotal})` : "Procurement History",
+      label: procurementFetched ? `Procurement History (${procurementTotal})` : "Procurement History",
       disabled: false
     },
     {
       id: "solicitations" as TabId,
-      label: solicitationsFetched && solicitationsTotal > 0 ? `Recent Solicitations (${solicitationsTotal})` : "Recent Solicitations",
+      label: solicitationsFetched ? `Recent Solicitations (${solicitationsTotal})` : "Recent Solicitations",
       disabled: false
     },
     {
       id: "manufacturers" as TabId,
-      label: manufacturersFetched && manufacturersTotal > 0 ? `Manufacturers (${manufacturersTotal})` : "Manufacturers",
+      label: manufacturersFetched ? `Manufacturers (${manufacturersTotal})` : "Manufacturers",
       disabled: false
     },
     {
       id: "technical" as TabId,
-      label: technicalFetched && technicalTotal > 0 ? `Technical Characteristics (${technicalTotal})` : "Technical Characteristics",
+      label: technicalFetched ? `Technical Characteristics (${technicalTotal})` : "Technical Characteristics",
       disabled: false
     },
     {
       id: "enduse" as TabId,
-      label: "End Use Description",
+      label: endUseFetched ? `End Use Description (${endUseTotal})` : "End Use Description",
       disabled: false
     },
     {
       id: "packaging" as TabId,
-      label: "Packaging Information",
+      label: packagingFetched ? `Packaging Information (${packaging ? 1 : 0})` : "Packaging Information",
       disabled: false
     },
     {
       id: "procurementitemdesc" as TabId,
-      label: "Procurement Item Description",
+      label: procurementItemDescFetched ? `Procurement Item Description (${procurementItemDescription?.has_description && procurementItemDescription?.description?.trim() ? 1 : 0})` : "Procurement Item Description",
       disabled: false
     },
   ];
@@ -808,10 +821,10 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
   // Always show these 4 codes, even if null
   // Code types match library_code_definitions table
   const codesToDisplay = [
-    { code: part.idsind, type: 'IDS', label: 'DLA' },  // ids_indicator uses 'IDS' code type
-    { code: part.amcode, type: 'AMC', label: 'AMC' },  // acquisition_method_code uses 'AMC' code type
-    { code: part.picode, type: 'PIC', label: 'PIC' },  // pi_code uses 'PIC' code type
-    { code: part.slc, type: 'SLC', label: 'SLC' },     // shelf_life_code uses 'SLC' code type
+    { code: part.idsind ?? part.ids_indicator ?? null, type: 'IDS', label: 'DLA' },  // ids_indicator uses 'IDS' code type
+    { code: part.amcode ?? part.acquisition_method_code ?? null, type: 'AMC', label: 'AMC' },  // acquisition_method_code uses 'AMC' code type
+    { code: part.picode ?? part.pi_code ?? null, type: 'PIC', label: 'PIC' },  // pi_code uses 'PIC' code type
+    { code: part.slc ?? part.shelf_life_code ?? null, type: 'SLC', label: 'SLC' },     // shelf_life_code uses 'SLC' code type
   ];
 
   const partInfo = [
@@ -922,15 +935,38 @@ interface ProcurementPanelProps {
 }
 
 function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: ProcurementPanelProps) {
+  const [pdfModal, setPdfModal] = useState<{ id: number; contract: string } | null>(null);
+  const pdfUrl = pdfModal ? `/api/library/awards/${pdfModal.id}/pdf` : null;
+
   const columns = useMemo<ColumnDef<PartProcurementRecord>[]>(
     () => [
       {
         id: "contract_number",
         accessorKey: "contract_number",
         header: "Contract #",
-        cell: ({ row }) => (
-          <span className="text-xs font-mono font-semibold">{row.original.contract_number || "—"}</span>
-        ),
+        cell: ({ row }) => {
+          const rec = row.original;
+          return (
+            <span className="inline-flex items-center gap-1">
+              <span className="text-xs font-mono font-semibold">{rec.contract_number || "—"}</span>
+              {rec.has_pdf && rec.order_detail_id && (
+                <button
+                  type="button"
+                  title="View award PDF"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPdfModal({ id: rec.order_detail_id!, contract: rec.contract_number || "" });
+                  }}
+                  className="text-primary hover:text-primary/80 cursor-pointer shrink-0"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                </button>
+              )}
+            </span>
+          );
+        },
       },
       {
         id: "contract_date",
@@ -1053,6 +1089,30 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
           },
         }}
       />
+      {pdfModal && pdfUrl && (
+        <Modal
+          isOpen={true}
+          onClose={() => setPdfModal(null)}
+          title={`Contract ${pdfModal.contract}`}
+          size="full"
+        >
+          <div className="flex flex-col gap-2">
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline"
+            >
+              Open in new tab
+            </a>
+            <iframe
+              src={pdfUrl}
+              title={`Contract ${pdfModal.contract}`}
+              className="w-full border border-border rounded min-h-[70vh]"
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -1067,6 +1127,9 @@ interface SolicitationsPanelProps {
 }
 
 function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRetry }: SolicitationsPanelProps) {
+  const [pdfModal, setPdfModal] = useState<{ id: number; number: string } | null>(null);
+  const pdfUrl = pdfModal ? `/api/library/solicitations/${pdfModal.id}/pdf` : null;
+
   const columns = useMemo<ColumnDef<PartSolicitation>[]>(
     () => [
       {
@@ -1081,8 +1144,80 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         id: "solicitation_number",
         accessorKey: "solicitation_number",
         header: "Solicitation #",
+        cell: ({ row }) => {
+          const sol = row.original;
+          return (
+            <span className="inline-flex items-center gap-1">
+              <span className="text-xs font-mono font-semibold">{sol.solicitation_number}</span>
+              {sol.has_pdf && (
+                <button
+                  type="button"
+                  title="View solicitation PDF"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPdfModal({ id: sol.solicitation_id, number: sol.solicitation_number });
+                  }}
+                  className="text-primary hover:text-primary/80 cursor-pointer shrink-0"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                </button>
+              )}
+            </span>
+          );
+        },
+      },
+      {
+        id: "buyer_name",
+        accessorKey: "buyer_name",
+        header: "Buyer",
         cell: ({ row }) => (
-          <span className="text-xs font-mono font-semibold">{row.original.solicitation_number}</span>
+          <span className="text-xs font-medium text-foreground">{row.original.buyer_name || "—"}</span>
+        ),
+        meta: { className: "hidden lg:table-cell" },
+      },
+      {
+        id: "buyer_contact",
+        accessorKey: "buyer_contact",
+        header: "Buyer contact",
+        cell: ({ row }) => (
+          <span className="text-xs font-medium text-foreground">{row.original.buyer_contact || "—"}</span>
+        ),
+        meta: { className: "hidden lg:table-cell" },
+      },
+      {
+        id: "quantity",
+        accessorKey: "quantity",
+        header: () => <span className="w-full text-right block">Qty</span>,
+        cell: ({ row }) => {
+          const qty = row.original.quantity;
+          const uom = row.original.quantity_unit;
+          const display = qty != null
+            ? (uom ? `${formatNumber(qty)}/${uom}` : formatNumber(qty))
+            : "—";
+          return (
+            <span className="text-right block text-xs">
+              {display}
+            </span>
+          );
+        },
+      },
+      {
+        id: "purchase_req",
+        accessorKey: "purchase_req",
+        header: "Purchase req",
+        cell: ({ row }) => (
+          <span className="text-xs font-medium text-foreground">{row.original.purchase_req || "—"}</span>
+        ),
+        meta: { className: "hidden md:table-cell" },
+      },
+      {
+        id: "status",
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <span className="text-xs font-medium text-foreground">{row.original.status || "—"}</span>
         ),
       },
       {
@@ -1093,16 +1228,6 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           <span className="text-xs font-medium text-foreground">{row.original.agency_code || "—"}</span>
         ),
         meta: { className: "hidden md:table-cell" },
-      },
-      {
-        id: "quantity",
-        accessorKey: "quantity",
-        header: () => <span className="w-full text-right block">Qty</span>,
-        cell: ({ row }) => (
-          <span className="text-right block text-xs">
-            {formatNumber(row.original.quantity)}
-          </span>
-        ),
       },
       {
         id: "estimated_value",
@@ -1184,6 +1309,30 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           },
         }}
       />
+      {pdfModal && pdfUrl && (
+        <Modal
+          isOpen={true}
+          onClose={() => setPdfModal(null)}
+          title={`Solicitation ${pdfModal.number}`}
+          size="full"
+        >
+          <div className="flex flex-col gap-2">
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline"
+            >
+              Open in new tab
+            </a>
+            <iframe
+              src={pdfUrl}
+              title={`Solicitation ${pdfModal.number}`}
+              className="w-full border border-border rounded min-h-[70vh]"
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
