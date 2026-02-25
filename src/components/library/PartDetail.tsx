@@ -31,6 +31,7 @@ import {
   PartPackagingResponse,
   ProcurementItemDescription,
   ProcurementItemDescriptionResponse,
+  PartTabCounts,
   formatNSN,
   formatNiin,
   formatCurrency,
@@ -284,6 +285,9 @@ export function PartDetail({ part }: PartDetailProps) {
   const [isLoadingProcurementItemDesc, setIsLoadingProcurementItemDesc] = useState(false);
   const [procurementItemDescError, setProcurementItemDescError] = useState<string | null>(null);
   const [procurementItemDescFetched, setProcurementItemDescFetched] = useState(false);
+
+  // Tab counts state (fetched eagerly for tab labels, no full data download)
+  const [tabCounts, setTabCounts] = useState<PartTabCounts | null>(null);
 
   // Fetch code definitions on component mount for overview tooltips
   useEffect(() => {
@@ -550,17 +554,27 @@ export function PartDetail({ part }: PartDetailProps) {
     }
   }, [part.nsn, procurementItemDescFetched, isLoadingProcurementItemDesc]);
 
-  // Eager-load all tab data when part is selected so counts show on tabs before click
+  // Fetch lightweight tab counts so labels show record counts before clicking
   useEffect(() => {
     if (!part?.nsn) return;
-    fetchProcurementHistory();
-    fetchSolicitations();
-    fetchManufacturers();
-    fetchTechnicalCharacteristics();
-    fetchEndUseDescriptions();
-    fetchPackaging();
-    fetchProcurementItemDescription();
-  }, [part?.nsn, fetchProcurementHistory, fetchSolicitations, fetchManufacturers, fetchTechnicalCharacteristics, fetchEndUseDescriptions, fetchPackaging, fetchProcurementItemDescription]);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch(
+          `/api/library/parts/${encodeURIComponent(part.nsn)}/tab-counts`
+        );
+        if (!cancelled && response.ok) {
+          const data = (await response.json()) as PartTabCounts;
+          setTabCounts(data);
+        }
+      } catch {
+        // Counts are best-effort; tabs still work without them
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [part?.nsn]);
 
   // Handle tab change with lazy loading
   const handleTabChange = useCallback((tabId: string) => {
@@ -582,57 +596,72 @@ export function PartDetail({ part }: PartDetailProps) {
     }
   }, [procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
 
-  // Build tabs dynamically with counts (show count when fetched, including 0)
+  // Build tabs dynamically with counts.
+  // Prefer data-fetched totals once loaded; fall back to lightweight tabCounts.
+  const procurementLabel = procurementFetched
+    ? `Procurement History (${procurementTotal})`
+    : tabCounts
+      ? `Procurement History (${tabCounts.procurement_history_count})`
+      : "Procurement History";
+
+  const solicitationsLabel = solicitationsFetched
+    ? `Recent Solicitations (${solicitationsTotal})`
+    : tabCounts
+      ? `Recent Solicitations (${tabCounts.solicitations_count})`
+      : "Recent Solicitations";
+
+  const manufacturersLabel = manufacturersFetched
+    ? `Manufacturers (${manufacturersTotal})`
+    : tabCounts
+      ? `Manufacturers (${tabCounts.manufacturers_count})`
+      : "Manufacturers";
+
+  const technicalLabel = technicalFetched
+    ? `Technical Characteristics (${technicalTotal})`
+    : tabCounts
+      ? `Technical Characteristics (${tabCounts.technical_characteristics_count})`
+      : "Technical Characteristics";
+
+  const endUseLabel = endUseFetched
+    ? `End Use Description (${endUseTotal})`
+    : tabCounts
+      ? `End Use Description (${tabCounts.end_use_description_count})`
+      : "End Use Description";
+
+  const packagingLabel = packagingFetched
+    ? `Packaging Information (${packaging ? 1 : 0})`
+    : tabCounts
+      ? `Packaging Information (${tabCounts.has_packaging ? 1 : 0})`
+      : "Packaging Information";
+
+  const pidLabel = procurementItemDescFetched
+    ? `Procurement Item Description (${procurementItemDescription?.has_description && procurementItemDescription?.description?.trim() ? 1 : 0})`
+    : tabCounts
+      ? `Procurement Item Description (${tabCounts.has_procurement_item_description ? 1 : 0})`
+      : "Procurement Item Description";
+
   const tabs = [
     { id: "overview" as TabId, label: "Overview", disabled: false },
-    {
-      id: "procurement" as TabId,
-      label: procurementFetched ? `Procurement History (${procurementTotal})` : "Procurement History",
-      disabled: false
-    },
-    {
-      id: "solicitations" as TabId,
-      label: solicitationsFetched ? `Recent Solicitations (${solicitationsTotal})` : "Recent Solicitations",
-      disabled: false
-    },
-    {
-      id: "manufacturers" as TabId,
-      label: manufacturersFetched ? `Manufacturers (${manufacturersTotal})` : "Manufacturers",
-      disabled: false
-    },
-    {
-      id: "technical" as TabId,
-      label: technicalFetched ? `Technical Characteristics (${technicalTotal})` : "Technical Characteristics",
-      disabled: false
-    },
-    {
-      id: "enduse" as TabId,
-      label: endUseFetched ? `End Use Description (${endUseTotal})` : "End Use Description",
-      disabled: false
-    },
-    {
-      id: "packaging" as TabId,
-      label: packagingFetched ? `Packaging Information (${packaging ? 1 : 0})` : "Packaging Information",
-      disabled: false
-    },
-    {
-      id: "procurementitemdesc" as TabId,
-      label: procurementItemDescFetched ? `Procurement Item Description (${procurementItemDescription?.has_description && procurementItemDescription?.description?.trim() ? 1 : 0})` : "Procurement Item Description",
-      disabled: false
-    },
+    { id: "procurement" as TabId, label: procurementLabel, disabled: false },
+    { id: "solicitations" as TabId, label: solicitationsLabel, disabled: false },
+    { id: "manufacturers" as TabId, label: manufacturersLabel, disabled: false },
+    { id: "technical" as TabId, label: technicalLabel, disabled: false },
+    { id: "enduse" as TabId, label: endUseLabel, disabled: false },
+    { id: "packaging" as TabId, label: packagingLabel, disabled: false },
+    { id: "procurementitemdesc" as TabId, label: pidLabel, disabled: false },
   ];
 
   return (
     <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border bg-muted-light">
+      <div className="px-3 py-2 border-b border-border bg-muted-light">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-xs font-semibold text-foreground">
+            <h2 className="text-xs font-semibold text-foreground truncate">
               {formatNSN(part.nsn) || part.nsn}
             </h2>
             {part.description && (
-              <p className="text-xs text-muted truncate mt-1">{part.description}</p>
+              <p className="text-xs text-muted truncate">{part.description}</p>
             )}
           </div>
         </div>
@@ -806,7 +835,7 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
               content={content}
               codeType={codeType}
             >
-              <span className="text-primary underline decoration-dotted hover:decoration-solid">
+              <span className="text-blue-600 underline decoration-dotted hover:decoration-solid">
                 {displayValue}
               </span>
             </CodeTooltip>
@@ -836,21 +865,21 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
   return (
     <div className="space-y-4">
       {/* Hero Card - Part Description */}
-      <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-6 border border-primary/10">
-        <div className="flex items-start gap-4">
-          <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
-            <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <div className="bg-gradient-to-br from-blue-500/5 to-blue-600/10 rounded-xl p-4 border border-blue-500/10">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-blue-500/10 rounded-lg flex-shrink-0">
+            <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m18 0A2.25 2.25 0 0119.5 19.5h-15A2.25 2.25 0 012.25 17.25m18 0V9a2.25 2.25 0 00-2.25-2.25h-15A2.25 2.25 0 002.25 9v8.25" />
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-foreground mb-2 leading-tight">
+            <h2 className="text-xs font-semibold text-foreground mb-2 leading-tight">
               {part.description || "Part Description Not Available"}
             </h2>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+            <div className="flex flex-wrap items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                <span className="font-mono font-medium text-primary">{formatNSN(part.nsn)}</span>
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                <span className="font-mono font-medium text-blue-600">{formatNSN(part.nsn)}</span>
               </div>
             </div>
           </div>
@@ -869,11 +898,11 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
               Identifiers
             </h3>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-3 space-y-2">
             {identifiers.map((item) => (
               <div key={item.label} className="flex items-center justify-between">
                 <span className="text-xs text-muted font-medium">{item.label}</span>
-                <span className="text-xs font-mono font-semibold text-primary bg-primary/5 px-2 py-1 rounded">
+                <span className="text-xs font-mono font-semibold text-blue-600 bg-blue-600/5 px-2 py-1 rounded">
                   {item.value}
                 </span>
               </div>
@@ -892,11 +921,11 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
               Part Details
             </h3>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-3 space-y-2">
             {partInfo.map((item) => (
               <div key={item.label} className="flex items-start justify-between gap-2">
                 <span className="text-xs text-muted font-medium">{item.label}</span>
-                <span className="text-xs font-medium text-foreground text-right max-w-[200px] break-words">
+                <span className="text-xs font-medium text-foreground text-right max-w-[160px] break-words">
                   {item.value}
                 </span>
               </div>
@@ -914,7 +943,7 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
               Part Codes
             </h3>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-3 space-y-2">
             {codesToDisplay.map((item) => 
               renderCodeWithTooltip(item.code, item.type, item.label)
             )}

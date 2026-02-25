@@ -55,6 +55,8 @@ export interface VendorAward {
   unit_price: number;
   total_value: number;
   agency_code: string | null;
+  has_pdf?: boolean;
+  order_detail_id?: number | null;
 }
 
 export interface VendorAwardsResponse {
@@ -104,12 +106,20 @@ export interface VendorSolicitation {
   description: string | null;
   unit_price: number | null;
   estimated_value: number | null;
+  has_pdf?: boolean;
 }
 
 export interface VendorSolicitationsResponse {
   cage_code: string;
   solicitations: VendorSolicitation[];
   total_count: number;
+}
+
+export interface VendorTabCounts {
+  cage_code: string;
+  awards_count: number;
+  bookings_count: number;
+  solicitations_count: number;
 }
 
 export interface VendorDetail {
@@ -578,6 +588,17 @@ export interface PartPackagingResponse {
   packaging: PartPackaging | null;
   code_definitions: Record<string, string>;
   marking_code_definitions: Record<string, string>;
+}
+
+export interface PartTabCounts {
+  nsn: string;
+  procurement_history_count: number;
+  solicitations_count: number;
+  manufacturers_count: number;
+  technical_characteristics_count: number;
+  end_use_description_count: number;
+  has_packaging: boolean;
+  has_procurement_item_description: boolean;
 }
 
 // Parts search type configuration

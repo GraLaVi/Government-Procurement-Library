@@ -5,11 +5,11 @@ import { AUTH_CONFIG } from '@/lib/auth/config';
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check for access token cookie
   const accessToken = request.cookies.get(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN)?.value;
+  const hasRefreshToken = request.cookies.has(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN);
 
   // Redirect authenticated users from home to dashboard
-  if (pathname === '/' && accessToken) {
+  if (pathname === '/' && (accessToken || hasRefreshToken)) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
@@ -28,24 +28,23 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (!accessToken) {
-    // Only redirect on initial page loads (direct navigation or page refresh)
-    // For subsequent requests during active use, let the client-side handle 401s
-    // Check if this is likely an initial load by checking for navigation headers
-    const isNavigationRequest = 
-      request.headers.get('sec-fetch-mode') === 'navigate' ||
-      request.headers.get('sec-fetch-dest') === 'document' ||
-      !request.headers.get('referer')?.startsWith(request.nextUrl.origin);
+  // If either token is present, let the request through.
+  // The client-side /api/auth/me call will use the refresh token
+  // to obtain a new access token if needed.
+  if (accessToken || hasRefreshToken) {
+    return NextResponse.next();
+  }
 
-    if (isNavigationRequest) {
-      // Redirect to login with return URL only on initial page loads
-      const loginUrl = new URL(AUTH_CONFIG.ROUTES.LOGIN, request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-    
-    // For non-navigation requests (API calls, etc.), allow them to proceed
-    // The client-side fetch interceptor will handle 401s
+  // No tokens at all — redirect to login on navigation requests only
+  const isNavigationRequest = 
+    request.headers.get('sec-fetch-mode') === 'navigate' ||
+    request.headers.get('sec-fetch-dest') === 'document' ||
+    !request.headers.get('referer')?.startsWith(request.nextUrl.origin);
+
+  if (isNavigationRequest) {
+    const loginUrl = new URL(AUTH_CONFIG.ROUTES.LOGIN, request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
