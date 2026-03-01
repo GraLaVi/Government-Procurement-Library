@@ -1198,24 +1198,6 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         },
       },
       {
-        id: "buyer_name",
-        accessorKey: "buyer_name",
-        header: "Buyer",
-        cell: ({ row }) => (
-          <span className="text-xs font-medium text-foreground">{row.original.buyer_name || "—"}</span>
-        ),
-        meta: { className: "hidden lg:table-cell" },
-      },
-      {
-        id: "buyer_contact",
-        accessorKey: "buyer_contact",
-        header: "Buyer contact",
-        cell: ({ row }) => (
-          <span className="text-xs font-medium text-foreground">{row.original.buyer_contact || "—"}</span>
-        ),
-        meta: { className: "hidden lg:table-cell" },
-      },
-      {
         id: "quantity",
         accessorKey: "quantity",
         header: () => <span className="w-full text-right block">Qty</span>,
@@ -1259,6 +1241,22 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         meta: { className: "hidden md:table-cell" },
       },
       {
+        id: "set_aside",
+        accessorKey: "set_aside",
+        header: "Set-Aside",
+        cell: ({ row }) => {
+          const val = row.original.set_aside;
+          if (!val) return <span className="text-muted">—</span>;
+          const truncated = val.length > 10 ? val.substring(0, 10) + "..." : val;
+          return (
+            <span className="text-xs font-medium text-foreground" title={val}>
+              {truncated}
+            </span>
+          );
+        },
+        meta: { className: "hidden lg:table-cell" },
+      },
+      {
         id: "estimated_value",
         accessorKey: "estimated_value",
         header: () => <span className="w-full text-right block">Est. Value</span>,
@@ -1267,15 +1265,66 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
             {formatCurrency(row.original.estimated_value)}
           </span>
         ),
-        meta: { className: "hidden md:table-cell" },
+        meta: { className: "hidden md:table-cell text-right" },
       },
       {
-        id: "set_aside",
-        accessorKey: "set_aside",
-        header: "Set-Aside",
+        id: "buyer_name",
+        accessorKey: "buyer_name",
+        header: "Buyer",
         cell: ({ row }) => (
-          <span className="text-xs font-medium text-foreground">{row.original.set_aside || "—"}</span>
+          <span className="text-xs font-medium text-foreground">{row.original.buyer_name || "—"}</span>
         ),
+        meta: { className: "hidden lg:table-cell" },
+      },
+      {
+        id: "buyer_contact",
+        accessorKey: "buyer_contact",
+        header: "Buyer contact",
+        cell: ({ row }) => {
+          const email = row.original.buyer_email?.toLowerCase();
+          const phone = row.original.buyer_phone;
+          const [copied, setCopied] = useState(false);
+
+          const handleCopyEmail = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            if (email) {
+              navigator.clipboard.writeText(email);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            }
+          };
+
+          if (!email && !phone) return <span className="text-muted">—</span>;
+
+          return (
+            <div className="flex items-center gap-2 group">
+              {phone && <span className="text-xs font-medium text-foreground whitespace-nowrap">{phone}</span>}
+              {email && (
+                <button
+                  type="button"
+                  onClick={handleCopyEmail}
+                  className={`inline-flex items-center gap-1 p-1 rounded transition-colors ${
+                    copied ? "text-success bg-success/10" : "text-primary hover:bg-primary/10"
+                  }`}
+                  title={copied ? "Email copied!" : `Copy email: ${email}`}
+                >
+                  {copied ? (
+                    <>
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-[10px] font-bold">Copied!</span>
+                    </>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                    </svg>
+                  )}
+                </button>
+              )}
+            </div>
+          );
+        },
         meta: { className: "hidden lg:table-cell" },
       },
     ],

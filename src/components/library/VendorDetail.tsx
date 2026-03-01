@@ -1097,16 +1097,11 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         id: "close_date",
         accessorKey: "close_date",
         header: "Close Date",
-        cell: ({ row }) => {
-          const closeDate = new Date(row.original.close_date);
-          const isExpired = closeDate.getTime() < Date.now();
-          return (
-            <span className={`text-xs whitespace-nowrap ${isExpired ? 'text-muted italic' : ''}`}>
-              {formatAwardDate(row.original.close_date)}
-              {isExpired && <span className="ml-1 text-[10px] not-italic">(closed)</span>}
-            </span>
-          );
-        },
+        cell: ({ row }) => (
+          <span className="text-xs whitespace-nowrap">
+            {formatAwardDate(row.original.close_date)}
+          </span>
+        ),
       },
       {
         id: "solicitation_number",

@@ -518,6 +518,8 @@ export interface PartSolicitation {
   unit_price: number | null;
   estimated_value: number | null;
   buyer_name: string | null;
+  buyer_email?: string | null;
+  buyer_phone?: string | null;
   buyer_contact: string | null;
   purchase_req: string | null;
   has_pdf?: boolean;
