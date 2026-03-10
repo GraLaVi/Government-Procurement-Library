@@ -8,11 +8,6 @@ export function proxy(request: NextRequest) {
   const accessToken = request.cookies.get(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN)?.value;
   const hasRefreshToken = request.cookies.has(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN);
 
-  // Redirect authenticated users from home to dashboard
-  if (pathname === '/' && (accessToken || hasRefreshToken)) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
   // Check if route is public
   const isPublicRoute = AUTH_CONFIG.ROUTES.PUBLIC.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)

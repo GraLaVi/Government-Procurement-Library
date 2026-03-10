@@ -32,7 +32,7 @@ export const PartsSearchForm = forwardRef<PartsSearchFormRef, PartsSearchFormPro
   // Update form when initial values change (normalize legacy 'nsn'/'niin' to 'nsn_niin')
   useEffect(() => {
     if (initialSearchType) {
-      const type = initialSearchType === 'nsn' || initialSearchType === 'niin' ? 'nsn_niin' : initialSearchType;
+      const type = (initialSearchType as string) === 'nsn' || (initialSearchType as string) === 'niin' ? 'nsn_niin' : initialSearchType;
       setSearchType(type);
     }
     if (initialSearchQuery) {

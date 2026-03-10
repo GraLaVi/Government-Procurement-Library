@@ -6,7 +6,7 @@ Customer-facing REST API for self-service operations.
 
 ```
 Production: https://api.gphusa.com/api/v1
-Development: https://alanapidev.lamlinks.com/api/v1
+Development: http://75.119.134.30:8000/api/v1
 ```
 
 ## Authentication
@@ -80,16 +80,16 @@ Headers include: `Retry-After: 45`
 ## OpenAPI Documentation
 
 When Swagger UI is enabled (development only):
-- Swagger UI: `https://alanapidev.lamlinks.com/docs`
-- ReDoc: `https://alanapidev.lamlinks.com/redoc`
-- OpenAPI JSON: `https://alanapidev.lamlinks.com/openapi.json`
+- Swagger UI: `http://75.119.134.30:8000/docs`
+- ReDoc: `http://75.119.134.30:8000/redoc`
+- OpenAPI JSON: `http://75.119.134.30:8000/openapi.json`
 
 ## Quick Start
 
 ### 1. Login
 
 ```bash
-curl -X POST "https://alanapidev.lamlinks.com/api/v1/auth/login" \
+curl -X POST "http://75.119.134.30:8000/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "password": "yourpassword"}'
 ```
@@ -108,14 +108,14 @@ Response:
 ### 2. Use Access Token
 
 ```bash
-curl -X GET "https://alanapidev.lamlinks.com/api/v1/auth/me" \
+curl -X GET "http://75.119.134.30:8000/api/v1/auth/me" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
 ```
 
 ### 3. Refresh Token When Expired
 
 ```bash
-curl -X POST "https://alanapidev.lamlinks.com/api/v1/auth/refresh" \
+curl -X POST "http://75.119.134.30:8000/api/v1/auth/refresh" \
   -H "Content-Type: application/json" \
   -d '{"refresh_token": "eyJhbGciOiJIUzI1NiIs..."}'
 ```

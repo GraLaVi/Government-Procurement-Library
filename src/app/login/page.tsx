@@ -103,6 +103,18 @@ function LoginForm() {
     );
   }
 
+  // If authenticated and redirect is in progress, still don't show the form
+  if (isAuthenticated && redirectAttempted) {
+    return (
+      <div className="min-h-screen bg-muted-light dark:bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-muted">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-muted-light dark:bg-background flex">
       {/* Left side - Branding */}
