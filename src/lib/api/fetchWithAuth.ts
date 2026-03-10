@@ -90,12 +90,20 @@ function redirectToLogin(): void {
     return;
   }
 
-  // Don't redirect if we're already on the login page to prevent loops
   // Normalize path by removing trailing slash for comparison
   const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
   const loginPath = AUTH_CONFIG.ROUTES.LOGIN.replace(/\/$/, '');
-  
+
+  // Don't redirect if we're already on the login page to prevent loops
   if (currentPath === loginPath) {
+    return;
+  }
+
+  // Don't redirect if we're on a public route — unauthenticated users are expected there
+  const isPublicRoute = AUTH_CONFIG.ROUTES.PUBLIC.some(
+    (route) => currentPath === route || currentPath.startsWith(`${route}/`)
+  );
+  if (isPublicRoute) {
     return;
   }
 

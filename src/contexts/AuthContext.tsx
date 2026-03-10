@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 4. Not on a public route
     // 5. Not already on the login page
     // 6. This is the initial load (hasInitialized was just set to true)
-    if (hasInitialized && !state.isAuthenticated && !state.isLoading) {
+    if (hasInitialized && !state.isAuthenticated && !state.isLoading && pathname) {
       const isPublicRoute = AUTH_CONFIG.ROUTES.PUBLIC.some(
         (route) => pathname === route || pathname?.startsWith(`${route}/`)
       );
