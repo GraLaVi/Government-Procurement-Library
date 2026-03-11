@@ -41,12 +41,20 @@ export async function POST(request: NextRequest) {
 
     // Handle account locked or inactive
     if (response.status === 403) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Login 403 response:', { detail: errorData.detail, status: response.status, url: response.url });
+      const rawBody = await response.text().catch(() => '');
+      const responseHeaders = Object.fromEntries(response.headers.entries());
+      console.error('Login 403 response:', {
+        status: response.status,
+        url: response.url,
+        body: rawBody,
+        headers: responseHeaders,
+      });
+      let detail: string | undefined;
+      try { detail = JSON.parse(rawBody)?.detail; } catch {}
       return NextResponse.json(
         {
           success: false,
-          error: errorData.detail || 'Account access denied. Please contact support.',
+          error: detail || 'Account access denied. Please contact support.',
         },
         { status: 403 }
       );
