@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 interface CodeDefinitionItem {
   code_value: string;
@@ -62,7 +63,7 @@ export default function CodeDefinitionsPage() {
       setError(null);
 
       try {
-        const response = await fetch('/api/library/code-definitions');
+        const response = await fetchWithAuth('/api/library/code-definitions');
         
         // Check if response is ok before trying to parse JSON
         if (!response.ok) {

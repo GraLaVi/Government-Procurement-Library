@@ -703,7 +703,7 @@ export function validatePartsSearchInput(
 
   // NSN/NIIN: validate after normalizing (strip dashes/spaces); must be 9 (NIIN) or 13 (NSN) alphanumeric
   if (type === 'nsn_niin') {
-    const normalized = trimmed.replace(/[- ]/g, '');
+    const normalized = trimmed.replace(/[\s\-\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '');
     if (normalized.length !== 9 && normalized.length !== 13) {
       return {
         valid: false,
@@ -741,7 +741,7 @@ export function buildPartsSearchParams(
   // Map search type to API parameter
   switch (type) {
     case 'nsn_niin': {
-      const normalized = query.trim().replace(/[- ]/g, '').toUpperCase();
+      const normalized = query.trim().replace(/[\s\-\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '').toUpperCase();
       if (normalized.length === 13) {
         params.set('nsn', normalized);
       } else {
@@ -777,7 +777,7 @@ export function formatNSN(nsn: string | null | undefined): string | null {
   if (!nsn) return null;
   
   // Remove existing dashes and spaces
-  const clean = nsn.replace(/[- ]/g, '').toUpperCase();
+  const clean = nsn.replace(/[\s\-\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '').toUpperCase();
   
   // If it's 13 characters, format as FSC-NIIN with dashes in NIIN: FSC-XX-XXX-XXXX
   if (clean.length === 13) {

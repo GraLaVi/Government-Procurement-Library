@@ -62,7 +62,7 @@ export const VendorSearchForm = forwardRef<VendorSearchFormRef, VendorSearchForm
   };
 
   const handleQueryChange = (value: string) => {
-    setSearchQuery(value);
+    setSearchQuery(value.trim());
     if (validationError) {
       setValidationError(undefined);
     }

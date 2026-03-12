@@ -17,6 +17,7 @@ import {
   getPartsSearchTypeConfig,
 } from "@/lib/library/types";
 import { PartsSearchActionData, RecentActionEntry } from "@/lib/preferences/types";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 export default function PartsSearchPage() {
   const { isLoading: authLoading, hasProductAccess } = useAuth();
@@ -74,7 +75,7 @@ export default function PartsSearchPage() {
     setPartDetail(null);
 
     try {
-      const response = await fetch(`/api/library/parts/${encodeURIComponent(nsn)}`);
+      const response = await fetchWithAuth(`/api/library/parts/${encodeURIComponent(nsn)}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -103,7 +104,7 @@ export default function PartsSearchPage() {
 
     try {
       const params = buildPartsSearchParams(type, query);
-      const response = await fetch(`/api/library/parts/search?${params.toString()}`);
+      const response = await fetchWithAuth(`/api/library/parts/search?${params.toString()}`);
       const data = await response.json();
 
       if (!response.ok) {

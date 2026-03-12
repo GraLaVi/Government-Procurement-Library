@@ -63,7 +63,7 @@ export const PartsSearchForm = forwardRef<PartsSearchFormRef, PartsSearchFormPro
   };
 
   const handleQueryChange = (value: string) => {
-    setSearchQuery(value);
+    setSearchQuery(value.trim());
     if (validationError) {
       setValidationError(undefined);
     }

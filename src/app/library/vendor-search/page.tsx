@@ -18,6 +18,7 @@ import {
   getSearchTypeConfig,
 } from "@/lib/library/types";
 import { VendorSearchActionData, RecentActionEntry } from "@/lib/preferences/types";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 export default function VendorSearchPage() {
   const { isLoading: authLoading, hasProductAccess } = useAuth();
@@ -50,6 +51,9 @@ export default function VendorSearchPage() {
 
   // Ref for search form to control focus
   const searchFormRef = useRef<VendorSearchFormRef>(null);
+
+  // Client-side search result cache (5-min TTL, max 50 entries)
+  const searchCache = useRef<Map<string, { results: VendorSearchResult[]; total: number; timestamp: number }>>(new Map());
 
   // Get URL search params
   const searchParams = useSearchParams();
@@ -108,7 +112,7 @@ export default function VendorSearchPage() {
     setVendorDetail(null);
 
     try {
-      const response = await fetch(`/api/library/vendor/${encodeURIComponent(cageCode)}`);
+      const response = await fetchWithAuth(`/api/library/vendor/${encodeURIComponent(cageCode)}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -126,6 +130,25 @@ export default function VendorSearchPage() {
 
   // Handle search
   const handleSearch = useCallback(async (type: VendorSearchType, query: string) => {
+    // Check client-side cache first
+    const cacheKey = `${type}:${query.trim().toUpperCase()}`;
+    const cached = searchCache.current.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+      setSearchResults(cached.results);
+      setTotalResults(cached.total);
+      setHasSearched(true);
+      setLastSearchType(type);
+      setLastSearchQuery(query);
+      setSearchError(null);
+      setSelectedCageCode(null);
+      setVendorDetail(null);
+      if (cached.results.length > 0) setIsSearchExpanded(false);
+      if (cached.results.length === 1 && (type === "cage" || type === "uei")) {
+        await handleSelectVendor(cached.results[0].cage_code);
+      }
+      return;
+    }
+
     setIsSearching(true);
     setSearchError(null);
     setHasSearched(true);
@@ -136,7 +159,7 @@ export default function VendorSearchPage() {
 
     try {
       const params = buildSearchParams(type, query);
-      const response = await fetch(`/api/library/vendor/search?${params.toString()}`);
+      const response = await fetchWithAuth(`/api/library/vendor/search?${params.toString()}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -146,6 +169,13 @@ export default function VendorSearchPage() {
       const searchResponse = data as VendorSearchResponse;
       setSearchResults(searchResponse.results);
       setTotalResults(searchResponse.total);
+
+      // Store in client-side cache
+      searchCache.current.set(cacheKey, { results: searchResponse.results, total: searchResponse.total, timestamp: Date.now() });
+      if (searchCache.current.size > 50) {
+        const oldest = searchCache.current.keys().next().value;
+        if (oldest !== undefined) searchCache.current.delete(oldest);
+      }
 
       // Save search to recent actions
       try {

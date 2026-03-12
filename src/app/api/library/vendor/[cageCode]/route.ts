@@ -63,8 +63,10 @@ export async function GET(
       );
     }
 
-    // Return vendor detail directly
-    return NextResponse.json(data);
+    // Return vendor detail with cache headers
+    const resp = NextResponse.json(data);
+    resp.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
+    return resp;
   } catch (error) {
     console.error('Vendor detail error:', error);
     return NextResponse.json(
