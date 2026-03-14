@@ -1,6 +1,6 @@
 // Vendor Search Types
 
-export type VendorSearchType = 'cage' | 'uei' | 'duns' | 'entity_name' | 'contact_email';
+export type VendorSearchType = 'cage' | 'uei' | 'entity_name';
 
 export interface VendorSearchResult {
   cage_code: string;
@@ -180,28 +180,10 @@ export const SEARCH_TYPE_CONFIGS: SearchTypeConfig[] = [
     patternError: 'UEI must be exactly 12 alphanumeric characters',
   },
   {
-    value: 'duns',
-    label: 'DUNS Number',
-    description: 'Data Universal Numbering System',
-    placeholder: 'Enter 9-13 digit DUNS number',
-    minLength: 9,
-    maxLength: 13,
-    pattern: /^\d{9,13}$/,
-    patternError: 'DUNS must be 9-13 digits',
-  },
-  {
     value: 'entity_name',
     label: 'Entity Name',
     description: 'Company or business name',
     placeholder: 'Enter company name (min 5 chars)',
-    minLength: 5,
-    maxLength: 255,
-  },
-  {
-    value: 'contact_email',
-    label: 'Contact Email',
-    description: 'Email address of a vendor contact',
-    placeholder: 'Enter contact email (min 5 chars)',
     minLength: 5,
     maxLength: 255,
   },
@@ -265,14 +247,8 @@ export function buildSearchParams(
     case 'uei':
       params.set('uei', query.trim().toUpperCase());
       break;
-    case 'duns':
-      params.set('duns', query.trim());
-      break;
     case 'entity_name':
       params.set('q', query.trim());
-      break;
-    case 'contact_email':
-      params.set('contact_email', query.trim());
       break;
   }
 

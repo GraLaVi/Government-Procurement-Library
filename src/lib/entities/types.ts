@@ -3,11 +3,7 @@
 export type EntitySearchType =
   | "cage"
   | "uei"
-  | "duns"
-  | "entity_name"
-  | "contact_email"
-  | "contact_phone"
-  | "contact_name";
+  | "entity_name";
 
 // ===========================================
 // Vendor Search API Types (from VENDOR_SEARCH.md)
@@ -337,33 +333,9 @@ export const SEARCH_TYPE_OPTIONS: SearchTypeConfig[] = [
     minLength: 12,
   },
   {
-    value: "duns",
-    label: "DUNS",
-    placeholder: "Enter 9-digit DUNS number",
-    minLength: 9,
-  },
-  {
     value: "entity_name",
     label: "Entity Name",
     placeholder: "Enter company or organization name (min 3 characters)",
-    minLength: 3,
-  },
-  {
-    value: "contact_email",
-    label: "Contact Email",
-    placeholder: "Enter contact email address (min 3 characters)",
-    minLength: 3,
-  },
-  {
-    value: "contact_phone",
-    label: "Contact Phone",
-    placeholder: "Enter phone number (min 10 digits)",
-    minLength: 10,
-  },
-  {
-    value: "contact_name",
-    label: "Contact Name",
-    placeholder: "Enter contact first and last name",
     minLength: 3,
   },
 ];

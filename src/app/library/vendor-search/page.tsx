@@ -62,8 +62,6 @@ export default function VendorSearchPage() {
   useEffect(() => {
     const cageCode = searchParams.get('cage_code');
     const uei = searchParams.get('uei');
-    const duns = searchParams.get('duns');
-    const contactEmail = searchParams.get('contact_email');
     const query = searchParams.get('q');
 
     // Auto-execute search if URL params exist
@@ -75,14 +73,6 @@ export default function VendorSearchPage() {
       setInitialSearchType('uei');
       setInitialSearchQuery(uei);
       handleSearch('uei', uei);
-    } else if (duns) {
-      setInitialSearchType('duns');
-      setInitialSearchQuery(duns);
-      handleSearch('duns', duns);
-    } else if (contactEmail) {
-      setInitialSearchType('contact_email');
-      setInitialSearchQuery(contactEmail);
-      handleSearch('contact_email', contactEmail);
     } else if (query) {
       setInitialSearchType('entity_name');
       setInitialSearchQuery(query);
@@ -144,7 +134,7 @@ export default function VendorSearchPage() {
       setVendorDetail(null);
       if (cached.results.length > 0) setIsSearchExpanded(false);
       if (cached.results.length === 1 && (type === "cage" || type === "uei")) {
-        await handleSelectVendor(cached.results[0].cage_code);
+        handleSelectVendor(cached.results[0].cage_code);
       }
       return;
     }
@@ -196,7 +186,7 @@ export default function VendorSearchPage() {
 
       // If only one result and it's an exact match search (CAGE, UEI), auto-select it
       if (searchResponse.results.length === 1 && (type === "cage" || type === "uei")) {
-        await handleSelectVendor(searchResponse.results[0].cage_code);
+        handleSelectVendor(searchResponse.results[0].cage_code);
       }
     } catch (error) {
       console.error("Search error:", error);
@@ -212,8 +202,6 @@ export default function VendorSearchPage() {
   useEffect(() => {
     const cageCode = searchParams.get('cage_code');
     const uei = searchParams.get('uei');
-    const duns = searchParams.get('duns');
-    const contactEmail = searchParams.get('contact_email');
     const query = searchParams.get('q');
 
     // Only auto-execute if we haven't searched yet and URL params exist
@@ -222,10 +210,6 @@ export default function VendorSearchPage() {
         handleSearch('cage', cageCode);
       } else if (uei) {
         handleSearch('uei', uei);
-      } else if (duns) {
-        handleSearch('duns', duns);
-      } else if (contactEmail) {
-        handleSearch('contact_email', contactEmail);
       } else if (query) {
         handleSearch('entity_name', query);
       }
@@ -271,7 +255,7 @@ export default function VendorSearchPage() {
         featureKey="library_vendor_search"
         description="Search and explore government vendor information including CAGE codes, UEI, business details, recent awards, contracts, and open solicitations."
         benefits={[
-          "Find vendors by CAGE code, UEI, DUNS, or business name",
+          "Find vendors by CAGE code, UEI, or business name",
           "View detailed vendor profiles with contact information",
           "Track vendor contract awards and bookings",
           "Discover open solicitations from specific vendors",
@@ -494,7 +478,7 @@ export default function VendorSearchPage() {
             Search for Vendors
           </h3>
           <p className="text-xs text-muted max-w-sm mx-auto">
-            Search by CAGE code, UEI, DUNS number, company name, or contact email
+            Search by CAGE code, UEI, or company name
           </p>
         </div>
       )}

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const queryParams = new URLSearchParams();
 
     // Forward all search parameters
-    const paramNames = ['q', 'cage_code', 'uei', 'duns', 'contact_email', 'limit', 'offset'];
+    const paramNames = ['q', 'cage_code', 'uei', 'limit', 'offset'];
     for (const param of paramNames) {
       const value = searchParams.get(param);
       if (value) {

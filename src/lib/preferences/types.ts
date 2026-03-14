@@ -35,7 +35,7 @@ export interface RecentActionsResponse {
 
 // Vendor search specific types
 export interface VendorSearchActionData {
-  query_type: string; // 'cage', 'uei', 'duns', 'entity_name', 'contact_email'
+  query_type: string; // 'cage', 'uei', 'entity_name'
   query: string;
 }
 
