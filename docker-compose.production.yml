@@ -38,7 +38,6 @@ services:
     volumes:
       - ./nginx/nginx.production.conf:/etc/nginx/nginx.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /var/www/certbot:/var/www/certbot:ro
       - /mnt/shared/alan/logs/${LOG_HOST:-gph-alanweb01}:/var/log/nginx
     networks:
       - alan_network
