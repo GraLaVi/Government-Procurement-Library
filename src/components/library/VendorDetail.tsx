@@ -664,7 +664,7 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
       {
         id: "award_date",
         accessorKey: "award_date",
-        header: "Date",
+        header: "Award Date",
         cell: ({ row }) => (
           <span className="whitespace-nowrap">
             {formatAwardDate(row.original.award_date)}
