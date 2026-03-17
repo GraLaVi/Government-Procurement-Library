@@ -1,5 +1,5 @@
 export const AUTH_CONFIG = {
-  API_BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://75.119.134.30:8000/api/v1',
+  API_BASE_URL: process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://75.119.134.30:8000/api/v1',
   COOKIE_NAMES: {
     ACCESS_TOKEN: 'govt_proc_hub_access_token',
     REFRESH_TOKEN: 'govt_proc_hub_refresh_token',
