@@ -14,6 +14,7 @@ import {
   VendorSearchResult,
   VendorSearchResponse,
   VendorDetail as VendorDetailType,
+  VendorTabCounts,
   buildSearchParams,
   getSearchTypeConfig,
 } from "@/lib/library/types";
@@ -44,6 +45,9 @@ export default function VendorSearchPage() {
   const [vendorDetail, setVendorDetail] = useState<VendorDetailType | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+
+  // Prefetched tab counts (from parallel CAGE search)
+  const [prefetchedTabCounts, setPrefetchedTabCounts] = useState<VendorTabCounts | null>(null);
 
   // Initial search state from last action
   const [initialSearchType, setInitialSearchType] = useState<VendorSearchType | null>(null);
@@ -100,6 +104,7 @@ export default function VendorSearchPage() {
     setIsLoadingDetail(true);
     setDetailError(null);
     setVendorDetail(null);
+    setPrefetchedTabCounts(null);
 
     try {
       const response = await fetchWithAuth(`/api/library/vendor/${encodeURIComponent(cageCode)}`);
@@ -132,6 +137,7 @@ export default function VendorSearchPage() {
       setSearchError(null);
       setSelectedCageCode(null);
       setVendorDetail(null);
+      setPrefetchedTabCounts(null);
       if (cached.results.length > 0) setIsSearchExpanded(false);
       if (cached.results.length === 1 && (type === "cage" || type === "uei")) {
         handleSelectVendor(cached.results[0].cage_code);
@@ -144,49 +150,109 @@ export default function VendorSearchPage() {
     setHasSearched(true);
     setSelectedCageCode(null);
     setVendorDetail(null);
+    setPrefetchedTabCounts(null);
     setLastSearchType(type);
     setLastSearchQuery(query);
 
     try {
       const params = buildSearchParams(type, query);
-      const response = await fetchWithAuth(`/api/library/vendor/search?${params.toString()}`);
-      const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Search failed");
-      }
+      if (type === "cage") {
+        // CAGE search: fire search + detail + tab-counts in parallel
+        const cageCode = query.trim().toUpperCase();
+        const [searchResult, detailResult, tabCountsResult] = await Promise.allSettled([
+          fetchWithAuth(`/api/library/vendor/search?${params.toString()}`).then(r => r.json()),
+          fetchWithAuth(`/api/library/vendor/${encodeURIComponent(cageCode)}`).then(r => r.json()),
+          fetch(`/api/library/vendor/${encodeURIComponent(cageCode)}/tab-counts`).then(r => r.json()),
+        ]);
 
-      const searchResponse = data as VendorSearchResponse;
-      setSearchResults(searchResponse.results);
-      setTotalResults(searchResponse.total);
+        // Search is the source of truth
+        if (searchResult.status === "rejected") {
+          throw new Error("Search failed");
+        }
+        const searchResponse = searchResult.value as VendorSearchResponse;
+        if ((searchResponse as unknown as { error?: string }).error) {
+          throw new Error((searchResponse as unknown as { error: string }).error);
+        }
 
-      // Store in client-side cache
-      searchCache.current.set(cacheKey, { results: searchResponse.results, total: searchResponse.total, timestamp: Date.now() });
-      if (searchCache.current.size > 50) {
-        const oldest = searchCache.current.keys().next().value;
-        if (oldest !== undefined) searchCache.current.delete(oldest);
-      }
+        setSearchResults(searchResponse.results);
+        setTotalResults(searchResponse.total);
 
-      // Save search to recent actions
-      try {
-        const actionData: VendorSearchActionData = {
-          query_type: type,
-          query: query.trim(),
-        };
-        await addAction(actionData);
-      } catch (err) {
-        // Don't fail the search if saving to recent actions fails
-        console.error('Failed to save search to recent actions:', err);
-      }
+        // Cache search results
+        searchCache.current.set(cacheKey, { results: searchResponse.results, total: searchResponse.total, timestamp: Date.now() });
+        if (searchCache.current.size > 50) {
+          const oldest = searchCache.current.keys().next().value;
+          if (oldest !== undefined) searchCache.current.delete(oldest);
+        }
 
-      // Collapse search form after successful search with results
-      if (searchResponse.results.length > 0) {
-        setIsSearchExpanded(false);
-      }
+        // Save to recent actions (fire-and-forget)
+        try {
+          await addAction({ query_type: type, query: query.trim() } as VendorSearchActionData);
+        } catch (err) {
+          console.error('Failed to save search to recent actions:', err);
+        }
 
-      // If only one result and it's an exact match search (CAGE, UEI), auto-select it
-      if (searchResponse.results.length === 1 && (type === "cage" || type === "uei")) {
-        handleSelectVendor(searchResponse.results[0].cage_code);
+        if (searchResponse.results.length > 0) {
+          setIsSearchExpanded(false);
+        }
+
+        // If exactly 1 result, use the pre-fetched detail + tab counts
+        if (searchResponse.results.length === 1) {
+          const resultCage = searchResponse.results[0].cage_code;
+          setSelectedCageCode(resultCage);
+
+          if (detailResult.status === "fulfilled" && !detailResult.value.error) {
+            setVendorDetail(detailResult.value as VendorDetailType);
+          } else {
+            // Detail prefetch failed — fall back to normal fetch
+            handleSelectVendor(resultCage);
+          }
+
+          if (tabCountsResult.status === "fulfilled" && !tabCountsResult.value.error) {
+            setPrefetchedTabCounts(tabCountsResult.value as VendorTabCounts);
+          }
+          // Tab counts are best-effort; VendorDetail will fetch its own if missing
+        }
+      } else {
+        // UEI and entity_name searches: sequential flow (cage code unknown upfront)
+        const response = await fetchWithAuth(`/api/library/vendor/search?${params.toString()}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Search failed");
+        }
+
+        const searchResponse = data as VendorSearchResponse;
+        setSearchResults(searchResponse.results);
+        setTotalResults(searchResponse.total);
+
+        // Store in client-side cache
+        searchCache.current.set(cacheKey, { results: searchResponse.results, total: searchResponse.total, timestamp: Date.now() });
+        if (searchCache.current.size > 50) {
+          const oldest = searchCache.current.keys().next().value;
+          if (oldest !== undefined) searchCache.current.delete(oldest);
+        }
+
+        // Save search to recent actions
+        try {
+          const actionData: VendorSearchActionData = {
+            query_type: type,
+            query: query.trim(),
+          };
+          await addAction(actionData);
+        } catch (err) {
+          console.error('Failed to save search to recent actions:', err);
+        }
+
+        // Collapse search form after successful search with results
+        if (searchResponse.results.length > 0) {
+          setIsSearchExpanded(false);
+        }
+
+        // If only one result and it's an exact match search (UEI), auto-select it
+        if (searchResponse.results.length === 1 && type === "uei") {
+          handleSelectVendor(searchResponse.results[0].cage_code);
+        }
       }
     } catch (error) {
       console.error("Search error:", error);
@@ -221,6 +287,7 @@ export default function VendorSearchPage() {
     setSelectedCageCode(null);
     setVendorDetail(null);
     setDetailError(null);
+    setPrefetchedTabCounts(null);
   }, []);
 
   // Handle new search
@@ -442,7 +509,7 @@ export default function VendorSearchPage() {
                   </div>
                 </div>
               ) : vendorDetail ? (
-                <VendorDetail vendor={vendorDetail} />
+                <VendorDetail vendor={vendorDetail} prefetchedTabCounts={prefetchedTabCounts ?? undefined} />
               ) : null}
             </div>
           ) : (

@@ -33,16 +33,18 @@ import {
 } from "@/lib/library/types";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { Badge } from "@/components/ui/Badge";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 
 interface VendorDetailProps {
   vendor: VendorDetailType;
+  prefetchedTabCounts?: VendorTabCounts;
 }
 
 type TabId = "demographics" | "contacts" | "awards" | "bookings" | "solicitations";
 
-export function VendorDetail({ vendor }: VendorDetailProps) {
+export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps) {
   const [activeTab, setActiveTab] = useState<TabId>("demographics");
 
   // Awards state
@@ -66,10 +68,15 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
   const [solicitationsError, setSolicitationsError] = useState<string | null>(null);
   const [solicitationsFetched, setSolicitationsFetched] = useState(false);
 
-  // Tab counts state (fetched eagerly for tab labels)
-  const [tabCounts, setTabCounts] = useState<VendorTabCounts | null>(null);
+  // Tab counts state (fetched eagerly for tab labels, or provided via prefetch)
+  const [tabCounts, setTabCounts] = useState<VendorTabCounts | null>(prefetchedTabCounts ?? null);
 
   useEffect(() => {
+    // Skip fetch if prefetched data was provided
+    if (prefetchedTabCounts) {
+      setTabCounts(prefetchedTabCounts);
+      return;
+    }
     if (!vendor?.cage_code) return;
     let cancelled = false;
 
@@ -88,7 +95,7 @@ export function VendorDetail({ vendor }: VendorDetailProps) {
     })();
 
     return () => { cancelled = true; };
-  }, [vendor?.cage_code]);
+  }, [vendor?.cage_code, prefetchedTabCounts]);
 
   // Get physical address
   const physicalAddress = vendor.addresses?.find((a) => a.address_type === "physical");
@@ -1180,13 +1187,25 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         id: "set_aside",
         accessorKey: "set_aside",
         header: "Set-Aside",
-        cell: ({ row }) => (
-          row.original.set_aside ? (
-            <Badge variant="info" size="sm">{row.original.set_aside}</Badge>
-          ) : (
-            <span className="text-muted">—</span>
-          )
-        ),
+        cell: ({ row }) => {
+          const code = row.original.set_aside;
+          if (!code) return <span className="text-muted">—</span>;
+          const SET_ASIDE_LABELS: Record<string, string> = {
+            Y: "Small Business Set-Aside",
+            H: "HUBZone Set-Aside",
+            R: "Service Disabled Veteran-Owned Small Business (SDVOSB) Set-Aside",
+            L: "Woman Owned Small Business (WOSB) Set-Aside",
+            A: "8(a) Set-Aside",
+            E: "Economically Disadvantaged Woman Owned Small Business (EDWOSB) Set-Aside",
+            N: "Unrestricted/Not Set-Aside",
+          };
+          const label = SET_ASIDE_LABELS[code.toUpperCase()] || code;
+          return (
+            <Tooltip content={label}>
+              <Badge variant="info" size="sm">{code}</Badge>
+            </Tooltip>
+          );
+        },
         meta: { className: "hidden sm:table-cell" },
       },
       {
