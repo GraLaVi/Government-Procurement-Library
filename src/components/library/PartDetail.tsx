@@ -1457,11 +1457,20 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
         id: "part_number",
         accessorKey: "part_number",
         header: "Part Number",
-        cell: ({ row }) => (
-          <span className="text-xs font-mono font-semibold text-muted">
-            {row.original.part_number || "—"}
-          </span>
-        ),
+        cell: ({ row }) =>
+          row.original.part_number ? (
+            <Link
+              href={`/library/parts?search_type=mfg_part_number&q=${encodeURIComponent(row.original.part_number)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-mono font-semibold text-primary hover:underline cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {row.original.part_number}
+            </Link>
+          ) : (
+            <span className="text-xs font-mono font-semibold text-muted">—</span>
+          ),
         meta: { className: "hidden md:table-cell" },
       },
       {

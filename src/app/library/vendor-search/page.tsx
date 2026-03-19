@@ -15,6 +15,7 @@ import {
   VendorSearchResponse,
   VendorDetail as VendorDetailType,
   VendorTabCounts,
+  VendorCageSummaryResponse,
   buildSearchParams,
   getSearchTypeConfig,
 } from "@/lib/library/types";
@@ -158,22 +159,19 @@ export default function VendorSearchPage() {
       const params = buildSearchParams(type, query);
 
       if (type === "cage") {
-        // CAGE search: fire search + detail + tab-counts in parallel
+        // CAGE search: single combined request (search + detail + tab-counts)
         const cageCode = query.trim().toUpperCase();
-        const [searchResult, detailResult, tabCountsResult] = await Promise.allSettled([
-          fetchWithAuth(`/api/library/vendor/search?${params.toString()}`).then(r => r.json()),
-          fetchWithAuth(`/api/library/vendor/${encodeURIComponent(cageCode)}`).then(r => r.json()),
-          fetch(`/api/library/vendor/${encodeURIComponent(cageCode)}/tab-counts`).then(r => r.json()),
-        ]);
+        const summaryResponse = await fetchWithAuth(
+          `/api/library/vendor/${encodeURIComponent(cageCode)}/summary`
+        );
+        const summaryData = await summaryResponse.json();
 
-        // Search is the source of truth
-        if (searchResult.status === "rejected") {
-          throw new Error("Search failed");
+        if (!summaryResponse.ok) {
+          throw new Error(summaryData.error || "Search failed");
         }
-        const searchResponse = searchResult.value as VendorSearchResponse;
-        if ((searchResponse as unknown as { error?: string }).error) {
-          throw new Error((searchResponse as unknown as { error: string }).error);
-        }
+
+        const summary = summaryData as VendorCageSummaryResponse;
+        const searchResponse = summary.search;
 
         setSearchResults(searchResponse.results);
         setTotalResults(searchResponse.total);
@@ -201,17 +199,15 @@ export default function VendorSearchPage() {
           const resultCage = searchResponse.results[0].cage_code;
           setSelectedCageCode(resultCage);
 
-          if (detailResult.status === "fulfilled" && !detailResult.value.error) {
-            setVendorDetail(detailResult.value as VendorDetailType);
+          if (summary.detail) {
+            setVendorDetail(summary.detail as VendorDetailType);
           } else {
-            // Detail prefetch failed — fall back to normal fetch
             handleSelectVendor(resultCage);
           }
 
-          if (tabCountsResult.status === "fulfilled" && !tabCountsResult.value.error) {
-            setPrefetchedTabCounts(tabCountsResult.value as VendorTabCounts);
+          if (summary.tab_counts) {
+            setPrefetchedTabCounts(summary.tab_counts as VendorTabCounts);
           }
-          // Tab counts are best-effort; VendorDetail will fetch its own if missing
         }
       } else {
         // UEI and entity_name searches: sequential flow (cage code unknown upfront)

@@ -122,6 +122,12 @@ export interface VendorTabCounts {
   solicitations_count: number;
 }
 
+export interface VendorCageSummaryResponse {
+  search: VendorSearchResponse;
+  detail: VendorDetail | null;
+  tab_counts: VendorTabCounts | null;
+}
+
 export interface VendorDetail {
   cage_code: string;
   uei: string | null;
@@ -345,7 +351,7 @@ export function formatAwardDate(dateStr: string | null | undefined): string {
 // Parts Search Types
 // ============================================================================
 
-export type PartsSearchType = 'nsn_niin' | 'solicitation' | 'mfg_part_number' | 'contract_number' | 'description' | 'keyword';
+export type PartsSearchType = 'nsn_niin' | 'solicitation' | 'mfg_part_number' | 'contract_number' | 'description';
 
 export interface PartSearchResult {
   id: number;
@@ -634,20 +640,12 @@ export const PARTS_SEARCH_TYPE_CONFIGS: PartsSearchTypeConfig[] = [
     minLength: 3,
     maxLength: 255,
   },
-  {
-    value: 'keyword',
-    label: 'Keyword',
-    description: 'Searches part description; if the term looks like an NSN (13 chars) or NIIN (9 chars), those are matched too.',
-    placeholder: 'e.g. NSN, NIIN, or description words (min 3 chars)',
-    minLength: 3,
-    maxLength: 255,
-  },
 ];
 
 // Helper function to get config for a parts search type
 export function getPartsSearchTypeConfig(type: PartsSearchType | string): PartsSearchTypeConfig {
   // Backward compatibility: old saved recent actions may have 'nsn' or 'niin'
-  const normalized = type === 'nsn' || type === 'niin' ? 'nsn_niin' : type;
+  const normalized = type === 'nsn' || type === 'niin' ? 'nsn_niin' : type === 'keyword' ? 'description' : type;
   const config = PARTS_SEARCH_TYPE_CONFIGS.find((c) => c.value === normalized);
   if (!config) {
     throw new Error(`Unknown parts search type: ${type}`);
@@ -735,9 +733,6 @@ export function buildPartsSearchParams(
       params.set('contract_number', query.trim());
       break;
     case 'description':
-      params.set('q', query.trim());
-      break;
-    case 'keyword':
       params.set('q', query.trim());
       break;
   }

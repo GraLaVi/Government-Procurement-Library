@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { PartsSearchForm, PartsSearchFormRef } from "@/components/library/PartsSearchForm";
 import { PartsResultsList } from "@/components/library/PartsResultsList";
@@ -51,14 +52,23 @@ export default function PartsSearchPage() {
   // Ref for search form to control focus
   const searchFormRef = useRef<PartsSearchFormRef>(null);
 
-  // Load last search on mount
+  // Get URL search params
+  const searchParams = useSearchParams();
+
+  // Set initial form values from URL params or last action
   useEffect(() => {
-    if (lastAction && lastAction.action_data) {
+    const searchType = searchParams.get('search_type') as PartsSearchType | null;
+    const query = searchParams.get('q');
+
+    if (searchType && query) {
+      setInitialSearchType(searchType);
+      setInitialSearchQuery(query);
+    } else if (lastAction && lastAction.action_data) {
       const actionData = lastAction.action_data as PartsSearchActionData;
       setInitialSearchType(actionData.query_type as PartsSearchType);
       setInitialSearchQuery(actionData.query);
     }
-  }, [lastAction]);
+  }, [searchParams, lastAction]);
 
   // Focus search input on mount
   useEffect(() => {
@@ -145,6 +155,16 @@ export default function PartsSearchPage() {
       setIsSearching(false);
     }
   }, [addAction, handleSelectPart]);
+
+  // Auto-execute search from URL parameters
+  useEffect(() => {
+    const searchType = searchParams.get('search_type') as PartsSearchType | null;
+    const query = searchParams.get('q');
+
+    if (!hasSearched && searchType && query) {
+      handleSearch(searchType, query);
+    }
+  }, [searchParams, hasSearched, handleSearch]);
 
   // Handle back to results
   const handleBackToResults = useCallback(() => {

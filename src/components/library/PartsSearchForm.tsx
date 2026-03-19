@@ -58,8 +58,9 @@ export const PartsSearchForm = forwardRef<PartsSearchFormRef, PartsSearchFormPro
 
   const handleSearchTypeChange = (value: PartsSearchType) => {
     setSearchType(value);
-    setSearchQuery("");
     setValidationError(undefined);
+    inputRef.current?.focus();
+    inputRef.current?.select();
   };
 
   const handleQueryChange = (value: string) => {
