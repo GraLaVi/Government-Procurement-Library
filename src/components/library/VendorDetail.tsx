@@ -340,8 +340,7 @@ function DemographicsPanel({
     { label: "Website", value: vendor.entity_url, isLink: true },
     { label: "State of Inc.", value: vendor.state_of_incorporation },
     { label: "Country of Inc.", value: vendor.country_of_incorporation },
-    { label: "Fiscal Year End", value: formatFiscalYearEnd(vendor.fiscal_year_end) },
-    { label: "Small Business", value: vendor.small_business === true ? "Yes" : vendor.small_business === false ? "No" : null },
+    { label: "Business Type", value: vendor.entity_description },
   ].filter(item => item.value);
 
   const registration = [
@@ -446,12 +445,12 @@ function DemographicsPanel({
                     href={item.value.startsWith("http") ? item.value : `https://${item.value}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium text-right max-w-[160px] break-words"
+                    className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium text-right max-w-[220px] break-words"
                   >
                     {item.value}
                   </a>
                 ) : (
-                  <span className="text-xs font-medium text-foreground text-right max-w-[160px] break-words">
+                  <span className="text-xs font-medium text-foreground text-right max-w-[220px] break-words">
                     {item.value}
                   </span>
                 )}

@@ -136,6 +136,7 @@ export interface VendorDetail {
   legal_business_name: string;
   dba_name: string | null;
   entity_structure: string | null;
+  entity_description: string | null;
   entity_url: string | null;
   sam_status: string | null;
   exclusion_status: boolean | null;
