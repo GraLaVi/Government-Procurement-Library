@@ -39,9 +39,9 @@ const accountSections = [
     ),
   },
   {
-    title: "Bid-Matching Filters",
-    description: "View and manage your contract search filters",
-    href: "/account/searches",
+    title: "Bid-Matching Profile",
+    description: "View and manage your bid-matching profiles",
+    href: "/account/bidmatching",
     icon: (
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -168,6 +168,32 @@ export default function AccountPage() {
             Edit Profile
           </Button>
         </div>
+        <div className="border-t border-border mt-6 pt-4 flex flex-wrap gap-x-8 gap-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted">Account Status</span>
+            <span className="w-2 h-2 bg-success rounded-full"></span>
+            <span className="text-sm font-semibold text-card-foreground">Active</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted">Email Status</span>
+            {user?.email_verified ? (
+              <>
+                <span className="w-2 h-2 bg-success rounded-full"></span>
+                <span className="text-sm font-semibold text-card-foreground">Verified</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 bg-warning rounded-full"></span>
+                <span className="text-sm font-semibold text-card-foreground">Not Verified</span>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-card-foreground">
+              {user?.created_at ? new Date(user.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : ""}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Email Verification Warning Card */}
@@ -249,38 +275,6 @@ export default function AccountPage() {
           ))}
       </div>
 
-      {/* Quick stats */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-card-bg rounded-xl border border-border p-6">
-          <div className="text-sm text-muted mb-1">Account Status</div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-success rounded-full"></span>
-            <span className="text-lg font-semibold text-card-foreground">Active</span>
-          </div>
-        </div>
-        <div className="bg-card-bg rounded-xl border border-border p-6">
-          <div className="text-sm text-muted mb-1">Email Status</div>
-          <div className="flex items-center gap-2">
-            {user?.email_verified ? (
-              <>
-                <span className="w-2 h-2 bg-success rounded-full"></span>
-                <span className="text-lg font-semibold text-card-foreground">Verified</span>
-              </>
-            ) : (
-              <>
-                <span className="w-2 h-2 bg-warning rounded-full"></span>
-                <span className="text-lg font-semibold text-card-foreground">Not Verified</span>
-              </>
-            )}
-          </div>
-        </div>
-        <div className="bg-card-bg rounded-xl border border-border p-6">
-          <div className="text-sm text-muted mb-1">Member Since</div>
-          <div className="text-lg font-semibold text-card-foreground">
-            {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-          </div>
-        </div>
-      </div>
     </>
   );
 }
