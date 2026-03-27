@@ -11,6 +11,7 @@ interface AuthContextValue extends AuthState {
   refreshUser: () => Promise<void>;
   hasProductAccess: (productKey: string) => boolean;
   hasAnyProductAccess: (productKeys: string[]) => boolean;
+  hasProductAccessByPrefix: (prefix: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -173,8 +174,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }, [state.products]);
 
+  // Check if user has access to any product whose key starts with prefix
+  const hasProductAccessByPrefix = useCallback((prefix: string): boolean => {
+    if (!state.products) return false;
+    return state.products.some(p => p.product_key.startsWith(prefix) && p.is_active);
+  }, [state.products]);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, refreshUser, hasProductAccess, hasAnyProductAccess }}>
+    <AuthContext.Provider value={{ ...state, login, logout, refreshUser, hasProductAccess, hasAnyProductAccess, hasProductAccessByPrefix }}>
       {hasInitialized ? children : (
         <div className="min-h-screen flex items-center justify-center bg-muted-light">
           <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />

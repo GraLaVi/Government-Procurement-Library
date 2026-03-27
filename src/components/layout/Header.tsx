@@ -16,7 +16,7 @@ const helpItems = [
 
 const mainNavItems = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/opportunities", label: "Opportunities" },
+  { href: "/bidmatching", label: "Bid-Matching" },
   { href: "/competitors", label: "Competitors" },
   { href: "/analytics", label: "Analytics" },
 ];
@@ -130,8 +130,8 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   </div>
                 )}
               </div>
-              <Link href="/opportunities" className="text-card-foreground hover:text-foreground transition-colors">
-                Opportunities
+              <Link href="/bidmatching" className="text-card-foreground hover:text-foreground transition-colors">
+                Bid-Matching
               </Link>
               <Link href="/competitors" className="text-card-foreground hover:text-foreground transition-colors">
                 Competitors
