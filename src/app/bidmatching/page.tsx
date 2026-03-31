@@ -3,12 +3,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
-import { BidMatchDatePicker } from "@/components/bidmatching/BidMatchDatePicker";
+import { BidMatchDatePanel } from "@/components/bidmatching/BidMatchDatePanel";
 import { BidMatchResultsTable } from "@/components/bidmatching/BidMatchResultsTable";
 
-interface DateEntry {
-  match_date: string;
+interface IssueDateEntry {
+  issue_date: string;
   match_count: number;
+}
+
+interface RunDateGroup {
+  run_date: string;
+  total_count: number;
+  issue_dates: IssueDateEntry[];
 }
 
 interface MatchedCondition {
@@ -47,8 +53,9 @@ const PAGE_SIZE = 50;
 export default function BidMatchingPage() {
   const { isLoading: authLoading, hasProductAccessByPrefix } = useAuth();
 
-  const [dates, setDates] = useState<DateEntry[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [dateTree, setDateTree] = useState<RunDateGroup[]>([]);
+  const [selectedRunDate, setSelectedRunDate] = useState<string | null>(null);
+  const [selectedIssueDate, setSelectedIssueDate] = useState<string | null>(null);
   const [results, setResults] = useState<BidMatchResult[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -56,17 +63,19 @@ export default function BidMatchingPage() {
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch available dates on mount
+  // Fetch date tree on mount
   useEffect(() => {
-    async function fetchDates() {
+    async function fetchDateTree() {
       setIsLoadingDates(true);
       try {
-        const res = await fetch("/api/bid-matching/results/dates");
+        const res = await fetch("/api/bid-matching/results/date-tree");
         if (!res.ok) throw new Error("Failed to load match dates");
-        const data: DateEntry[] = await res.json();
-        setDates(data);
-        if (data.length > 0) {
-          setSelectedDate(data[0].match_date);
+        const data: RunDateGroup[] = await res.json();
+        setDateTree(data);
+        // Auto-select first run date + first issue date
+        if (data.length > 0 && data[0].issue_dates.length > 0) {
+          setSelectedRunDate(data[0].run_date);
+          setSelectedIssueDate(data[0].issue_dates[0].issue_date);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load match dates");
@@ -74,17 +83,21 @@ export default function BidMatchingPage() {
         setIsLoadingDates(false);
       }
     }
-    fetchDates();
+    fetchDateTree();
   }, []);
 
-  // Fetch results when date or page changes
-  const fetchResults = useCallback(async (date: string, pg: number) => {
+  // Fetch results when selection or page changes
+  const fetchResults = useCallback(async (runDate: string, issueDate: string, pg: number) => {
     setIsLoadingResults(true);
     setError(null);
     try {
-      const res = await fetch(
-        `/api/bid-matching/results?date=${date}&page=${pg}&page_size=${PAGE_SIZE}`
-      );
+      const params = new URLSearchParams({
+        date: issueDate,
+        run_date: runDate,
+        page: pg.toString(),
+        page_size: PAGE_SIZE.toString(),
+      });
+      const res = await fetch(`/api/bid-matching/results?${params}`);
       if (!res.ok) throw new Error("Failed to load match results");
       const data: ResultsResponse = await res.json();
       setResults(data.results);
@@ -99,13 +112,14 @@ export default function BidMatchingPage() {
   }, []);
 
   useEffect(() => {
-    if (selectedDate) {
-      fetchResults(selectedDate, page);
+    if (selectedRunDate && selectedIssueDate) {
+      fetchResults(selectedRunDate, selectedIssueDate, page);
     }
-  }, [selectedDate, page, fetchResults]);
+  }, [selectedRunDate, selectedIssueDate, page, fetchResults]);
 
-  const handleDateChange = (date: string) => {
-    setSelectedDate(date);
+  const handleDateSelect = (runDate: string, issueDate: string) => {
+    setSelectedRunDate(runDate);
+    setSelectedIssueDate(issueDate);
     setPage(1);
   };
 
@@ -162,7 +176,7 @@ export default function BidMatchingPage() {
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
         </div>
-      ) : dates.length === 0 ? (
+      ) : dateTree.length === 0 ? (
         /* No match history */
         <div className="text-center py-16 bg-card-bg rounded-lg border border-border">
           <svg className="mx-auto h-16 w-16 text-muted-foreground/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
@@ -175,28 +189,36 @@ export default function BidMatchingPage() {
           </p>
         </div>
       ) : (
-        <>
-          {/* Date picker */}
-          <div className="bg-card-bg rounded-lg border border-border p-4">
-            <BidMatchDatePicker
-              dates={dates}
-              selectedDate={selectedDate}
-              onDateChange={handleDateChange}
+        /* Two-column layout: date panel + results */
+        <div className="flex gap-6 items-start">
+          {/* Date panel */}
+          <div className="w-72 flex-shrink-0 bg-card-bg rounded-lg border border-border overflow-hidden">
+            <BidMatchDatePanel
+              dateTree={dateTree}
+              selectedRunDate={selectedRunDate}
+              selectedIssueDate={selectedIssueDate}
+              onSelect={handleDateSelect}
             />
           </div>
 
-          {/* Results table */}
-          <div className="bg-card-bg rounded-lg border border-border p-4">
-            <BidMatchResultsTable
-              results={results}
-              isLoading={isLoadingResults}
-              total={total}
-              page={page}
-              pageSize={PAGE_SIZE}
-              onPageChange={handlePageChange}
-            />
+          {/* Results */}
+          <div className="flex-1 min-w-0 bg-card-bg rounded-lg border border-border p-4">
+            {selectedRunDate && selectedIssueDate ? (
+              <BidMatchResultsTable
+                results={results}
+                isLoading={isLoadingResults}
+                total={total}
+                page={page}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+              />
+            ) : (
+              <div className="text-center py-16">
+                <p className="text-muted-foreground">Select a date from the panel to view results.</p>
+              </div>
+            )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

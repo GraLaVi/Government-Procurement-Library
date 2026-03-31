@@ -27,7 +27,7 @@ export function BidMatchDatePicker({ dates, selectedDate, onDateChange }: BidMat
   return (
     <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
       <span className="text-sm font-medium text-muted-foreground whitespace-nowrap mr-1">
-        Match Date:
+        Issue Date:
       </span>
       {dates.map((entry) => {
         const isSelected = entry.match_date === selectedDate;

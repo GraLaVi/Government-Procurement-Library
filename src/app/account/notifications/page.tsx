@@ -19,7 +19,9 @@ interface NotificationType {
   category: string | null;
   available_frequencies: string[] | null;
   default_frequency: string | null;
+  requires_product_group: string | null;
   requires_product: string | null;
+  entitled: boolean;
   current_subscription: CurrentSubscription | null;
 }
 
@@ -157,18 +159,7 @@ export default function NotificationsPage() {
   };
 
   const isLocked = (t: NotificationType): boolean => {
-    // If requires_product and no current_subscription, the backend still
-    // returns the type but the user can't subscribe. We check if the type
-    // has requires_product set — if the backend filtered it properly the
-    // user has the product. If not, we show it locked.
-    // The backend includes all active types; locked ones have requires_product
-    // set but no subscription and the user doesn't own that product.
-    // Since the backend LEFT JOINs subscriptions, we detect locked state
-    // by checking requires_product is set AND there's no subscription AND
-    // default behavior means it should be shown. Actually, the backend
-    // always returns the type. We'll trust the backend: if it's included,
-    // the user can interact. The requires_product field is informational.
-    return false;
+    return !t.entitled;
   };
 
   if (authLoading || isLoading) {
@@ -282,8 +273,10 @@ export default function NotificationsPage() {
                   const effective = getEffectiveFrequency(t);
                   const locked = isLocked(t);
                   const frequencies = [
-                    ...(t.available_frequencies || ["immediate", "digest"]),
-                    "none",
+                    ...new Set([
+                      ...(t.available_frequencies || ["immediate", "digest"]),
+                      "none",
+                    ]),
                   ];
                   const isDefault = !t.current_subscription;
                   const isSaving = savingId === t.id;

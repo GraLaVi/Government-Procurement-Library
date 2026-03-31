@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
 
-// GET /api/bid-matching/results - List match results for a specific date
+// GET /api/bid-matching/results/date-tree - Get run dates with nested issue dates
 export async function GET(request: NextRequest) {
   try {
     let accessToken = await getAccessToken();
@@ -15,17 +15,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const params = new URLSearchParams();
-    const date = searchParams.get('date');
-    if (date) params.set('date', date);
-    const runDate = searchParams.get('run_date');
-    if (runDate) params.set('run_date', runDate);
-    const page = searchParams.get('page');
-    if (page) params.set('page', page);
-    const pageSize = searchParams.get('page_size');
-    if (pageSize) params.set('page_size', pageSize);
-
-    const backendUrl = `${AUTH_CONFIG.API_BASE_URL}/bid-matching/results?${params.toString()}`;
+    const limit = searchParams.get('limit') || '100';
+    const backendUrl = `${AUTH_CONFIG.API_BASE_URL}/bid-matching/results/date-tree?limit=${limit}`;
 
     let response = await fetch(backendUrl, {
       headers: {
@@ -53,14 +44,14 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.detail || 'Failed to fetch match results' },
+        { error: data.detail || 'Failed to fetch date tree' },
         { status: response.status }
       );
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Get bid matching results error:', error);
+    console.error('Get bid matching date tree error:', error);
     return NextResponse.json(
       { error: 'An unexpected error occurred' },
       { status: 500 }
