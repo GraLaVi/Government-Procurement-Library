@@ -4,7 +4,7 @@ const footerLinks = {
   Product: [
     { href: "/#features", label: "Features" },
     { href: "/#pricing", label: "Pricing" },
-    { href: "/trial", label: "Free Trial" },
+    { href: "/trial", label: "Join Waitlist" },
   ],
   Company: [
     { href: "/about", label: "About" },
@@ -37,7 +37,7 @@ export function Footer() {
               <span className="text-xl font-bold">GPH</span>
             </Link>
             <p className="text-white/70 text-sm">
-              Your Defense Contracting Intelligence Platform
+              Your DoD Solicitation Intelligence Platform
             </p>
           </div>
 

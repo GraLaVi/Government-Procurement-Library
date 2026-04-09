@@ -17,17 +17,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GPH - Win More Government Bids",
+  title: "GPH - DoD Solicitation Intelligence Platform",
   description:
-    "Your Defense Contracting Intelligence Platform. Find, track, and win federal contracts with AI-powered bid matching and real-time market intelligence.",
+    "Track and win Department of Defense solicitations. Search DLA, DIBBS, and military branch opportunities with NSN/NIIN lookup, CAGE code intelligence, and real-time bid alerts.",
   keywords: [
-    "government contracts",
-    "federal contracts",
+    "DoD solicitations",
+    "DLA contracts",
+    "DIBBS",
+    "defense logistics agency",
+    "military procurement",
+    "NSN search",
+    "NIIN lookup",
+    "CAGE codes",
+    "DoDAAC",
     "defense contracting",
-    "bid matching",
-    "SAM.gov",
-    "government procurement",
-    "DoD contracts",
+    "DoD procurement",
   ],
 };
 

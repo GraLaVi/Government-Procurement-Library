@@ -10,39 +10,39 @@ import {
 const features = [
   {
     icon: TargetIcon,
-    title: "Intelligent Bid Matching",
+    title: "DLA Solicitation Matching",
     description:
-      "Our AI analyzes your capabilities and automatically matches you with relevant opportunities from SAM.gov, DIBBS, FedBizOpps, and 20+ other sources.",
+      "Automatically scan and match DLA solicitations from DIBBS and other DoD procurement channels to your company's capabilities, CAGE code, and past performance.",
   },
   {
     icon: BellIcon,
-    title: "Real-Time Alerts",
+    title: "Real-Time DoD Alerts",
     description:
-      "Get instant notifications when new opportunities match your criteria. Never miss a deadline with automated reminders and tracking.",
+      "Get instant notifications when new RFQs, RFPs, and solicitations are posted by DLA, Army, Navy, Air Force, and Marine Corps contracting offices.",
   },
   {
     icon: DatabaseIcon,
-    title: "SAM.gov Integration",
+    title: "NSN/NIIN Parts Database",
     description:
-      "Seamlessly pull opportunity data, entity information, and award history directly from SAM.gov and other federal databases.",
+      "Search millions of National Stock Numbers and NIINs with complete part data, cross-references, management codes, and linked solicitation history.",
   },
   {
     icon: ChartIcon,
-    title: "Contract Analytics",
+    title: "CAGE Code Intelligence",
     description:
-      "Analyze historical contract data, pricing trends, and award patterns to build more competitive proposals.",
+      "Look up any CAGE or DoDAAC code to see associated contracts, award history, and active solicitations. Understand who is competing and winning.",
   },
   {
     icon: UsersIcon,
-    title: "Competitor Tracking",
+    title: "Competitor Analysis",
     description:
-      "Monitor competitor activity, win rates, and contract awards to understand your competitive landscape.",
+      "Track which contractors are winning DoD awards in your space. See their CAGE codes, contract values, and bidding patterns across DLA and service branches.",
   },
   {
     icon: SearchIcon,
-    title: "Advanced Search",
+    title: "DIBBS & Solicitation Search",
     description:
-      "Filter opportunities by NAICS codes, set-asides, contract type, agency, location, and dozens of other criteria.",
+      "Search and filter DIBBS solicitations, packaging requirements, and qualification criteria so you can respond to DoD opportunities faster and more accurately.",
   },
 ];
 
@@ -53,10 +53,10 @@ export function Features() {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-bold text-secondary dark:text-foreground">
-            Everything You Need to Win Government Contracts
+            Everything You Need to Win DoD Bids
           </h2>
           <p className="mt-4 text-lg text-muted dark:text-foreground/70">
-            Powerful tools designed specifically for defense contractors and government vendors
+            Purpose-built tools for defense contractors working with DLA, DIBBS, and military service branches
           </p>
         </div>
 

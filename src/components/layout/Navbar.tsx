@@ -9,7 +9,6 @@ import { useAuth } from "@/contexts/AuthContext";
 const navLinks = [
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How It Works" },
-  { href: "/#pricing", label: "Pricing" },
   { href: "/about", label: "About" },
 ];
 
@@ -160,14 +159,9 @@ export function Navbar() {
                 </Link>
               </>
             ) : (
-              <>
-                <Button href="/login" variant="ghost" size="sm">
-                  Log In
-                </Button>
-                <Button href="/trial" variant="primary" size="sm">
-                  Start Free Trial
-                </Button>
-              </>
+              <Button href="/trial" variant="primary" size="sm">
+                Join Waitlist
+              </Button>
             )}
           </div>
 
@@ -289,14 +283,9 @@ export function Navbar() {
                     </Link>
                   </>
                 ) : (
-                  <>
-                    <Button href="/login" variant="outline" size="md">
-                      Log In
-                    </Button>
-                    <Button href="/trial" variant="primary" size="md">
-                      Start Free Trial
-                    </Button>
-                  </>
+                  <Button href="/trial" variant="primary" size="md">
+                    Join Waitlist
+                  </Button>
                 )}
               </div>
             </div>

@@ -3,21 +3,21 @@ import { ArrowRightIcon } from "@/components/icons";
 const steps = [
   {
     number: "01",
-    title: "Set Your Criteria",
+    title: "Join the Waitlist",
     description:
-      "Define your capabilities, NAICS codes, contract preferences, and target agencies. Our system learns what opportunities matter to you.",
+      "Enter your email to get early access when we launch. We'll notify you the moment GPH goes live with full DLA and DIBBS solicitation feeds.",
   },
   {
     number: "02",
-    title: "Get Matched",
+    title: "Set Your DoD Profile",
     description:
-      "Our AI scans federal databases daily and delivers personalized opportunity matches directly to your dashboard and inbox.",
+      "At launch, configure your CAGE code, NSN categories, preferred military branches, and contract size range. Our system learns which DoD solicitations matter to you.",
   },
   {
     number: "03",
-    title: "Win Contracts",
+    title: "Win DoD Contracts",
     description:
-      "Use our analytics and insights to craft winning proposals. Track your pipeline and grow your government business.",
+      "Receive matched solicitations daily, analyze competitor bids with CAGE code intelligence, and submit stronger proposals backed by real procurement data.",
   },
 ];
 
@@ -31,7 +31,7 @@ export function HowItWorks() {
             How GPH Works
           </h2>
           <p className="mt-4 text-lg text-muted dark:text-foreground/70">
-            Get started in minutes and find your first matched opportunities today
+            Get notified at launch and start finding DoD solicitations immediately
           </p>
         </div>
 
