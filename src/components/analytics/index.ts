@@ -6,4 +6,7 @@ export { BookingsTrendChart } from './BookingsTrendChart';
 export { AwardsOverTimeChart } from './AwardsOverTimeChart';
 export { TopAwardedPartsChart } from './TopAwardedPartsChart';
 export { UpcomingSolicitationsTable } from './UpcomingSolicitationsTable';
+export { MatchTrendChart } from './MatchTrendChart';
+export { ConditionTypeChart } from './ConditionTypeChart';
+export { RecentMatchesTable } from './RecentMatchesTable';
 export { formatCurrency, formatNumber } from './ChartColors';

@@ -43,7 +43,18 @@ export function UpcomingSolicitationsTable({ data }: UpcomingSolicitationsTableP
 
               return (
                 <tr key={i} className="hover:bg-muted-light/30 transition-colors">
-                  <td className="px-6 py-3 font-mono text-card-foreground">{sol.solicitation_number || '-'}</td>
+                  <td className="px-6 py-3 font-mono">
+                    {sol.solicitation_number ? (
+                      <a
+                        href={`/library/parts?search_type=solicitation&q=${encodeURIComponent(sol.solicitation_number)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:text-primary/80 hover:underline"
+                      >
+                        {sol.solicitation_number}
+                      </a>
+                    ) : '-'}
+                  </td>
                   <td className="px-6 py-3 text-card-foreground whitespace-nowrap">
                     {closeDate}
                     {daysUntil !== null && daysUntil <= 7 && (

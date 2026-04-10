@@ -1,6 +1,6 @@
 "use client";
 
-import { useMarketAnalytics, useMyBusinessAnalytics } from '@/lib/hooks/useAnalytics';
+import { useMarketAnalytics, useMyBusinessAnalytics, useBidMatchAnalytics } from '@/lib/hooks/useAnalytics';
 import {
   KPICard,
   KPICardSkeleton,
@@ -11,6 +11,9 @@ import {
   AwardsOverTimeChart,
   TopAwardedPartsChart,
   UpcomingSolicitationsTable,
+  MatchTrendChart,
+  ConditionTypeChart,
+  RecentMatchesTable,
   formatCurrency,
   formatNumber,
 } from '@/components/analytics';
@@ -18,6 +21,7 @@ import {
 export default function AnalyticsPage() {
   const market = useMarketAnalytics();
   const business = useMyBusinessAnalytics();
+  const bidMatch = useBidMatchAnalytics();
 
   return (
     <>
@@ -49,17 +53,17 @@ export default function AnalyticsPage() {
             <KPICard
               label="DIBBS Open Solicitations"
               value={formatNumber(market.data.dibbs_open_solicitations_count)}
-              source="Source: DIBBS/DLA"
+              source="Source: DIBBS"
             />
             <KPICard
               label="SAM.gov DoD Open Solicitations"
               value={formatNumber(market.data.sam_dod_open_solicitations_count)}
-              source="Source: SAM.gov (DLA)"
+              source="Source: SAM.gov"
             />
             <KPICard
               label="Recent DIBBS Awards (90d)"
               value={formatCurrency(market.data.dibbs_recent_awards_total)}
-              source="Source: DIBBS/DLA"
+              source="Source: DIBBS"
             />
             <KPICard
               label="Recent SAM Awards (90d)"
@@ -154,6 +158,57 @@ export default function AnalyticsPage() {
           <UpcomingSolicitationsTable data={business.data.upcoming_solicitations} />
         ) : null}
       </section>
+
+      {/* ================================================================ */}
+      {/* Section 3: Bid-Matching (only shown if customer has access)      */}
+      {/* ================================================================ */}
+      {!bidMatch.forbidden && (bidMatch.isLoading || bidMatch.data || bidMatch.error) && (
+        <section className="mt-10">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Bid-Matching</h2>
+
+          {/* KPI Cards */}
+          {bidMatch.isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {Array.from({ length: 3 }).map((_, i) => <KPICardSkeleton key={i} />)}
+            </div>
+          ) : bidMatch.error ? (
+            <div className="bg-error/10 border border-error/30 rounded-xl p-4 mb-6 text-error text-sm">
+              Failed to load bid-matching data: {bidMatch.error}
+            </div>
+          ) : bidMatch.data ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <KPICard
+                  label="Active Profiles"
+                  value={formatNumber(bidMatch.data.active_profiles_count)}
+                  subtitle="Running bid-match profiles"
+                />
+                <KPICard
+                  label="Total Matches"
+                  value={formatNumber(bidMatch.data.total_matches)}
+                  subtitle="Lifetime matched solicitations"
+                  href="/bidmatching"
+                />
+                <KPICard
+                  label="Latest Run Matches"
+                  value={formatNumber(bidMatch.data.latest_run_matches)}
+                  subtitle="Most recent matching run"
+                  href="/bidmatching"
+                />
+              </div>
+
+              {/* Charts row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <MatchTrendChart data={bidMatch.data.match_trend} />
+                <ConditionTypeChart data={bidMatch.data.condition_type_distribution} />
+              </div>
+
+              {/* Recent Matches Table */}
+              <RecentMatchesTable data={bidMatch.data.recent_matches} />
+            </>
+          ) : null}
+        </section>
+      )}
     </>
   );
 }

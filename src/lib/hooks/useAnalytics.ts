@@ -164,3 +164,87 @@ export function useMyBusinessAnalytics() {
 
   return { data, isLoading, error, refetch: fetchData };
 }
+
+// ============================================================================
+// Bid-Matching Analytics
+// ============================================================================
+
+export interface DayCount {
+  day: string;
+  count: number;
+}
+
+export interface ConditionTypeCount {
+  condition_type: string;
+  count: number;
+}
+
+export interface RecentMatch {
+  solicitation_number: string | null;
+  close_date: string | null;
+  profile_name: string | null;
+  condition_types: string[];
+  matched_at: string | null;
+}
+
+export interface BidMatchAnalytics {
+  active_profiles_count: number;
+  total_matches: number;
+  latest_run_matches: number;
+  match_trend: DayCount[];
+  condition_type_distribution: ConditionTypeCount[];
+  recent_matches: RecentMatch[];
+  generated_at: string;
+}
+
+export function useBidMatchAnalytics() {
+  const [data, setData] = useState<BidMatchAnalytics | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await fetchWithAuth('/api/library/analytics/bid-matching', {
+        credentials: 'include',
+      });
+
+      if (response.status === 401) {
+        setData(null);
+        return;
+      }
+
+      // 403 = customer doesn't have bid_matching product — not an error, just hide the section
+      if (response.status === 403) {
+        setForbidden(true);
+        setData(null);
+        return;
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to fetch bid-matching analytics');
+      }
+
+      const result: BidMatchAnalytics = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      console.error('Failed to fetch bid-matching analytics:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    intervalRef.current = setInterval(fetchData, 60 * 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [fetchData]);
+
+  return { data, isLoading, error, forbidden, refetch: fetchData };
+}
