@@ -260,23 +260,9 @@ export default function VendorSearchPage() {
     }
   }, [addAction, handleSelectVendor]);
 
-  // Auto-execute search from URL parameters (separate effect to avoid dependency issues)
-  useEffect(() => {
-    const cageCode = searchParams.get('cage_code');
-    const uei = searchParams.get('uei');
-    const query = searchParams.get('q');
-
-    // Only auto-execute if we haven't searched yet and URL params exist
-    if (!hasSearched) {
-      if (cageCode) {
-        handleSearch('cage', cageCode);
-      } else if (uei) {
-        handleSearch('uei', uei);
-      } else if (query) {
-        handleSearch('entity_name', query);
-      }
-    }
-  }, [searchParams, hasSearched, handleSearch]);
+  // NOTE: URL-param-triggered searches are handled by the mount effect above (line 66).
+  // A second useEffect with [searchParams, hasSearched, handleSearch] deps was removed
+  // because it fired a duplicate search before hasSearched could flip to true.
 
   // Handle back to results
   const handleBackToResults = useCallback(() => {

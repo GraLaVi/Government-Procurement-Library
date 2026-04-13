@@ -52,6 +52,9 @@ export default function PartsSearchPage() {
   // Ref for search form to control focus
   const searchFormRef = useRef<PartsSearchFormRef>(null);
 
+  // Client-side search result cache (5-min TTL, max 50 entries)
+  const searchCache = useRef<Map<string, { results: PartSearchResult[]; total: number; timestamp: number }>>(new Map());
+
   // Get URL search params
   const searchParams = useSearchParams();
 
@@ -104,6 +107,25 @@ export default function PartsSearchPage() {
 
   // Handle search
   const handleSearch = useCallback(async (type: PartsSearchType, query: string) => {
+    // Check client-side cache first
+    const cacheKey = `${type}:${query.trim().toUpperCase()}`;
+    const cached = searchCache.current.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+      setSearchResults(cached.results);
+      setTotalResults(cached.total);
+      setHasSearched(true);
+      setLastSearchType(type);
+      setLastSearchQuery(query);
+      setSearchError(null);
+      setSelectedNSN(null);
+      setPartDetail(null);
+      if (cached.results.length > 0) setIsSearchExpanded(false);
+      if (cached.results.length === 1 && (type === "nsn_niin" || type === "solicitation" || type === "mfg_part_number" || type === "contract_number")) {
+        handleSelectPart(cached.results[0].nsn);
+      }
+      return;
+    }
+
     setIsSearching(true);
     setSearchError(null);
     setHasSearched(true);
@@ -124,6 +146,13 @@ export default function PartsSearchPage() {
       const searchResponse = data as PartSearchResponse;
       setSearchResults(searchResponse.results);
       setTotalResults(searchResponse.total);
+
+      // Store in client-side cache
+      searchCache.current.set(cacheKey, { results: searchResponse.results, total: searchResponse.total, timestamp: Date.now() });
+      if (searchCache.current.size > 50) {
+        const oldest = searchCache.current.keys().next().value;
+        if (oldest !== undefined) searchCache.current.delete(oldest);
+      }
 
       // Save search to recent actions
       try {
