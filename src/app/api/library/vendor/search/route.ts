@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeaders } from '@/lib/api/forwardHeaders';
 
 // GET /api/library/vendor/search - Search vendors
 // Proxies to: GET /api/v1/library/vendor/search
@@ -34,9 +35,12 @@ export async function GET(request: NextRequest) {
     // Note: AUTH_CONFIG.API_BASE_URL already includes /api/v1
     const url = `${AUTH_CONFIG.API_BASE_URL}/library/vendor/search?${queryParams.toString()}`;
 
+    const forwardHeaders = buildForwardHeaders(request);
+
     let response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...forwardHeaders,
       },
     });
 
@@ -47,6 +51,7 @@ export async function GET(request: NextRequest) {
         response = await fetch(url, {
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...forwardHeaders,
           },
         });
       } else {

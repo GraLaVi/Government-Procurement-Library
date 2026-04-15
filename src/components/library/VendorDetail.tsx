@@ -193,9 +193,27 @@ export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps)
     }
   }, [vendor.cage_code, solicitationsFetched, isLoadingSolicitations]);
 
+  // Map UI tabId -> audit `view` name (matches FastAPI _VALID_VENDOR_TAB_VIEWS)
+  const TAB_VIEW_MAP: Record<string, string> = {
+    demographics: 'detail',
+    contacts: 'detail',
+    awards: 'awards',
+    bookings: 'bookings',
+    solicitations: 'solicitations',
+  };
+
   // Handle tab change with lazy loading
   const handleTabChange = useCallback((tabId: string) => {
     setActiveTab(tabId as TabId);
+
+    // Record user intent (fire-and-forget; don't block UI on audit).
+    const view = TAB_VIEW_MAP[tabId];
+    if (view && vendor?.cage_code) {
+      fetch(`/api/library/vendor/${encodeURIComponent(vendor.cage_code)}/track-view?view=${view}`, {
+        method: 'POST',
+      }).catch(() => { /* audit must never break UX */ });
+    }
+
     if (tabId === 'awards' && !awardsFetched) {
       fetchAwards();
     } else if (tabId === 'bookings' && !bookingsFetched) {
@@ -203,7 +221,7 @@ export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps)
     } else if (tabId === 'solicitations' && !solicitationsFetched) {
       fetchSolicitations();
     }
-  }, [awardsFetched, fetchAwards, bookingsFetched, fetchBookings, solicitationsFetched, fetchSolicitations]);
+  }, [vendor?.cage_code, awardsFetched, fetchAwards, bookingsFetched, fetchBookings, solicitationsFetched, fetchSolicitations]);
 
   // Build tabs dynamically with counts in parenthesis for better readability.
   // Prefer the eagerly-fetched tabCounts; fall back to data-fetched totals once loaded.

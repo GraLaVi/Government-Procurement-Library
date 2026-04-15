@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { LoginRequest, LoginResponse } from '@/lib/auth/types';
+import { buildForwardHeaders } from '@/lib/api/forwardHeaders';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...buildForwardHeaders(request),
       },
       body: JSON.stringify(body),
     });

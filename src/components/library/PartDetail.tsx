@@ -583,9 +583,30 @@ export function PartDetail({ part }: PartDetailProps) {
     return () => { cancelled = true; };
   }, [part?.nsn]);
 
+  // Map UI tabId -> audit `view` name (matches FastAPI _VALID_TAB_VIEWS)
+  const TAB_VIEW_MAP: Record<string, string> = {
+    overview: 'detail',
+    procurement: 'procurement_history',
+    solicitations: 'solicitations',
+    manufacturers: 'manufacturers',
+    technical: 'technical_characteristics',
+    enduse: 'end_use_description',
+    packaging: 'packaging',
+    procurementitemdesc: 'procurement_item_description',
+  };
+
   // Handle tab change with lazy loading
   const handleTabChange = useCallback((tabId: string) => {
     setActiveTab(tabId as TabId);
+
+    // Record user intent (fire-and-forget; don't block UI on audit).
+    const view = TAB_VIEW_MAP[tabId];
+    if (view && part?.nsn) {
+      fetch(`/api/library/parts/${encodeURIComponent(part.nsn)}/track-view?view=${view}`, {
+        method: 'POST',
+      }).catch(() => { /* audit must never break UX */ });
+    }
+
     if (tabId === 'procurement' && !procurementFetched) {
       fetchProcurementHistory();
     } else if (tabId === 'solicitations' && !solicitationsFetched) {
@@ -601,7 +622,7 @@ export function PartDetail({ part }: PartDetailProps) {
     } else if (tabId === 'procurementitemdesc' && !procurementItemDescFetched) {
       fetchProcurementItemDescription();
     }
-  }, [procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
+  }, [part?.nsn, procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
 
   // Build tabs dynamically with counts.
   // Prefer data-fetched totals once loaded; fall back to lightweight tabCounts.

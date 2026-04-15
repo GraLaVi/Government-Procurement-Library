@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeaders } from '@/lib/api/forwardHeaders';
 
 // GET /api/library/vendor/[cageCode]/summary - Combined search + detail + tab counts
 // Proxies to: GET /api/v1/library/vendor/{cage_code}/summary
@@ -28,10 +29,12 @@ export async function GET(
     }
 
     const url = `${AUTH_CONFIG.API_BASE_URL}/library/vendor/${encodeURIComponent(cageCode)}/summary`;
+    const forwardHeaders = buildForwardHeaders(request);
 
     let response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...forwardHeaders,
       },
     });
 
@@ -41,6 +44,7 @@ export async function GET(
         response = await fetch(url, {
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...forwardHeaders,
           },
         });
       } else {

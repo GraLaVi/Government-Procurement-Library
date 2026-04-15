@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from '@/lib/auth/config';
+import { buildForwardHeaders } from '@/lib/api/forwardHeaders';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +14,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
+          ...buildForwardHeaders(request),
         },
       }).catch(() => {
         // Ignore errors - we'll clear cookies regardless
