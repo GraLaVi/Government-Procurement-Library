@@ -21,7 +21,7 @@ import { PartsSearchActionData, RecentActionEntry } from "@/lib/preferences/type
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 export default function PartsSearchPage() {
-  const { isLoading: authLoading, hasProductAccess } = useAuth();
+  const { isLoading: authLoading, hasAnyProductAccess } = useAuth();
 
   // Recent actions hook
   const { actions: recentActions, addAction, deleteAction, isLoading: isLoadingActions } = useRecentActions('parts_search');
@@ -226,12 +226,17 @@ export default function PartsSearchPage() {
     );
   }
 
-  // Check if user has access to parts search
-  if (!hasProductAccess("library_parts_search")) {
+  // Check if user has access to parts search (any tier: full or basic)
+  if (!hasAnyProductAccess([
+    "library_search_full",
+    "library_parts_search_full",
+    "library_search_basic",
+    "library_parts_search_basic",
+  ])) {
     return (
       <AccessDeniedPage
         featureName="Parts Search"
-        featureKey="library_parts_search"
+        featureKey="library_parts_search_full"
         description="Search the parts library to find National Stock Numbers (NSN), part descriptions, pricing information, and related contract data."
         benefits={[
           "Search parts by NSN/NIIN, solicitation, mfg part number, contract number, description, or keywords",

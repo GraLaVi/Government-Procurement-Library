@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface VendorDetailProps {
   vendor: VendorDetailType;
@@ -45,6 +46,12 @@ interface VendorDetailProps {
 type TabId = "demographics" | "contacts" | "awards" | "bookings" | "solicitations";
 
 export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps) {
+  const { hasAnyProductAccess } = useAuth();
+  const isFullTier = hasAnyProductAccess([
+    "library_search_full",
+    "library_vendor_search_full",
+  ]);
+
   const [activeTab, setActiveTab] = useState<TabId>("demographics");
 
   // Awards state
@@ -218,17 +225,24 @@ export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps)
       ? `Open Solicitations (${tabCounts.solicitations_count})`
       : "Open Solicitations";
 
-  const tabs = [
-    { id: "demographics" as TabId, label: "Demographics", disabled: false },
+  const allTabs: Array<{ id: TabId; label: string; disabled: boolean; fullOnly?: boolean }> = [
+    { id: "demographics", label: "Demographics", disabled: false },
     {
-      id: "contacts" as TabId,
+      id: "contacts",
       label: hasContacts ? `Contacts (${contactCount})` : "Contacts",
       disabled: false,
     },
-    { id: "awards" as TabId, label: awardsLabel, disabled: false },
-    { id: "bookings" as TabId, label: bookingsLabel, disabled: false },
-    { id: "solicitations" as TabId, label: solicitationsLabel, disabled: false },
+    { id: "awards", label: awardsLabel, disabled: false },
+    { id: "bookings", label: bookingsLabel, disabled: false, fullOnly: true },
+    { id: "solicitations", label: solicitationsLabel, disabled: false, fullOnly: true },
   ];
+  const tabs = allTabs.filter((t) => isFullTier || !t.fullOnly);
+
+  useEffect(() => {
+    if (!tabs.some((t) => t.id === activeTab)) {
+      setActiveTab("demographics");
+    }
+  }, [isFullTier, activeTab, tabs]);
 
   return (
     <div className="bg-card-bg rounded-lg border border-border overflow-hidden">

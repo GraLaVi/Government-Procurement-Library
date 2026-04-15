@@ -41,6 +41,7 @@ import {
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ============================================================================
 // CodeTooltip Component - Shared tooltip for code definitions
@@ -230,6 +231,12 @@ interface PartDetailProps {
 type TabId = "overview" | "procurement" | "solicitations" | "manufacturers" | "technical" | "enduse" | "packaging" | "procurementitemdesc";
 
 export function PartDetail({ part }: PartDetailProps) {
+  const { hasAnyProductAccess } = useAuth();
+  const isFullTier = hasAnyProductAccess([
+    "library_search_full",
+    "library_parts_search_full",
+  ]);
+
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   
   // Code definitions for tooltips
@@ -640,16 +647,23 @@ export function PartDetail({ part }: PartDetailProps) {
       ? `Procurement Item Description (${tabCounts.has_procurement_item_description ? 1 : 0})`
       : "Procurement Item Description";
 
-  const tabs = [
-    { id: "overview" as TabId, label: "Overview", disabled: false },
-    { id: "procurement" as TabId, label: procurementLabel, disabled: false },
-    { id: "solicitations" as TabId, label: solicitationsLabel, disabled: false },
-    { id: "manufacturers" as TabId, label: manufacturersLabel, disabled: false },
-    { id: "technical" as TabId, label: technicalLabel, disabled: false },
-    { id: "enduse" as TabId, label: endUseLabel, disabled: false },
-    { id: "packaging" as TabId, label: packagingLabel, disabled: false },
-    { id: "procurementitemdesc" as TabId, label: pidLabel, disabled: false },
+  const allTabs: Array<{ id: TabId; label: string; disabled: boolean; fullOnly?: boolean }> = [
+    { id: "overview", label: "Overview", disabled: false },
+    { id: "procurement", label: procurementLabel, disabled: false, fullOnly: true },
+    { id: "solicitations", label: solicitationsLabel, disabled: false },
+    { id: "manufacturers", label: manufacturersLabel, disabled: false, fullOnly: true },
+    { id: "technical", label: technicalLabel, disabled: false },
+    { id: "enduse", label: endUseLabel, disabled: false },
+    { id: "packaging", label: packagingLabel, disabled: false, fullOnly: true },
+    { id: "procurementitemdesc", label: pidLabel, disabled: false },
   ];
+  const tabs = allTabs.filter((t) => isFullTier || !t.fullOnly);
+
+  useEffect(() => {
+    if (!tabs.some((t) => t.id === activeTab)) {
+      setActiveTab("overview");
+    }
+  }, [isFullTier, activeTab, tabs]);
 
   return (
     <div className="bg-card-bg rounded-lg border border-border overflow-hidden">

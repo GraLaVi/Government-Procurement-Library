@@ -23,7 +23,7 @@ import { VendorSearchActionData, RecentActionEntry } from "@/lib/preferences/typ
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 export default function VendorSearchPage() {
-  const { isLoading: authLoading, hasProductAccess } = useAuth();
+  const { isLoading: authLoading, hasAnyProductAccess } = useAuth();
 
   // Recent actions hook
   const { actions: recentActions, addAction, deleteAction, isLoading: isLoadingActions } = useRecentActions('vendor_search');
@@ -296,12 +296,17 @@ export default function VendorSearchPage() {
     );
   }
 
-  // Check if user has access to vendor search
-  if (!hasProductAccess("library_vendor_search")) {
+  // Check if user has access to vendor search (any tier: full or basic)
+  if (!hasAnyProductAccess([
+    "library_search_full",
+    "library_vendor_search_full",
+    "library_search_basic",
+    "library_vendor_search_basic",
+  ])) {
     return (
       <AccessDeniedPage
         featureName="Vendor Search"
-        featureKey="library_vendor_search"
+        featureKey="library_vendor_search_full"
         description="Search and explore government vendor information including CAGE codes, UEI, business details, recent awards, contracts, and open solicitations."
         benefits={[
           "Find vendors by CAGE code, UEI, or business name",
