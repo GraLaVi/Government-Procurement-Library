@@ -1,6 +1,7 @@
 "use client";
 
 import { RecentMatch } from '@/lib/hooks/useAnalytics';
+import { SolicitationNumberLink } from '@/components/library/SolicitationNumberLink';
 
 interface RecentMatchesTableProps {
   data: RecentMatch[];
@@ -45,14 +46,7 @@ export function RecentMatchesTable({ data }: RecentMatchesTableProps) {
                 <tr key={i} className="hover:bg-muted-light/30 transition-colors">
                   <td className="px-6 py-3 font-mono">
                     {match.solicitation_number ? (
-                      <a
-                        href={`/library/parts?search_type=solicitation&q=${encodeURIComponent(match.solicitation_number)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:text-primary/80 hover:underline"
-                      >
-                        {match.solicitation_number}
-                      </a>
+                      <SolicitationNumberLink solicitationNumber={match.solicitation_number} />
                     ) : '-'}
                   </td>
                   <td className="px-6 py-3 text-card-foreground whitespace-nowrap">{closeDate}</td>

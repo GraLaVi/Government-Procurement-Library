@@ -1,5 +1,7 @@
 "use client";
 
+import { SolicitationNumberLink } from "@/components/library/SolicitationNumberLink";
+
 interface MatchedCondition {
   condition_type: string;
   match_value: string;
@@ -102,7 +104,16 @@ export function BidMatchResultsTable({
             {results.map((result) => (
               <tr key={result.result_id} className="border-b border-border last:border-0 hover:bg-muted-light/50 transition-colors">
                 <td className="px-4 py-3">
-                  <div className="font-medium text-foreground">{result.solicitation_number || "-"}</div>
+                  <div className="font-medium">
+                    {result.solicitation_number ? (
+                      <SolicitationNumberLink
+                        solicitationNumber={result.solicitation_number}
+                        className="text-primary hover:text-primary/80 hover:underline cursor-pointer"
+                      />
+                    ) : (
+                      <span className="text-foreground">-</span>
+                    )}
+                  </div>
                   {result.agency_code && (
                     <div className="text-xs text-muted-foreground mt-0.5">{result.agency_code}</div>
                   )}

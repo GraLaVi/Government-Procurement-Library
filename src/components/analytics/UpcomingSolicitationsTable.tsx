@@ -1,6 +1,7 @@
 "use client";
 
 import { UpcomingSolicitation } from '@/lib/hooks/useAnalytics';
+import { SolicitationNumberLink } from '@/components/library/SolicitationNumberLink';
 
 interface UpcomingSolicitationsTableProps {
   data: UpcomingSolicitation[];
@@ -45,14 +46,7 @@ export function UpcomingSolicitationsTable({ data }: UpcomingSolicitationsTableP
                 <tr key={i} className="hover:bg-muted-light/30 transition-colors">
                   <td className="px-6 py-3 font-mono">
                     {sol.solicitation_number ? (
-                      <a
-                        href={`/library/parts?search_type=solicitation&q=${encodeURIComponent(sol.solicitation_number)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:text-primary/80 hover:underline"
-                      >
-                        {sol.solicitation_number}
-                      </a>
+                      <SolicitationNumberLink solicitationNumber={sol.solicitation_number} />
                     ) : '-'}
                   </td>
                   <td className="px-6 py-3 text-card-foreground whitespace-nowrap">

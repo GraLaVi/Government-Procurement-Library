@@ -362,10 +362,13 @@ export interface PartSearchResult {
   description: string | null;
   unit_of_issue: string | null;
   unit_price: number | null;
-  
+
   // Key code fields for search results
   psclas: string | null;  // Product or Service Class
   nscode: string | null;  // NSN Status Code
+
+  // Only populated when searching by solicitation: sum of requested_quantity on that solicitation
+  quantity?: number | null;
 }
 
 export interface PartSearchResponse {
