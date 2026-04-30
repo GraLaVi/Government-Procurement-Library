@@ -235,8 +235,8 @@ function LoginForm() {
             {/* Sign up link */}
             <p className="mt-8 text-center text-sm text-muted">
               Don&apos;t have an account?{" "}
-              <Link href="/trial" className="text-primary font-medium hover:underline">
-                Start free trial
+              <Link href="/signup" className="text-primary font-medium hover:underline">
+                Sign up
               </Link>
             </p>
           </div>

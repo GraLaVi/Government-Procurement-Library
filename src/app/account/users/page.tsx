@@ -63,6 +63,20 @@ export default function UsersPage() {
   const [orgProducts, setOrgProducts] = useState<AssignedProduct[]>([]);
   const [isOrgProductsExpanded, setIsOrgProductsExpanded] = useState(false);
 
+  // Seat usage state (Phase 7c) — drives the seat counter + cap enforcement
+  // when assigning seat-allocated products to team members.
+  type SeatUsageRow = {
+    kind: 'product' | 'product_group';
+    id: number;
+    name: string;
+    product_key: string | null;
+    requires_seat_assignment: boolean;
+    used: number;
+    cap: number | null;
+    remaining: number | null;
+  };
+  const [seatUsage, setSeatUsage] = useState<SeatUsageRow[]>([]);
+
   // User products modal state
   const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
   const [selectedUserProducts, setSelectedUserProducts] = useState<UserProductsResponse | null>(null);
@@ -134,6 +148,19 @@ export default function UsersPage() {
     }
   }, []);
 
+  // Fetch seat usage (Phase 7c) — used by the manage-products modal to
+  // disable Assign when at capacity, and by the summary panel.
+  const fetchSeatUsage = useCallback(async () => {
+    try {
+      const response = await fetch("/api/billing/seat-usage", { credentials: 'include' });
+      if (response.ok) {
+        setSeatUsage(await response.json());
+      }
+    } catch {
+      // Soft-fail — seat info is informational; the rest of the page still works.
+    }
+  }, []);
+
   // Fetch user products
   const fetchUserProducts = async (targetUser: ManagedUser) => {
     setSelectedUserForProducts(targetUser);
@@ -194,6 +221,7 @@ export default function UsersPage() {
       if (response.ok) {
         setUserDirectProducts((prev) => [...prev, productId]);
         setSuccess("Product assigned successfully");
+        fetchSeatUsage();
       } else {
         const data = await response.json();
         setError(data.error || "Failed to assign product");
@@ -218,6 +246,7 @@ export default function UsersPage() {
       if (response.ok || response.status === 204) {
         setUserDirectProducts((prev) => prev.filter((id) => id !== productId));
         setSuccess("Product removed successfully");
+        fetchSeatUsage();
       } else {
         const data = await response.json();
         setError(data.error || "Failed to remove product");
@@ -238,8 +267,9 @@ export default function UsersPage() {
       }
       fetchUsers();
       fetchOrgProducts();
+      fetchSeatUsage();
     }
-  }, [authLoading, user, router, fetchUsers, fetchOrgProducts]);
+  }, [authLoading, user, router, fetchUsers, fetchOrgProducts, fetchSeatUsage]);
 
   // Close menus when clicking outside, scrolling, or resizing
   useEffect(() => {
@@ -407,6 +437,81 @@ export default function UsersPage() {
           Add User
         </Button>
       </div>
+
+      {/* Seat Allocations Summary (Phase 7c) */}
+      {seatUsage.length > 0 && (
+        <div className="mb-6 bg-card-bg rounded-xl border border-border p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Seat Allocations</h3>
+              <p className="text-xs text-muted">Per-user seats your team has used vs. purchased.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {seatUsage.map((row) => {
+              const atCap = row.cap !== null && row.cap > 0 && row.used >= row.cap;
+              const noSub = row.requires_seat_assignment && (row.cap === null || row.cap === 0);
+              const pct = row.cap && row.cap > 0 ? Math.min(100, (row.used / row.cap) * 100) : 0;
+              return (
+                <div
+                  key={`${row.kind}-${row.id}`}
+                  className={`p-3 rounded-lg border ${atCap || noSub
+                    ? 'border-warning/40 bg-warning/5'
+                    : 'border-border bg-muted-light/30'}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="text-sm font-medium text-foreground truncate">{row.name}</div>
+                    {row.requires_seat_assignment ? (
+                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 whitespace-nowrap">
+                        seat-allocated
+                      </span>
+                    ) : (
+                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted-light text-muted border border-border whitespace-nowrap">
+                        org-wide
+                      </span>
+                    )}
+                  </div>
+                  {row.requires_seat_assignment ? (
+                    <>
+                      <div className="text-xs text-muted mt-1">
+                        {noSub ? (
+                          <span className="text-error">No active subscription — assignments blocked</span>
+                        ) : (
+                          <>
+                            <span className={atCap ? 'text-warning font-medium' : ''}>
+                              {row.used} / {row.cap} seats used
+                            </span>
+                            {row.remaining !== null && row.remaining > 0 && (
+                              <span className="ml-1 text-muted">({row.remaining} available)</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      {row.cap !== null && row.cap > 0 && (
+                        <div className="mt-1.5 h-1 bg-muted-light rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${atCap ? 'bg-warning' : 'bg-primary'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-xs text-muted mt-1">
+                      All team members get access automatically
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Organization Products Section */}
       {orgProducts.length > 0 && (
@@ -894,6 +999,17 @@ export default function UsersPage() {
               {orgProducts.map((product) => {
                 const isDirectlyAssigned = userDirectProducts.includes(product.id);
                 const isFromOrg = product.source === 'customer_direct' || product.source === 'customer_group' || product.source === 'direct' || product.source === 'group';
+                // Seat-usage lookup. If we don't have an entry for this
+                // product, treat it as org-wide (no enforcement).
+                const seatRow = seatUsage.find((r) => r.kind === 'product' && r.id === product.id);
+                const isSeatAllocated = !!seatRow?.requires_seat_assignment;
+                const noSubscription = isSeatAllocated && (seatRow?.cap === null || seatRow?.cap === 0);
+                const atCapacity = isSeatAllocated
+                  && seatRow?.cap !== null
+                  && seatRow!.cap !== undefined
+                  && seatRow!.cap > 0
+                  && (seatRow!.remaining ?? 0) <= 0;
+                const assignBlocked = !isDirectlyAssigned && (atCapacity || noSubscription);
 
                 return (
                   <div
@@ -917,7 +1033,7 @@ export default function UsersPage() {
                         {product.description && (
                           <p className="text-xs text-muted mt-0.5">{product.description}</p>
                         )}
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
                           {isDirectlyAssigned && (
                             <Badge variant="info" className="text-xs">
                               User Direct
@@ -928,11 +1044,34 @@ export default function UsersPage() {
                               Organization
                             </Badge>
                           )}
+                          {isSeatAllocated && seatRow && seatRow.cap !== null && seatRow.cap > 0 && (
+                            <span className={`text-[11px] px-1.5 py-0.5 rounded ${
+                              atCapacity
+                                ? 'bg-warning/10 text-warning border border-warning/20'
+                                : 'bg-primary/10 text-primary border border-primary/20'
+                            }`}>
+                              {seatRow.used} / {seatRow.cap} seats used
+                            </span>
+                          )}
+                          {isSeatAllocated && noSubscription && (
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-error/10 text-error border border-error/20">
+                              No active subscription
+                            </span>
+                          )}
+                          {seatRow && !seatRow.requires_seat_assignment && (
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted-light text-muted border border-border">
+                              Org-wide — auto-granted
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
                     <div className="ml-4">
-                      {isDirectlyAssigned ? (
+                      {seatRow && !seatRow.requires_seat_assignment ? (
+                        // Org-wide products: every user gets access automatically;
+                        // per-user assignment isn't meaningful so hide the action.
+                        <span className="text-xs text-muted">—</span>
+                      ) : isDirectlyAssigned ? (
                         <Button
                           variant="outline"
                           size="sm"
@@ -946,9 +1085,16 @@ export default function UsersPage() {
                           variant="primary"
                           size="sm"
                           onClick={() => handleAssignProduct(product.id)}
-                          disabled={isSavingProducts}
+                          disabled={isSavingProducts || assignBlocked}
+                          title={
+                            atCapacity
+                              ? `All ${seatRow?.cap} seats are assigned. Increase seats or remove a user first.`
+                              : noSubscription
+                                ? 'No active subscription with available seats. Subscribe to start assigning.'
+                                : ''
+                          }
                         >
-                          {isSavingProducts ? 'Assigning...' : 'Assign'}
+                          {isSavingProducts ? 'Assigning...' : (atCapacity ? 'No seats' : 'Assign')}
                         </Button>
                       )}
                     </div>

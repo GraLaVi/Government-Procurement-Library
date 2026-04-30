@@ -6,13 +6,7 @@ import { useRouter } from "next/navigation";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-
-const PASSWORD_REQUIREMENTS = [
-  { id: "length", label: "At least 8 characters", test: (p: string) => p.length >= 8 },
-  { id: "uppercase", label: "One uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
-  { id: "lowercase", label: "One lowercase letter", test: (p: string) => /[a-z]/.test(p) },
-  { id: "number", label: "One number", test: (p: string) => /\d/.test(p) },
-];
+import { PASSWORD_RULES, isPasswordStrong } from "@/lib/auth/passwordRules";
 
 export default function ChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -25,7 +19,7 @@ export default function ChangePasswordPage() {
   const router = useRouter();
 
   const passwordsMatch = newPassword === confirmPassword;
-  const allRequirementsMet = PASSWORD_REQUIREMENTS.every((req) => req.test(newPassword));
+  const allRequirementsMet = isPasswordStrong(newPassword);
   const canSubmit = currentPassword && newPassword && confirmPassword && passwordsMatch && allRequirementsMet;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,13 +133,13 @@ export default function ChangePasswordPage() {
               disabled={isSubmitting || success}
             />
 
-            {/* Password requirements */}
+            {/* Password requirements (shared with /signup via PASSWORD_RULES) */}
             {newPassword && (
               <div className="mt-3 space-y-2">
-                {PASSWORD_REQUIREMENTS.map((req) => {
-                  const passed = req.test(newPassword);
+                {PASSWORD_RULES.map((rule) => {
+                  const passed = rule.test(newPassword);
                   return (
-                    <div key={req.id} className="flex items-center gap-2 text-sm">
+                    <div key={rule.id} className="flex items-center gap-2 text-sm">
                       {passed ? (
                         <svg className="w-4 h-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -156,7 +150,7 @@ export default function ChangePasswordPage() {
                         </svg>
                       )}
                       <span className={passed ? "text-success" : "text-muted"}>
-                        {req.label}
+                        {rule.label}
                       </span>
                     </div>
                   );

@@ -11,6 +11,6 @@ export const AUTH_CONFIG = {
   ROUTES: {
     LOGIN: '/login',
     ACCOUNT: '/account',
-    PUBLIC: ['/', '/login', '/trial', '/about', '/forgot-password', '/privacy', '/terms', '/security'],
+    PUBLIC: ['/', '/login', '/signup', '/pricing', '/trial', '/about', '/forgot-password', '/privacy', '/terms', '/security', '/verify-email'],
   },
 } as const;

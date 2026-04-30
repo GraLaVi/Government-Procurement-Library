@@ -101,7 +101,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         (route) => pathname === route || pathname?.startsWith(`${route}/`)
       );
 
-      if (!isPublicRoute && pathname !== AUTH_CONFIG.ROUTES.LOGIN) {
+      // Self-serve checkout-return exception: when a brand-new visitor lands
+      // on /account/billing?checkout=success&session_id=… straight from
+      // Stripe Checkout, they aren't logged in YET — the page itself swaps
+      // session_id for auth cookies via /api/billing/finalize-checkout.
+      // Skip the auto-redirect for that single case so the finalize step
+      // can run.
+      const isPostCheckoutFinalize =
+        pathname === '/account/billing' &&
+        typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('session_id');
+
+      if (!isPublicRoute && !isPostCheckoutFinalize && pathname !== AUTH_CONFIG.ROUTES.LOGIN) {
         // Only redirect on initial page load, not on subsequent auth failures
         // This prevents redirect loops when session expires during active use
         const loginUrl = `${AUTH_CONFIG.ROUTES.LOGIN}?redirect=${encodeURIComponent(pathname || '/')}`;

@@ -33,6 +33,16 @@ interface ConditionForm {
   match_value: string;
 }
 
+interface BidMatchingAccess {
+  has_access: boolean;
+  tier: "pro" | "bundled" | null;
+  limits: {
+    max_profiles: number | null; // null = unlimited
+    max_conditions_per_profile: number | null;
+  };
+  usage: { profile_count: number };
+}
+
 const ALLOWED_CONDITION_TYPES = [
   "NIIN",
   "FSC",
@@ -61,6 +71,7 @@ export default function BidMatchingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [access, setAccess] = useState<BidMatchingAccess | null>(null);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -72,6 +83,19 @@ export default function BidMatchingPage() {
   const [saving, setSaving] = useState(false);
 
   const isAdmin = user?.roles?.includes("admin");
+
+  const fetchAccess = useCallback(async () => {
+    try {
+      const resp = await fetch("/api/bid-matching/access", { credentials: "include" });
+      if (resp.ok) {
+        setAccess(await resp.json());
+      } else {
+        setAccess(null);
+      }
+    } catch {
+      setAccess(null);
+    }
+  }, []);
 
   const fetchProfiles = useCallback(async () => {
     try {
@@ -96,9 +120,10 @@ export default function BidMatchingPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
+      fetchAccess();
       fetchProfiles();
     }
-  }, [authLoading, user, fetchProfiles]);
+  }, [authLoading, user, fetchAccess, fetchProfiles]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -198,6 +223,7 @@ export default function BidMatchingPage() {
       }
       setShowModal(false);
       fetchProfiles();
+      fetchAccess();
     } catch {
       setError("An unexpected error occurred");
     } finally {
@@ -219,6 +245,7 @@ export default function BidMatchingPage() {
       }
       setToast("Profile deleted");
       fetchProfiles();
+      fetchAccess();
     } catch {
       setError("An unexpected error occurred");
     }
@@ -282,11 +309,95 @@ export default function BidMatchingPage() {
           </p>
         </div>
         {isAdmin && (
-          <Button variant="primary" size="sm" onClick={openCreateModal}>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={openCreateModal}
+            disabled={!!access && access.has_access && access.limits.max_profiles !== null && access.usage.profile_count >= access.limits.max_profiles}
+            title={
+              !!access && access.has_access && access.limits.max_profiles !== null && access.usage.profile_count >= access.limits.max_profiles
+                ? "You're at the profile cap — upgrade to Pro for unlimited profiles, or delete an existing profile."
+                : undefined
+            }
+          >
             Create Profile
           </Button>
         )}
       </div>
+
+      {/* Tier + limits card */}
+      {access && (
+        <div
+          className={`mb-6 rounded-xl border p-4 ${
+            access.tier === "pro"
+              ? "bg-primary/5 border-primary/30"
+              : access.has_access
+                ? "bg-card-bg border-border"
+                : "bg-warning/5 border-warning/30"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-foreground">
+                  {access.tier === "pro"
+                    ? "Bid Matching Pro"
+                    : access.tier === "bundled"
+                      ? "Bid Matching (bundled with your plan)"
+                      : "No active plan"}
+                </span>
+                {access.tier === "pro" && (
+                  <span className="text-[11px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                    PRO
+                  </span>
+                )}
+              </div>
+              {access.has_access ? (
+                <p className="text-xs text-muted mt-1">
+                  Profiles:{" "}
+                  <span className="font-medium text-foreground">
+                    {access.usage.profile_count}
+                    {access.limits.max_profiles !== null
+                      ? ` / ${access.limits.max_profiles}`
+                      : " (unlimited)"}
+                  </span>
+                  {access.limits.max_conditions_per_profile !== null && (
+                    <>
+                      {" · Up to "}
+                      <span className="font-medium text-foreground">
+                        {access.limits.max_conditions_per_profile}
+                      </span>{" "}
+                      conditions per profile
+                    </>
+                  )}
+                </p>
+              ) : (
+                <p className="text-xs text-muted mt-1">
+                  An active subscription unlocks bundled bid-matching.
+                </p>
+              )}
+            </div>
+            {access.tier !== "pro" && (
+              <Link
+                href="/pricing"
+                className="text-xs text-primary hover:underline whitespace-nowrap"
+              >
+                {access.has_access
+                  ? "Need more? Upgrade to Pro →"
+                  : "View plans →"}
+              </Link>
+            )}
+          </div>
+          {access.has_access &&
+            access.limits.max_profiles !== null &&
+            access.usage.profile_count >= access.limits.max_profiles && (
+              <p className="mt-3 text-xs text-warning">
+                You&apos;ve reached your profile cap. Delete an existing
+                profile or upgrade to Pro for unlimited profiles.
+              </p>
+            )}
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (

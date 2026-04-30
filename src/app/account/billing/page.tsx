@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { AssignedProduct } from "@/lib/users/types";
+import { clearPendingSignup } from "@/lib/signup/pendingSignup";
 
 type Price = {
   id: number;
@@ -28,6 +31,8 @@ type Subscription = {
   id: number;
   status: string;
   seat_quantity: number;
+  plan_kind: "product" | "product_group" | null;
+  plan_id: number | null;
   product_name: string | null;
   product_group_name: string | null;
   interval_count: number | null;
@@ -103,33 +108,71 @@ function statusBadge(status: string): { label: string; className: string } {
   }
 }
 
+function formatProductName(product: AssignedProduct): string {
+  return product.name || product.product_key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatProductSource(source: string): string {
+  const sourceLabels: Record<string, string> = {
+    direct: "Direct Assignment",
+    group: "Product Group",
+    customer_direct: "Direct Assignment",
+    customer_group: "Product Group",
+  };
+  return sourceLabels[source] || source;
+}
+
+function formatCategory(category: string | null): string {
+  if (!category) return "General";
+  return category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function groupByCategory(products: AssignedProduct[]): Record<string, AssignedProduct[]> {
+  return products.reduce((acc, product) => {
+    const category = product.category || "general";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(product);
+    return acc;
+  }, {} as Record<string, AssignedProduct[]>);
+}
+
 type ActiveModal =
   | { kind: "seats"; sub: Subscription }
   | { kind: "interval"; sub: Subscription }
+  | { kind: "switchPlan"; sub: Subscription }
   | { kind: "cancel"; sub: Subscription }
   | null;
 
 export default function BillingPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const { user, isLoading: authLoading, refreshUser } = useAuth();
   const searchParams = useSearchParams();
   const checkoutFlag = searchParams.get("checkout");
+  const checkoutSessionId = searchParams.get("session_id");
 
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [products, setProducts] = useState<AssignedProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [portalPending, setPortalPending] = useState(false);
   const [modal, setModal] = useState<ActiveModal>(null);
+  // Tracks the post-Checkout finalization step (Option 2 self-serve flow):
+  // when /pricing's signup-and-checkout sent the visitor to Stripe, the
+  // visitor lands here ?checkout=success&session_id=cs_… still logged out.
+  // We exchange the session_id for auth cookies before loading the rest.
+  const [finalizingCheckout, setFinalizingCheckout] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [subsResp, invsResp, plansResp] = await Promise.all([
+      const [subsResp, invsResp, plansResp, prodsResp] = await Promise.all([
         fetchWithAuth("/api/billing/subscriptions"),
         fetchWithAuth("/api/billing/invoices"),
         fetch("/api/billing/plans"),
+        fetchWithAuth("/api/users/organization/products"),
       ]);
 
       if (!subsResp.ok) {
@@ -151,6 +194,9 @@ export default function BillingPage() {
       setSubscriptions(await subsResp.json());
       setInvoices((await invsResp.json() as InvoiceListResponse).invoices);
       setPlans(await plansResp.json());
+      // Products is informational; if it fails, show the rest of the page anyway.
+      if (prodsResp.ok) setProducts(await prodsResp.json());
+      else setProducts([]);
     } catch (err) {
       console.error(err);
       setError("An unexpected error occurred");
@@ -158,6 +204,53 @@ export default function BillingPage() {
       setIsLoading(false);
     }
   }, []);
+
+  // Option 2: when we land here from a successful Stripe Checkout that
+  // started in /pricing's signup-and-checkout flow, the visitor isn't
+  // logged in yet. Exchange ?session_id=… for auth cookies first, then
+  // fall through to the normal user-aware loadData below.
+  useEffect(() => {
+    if (checkoutFlag !== "success" || !checkoutSessionId) return;
+    if (user) return;            // already logged in (e.g. existing customer adding a sub)
+    if (authLoading) return;     // wait until we know whether they're logged in
+    if (finalizingCheckout) return;
+
+    let cancelled = false;
+    (async () => {
+      setFinalizingCheckout(true);
+      try {
+        const resp = await fetch("/api/billing/finalize-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: checkoutSessionId }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {
+          if (!cancelled) setError(data.error || "We couldn't finalize your checkout. Please sign in.");
+          return;
+        }
+        // Pending signup blob is no longer needed.
+        clearPendingSignup();
+        // Pull the new user identity into AuthContext.
+        await refreshUser();
+        // Strip session_id from the URL (no need to re-finalize on refresh).
+        if (!cancelled) {
+          const cleaned = new URLSearchParams(searchParams.toString());
+          cleaned.delete("session_id");
+          router.replace(`/account/billing?${cleaned.toString()}`);
+        }
+      } catch (err) {
+        console.error("finalize-checkout error", err);
+        if (!cancelled) setError("Network error finalizing checkout. Please sign in.");
+      } finally {
+        if (!cancelled) setFinalizingCheckout(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkoutFlag, checkoutSessionId, user, authLoading]);
 
   useEffect(() => {
     if (!authLoading && user) loadData();
@@ -217,13 +310,30 @@ export default function BillingPage() {
 
   if (authLoading) return <div className="p-6">Loading...</div>;
 
+  // Post-Checkout finalize for the self-serve signup-and-checkout flow:
+  // visitor isn't logged in yet, we're swapping the Stripe session_id for
+  // auth cookies. Show a clear interstitial so they don't see the
+  // "you're not logged in" empty state in the millisecond before cookies
+  // are set.
+  if (finalizingCheckout || (!user && checkoutFlag === "success" && checkoutSessionId)) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto" />
+          <p className="mt-4 text-muted">Setting up your account…</p>
+          {error && <p className="mt-3 text-sm text-error">{error}</p>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Billing</h1>
+          <h1 className="text-2xl font-bold text-foreground">Billing & Subscriptions</h1>
           <p className="text-muted mt-1">
-            Your current plan, invoices, and payment history.
+            Your current plan, included features, invoices, and payment history.
           </p>
         </div>
         <div className="flex gap-2">
@@ -281,10 +391,70 @@ export default function BillingPage() {
               plans={plans}
               onAddSeats={() => setModal({ kind: "seats", sub })}
               onChangeInterval={() => setModal({ kind: "interval", sub })}
+              onSwitchPlan={() => setModal({ kind: "switchPlan", sub })}
               onCancel={() => setModal({ kind: "cancel", sub })}
               onReactivate={() => reactivate(sub)}
             />
           ))}
+        </div>
+      )}
+
+      <h2 className="text-lg font-semibold text-foreground mb-4">
+        Features included ({products.length})
+      </h2>
+      {isLoading ? (
+        <div className="bg-card-bg border border-border rounded-xl p-6 mb-8 text-muted text-sm">
+          Loading features…
+        </div>
+      ) : products.length === 0 ? (
+        <div className="bg-card-bg border border-border rounded-xl p-6 mb-8 text-muted text-sm">
+          No products are currently assigned to your organization.
+        </div>
+      ) : (
+        <div className="space-y-4 mb-8">
+          {Object.keys(groupByCategory(products)).sort().map((category) => {
+            const grouped = groupByCategory(products);
+            return (
+              <div key={category} className="bg-card-bg border border-border rounded-xl overflow-hidden">
+                <div className="px-4 py-3 bg-muted-light/40 border-b border-border">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {formatCategory(category)}
+                  </h3>
+                  <p className="text-xs text-muted">
+                    {grouped[category].length} product{grouped[category].length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+                <div className="divide-y divide-border">
+                  {grouped[category].map((product) => (
+                    <div key={product.id} className="px-4 py-3 hover:bg-muted-light/30 transition-colors">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-foreground">
+                            {formatProductName(product)}
+                          </h4>
+                          {product.description && (
+                            <p className="text-xs text-muted mt-1">{product.description}</p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-3 mt-2">
+                            <span className="text-xs text-muted">
+                              <span className="font-medium">Source:</span> {formatProductSource(product.source)}
+                            </span>
+                            <span className="text-xs text-muted">
+                              <span className="font-medium">Key:</span>{" "}
+                              <code className="bg-muted-light px-1.5 py-0.5 rounded text-xs">{product.product_key}</code>
+                            </span>
+                          </div>
+                        </div>
+                        <Badge variant={product.is_active ? "success" : "warning"}>
+                          {product.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -353,6 +523,15 @@ export default function BillingPage() {
           onError={setError}
         />
       )}
+      {modal?.kind === "switchPlan" && (
+        <SwitchPlanModal
+          sub={modal.sub}
+          plans={plans}
+          onClose={() => setModal(null)}
+          onSaved={(next) => { replaceSub(next); setModal(null); }}
+          onError={setError}
+        />
+      )}
       {modal?.kind === "cancel" && (
         <CancelModal
           sub={modal.sub}
@@ -370,6 +549,7 @@ function SubscriptionCard({
   plans,
   onAddSeats,
   onChangeInterval,
+  onSwitchPlan,
   onCancel,
   onReactivate,
 }: {
@@ -377,6 +557,7 @@ function SubscriptionCard({
   plans: Plan[];
   onAddSeats: () => void;
   onChangeInterval: () => void;
+  onSwitchPlan: () => void;
   onCancel: () => void;
   onReactivate: () => void;
 }) {
@@ -390,6 +571,13 @@ function SubscriptionCard({
     return false;
   });
   const hasOtherIntervals = (matchingPlan?.prices.length ?? 0) > 1;
+  // "Other plans available" = at least one plan that isn't the current sub's plan.
+  // The Plan type lacks an id-key per kind, so identify the current one by name.
+  const otherPlansExist = plans.some((p) => {
+    if (sub.product_name && p.kind === "product") return p.name !== sub.product_name;
+    if (sub.product_group_name && p.kind === "product_group") return p.name !== sub.product_group_name;
+    return true; // any cross-kind plan is also a candidate
+  });
 
   return (
     <div className="bg-card-bg border border-border rounded-xl p-6">
@@ -440,6 +628,9 @@ function SubscriptionCard({
           <Button variant="outline" size="sm" onClick={onAddSeats}>Change seats</Button>
           {hasOtherIntervals && (
             <Button variant="outline" size="sm" onClick={onChangeInterval}>Change interval</Button>
+          )}
+          {otherPlansExist && (
+            <Button variant="outline" size="sm" onClick={onSwitchPlan}>Change plan</Button>
           )}
           {sub.cancel_at_period_end ? (
             <Button variant="outline" size="sm" onClick={onReactivate}>Reactivate</Button>
@@ -519,13 +710,19 @@ function SeatsModal({
         onChange={(e) => setCount(Math.max(1, Number(e.target.value) || 1))}
         className="w-full px-3 py-2 text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-primary"
       />
-      <p className="text-xs text-muted mt-2">
-        New subtotal: <span className="text-card-foreground font-medium">
-          {formatMoney(subtotalCents, sub.currency)} {intervalLabel(sub.interval_count).toLowerCase()}
-        </span>
-      </p>
+      {(sub.unit_amount_cents ?? 0) > 0 ? (
+        <p className="text-xs text-muted mt-2">
+          New subtotal: <span className="text-card-foreground font-medium">
+            {formatMoney(subtotalCents, sub.currency)} {intervalLabel(sub.interval_count).toLowerCase()}
+          </span>
+        </p>
+      ) : (
+        <p className="text-xs text-muted mt-2">
+          Volume pricing: Stripe will compute your new total at the bracket your seat count falls into.
+        </p>
+      )}
       <p className="text-xs text-muted mt-1">
-        Stripe will prorate the difference on your next invoice.
+        Stripe prorates the difference on your next invoice.
       </p>
       <div className="flex justify-end gap-2 mt-5">
         <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
@@ -613,6 +810,163 @@ function IntervalModal({
         <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
         <Button variant="primary" size="sm" onClick={save} disabled={saving || selected === null || otherPrices.length === 0}>
           {saving ? "Switching…" : "Switch"}
+        </Button>
+      </div>
+    </ModalShell>
+  );
+}
+
+function SwitchPlanModal({
+  sub, plans, onClose, onSaved, onError,
+}: {
+  sub: Subscription;
+  plans: Plan[];
+  onClose: () => void;
+  onSaved: (s: Subscription) => void;
+  onError: (msg: string | null) => void;
+}) {
+  // Filter out the plan the customer is already on. Match by plan_kind+plan_id
+  // when available, otherwise fall back to product name.
+  const otherPlans = useMemo(() => plans.filter((p) => {
+    if (sub.plan_kind && sub.plan_id !== null) {
+      return !(p.kind === sub.plan_kind && p.id === sub.plan_id);
+    }
+    if (sub.product_name && p.kind === "product") return p.name !== sub.product_name;
+    if (sub.product_group_name && p.kind === "product_group") return p.name !== sub.product_group_name;
+    return true;
+  }), [plans, sub.plan_kind, sub.plan_id, sub.product_name, sub.product_group_name]);
+
+  // Default selection: first plan, first price matching current interval if any.
+  const [selectedPlanKey, setSelectedPlanKey] = useState<string>(() => {
+    const first = otherPlans[0];
+    return first ? `${first.kind}-${first.id}` : "";
+  });
+  const selectedPlan = otherPlans.find((p) => `${p.kind}-${p.id}` === selectedPlanKey) ?? null;
+
+  const [selectedPriceId, setSelectedPriceId] = useState<number | null>(() => {
+    const first = otherPlans[0];
+    if (!first) return null;
+    const sameInterval = first.prices.find((pr) => pr.interval_count === sub.interval_count);
+    return (sameInterval ?? first.prices[0])?.id ?? null;
+  });
+
+  // Whenever the selected plan changes, reset the price to the same-interval
+  // option if it exists, else the first price.
+  useEffect(() => {
+    if (!selectedPlan) {
+      setSelectedPriceId(null);
+      return;
+    }
+    const sameInterval = selectedPlan.prices.find((pr) => pr.interval_count === sub.interval_count);
+    setSelectedPriceId((sameInterval ?? selectedPlan.prices[0])?.id ?? null);
+  }, [selectedPlanKey, selectedPlan, sub.interval_count]);
+
+  const [saving, setSaving] = useState(false);
+
+  const selectedPrice = selectedPlan?.prices.find((p) => p.id === selectedPriceId) ?? null;
+
+  const save = async () => {
+    if (selectedPriceId === null) return;
+    setSaving(true);
+    onError(null);
+    try {
+      const resp = await fetchWithAuth(`/api/billing/subscriptions/${sub.id}/switch-plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ price_id: selectedPriceId }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) { onError(data.error || "Failed to switch plan"); return; }
+      onSaved(data);
+    } catch {
+      onError("An unexpected error occurred");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalShell
+      title="Change plan"
+      subtitle={`Current: ${sub.product_name || sub.product_group_name || "Plan"} · ${sub.seat_quantity} seat${sub.seat_quantity === 1 ? "" : "s"}`}
+      onClose={onClose}
+    >
+      {otherPlans.length === 0 ? (
+        <p className="text-sm text-muted">No other plans are available.</p>
+      ) : (
+        <>
+          <label className="block text-sm text-card-foreground mb-2">Plan</label>
+          <select
+            value={selectedPlanKey}
+            onChange={(e) => setSelectedPlanKey(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-primary mb-4"
+          >
+            {otherPlans.map((p) => (
+              <option key={`${p.kind}-${p.id}`} value={`${p.kind}-${p.id}`}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+
+          {selectedPlan && selectedPlan.prices.length > 0 && (
+            <>
+              <label className="block text-sm text-card-foreground mb-2">Billing interval</label>
+              <div className="space-y-2 mb-4">
+                {selectedPlan.prices.map((p) => (
+                  <label
+                    key={p.id}
+                    className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                      selectedPriceId === p.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="switch-plan-price"
+                        checked={selectedPriceId === p.id}
+                        onChange={() => setSelectedPriceId(p.id)}
+                      />
+                      <span className="text-sm font-medium text-card-foreground">{intervalLabel(p.interval_count)}</span>
+                    </div>
+                    <span className="text-sm text-muted">
+                      {formatMoney(p.unit_amount_cents, p.currency)} / seat
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              {selectedPrice && (
+                <div className="bg-muted-light/40 border border-border rounded-lg p-3 mb-4 text-xs space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted">Seats stay at</span>
+                    <span className="text-card-foreground font-medium">{sub.seat_quantity}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted">New total</span>
+                    <span className="text-card-foreground font-medium">
+                      {formatMoney(selectedPrice.unit_amount_cents * sub.seat_quantity, selectedPrice.currency)}
+                      {" "}{intervalLabel(selectedPrice.interval_count).toLowerCase()}
+                    </span>
+                  </div>
+                  <p className="text-muted pt-1">
+                    Stripe will prorate the difference on your next invoice. Period dates will be recalculated.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      <div className="flex justify-end gap-2 mt-2">
+        <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={save}
+          disabled={saving || selectedPriceId === null || otherPlans.length === 0}
+        >
+          {saving ? "Switching…" : "Switch plan"}
         </Button>
       </div>
     </ModalShell>
