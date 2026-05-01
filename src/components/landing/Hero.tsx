@@ -1,38 +1,15 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { CheckIcon } from "@/components/icons";
 
 const highlights = [
   "Live DLA and DIBBS solicitation feeds updated daily",
   "NSN/NIIN part search with cross-referenced CAGE codes",
-  "Automated alerts for new DoD RFQs matching your capabilities",
+  "Automated bid-matching against your saved profiles",
 ];
 
 export function Hero() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  useEffect(() => {
-    if (localStorage.getItem("gph_waitlist_submitted")) {
-      setSubmitted(true);
-    }
-  }, []);
-
-  const handleJoinWaitlist = () => {
-    if (!email) return;
-    // TODO: Replace with API call when backend endpoint is ready
-    const existing = JSON.parse(localStorage.getItem("gph_waitlist") || "[]");
-    existing.push({ email, timestamp: new Date().toISOString() });
-    localStorage.setItem("gph_waitlist", JSON.stringify(existing));
-    localStorage.setItem("gph_waitlist_submitted", "true");
-    setSubmitted(true);
-    setEmail("");
-  };
-
   return (
-    <section className="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden">
+    <section className="relative pt-40 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary-light via-white to-accent-light opacity-50" />
 
@@ -44,12 +21,21 @@ export function Hero() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
           <div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-secondary dark:text-foreground leading-tight">
+            {/* Beta pill */}
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
+              <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+              Private beta · invitation only
+            </div>
+
+            <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold text-secondary dark:text-foreground leading-tight">
               Win More{" "}
               <span className="text-primary">DoD Bids</span>
             </h1>
             <p className="mt-6 text-lg sm:text-xl text-muted dark:text-foreground/70 leading-relaxed">
-              Your DoD Solicitation Intelligence Platform. Search DLA and DIBBS opportunities, track military branch RFQs, and find contracts matched to your CAGE code — before your competitors do.
+              GPH is your DoD solicitation intelligence platform. Search DLA
+              and DIBBS opportunities, track military branch RFQs, and match
+              your CAGE-coded capabilities to active contracts — before your
+              competitors do.
             </p>
 
             {/* Highlights */}
@@ -64,38 +50,20 @@ export function Hero() {
               ))}
             </ul>
 
-            {/* Waitlist signup */}
-            <div className="mt-10">
-              {submitted ? (
-                <div className="flex items-center gap-3 bg-success/10 border border-success/20 rounded-lg px-6 py-4">
-                  <CheckIcon className="w-5 h-5 text-success flex-shrink-0" />
-                  <span className="text-foreground font-medium">You&apos;re on the list! We&apos;ll notify you when GPH launches.</span>
-                </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="email"
-                    placeholder="Enter your work email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleJoinWaitlist()}
-                    className="flex-1 px-4 py-4 rounded-lg border border-border bg-card-bg text-card-foreground placeholder:text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                  />
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="lg"
-                    onClick={handleJoinWaitlist}
-                  >
-                    Get Early Access
-                  </Button>
-                </div>
-              )}
+            {/* CTAs */}
+            <div className="mt-10 flex flex-col sm:flex-row gap-3">
+              <Button href="/signup" variant="primary" size="lg">
+                Request Beta Access
+              </Button>
+              <Button href="/pricing" variant="outline" size="lg">
+                View Pricing
+              </Button>
             </div>
 
             {/* Trust indicator */}
             <p className="mt-6 text-sm text-muted dark:text-foreground/70">
-              Launching soon. Be first to know when we go live.
+              Beta access is reviewed and approved before activation. No
+              credit card required to apply.
             </p>
           </div>
 

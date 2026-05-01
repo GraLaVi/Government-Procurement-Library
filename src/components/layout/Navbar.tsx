@@ -6,9 +6,20 @@ import { Button } from "@/components/ui/Button";
 import { MenuIcon, CloseIcon } from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
 
+// Links shown to authenticated users (excludes Pricing — they reach it via /account/billing).
 const navLinks = [
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How It Works" },
+  { href: "/about", label: "About" },
+];
+
+// Links shown to unauthenticated visitors. Pricing is surfaced here so visitors
+// can compare plans before signing up.
+const visitorNavLinks = [
+  { href: "/#products", label: "Products" },
+  { href: "/#features", label: "Features" },
+  { href: "/#how-it-works", label: "How It Works" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "About" },
 ];
 
@@ -128,7 +139,7 @@ export function Navbar() {
                 )}
               </div>
             )}
-            {navLinks.map((link) => (
+            {(isAuthenticated ? navLinks : visitorNavLinks).map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -159,9 +170,14 @@ export function Navbar() {
                 </Link>
               </>
             ) : (
-              <Button href="/trial" variant="primary" size="sm">
-                Join Waitlist
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button href="/login" variant="ghost" size="sm">
+                  Sign in
+                </Button>
+                <Button href="/signup" variant="primary" size="sm">
+                  Get Started
+                </Button>
+              </div>
             )}
           </div>
 
@@ -253,7 +269,7 @@ export function Navbar() {
                   )}
                 </div>
               )}
-              {navLinks.map((link) => (
+              {(isAuthenticated ? navLinks : visitorNavLinks).map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -283,9 +299,14 @@ export function Navbar() {
                     </Link>
                   </>
                 ) : (
-                  <Button href="/trial" variant="primary" size="md">
-                    Join Waitlist
-                  </Button>
+                  <>
+                    <Button href="/login" variant="outline" size="md">
+                      Sign in
+                    </Button>
+                    <Button href="/signup" variant="primary" size="md">
+                      Get Started
+                    </Button>
+                  </>
                 )}
               </div>
             </div>

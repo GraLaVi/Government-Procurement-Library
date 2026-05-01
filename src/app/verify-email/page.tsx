@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 
@@ -13,12 +13,19 @@ function VerifyEmailContent() {
 
   const [status, setStatus] = useState<VerificationStatus>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const hasVerifiedRef = useRef(false);
 
   useEffect(() => {
     if (!token) {
       setStatus("no-token");
       return;
     }
+
+    // Guard against StrictMode double-invoke and any other remount
+    if (hasVerifiedRef.current) {
+      return;
+    }
+    hasVerifiedRef.current = true;
 
     const verifyEmail = async () => {
       try {

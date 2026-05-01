@@ -1,31 +1,7 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { ShieldIcon, ZapIcon } from "@/components/icons";
 
 export function CTA() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  useEffect(() => {
-    if (localStorage.getItem("gph_waitlist_submitted")) {
-      setSubmitted(true);
-    }
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    // TODO: Replace with API call when backend endpoint is ready
-    const existing = JSON.parse(localStorage.getItem("gph_waitlist") || "[]");
-    existing.push({ email, timestamp: new Date().toISOString() });
-    localStorage.setItem("gph_waitlist", JSON.stringify(existing));
-    localStorage.setItem("gph_waitlist_submitted", "true");
-    setSubmitted(true);
-    setEmail("");
-  };
-
   return (
     <section className="py-20 lg:py-32 bg-secondary dark:bg-[#1C2C54]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -37,40 +13,37 @@ export function CTA() {
           <div className="relative grid lg:grid-cols-2 gap-12 items-center">
             {/* Content */}
             <div>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
+              <div className="inline-flex items-center gap-2 bg-white/15 text-white px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
+                <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                Beta seats available
+              </div>
+              <h2 className="mt-5 text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
                 Ready to Win More DoD Bids?
               </h2>
               <p className="mt-6 text-lg text-white/80 leading-relaxed">
-                GPH is launching soon with live DLA solicitation feeds, NSN/NIIN search, and CAGE code intelligence. Join the waitlist to get early access.
+                Apply for a beta seat to get hands-on with live DLA solicitation
+                feeds, NSN/NIIN search, and bid matching. Pick a plan when
+                you&apos;re ready — your team is approved before any charge.
               </p>
 
-              {submitted ? (
-                <div className="mt-8 flex items-center gap-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg px-6 py-4">
-                  <svg className="w-5 h-5 text-white flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-white font-medium">You&apos;re on the list! We&apos;ll notify you when GPH launches.</span>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="mt-8 flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="email"
-                    required
-                    placeholder="Enter your work email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="flex-1 px-4 py-4 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:border-white/50 focus:ring-1 focus:ring-white/30"
-                  />
-                  <Button
-                    type="submit"
-                    variant="secondary"
-                    size="lg"
-                    className="!bg-white !text-primary hover:!bg-white/90"
-                  >
-                    Join Waitlist
-                  </Button>
-                </form>
-              )}
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <Button
+                  href="/signup"
+                  variant="secondary"
+                  size="lg"
+                  className="!bg-white !text-primary hover:!bg-white/90"
+                >
+                  Request Beta Access
+                </Button>
+                <Button
+                  href="/pricing"
+                  variant="outline"
+                  size="lg"
+                  className="!border-white/30 !text-white hover:!bg-white/10"
+                >
+                  View Pricing
+                </Button>
+              </div>
             </div>
 
             {/* Stats/Trust */}

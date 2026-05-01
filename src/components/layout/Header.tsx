@@ -17,8 +17,6 @@ const helpItems = [
 const mainNavItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/bidmatching", label: "Bid-Matching" },
-  { href: "/competitors", label: "Competitors" },
-  { href: "/analytics", label: "Analytics" },
 ];
 
 interface HeaderProps {
@@ -132,12 +130,6 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               </div>
               <Link href="/bidmatching" className="text-card-foreground hover:text-foreground transition-colors">
                 Bid-Matching
-              </Link>
-              <Link href="/competitors" className="text-card-foreground hover:text-foreground transition-colors">
-                Competitors
-              </Link>
-              <Link href="/analytics" className="text-card-foreground hover:text-foreground transition-colors">
-                Analytics
               </Link>
               {/* Help Dropdown */}
               <div className="relative" ref={helpDropdownRef}>
