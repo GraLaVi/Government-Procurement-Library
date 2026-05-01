@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { PasswordRulesChecklist } from "@/components/auth/PasswordRulesChecklist";
 import { firstPasswordViolation, isPasswordStrong } from "@/lib/auth/passwordRules";
-import { writePendingSignup } from "@/lib/signup/pendingSignup";
 import { useAuth } from "@/contexts/AuthContext";
 
 type ValidateResponse = {
@@ -22,28 +21,38 @@ type ValidateResponse = {
 
 type Step = "cage" | "account";
 
+// Plan checkboxes shown on the application form. The product_keys here must
+// match the catalog keys in the FastAPI products / product_groups tables —
+// they are passed back to the backend verbatim and stored in
+// customers.application_metadata for the admin reviewer.
+const PLAN_OPTIONS: Array<{ key: string; label: string; description: string }> = [
+  {
+    key: "library_search_full",
+    label: "ALAN Library — Full",
+    description: "Combined parts + vendor library with all advanced tabs.",
+  },
+  {
+    key: "library_search_basic",
+    label: "ALAN Library — Basic",
+    description: "Parts + vendor library essentials.",
+  },
+  {
+    key: "bid_matching_pro",
+    label: "Bid Matching Pro",
+    description: "Unlimited matching profiles and conditions.",
+  },
+];
+
 export default function SignupPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  // Plan/seat passthrough so a customer who clicked Subscribe before signing
-  // up lands back on /pricing with the same selection ready. We honor an
-  // explicit `next` first; otherwise build it from `plan` + `seats`.
-  const explicitNext = searchParams.get("next");
-  const planParam = searchParams.get("plan");
-  const seatsParam = searchParams.get("seats");
-  const next =
-    explicitNext ||
-    (planParam
-      ? `/pricing?plan=${planParam}${seatsParam ? `&seats=${seatsParam}` : ""}`
-      : "/pricing");
   const { user, isLoading: authLoading } = useAuth();
 
-  // Already-logged-in visitors don't need signup.
+  // Already-logged-in visitors don't need to apply.
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace(next);
+      router.replace("/dashboard");
     }
-  }, [authLoading, user, next, router]);
+  }, [authLoading, user, router]);
 
   const [step, setStep] = useState<Step>("cage");
 
@@ -59,8 +68,15 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [requestedPlans, setRequestedPlans] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const togglePlan = (key: string) => {
+    setRequestedPlans((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  };
 
   const validateCage = useCallback(async (raw: string) => {
     const code = raw.trim().toUpperCase();
@@ -78,8 +94,6 @@ export default function SignupPage() {
       });
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({}));
-        // Surface backend-unreachable as a soft error rather than a misleading
-        // "not eligible" result. The proxy returns 503 for network failures.
         setError(
           errBody.error ||
             (resp.status >= 500
@@ -106,7 +120,7 @@ export default function SignupPage() {
     if (cageResult?.eligible) setStep("account");
   };
 
-  const submitSignup = (e: React.FormEvent) => {
+  const submitApplication = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (password !== confirmPassword) {
@@ -119,23 +133,29 @@ export default function SignupPage() {
       return;
     }
 
-    // Option 2: nothing is created server-side here. We stash the form
-    // data in sessionStorage and send the visitor to /pricing. The actual
-    // customer/user/Stripe-customer creation only happens when they click
-    // Subscribe on a plan, via the combined /signup-and-checkout endpoint.
     setSubmitting(true);
     try {
-      writePendingSignup({
-        cage_code: cageInput.trim().toUpperCase(),
-        email: email.trim().toLowerCase(),
-        password,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        company_name: companyName.trim() || undefined,
+      const resp = await fetch("/api/auth/beta-application", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cage_code: cageInput.trim().toUpperCase(),
+          email: email.trim().toLowerCase(),
+          password,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          requested_plans: requestedPlans,
+        }),
       });
-      router.push(next);
+      const data = await resp.json();
+      if (!resp.ok) {
+        setError(data.error || "Failed to submit application. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+      router.push(`/signup/pending?email=${encodeURIComponent(email.trim().toLowerCase())}`);
     } catch {
-      setError("Unable to save your details. Please try again.");
+      setError("Unable to submit your application. Please try again.");
       setSubmitting(false);
     }
   };
@@ -149,10 +169,16 @@ export default function SignupPage() {
       <Navbar />
       <main className="max-w-screen-md mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-28">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Create your account</h1>
+          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide mb-3">
+            <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+            Private beta
+          </div>
+          <h1 className="text-3xl font-bold text-foreground">Apply for beta access</h1>
           <p className="text-muted mt-2">
-            Sign up with your CAGE code to get started. Already have an account?{" "}
-            <Link href={`/login?redirect=${encodeURIComponent(next)}`} className="text-primary hover:underline">
+            We review beta applications by hand. Submit your details and
+            we&apos;ll email you when your account is approved. Already have
+            an approved account?{" "}
+            <Link href="/login" className="text-primary hover:underline">
               Sign in
             </Link>
             .
@@ -180,7 +206,7 @@ export default function SignupPage() {
             >
               2
             </span>
-            Account details
+            Application details
           </li>
         </ol>
 
@@ -254,7 +280,7 @@ export default function SignupPage() {
                 >
                   SAM.gov
                 </a>{" "}
-                before you can sign up.
+                before you can apply.
               </p>
 
               <div className="flex justify-end gap-2 pt-2">
@@ -271,7 +297,7 @@ export default function SignupPage() {
 
           {/* ---------- Step 2: account ---------- */}
           {step === "account" && (
-            <form onSubmit={submitSignup} className="space-y-4">
+            <form onSubmit={submitApplication} className="space-y-4">
               {error && (
                 <div className="p-3 bg-error/5 border border-error/20 text-error rounded text-sm">
                   {error}
@@ -344,7 +370,7 @@ export default function SignupPage() {
                   className="w-full px-3 py-2 text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-primary"
                 />
                 <p className="text-[11px] text-muted mt-1">
-                  This will be your sign-in email. We&apos;ll send a verification link after checkout completes — your account isn&apos;t created until you subscribe to a plan.
+                  We&apos;ll send a verification link to confirm this address.
                 </p>
               </div>
 
@@ -374,6 +400,31 @@ export default function SignupPage() {
               </div>
               <PasswordRulesChecklist password={password} className="-mt-2" />
 
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Which plans interest you? <span className="text-muted font-normal">(optional)</span>
+                </label>
+                <div className="space-y-2">
+                  {PLAN_OPTIONS.map((option) => (
+                    <label
+                      key={option.key}
+                      className="flex items-start gap-3 p-3 border border-border rounded-lg hover:border-primary/40 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={requestedPlans.includes(option.key)}
+                        onChange={() => togglePlan(option.key)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-foreground">{option.label}</div>
+                        <div className="text-xs text-muted mt-0.5">{option.description}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex justify-between gap-2 pt-2">
                 <Button variant="outline" onClick={() => setStep("cage")} disabled={submitting} type="button">
                   ← Back
@@ -387,7 +438,7 @@ export default function SignupPage() {
                     password !== confirmPassword
                   }
                 >
-                  {submitting ? "Saving…" : "Continue to plans →"}
+                  {submitting ? "Submitting…" : "Submit application"}
                 </Button>
               </div>
             </form>

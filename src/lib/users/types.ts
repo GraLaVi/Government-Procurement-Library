@@ -76,6 +76,26 @@ export interface AssignedProduct {
   source: string;  // 'direct', 'group', 'customer_direct', 'customer_group', 'user_direct', 'user_group'
 }
 
+// Catalog item shown by the manage-products modal on /account/users.
+// `kind` distinguishes a standalone product from a product group so the
+// frontend can hit the right assignment endpoint. The customer's
+// subscription FK determines which kind it really is — assigning the
+// individual constituent products of a group would fail seat-cap because
+// the subscription is for the group, not its members.
+export interface AssignableItem {
+  kind: "product" | "product_group";
+  id: number;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  requires_seat_assignment?: boolean;
+  // Either product_key (for kind='product') or group_key (for kind='product_group').
+  product_key?: string;
+  group_key?: string;
+  category?: string | null;
+  source?: string;
+}
+
 // Response type for user products
 export interface UserProductsResponse {
   products: AssignedProduct[];

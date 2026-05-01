@@ -8,11 +8,22 @@ import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/contexts/AuthContext";
 import { AUTH_CONFIG } from "@/lib/auth/config";
 
+// Surface the right copy for the three "inactive" 403 variants the backend
+// returns. The substrings come from src/api/v1/auth/service.py.
+function classifyLoginError(error: string): "pending_approval" | "rejected" | null {
+  const e = error.toLowerCase();
+  if (e.includes("beta application is under review")) return "pending_approval";
+  if (e.includes("beta application was not approved")) return "rejected";
+  return null;
+}
+
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
 
   const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -175,16 +186,83 @@ function LoginForm() {
             </div>
 
             {/* Error Alert */}
-            {error && (
-              <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg">
-                <p className="text-sm text-error">{error}</p>
-                {rateLimitSeconds !== null && rateLimitSeconds > 0 && (
-                  <p className="text-sm text-muted mt-1">
-                    Try again in {rateLimitSeconds} second{rateLimitSeconds !== 1 ? "s" : ""}
-                  </p>
-                )}
-              </div>
-            )}
+            {error && (() => {
+              const kind = classifyLoginError(error);
+              if (kind === "pending_approval") {
+                const resend = async () => {
+                  if (!email) return;
+                  setResendingVerification(true);
+                  setResendMessage(null);
+                  try {
+                    const resp = await fetch("/api/auth/resend-verification", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ email }),
+                    });
+                    const data = await resp.json();
+                    setResendMessage(
+                      resp.ok
+                        ? "Verification email sent — check your inbox."
+                        : data.error || "Failed to send verification email.",
+                    );
+                  } catch {
+                    setResendMessage("An unexpected error occurred. Please try again.");
+                  } finally {
+                    setResendingVerification(false);
+                  }
+                };
+                return (
+                  <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg">
+                    <p className="text-sm font-medium text-foreground">
+                      Your beta application is under review.
+                    </p>
+                    <p className="text-sm text-muted mt-1">
+                      We&apos;ll email you when your account is approved. In
+                      the meantime, please make sure your email is verified.
+                    </p>
+                    {email && (
+                      <button
+                        type="button"
+                        onClick={resend}
+                        disabled={resendingVerification}
+                        className="mt-2 text-sm text-primary font-medium hover:underline disabled:opacity-50"
+                      >
+                        {resendingVerification ? "Sending…" : "Resend verification email"}
+                      </button>
+                    )}
+                    {resendMessage && (
+                      <p className="text-xs text-muted mt-2">{resendMessage}</p>
+                    )}
+                  </div>
+                );
+              }
+              if (kind === "rejected") {
+                return (
+                  <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg">
+                    <p className="text-sm font-medium text-foreground">
+                      Your beta application wasn&apos;t approved.
+                    </p>
+                    <p className="text-sm text-muted mt-1">
+                      If you&apos;d like to discuss your use case, please email{" "}
+                      <a href="mailto:support@gphusa.com" className="text-primary hover:underline">
+                        support@gphusa.com
+                      </a>
+                      .
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-lg">
+                  <p className="text-sm text-error">{error}</p>
+                  {rateLimitSeconds !== null && rateLimitSeconds > 0 && (
+                    <p className="text-sm text-muted mt-1">
+                      Try again in {rateLimitSeconds} second{rateLimitSeconds !== 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <Input
