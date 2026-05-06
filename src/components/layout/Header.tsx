@@ -12,6 +12,7 @@ const librarySearchItems = [
 
 const helpItems = [
   { href: "/library/code-definitions", label: "Code Definitions" },
+  { href: "/contact", label: "Contact Us" },
 ];
 
 const mainNavItems = [

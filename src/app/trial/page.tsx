@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CheckIcon } from "@/components/icons";
+import { hasConsent } from "@/lib/consent/storage";
 
 const waitlistBenefits = [
   "Early access before public launch",
@@ -40,14 +41,16 @@ export default function WaitlistPage() {
     e.preventDefault();
     setIsLoading(true);
     // TODO: Replace with API call when backend endpoint is ready
-    const existing = JSON.parse(localStorage.getItem("gph_waitlist") || "[]");
-    existing.push({
-      email: formData.email,
-      company: formData.company,
-      timestamp: new Date().toISOString(),
-    });
-    localStorage.setItem("gph_waitlist", JSON.stringify(existing));
-    localStorage.setItem("gph_waitlist_submitted", "true");
+    if (hasConsent("functional")) {
+      const existing = JSON.parse(localStorage.getItem("gph_waitlist") || "[]");
+      existing.push({
+        email: formData.email,
+        company: formData.company,
+        timestamp: new Date().toISOString(),
+      });
+      localStorage.setItem("gph_waitlist", JSON.stringify(existing));
+      localStorage.setItem("gph_waitlist_submitted", "true");
+    }
     await new Promise((resolve) => setTimeout(resolve, 500));
     setIsLoading(false);
     setSubmitted(true);

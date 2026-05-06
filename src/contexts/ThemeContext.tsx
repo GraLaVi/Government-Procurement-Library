@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { usePreferences } from '@/lib/hooks/usePreferences';
+import { hasConsent } from '@/lib/consent/storage';
 
 type Theme = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
@@ -58,8 +59,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         const savedTheme = preferences.theme as Theme;
         setThemeState(savedTheme);
         applyTheme(savedTheme);
-        // Sync to localStorage
-        if (typeof window !== 'undefined') {
+        // Sync to localStorage only when the visitor has opted in to
+        // functional storage. Without consent the theme still applies
+        // for the session; it just won't persist across sessions.
+        if (typeof window !== 'undefined' && hasConsent('functional')) {
           localStorage.setItem('theme', savedTheme);
         }
       } else {
@@ -104,8 +107,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(newTheme);
     applyTheme(newTheme);
     
-    // Store in localStorage for immediate access on next load
-    if (typeof window !== 'undefined') {
+    // Store in localStorage for immediate access on next load. Gated
+    // on functional consent — without it the picker still updates the
+    // current page but the choice won't survive a fresh session.
+    if (typeof window !== 'undefined' && hasConsent('functional')) {
       localStorage.setItem('theme', newTheme);
     }
 

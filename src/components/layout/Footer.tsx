@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CookiePreferencesLink } from "@/components/layout/CookiePreferencesLink";
 
 const footerLinks = {
   Product: [
@@ -10,17 +11,16 @@ const footerLinks = {
   Company: [
     { href: "/about", label: "About" },
     { href: "/contact", label: "Contact" },
-    { href: "/careers", label: "Careers" },
   ],
   Resources: [
     { href: "/docs", label: "Documentation" },
-    { href: "/blog", label: "Blog" },
     { href: "/support", label: "Support" },
   ],
   Legal: [
-    { href: "/privacy", label: "Privacy Policy" },
-    { href: "/terms", label: "Terms of Service" },
-    { href: "/security", label: "Security" },
+    { href: "/legal/privacy", label: "Privacy Policy" },
+    { href: "/legal/terms", label: "Terms of Service" },
+    { href: "/legal/security", label: "Security" },
+    { href: "/legal/cookies", label: "Cookies" },
   ],
 };
 
@@ -57,6 +57,11 @@ export function Footer() {
                     </Link>
                   </li>
                 ))}
+                {category === "Legal" && (
+                  <li>
+                    <CookiePreferencesLink />
+                  </li>
+                )}
               </ul>
             </div>
           ))}

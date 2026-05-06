@@ -4,6 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SessionExpiredProvider } from "@/contexts/SessionExpiredContext";
 import { SessionExpiredModal } from "@/components/auth/SessionExpiredModal";
+import { ConsentProvider } from "@/contexts/ConsentContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -45,14 +46,16 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>
-          <SessionExpiredProvider>
-            <AuthProvider>
-              {children}
-              <SessionExpiredModal />
-            </AuthProvider>
-          </SessionExpiredProvider>
-        </ThemeProvider>
+        <ConsentProvider>
+          <ThemeProvider>
+            <SessionExpiredProvider>
+              <AuthProvider>
+                {children}
+                <SessionExpiredModal />
+              </AuthProvider>
+            </SessionExpiredProvider>
+          </ThemeProvider>
+        </ConsentProvider>
       </body>
     </html>
   );

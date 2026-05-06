@@ -8,7 +8,13 @@
  * happen — abandoning the flow leaves zero residue on the server.
  *
  * Cleared by /account/billing once finalize-checkout has issued cookies.
+ *
+ * Writes are gated on functional-consent: visitors who decline functional
+ * storage can still complete the signup flow within a single tab, but
+ * navigating away loses the in-flight state.
  */
+
+import { hasConsent } from "@/lib/consent/storage";
 
 const STORAGE_KEY = "gph_pending_signup";
 
@@ -45,6 +51,7 @@ export function readPendingSignup(): PendingSignup | null {
 
 export function writePendingSignup(blob: PendingSignup): void {
   if (typeof window === "undefined") return;
+  if (!hasConsent("functional")) return;
   window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(blob));
 }
 

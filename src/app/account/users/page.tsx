@@ -37,7 +37,7 @@ type ConfirmAction = "delete" | "deactivate" | "activate" | "reset-password" | n
 
 // Format product name for display
 const formatProductName = (product: AssignedProduct): string => {
-  return product.name || product.product_key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return product.name || (product.product_key || "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
 // Format source for display
@@ -841,7 +841,6 @@ export default function UsersPage() {
           }
           fetchUsers();
         }}
-        onError={setError}
       />
 
       {/* Edit User Modal */}
@@ -857,7 +856,6 @@ export default function UsersPage() {
           setSuccess("User updated successfully");
           fetchUsers();
         }}
-        onError={setError}
       />
 
       {/* Confirm Dialogs */}
@@ -1165,12 +1163,10 @@ function CreateUserModal({
   isOpen,
   onClose,
   onSuccess,
-  onError,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (password: string | null, email: string) => void;
-  onError: (error: string) => void;
 }) {
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -1180,6 +1176,7 @@ function CreateUserModal({
   const [selectedRole, setSelectedRole] = useState<string>("user");
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const resetForm = () => {
     setEmail("");
@@ -1189,13 +1186,21 @@ function CreateUserModal({
     setJobTitle("");
     setSelectedRole("user");
     setSendWelcomeEmail(true);
+    setSubmitError(null);
   };
+
+  // Clear inline errors whenever the modal is reopened so a stale message
+  // from a prior attempt doesn't greet the next user.
+  useEffect(() => {
+    if (isOpen) setSubmitError(null);
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
 
     if (!selectedRole) {
-      onError("Please select a role");
+      setSubmitError("Please select a role");
       return;
     }
 
@@ -1221,7 +1226,7 @@ function CreateUserModal({
       const data = await response.json();
 
       if (!response.ok) {
-        onError(data.error || "Failed to create user");
+        setSubmitError(data.error || "Failed to create user");
         return;
       }
 
@@ -1229,7 +1234,7 @@ function CreateUserModal({
       onClose();
       onSuccess(data.temporary_password || null, email);
     } catch {
-      onError("An unexpected error occurred");
+      setSubmitError("An unexpected error occurred");
     } finally {
       setIsSubmitting(false);
     }
@@ -1245,6 +1250,11 @@ function CreateUserModal({
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Add New User" size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {submitError && (
+          <div className="p-3 bg-error/10 border border-error/20 rounded-lg">
+            <p className="text-sm text-error">{submitError}</p>
+          </div>
+        )}
         <Input
           label="Email Address"
           type="email"
@@ -1358,14 +1368,12 @@ function EditUserModal({
   user,
   currentUserId,
   onSuccess,
-  onError,
 }: {
   isOpen: boolean;
   onClose: () => void;
   user: ManagedUser | null;
   currentUserId: number;
   onSuccess: () => void;
-  onError: (error: string) => void;
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -1373,6 +1381,7 @@ function EditUserModal({
   const [jobTitle, setJobTitle] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("user");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isSelf = user?.id === currentUserId;
 
@@ -1388,6 +1397,12 @@ function EditUserModal({
     }
   }, [user]);
 
+  // Clear inline errors when the modal opens or switches to a different
+  // user, so a stale message doesn't carry over.
+  useEffect(() => {
+    if (isOpen) setSubmitError(null);
+  }, [isOpen, user?.id]);
+
   const handleRoleChange = (role: string) => {
     // Prevent changing admin role from self
     if (isSelf && selectedRole === "admin" && role !== "admin") {
@@ -1398,10 +1413,11 @@ function EditUserModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     if (!user) return;
 
     if (!selectedRole) {
-      onError("Please select a role");
+      setSubmitError("Please select a role");
       return;
     }
 
@@ -1425,14 +1441,14 @@ function EditUserModal({
       const data = await response.json();
 
       if (!response.ok) {
-        onError(data.error || "Failed to update user");
+        setSubmitError(data.error || "Failed to update user");
         return;
       }
 
       onClose();
       onSuccess();
     } catch {
-      onError("An unexpected error occurred");
+      setSubmitError("An unexpected error occurred");
     } finally {
       setIsSubmitting(false);
     }
@@ -1441,6 +1457,11 @@ function EditUserModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit User" size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {submitError && (
+          <div className="p-3 bg-error/10 border border-error/20 rounded-lg">
+            <p className="text-sm text-error">{submitError}</p>
+          </div>
+        )}
         <Input
           label="Email Address"
           type="email"

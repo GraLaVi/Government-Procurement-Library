@@ -68,12 +68,18 @@ export interface ResetPasswordRequest {
 // Product assigned to organization or user
 export interface AssignedProduct {
   id: number;
-  product_key: string;
+  product_key?: string;  // present for kind='product'; product_groups use group_key instead
+  group_key?: string;
+  kind?: "product" | "product_group";
   name: string;
   description: string | null;
   category: string | null;
   is_active: boolean;
   source: string;  // 'direct', 'group', 'customer_direct', 'customer_group', 'user_direct', 'user_group'
+  // How the grant was created in the DB. 'admin' | 'stripe' | 'xero_manual' | 'comp'.
+  // Surfaced by /organization/products so the UI can label comp/beta grants
+  // distinctly from direct admin assignments.
+  assigned_by_type?: string;
 }
 
 // Catalog item shown by the manage-products modal on /account/users.

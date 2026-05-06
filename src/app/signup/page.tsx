@@ -23,23 +23,18 @@ type Step = "cage" | "account";
 
 // Plan checkboxes shown on the application form. The product_keys here must
 // match the catalog keys in the FastAPI products / product_groups tables —
-// they are passed back to the backend verbatim and stored in
-// customers.application_metadata for the admin reviewer.
+// they are passed back to the backend verbatim and stored on the matching
+// beta_applications row for the admin reviewer.
+//
+// The current beta only offers ALAN Library — Full. To re-add Library
+// Basic or Bid Matching Pro later, append entries here:
+//   { key: "library_search_basic", label: "ALAN Library — Basic", description: "..." },
+//   { key: "bid_matching_pro",     label: "Bid Matching Pro",     description: "..." },
 const PLAN_OPTIONS: Array<{ key: string; label: string; description: string }> = [
   {
     key: "library_search_full",
     label: "ALAN Library — Full",
     description: "Combined parts + vendor library with all advanced tabs.",
-  },
-  {
-    key: "library_search_basic",
-    label: "ALAN Library — Basic",
-    description: "Parts + vendor library essentials.",
-  },
-  {
-    key: "bid_matching_pro",
-    label: "Bid Matching Pro",
-    description: "Unlimited matching profiles and conditions.",
   },
 ];
 

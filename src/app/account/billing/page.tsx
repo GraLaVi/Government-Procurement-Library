@@ -109,17 +109,29 @@ function statusBadge(status: string): { label: string; className: string } {
 }
 
 function formatProductName(product: AssignedProduct): string {
-  return product.name || product.product_key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const key = product.product_key || product.group_key || "";
+  return product.name || key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function formatProductSource(source: string): string {
+function formatProductSource(product: AssignedProduct): string {
+  // Prefer the DB-truth `assigned_by_type` (admin | stripe | xero_manual | comp)
+  // when present. Fall back to the legacy `source` field for older payloads.
+  const assignedBy = product.assigned_by_type;
+  const assignedByLabels: Record<string, string> = {
+    admin: "Direct Assignment",
+    stripe: "Subscription",
+    xero_manual: "Manual (Xero)",
+    comp: "Complimentary",
+  };
+  if (assignedBy && assignedByLabels[assignedBy]) return assignedByLabels[assignedBy];
+
   const sourceLabels: Record<string, string> = {
     direct: "Direct Assignment",
     group: "Product Group",
     customer_direct: "Direct Assignment",
     customer_group: "Product Group",
   };
-  return sourceLabels[source] || source;
+  return sourceLabels[product.source] || product.source;
 }
 
 function formatCategory(category: string | null): string {
@@ -437,11 +449,11 @@ export default function BillingPage() {
                           )}
                           <div className="flex flex-wrap items-center gap-3 mt-2">
                             <span className="text-xs text-muted">
-                              <span className="font-medium">Source:</span> {formatProductSource(product.source)}
+                              <span className="font-medium">Source:</span> {formatProductSource(product)}
                             </span>
                             <span className="text-xs text-muted">
                               <span className="font-medium">Key:</span>{" "}
-                              <code className="bg-muted-light px-1.5 py-0.5 rounded text-xs">{product.product_key}</code>
+                              <code className="bg-muted-light px-1.5 py-0.5 rounded text-xs">{product.product_key || product.group_key}</code>
                             </span>
                           </div>
                         </div>
