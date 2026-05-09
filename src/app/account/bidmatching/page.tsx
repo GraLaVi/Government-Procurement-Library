@@ -341,7 +341,7 @@ export default function BidMatchingPage() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-foreground">
                   {access.tier === "pro"
-                    ? "Bid Matching Pro"
+                    ? "Bid Matching Advanced"
                     : access.tier === "bundled"
                       ? "Bid Matching (bundled with your plan)"
                       : "No active plan"}

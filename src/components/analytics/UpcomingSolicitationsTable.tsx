@@ -7,6 +7,30 @@ interface UpcomingSolicitationsTableProps {
   data: UpcomingSolicitation[];
 }
 
+// Parse a "YYYY-MM-DD" (or ISO timestamp) as a local-calendar date so the
+// displayed day doesn't shift in US timezones where `new Date("2026-05-07")`
+// would parse as UTC midnight (= May 6 evening locally).
+function parseLocalDate(value: string): Date {
+  const [y, m, d] = value.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function formatLocalDate(value: string): string {
+  return parseLocalDate(value).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+// Calendar-day delta (close_date - today). Negative = already past.
+function calendarDaysUntil(value: string): number {
+  const close = parseLocalDate(value);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((close.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 export function UpcomingSolicitationsTable({ data }: UpcomingSolicitationsTableProps) {
   if (!data.length) {
     return (
@@ -36,11 +60,18 @@ export function UpcomingSolicitationsTable({ data }: UpcomingSolicitationsTableP
             {data.map((sol, i) => {
               const nsn = sol.fsc && sol.niin ? `${sol.fsc}-${sol.niin}` : sol.niin || '-';
               const closeDate = sol.close_date
-                ? new Date(sol.close_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                ? formatLocalDate(sol.close_date)
                 : '-';
               const daysUntil = sol.close_date
-                ? Math.ceil((new Date(sol.close_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                ? calendarDaysUntil(sol.close_date)
                 : null;
+
+              let badge: string | null = null;
+              if (daysUntil !== null) {
+                if (daysUntil < 0) badge = 'Closed';
+                else if (daysUntil === 0) badge = 'Today';
+                else if (daysUntil <= 7) badge = `${daysUntil}d`;
+              }
 
               return (
                 <tr key={i} className="hover:bg-muted-light/30 transition-colors">
@@ -51,9 +82,9 @@ export function UpcomingSolicitationsTable({ data }: UpcomingSolicitationsTableP
                   </td>
                   <td className="px-6 py-3 text-card-foreground whitespace-nowrap">
                     {closeDate}
-                    {daysUntil !== null && daysUntil <= 7 && (
+                    {badge && (
                       <span className="ml-2 text-xs font-medium text-error">
-                        {daysUntil <= 0 ? 'Today' : `${daysUntil}d`}
+                        {badge}
                       </span>
                     )}
                   </td>

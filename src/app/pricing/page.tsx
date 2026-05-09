@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { Navbar } from "@/components/layout/Navbar";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { readPendingSignup } from "@/lib/signup/pendingSignup";
+import { TermsAcceptanceModal } from "@/components/billing/TermsAcceptanceModal";
+import { clearPendingSignup, readPendingSignup } from "@/lib/signup/pendingSignup";
 
 type PriceTier = {
   up_to_quantity: number | null; // null = infinity
@@ -131,6 +132,14 @@ export default function PricingPage() {
   const [checkoutPending, setCheckoutPending] = useState<number | null>(null);
   const [resendingVerification, setResendingVerification] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
+  // Captured when the user clicks Subscribe; consumed by the ToS modal's
+  // confirm handler to fire the actual checkout request. Null while no
+  // modal is open.
+  const [tosPending, setTosPending] = useState<{
+    plan: Plan;
+    priceId: number;
+    seatCount: number;
+  } | null>(null);
 
   const loadPlans = useCallback(async () => {
     setIsLoading(true);
@@ -211,26 +220,42 @@ export default function PricingPage() {
     }
   };
 
-  const handleSubscribe = async (plan: Plan) => {
+  const handleSubscribe = (plan: Plan) => {
     const priceId = selected[plan.id];
     if (!priceId) return;
     const seatCount = Math.max(1, seats[plan.id] || plan.default_seat_count || 1);
 
-    // Not logged in — Option 2 flow: if /signup already stashed the
-    // visitor's account details, package everything and call the combined
-    // signup-and-checkout endpoint. Otherwise send them through /signup
-    // first to collect those details.
-    if (!authLoading && !user) {
-      const pending = readPendingSignup();
-      if (!pending) {
-        const next = `/pricing?plan=${priceId}&seats=${seatCount}`;
-        router.push(`/signup?plan=${priceId}&seats=${seatCount}&next=${encodeURIComponent(next)}`);
-        return;
-      }
+    // Anonymous visitors who haven't started /signup get bounced there
+    // first — no point opening the consent modal yet, since they'll
+    // re-consent right after signup completes anyway.
+    if (!authLoading && !user && !readPendingSignup()) {
+      const next = `/pricing?plan=${priceId}&seats=${seatCount}`;
+      router.push(`/signup?plan=${priceId}&seats=${seatCount}&next=${encodeURIComponent(next)}`);
+      return;
+    }
 
-      setCheckoutPending(plan.id);
-      setError(null);
-      try {
+    setError(null);
+    setTosPending({ plan, priceId, seatCount });
+  };
+
+  const handleTosConfirm = async (tosVersion: string, tosAcceptedAt: string) => {
+    if (!tosPending) return;
+    const { plan, priceId, seatCount } = tosPending;
+
+    setCheckoutPending(plan.id);
+    setError(null);
+
+    try {
+      // Anonymous + pending signup → combined signup-and-checkout endpoint.
+      if (!user) {
+        const pending = readPendingSignup();
+        if (!pending) {
+          // Defensive: pending blob disappeared between handleSubscribe
+          // and confirm. Send them back through /signup.
+          const next = `/pricing?plan=${priceId}&seats=${seatCount}`;
+          router.push(`/signup?plan=${priceId}&seats=${seatCount}&next=${encodeURIComponent(next)}`);
+          return;
+        }
         const resp = await fetch("/api/billing/signup-and-checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -238,35 +263,37 @@ export default function PricingPage() {
             ...pending,
             price_id: priceId,
             seat_quantity: seatCount,
+            tos_version: tosVersion,
+            tos_accepted_at: tosAcceptedAt,
           }),
         });
         const data = await resp.json();
         if (!resp.ok || !data.checkout_url) {
+          // 4xx means the stashed signup blob is no longer valid (CAGE
+          // already claimed, email already in use, etc., often from a
+          // prior abandoned test in this same tab). Drop the blob so the
+          // next Subscribe click redirects them to /signup with a fresh
+          // form instead of replaying the same bad data.
+          if (resp.status >= 400 && resp.status < 500) {
+            clearPendingSignup();
+            setTosPending(null);
+          }
           setError(data.error || "Failed to start checkout. Please try again.");
           return;
         }
-        // Hand the browser off to Stripe Checkout. The pending blob stays
-        // in sessionStorage; /account/billing's finalize step clears it
-        // once tokens are issued.
         window.location.href = data.checkout_url;
-      } catch (err) {
-        console.error(err);
-        setError("An unexpected error occurred");
-      } finally {
-        setCheckoutPending(null);
+        return;
       }
-      return;
-    }
 
-    setCheckoutPending(plan.id);
-    setError(null);
-    try {
+      // Logged-in flow.
       const response = await fetch("/api/billing/checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           price_id: priceId,
           seat_quantity: seatCount,
+          tos_version: tosVersion,
+          tos_accepted_at: tosAcceptedAt,
         }),
       });
       const data = await response.json();
@@ -274,15 +301,28 @@ export default function PricingPage() {
         setError(data.error || "Failed to start checkout");
         return;
       }
-      // Hand the browser off to Stripe Checkout.
       window.location.href = data.checkout_url;
     } catch (err) {
       console.error(err);
       setError("An unexpected error occurred");
     } finally {
       setCheckoutPending(null);
+      setTosPending(null);
     }
   };
+
+  const tosPlanSummary = useMemo(() => {
+    if (!tosPending) return undefined;
+    const { plan, priceId, seatCount } = tosPending;
+    const price = plan.prices.find((p) => p.id === priceId);
+    if (!price) return plan.name;
+    const total = computeTotalCents(price, seatCount);
+    const seatPart = plan.requires_seat_assignment
+      ? ` · ${seatCount} seat${seatCount === 1 ? "" : "s"}`
+      : "";
+    const totalPart = total !== null ? ` · ${formatMoney(total, price.currency)}` : "";
+    return `${plan.name} · ${intervalLabel(price.interval_count)}${seatPart}${totalPart}`;
+  }, [tosPending]);
 
   const emptyState = useMemo(
     () => !isLoading && plans.length === 0,
@@ -548,7 +588,21 @@ export default function PricingPage() {
           );
         })}
       </div>
+
+      <p className="text-center text-sm text-muted mt-8">
+        Payments processed securely by Stripe. Your card details are never stored on our servers.
+      </p>
     </main>
+    <TermsAcceptanceModal
+      isOpen={tosPending !== null}
+      onCancel={() => {
+        if (checkoutPending !== null) return;
+        setTosPending(null);
+      }}
+      onConfirm={handleTosConfirm}
+      planSummary={tosPlanSummary}
+      pending={checkoutPending !== null}
+    />
     <Footer />
     </>
   );

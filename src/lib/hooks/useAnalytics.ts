@@ -120,10 +120,18 @@ export function useMarketAnalytics() {
   return { data, isLoading, error, refetch: fetchData };
 }
 
+// Effective library tier returned alongside a 403 from the analytics endpoint.
+// "basic" → render the search-launcher dashboard.
+// null    → no library product at all (subscription expired) — render the
+//           resubscribe prompt.
+export type LibraryTier = "basic" | null;
+
 export function useMyBusinessAnalytics() {
   const [data, setData] = useState<CustomerAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+  const [tier, setTier] = useState<LibraryTier>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -134,6 +142,16 @@ export function useMyBusinessAnalytics() {
       });
 
       if (response.status === 401) {
+        setData(null);
+        return;
+      }
+
+      // 403 = user lacks the full library tier. Body carries `tier` so the
+      // dashboard can branch (basic → launcher; null → resubscribe).
+      if (response.status === 403) {
+        const errData = await response.json().catch(() => ({}));
+        setForbidden(true);
+        setTier(errData.tier === "basic" ? "basic" : null);
         setData(null);
         return;
       }
@@ -162,7 +180,7 @@ export function useMyBusinessAnalytics() {
     };
   }, [fetchData]);
 
-  return { data, isLoading, error, refetch: fetchData };
+  return { data, isLoading, error, forbidden, tier, refetch: fetchData };
 }
 
 // ============================================================================

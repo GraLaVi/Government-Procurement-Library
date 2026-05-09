@@ -44,8 +44,17 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       console.error('[Analytics/MyBusiness] Backend error:', data);
+      // Pass the structured detail through on 403 so the dashboard can read
+      // the tier ("basic" | null) and branch its UI. Other errors flatten
+      // to a string message as before.
+      if (response.status === 403 && data.detail && typeof data.detail === 'object') {
+        return NextResponse.json(
+          { error: data.detail.reason || 'Access denied', tier: data.detail.tier ?? null },
+          { status: 403 }
+        );
+      }
       return NextResponse.json(
-        { error: data.detail || 'Failed to fetch business analytics' },
+        { error: typeof data.detail === 'string' ? data.detail : 'Failed to fetch business analytics' },
         { status: response.status }
       );
     }

@@ -1,60 +1,40 @@
 "use client";
 
-import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
-
-const quickStats = [
-  { label: "Active Opportunities", value: "127", change: "+12", trend: "up" },
-  { label: "Saved Searches", value: "8", change: null, trend: null },
-  { label: "Tracked Competitors", value: "15", change: "+2", trend: "up" },
-  { label: "Alerts This Week", value: "23", change: "-5", trend: "down" },
-];
-
-const recentOpportunities = [
-  {
-    id: "1",
-    title: "IT Support Services - Department of Defense",
-    agency: "DoD",
-    value: "$2.5M",
-    deadline: "Dec 15, 2025",
-    matchScore: 92,
-  },
-  {
-    id: "2",
-    title: "Cybersecurity Assessment - DHS",
-    agency: "DHS",
-    value: "$1.8M",
-    deadline: "Dec 20, 2025",
-    matchScore: 87,
-  },
-  {
-    id: "3",
-    title: "Cloud Migration Services - VA",
-    agency: "VA",
-    value: "$3.2M",
-    deadline: "Jan 5, 2026",
-    matchScore: 84,
-  },
-  {
-    id: "4",
-    title: "Software Development - GSA",
-    agency: "GSA",
-    value: "$950K",
-    deadline: "Jan 10, 2026",
-    matchScore: 79,
-  },
-];
+import { useMyBusinessAnalytics } from "@/lib/hooks/useAnalytics";
+import {
+  KPICard,
+  KPICardSkeleton,
+  ChartSkeleton,
+  UpcomingSolicitationsTable,
+  formatCurrency,
+  formatNumber,
+} from "@/components/analytics";
+import { QuickSearchLauncher } from "@/components/dashboard/QuickSearchLauncher";
+import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
+import { RecentSearches } from "@/components/dashboard/RecentSearches";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const business = useMyBusinessAnalytics();
 
   const userName = user?.first_name || user?.email?.split("@")[0] || "User";
 
+  // Three branches:
+  //   - tier === null  → no library access (subscription expired) — full
+  //                      resubscribe prompt, no product surface
+  //   - forbidden=true → library_search_basic — search-launcher dashboard
+  //   - otherwise      → library_search_full — analytics dashboard
+  const showResubscribe = business.forbidden && business.tier === null;
+  const showBasic = business.forbidden && business.tier === "basic";
+  const showFull = !business.forbidden;
+
   return (
     <>
-      {/* Welcome section */}
-      <div className="mb-8">
+      {/* Welcome strip */}
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
           <h1 className="text-2xl font-bold text-foreground">
             Welcome back, {userName}
           </h1>
@@ -62,133 +42,162 @@ export default function DashboardPage() {
             Here&apos;s what&apos;s happening with your government contract opportunities.
           </p>
         </div>
+        {showFull && (
+          <Button href="/analytics" variant="outline" size="sm">
+            View Full Analytics →
+          </Button>
+        )}
+      </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {quickStats.map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-card-bg rounded-xl border border-border p-6"
+      {showResubscribe && <ResubscribePrompt />}
+      {showBasic && <BasicDashboard />}
+      {showFull && <FullDashboard business={business} />}
+    </>
+  );
+}
+
+function ResubscribePrompt() {
+  return (
+    <div className="bg-card-bg border border-border rounded-xl p-8 max-w-2xl mx-auto text-center">
+      <div className="w-16 h-16 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg
+          className="w-8 h-8 text-error"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+          />
+        </svg>
+      </div>
+      <h2 className="text-xl font-bold text-foreground mb-2">
+        Your subscription has expired
+      </h2>
+      <p className="text-muted mb-6">
+        Resubscribe to restore access to the Library and your other products.
+        Your account data is preserved — picking back up where you left off
+        takes one click.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <Button href="/pricing" variant="primary" size="md">
+          View Pricing
+        </Button>
+        <Button href="/account/billing" variant="outline" size="md">
+          Manage Billing
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function BasicDashboard() {
+  return (
+    <div className="space-y-6">
+      <QuickSearchLauncher />
+      <OnboardingChecklist />
+      <RecentSearches />
+
+      <div className="bg-card-bg border border-border rounded-xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+            <svg
+              className="w-5 h-5 text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
             >
-              <div className="text-sm text-muted mb-1">{stat.label}</div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-card-foreground">{stat.value}</span>
-                {stat.change && (
-                  <span
-                    className={`text-sm font-medium ${
-                      stat.trend === "up" ? "text-success" : "text-error"
-                    }`}
-                  >
-                    {stat.change}
-                  </span>
-                )}
-              </div>
-            </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-foreground">
+              Procurement Analytics
+            </h2>
+            <p className="text-sm text-muted mt-0.5">
+              Available on a higher plan. Upgrade to see solicitations matched
+              to your parts, contract history, and competitor activity on your
+              CAGE.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <Button href="/pricing" variant="primary" size="sm">
+            View Pricing
+          </Button>
+          <Button href="/account/billing" variant="outline" size="sm">
+            Manage Billing
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface FullDashboardProps {
+  business: ReturnType<typeof useMyBusinessAnalytics>;
+}
+
+function FullDashboard({ business }: FullDashboardProps) {
+  return (
+    <div className="space-y-6">
+      <QuickSearchLauncher />
+
+      {business.isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <KPICardSkeleton key={i} />
           ))}
         </div>
-
-        {/* Recent Opportunities */}
-        <div className="bg-card-bg rounded-xl border border-border">
-          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-card-foreground">
-              Top Matching Opportunities
-            </h2>
-            <Button href="/opportunities" variant="ghost" size="sm">
-              View All
-            </Button>
-          </div>
-          <div className="divide-y divide-border">
-            {recentOpportunities.map((opp) => (
-              <div
-                key={opp.id}
-                className="px-6 py-4 hover:bg-muted-light/50 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-card-foreground truncate">
-                      {opp.title}
-                    </h3>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-muted">
-                      <span>{opp.agency}</span>
-                      <span>{opp.value}</span>
-                      <span>Due: {opp.deadline}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        opp.matchScore >= 90
-                          ? "bg-success/10 text-success"
-                          : opp.matchScore >= 80
-                          ? "bg-accent/10 text-accent"
-                          : "bg-warning/10 text-warning"
-                      }`}
-                    >
-                      {opp.matchScore}% Match
-                    </div>
-                    <Button variant="outline" size="sm">
-                      View
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+      ) : business.error ? (
+        <div className="bg-error/10 border border-error/30 rounded-xl p-4 text-error text-sm flex items-center justify-between gap-4">
+          <span>Failed to load your business data: {business.error}</span>
+          <button
+            type="button"
+            onClick={business.refetch}
+            className="underline hover:no-underline shrink-0"
+          >
+            Retry
+          </button>
         </div>
-
-        {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link
-            href="/opportunities/search"
-            className="bg-card-bg rounded-xl border border-border p-6 hover:border-primary/50 hover:shadow-lg transition-all group"
-          >
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <h3 className="font-semibold text-card-foreground group-hover:text-primary transition-colors">
-              Search Opportunities
-            </h3>
-            <p className="text-sm text-muted mt-1">
-              Find new government contracts matching your capabilities
-            </p>
-          </Link>
-
-          <Link
-            href="/competitors/add"
-            className="bg-card-bg rounded-xl border border-border p-6 hover:border-primary/50 hover:shadow-lg transition-all group"
-          >
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <h3 className="font-semibold text-card-foreground group-hover:text-primary transition-colors">
-              Track Competitor
-            </h3>
-            <p className="text-sm text-muted mt-1">
-              Monitor competitor activity and contract wins
-            </p>
-          </Link>
-
-          <Link
-            href="/account/searches"
-            className="bg-card-bg rounded-xl border border-border p-6 hover:border-primary/50 hover:shadow-lg transition-all group"
-          >
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-            </div>
-            <h3 className="font-semibold text-card-foreground group-hover:text-primary transition-colors">
-              Manage Alerts
-            </h3>
-            <p className="text-sm text-muted mt-1">
-              Configure notifications for new opportunities
-            </p>
-          </Link>
+      ) : business.data ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <KPICard
+            label="Open Matched Solicitations"
+            value={formatNumber(business.data.open_solicitations_count)}
+            subtitle="Matching your manufactured parts"
+            href="/analytics#your-business"
+          />
+          <KPICard
+            label="Historical Contract Value"
+            value={formatCurrency(business.data.procurement_history_total)}
+            subtitle="Lifetime procurement total"
+            href="/analytics#your-business"
+          />
+          <KPICard
+            label="Competitors on Your Parts"
+            value={formatNumber(business.data.competitor_count)}
+            subtitle="Distinct vendors on the same parts"
+            href="/analytics#your-business"
+          />
         </div>
-    </>
+      ) : null}
+
+      {business.isLoading ? (
+        <ChartSkeleton height="h-48" />
+      ) : business.data && business.data.upcoming_solicitations.length > 0 ? (
+        <UpcomingSolicitationsTable data={business.data.upcoming_solicitations} />
+      ) : null}
+
+      <RecentSearches />
+    </div>
   );
 }

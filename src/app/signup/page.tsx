@@ -26,14 +26,14 @@ type Step = "cage" | "account";
 // they are passed back to the backend verbatim and stored on the matching
 // beta_applications row for the admin reviewer.
 //
-// The current beta only offers ALAN Library — Full. To re-add Library
-// Basic or Bid Matching Pro later, append entries here:
-//   { key: "library_search_basic", label: "ALAN Library — Basic", description: "..." },
-//   { key: "bid_matching_pro",     label: "Bid Matching Pro",     description: "..." },
+// The current beta only offers Parts and Vendor Library — Advanced. To re-add Library
+// Basic or Bid Matching Advanced later, append entries here:
+//   { key: "library_search_basic", label: "Parts and Vendor Library — Basic", description: "..." },
+//   { key: "bid_matching_pro",     label: "Bid Matching Advanced",     description: "..." },
 const PLAN_OPTIONS: Array<{ key: string; label: string; description: string }> = [
   {
     key: "library_search_full",
-    label: "ALAN Library — Full",
+    label: "Parts and Vendor Library — Advanced",
     description: "Combined parts + vendor library with all advanced tabs.",
   },
 ];

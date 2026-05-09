@@ -365,6 +365,12 @@ export default function BillingPage() {
         </div>
       </div>
 
+      {hasStripeCustomer && (
+        <p className="text-sm text-muted mb-6">
+          Payments processed securely by Stripe. Your card details are never stored on our servers.
+        </p>
+      )}
+
       {checkoutFlag === "success" && (
         <div className="bg-success/5 border border-success/20 rounded-xl p-4 mb-6 text-sm text-foreground">
           Thanks — your Checkout was completed. If your new plan isn&apos;t showing yet, it&apos;ll appear within a few seconds as Stripe finalizes the subscription.

@@ -285,7 +285,9 @@ case "${1:-help}" in
 ${BLUE}Govt Procurement Library Production Services Manager${NC}
 
 ${GREEN}Setup & Deployment:${NC}
-  ./prod.sh build        Build Docker images (auto-clears Next.js cache)
+  ./prod.sh build        Build Docker images (auto-clears Next.js cache;
+                         --no-cache reinstalls all package.json deps inside
+                         the image, so new packages land automatically)
   ./prod.sh start        Start all production services
   ./prod.sh stop         Stop all services
   ./prod.sh restart      Restart all services

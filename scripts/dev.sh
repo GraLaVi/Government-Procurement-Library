@@ -44,19 +44,37 @@ get_pid() {
     fi
 }
 
-# Function to check if dependencies are installed
+# Function to check if dependencies are installed and install if necessary.
+# Auto-runs `npm install` when:
+#   - node_modules is missing, OR
+#   - package.json is newer than the install stamp (node_modules/.package-lock.json),
+#     which is npm's own marker rewritten on every install.
 check_dependencies() {
     cd "$PROJECT_DIR"
-    
-    # Check if node_modules directory exists
+
+    local install_stamp="node_modules/.package-lock.json"
+    local need_install=0
+    local reason=""
+
     if [ ! -d "node_modules" ]; then
-        echo "Error: Dependencies not found. Please run 'npm install' first."
-        exit 1
+        need_install=1
+        reason="node_modules missing"
+    elif [ ! -f "$install_stamp" ] || [ "package.json" -nt "$install_stamp" ]; then
+        need_install=1
+        reason="package.json changed since last install"
     fi
-    
-    # Check if next is available
+
+    if [ "$need_install" -eq 1 ]; then
+        echo "[INFO] Installing/updating dependencies ($reason)..."
+        if ! npm install; then
+            echo "Error: 'npm install' failed."
+            exit 1
+        fi
+    fi
+
+    # Final sanity check — Next.js should now be available.
     if [ ! -f "node_modules/.bin/next" ] && ! command -v next &> /dev/null; then
-        echo "Error: Next.js not found. Please run 'npm install' to install dependencies."
+        echo "Error: Next.js not found after install. Check npm output above."
         exit 1
     fi
 }

@@ -23,8 +23,8 @@ export function Hero() {
           <div>
             {/* Beta pill */}
             <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
-              <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-              Private beta · invitation only
+              <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
+              Private beta · applications open
             </div>
 
             <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold text-secondary dark:text-foreground leading-tight">

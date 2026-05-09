@@ -11,7 +11,7 @@ const steps = [
     number: "02",
     title: "Pick a Plan & Set Your Profile",
     description:
-      "Once approved, subscribe to ALAN Library Basic, Full, or Bid Matching Pro. Configure your CAGE code, NSN categories, and bid-matching profiles.",
+      "Once approved, subscribe to ALAN Library Basic, Full, or Bid Matching Advanced. Configure your CAGE code, NSN categories, and bid-matching profiles.",
   },
   {
     number: "03",

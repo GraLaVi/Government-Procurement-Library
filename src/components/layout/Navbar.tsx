@@ -176,7 +176,7 @@ export function Navbar() {
                   Sign in
                 </Button>
                 <Button href="/signup" variant="primary" size="sm">
-                  Get Started
+                  Request Beta Access
                 </Button>
               </div>
             )}
@@ -305,7 +305,7 @@ export function Navbar() {
                       Sign in
                     </Button>
                     <Button href="/signup" variant="primary" size="md">
-                      Get Started
+                      Request Beta Access
                     </Button>
                   </>
                 )}

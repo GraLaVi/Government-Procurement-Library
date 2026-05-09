@@ -1,6 +1,7 @@
 "use client";
 
 import { Header } from "@/components/layout/Header";
+import { AppFooter } from "@/components/layout/AppFooter";
 
 interface LibraryLayoutProps {
   children: React.ReactNode;
@@ -8,11 +9,12 @@ interface LibraryLayoutProps {
 
 export default function LibraryLayout({ children }: LibraryLayoutProps) {
   return (
-    <div className="min-h-screen bg-muted-light">
+    <div className="min-h-screen bg-muted-light flex flex-col">
       <Header showAccountLink={true} />
-      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+      <AppFooter />
     </div>
   );
 }

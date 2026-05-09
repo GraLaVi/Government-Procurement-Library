@@ -4,9 +4,38 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useConsent } from "@/contexts/ConsentContext";
+
+const COOKIE_CATEGORIES = [
+  {
+    key: "necessary" as const,
+    label: "Strictly necessary",
+    description:
+      "Required for sign-in, navigation, and remembering your cookie choices. Always on.",
+  },
+  {
+    key: "functional" as const,
+    label: "Functional",
+    description:
+      "Remembers preferences like theme and partially-completed signup forms.",
+  },
+  {
+    key: "analytics" as const,
+    label: "Analytics",
+    description:
+      "Anonymous usage data so we can improve the product. Reserved — not in use today.",
+  },
+  {
+    key: "marketing" as const,
+    label: "Marketing",
+    description:
+      "Personalized content and ads. Reserved — not in use today.",
+  },
+];
 
 export default function PreferencesPage() {
   const { theme, setTheme } = useTheme();
+  const { consent, hasDecided, openSettings } = useConsent();
   const [localTheme, setLocalTheme] = useState<'light' | 'dark' | 'system'>('system');
   const [success, setSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -168,6 +197,72 @@ export default function PreferencesPage() {
             ) : (
               'Save Preferences'
             )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Cookie Preferences Section */}
+      <div className="bg-card-bg rounded-xl border border-border p-6 mb-6">
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-secondary mb-1">Cookie Preferences</h2>
+          <p className="text-sm text-muted">
+            Control what data we store in your browser. See our{" "}
+            <Link href="/legal/cookies" className="text-primary hover:underline">
+              cookie policy
+            </Link>{" "}
+            for details on each category.
+          </p>
+        </div>
+
+        <ul className="space-y-3">
+          {COOKIE_CATEGORIES.map((category) => {
+            const enabled = consent[category.key];
+            const isLocked = category.key === "necessary";
+            return (
+              <li
+                key={category.key}
+                className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-border"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm sm:text-base font-medium text-foreground">
+                      {category.label}
+                    </span>
+                    <span
+                      className={`text-[11px] px-1.5 py-0.5 rounded border ${
+                        enabled
+                          ? "bg-success/10 text-success border-success/20"
+                          : "bg-muted-light text-muted border-border"
+                      }`}
+                    >
+                      {enabled ? "On" : "Off"}
+                    </span>
+                    {isLocked && (
+                      <span className="text-[11px] px-1.5 py-0.5 rounded border bg-muted-light text-muted border-border">
+                        Always on
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted mt-1">{category.description}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="mt-6 pt-6 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-xs text-muted">
+            {hasDecided
+              ? "You've already made a choice — open the settings to change it."
+              : "You haven't made a choice yet. Defaults are shown above."}
+          </p>
+          <Button
+            onClick={openSettings}
+            variant="outline"
+            size="md"
+            className="w-full sm:w-auto touch-manipulation"
+          >
+            Manage cookie preferences
           </Button>
         </div>
       </div>

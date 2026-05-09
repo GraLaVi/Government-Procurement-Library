@@ -90,7 +90,7 @@ export default function AnalyticsPage() {
       {/* ================================================================ */}
       {/* Section 2: Your Business                                         */}
       {/* ================================================================ */}
-      <section>
+      <section id="your-business" className="scroll-mt-8">
         <h2 className="text-lg font-semibold text-foreground mb-4">
           Your Business
           {business.data?.company_name && (

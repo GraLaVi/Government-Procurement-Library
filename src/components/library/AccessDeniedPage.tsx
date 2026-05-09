@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 
 interface AccessDeniedPageProps {
@@ -36,10 +35,12 @@ export function AccessDeniedPage({
           </svg>
         </div>
 
-        {/* Not Authorized Title */}
-        <h1 className="text-2xl font-bold text-foreground mb-2">Not Authorized</h1>
+        {/* Title */}
+        <h1 className="text-2xl font-bold text-foreground mb-2">
+          Unlock {featureName}
+        </h1>
         <p className="text-muted">
-          You don't currently have access to {featureName}
+          This feature isn't included in your current plan.
         </p>
       </div>
 
@@ -84,11 +85,11 @@ export function AccessDeniedPage({
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
-        <Button href="/dashboard" variant="primary" size="md">
-          Go to Dashboard
+        <Button href="/pricing" variant="primary" size="md">
+          View Pricing
         </Button>
-        <Button href="/account" variant="outline" size="md">
-          View Account Settings
+        <Button href="/account/billing" variant="outline" size="md">
+          Manage Billing
         </Button>
       </div>
     </div>

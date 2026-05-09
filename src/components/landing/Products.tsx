@@ -4,7 +4,8 @@ import { DatabaseIcon, SearchIcon, TargetIcon, CheckIcon } from "@/components/ic
 const products = [
   {
     icon: SearchIcon,
-    name: "ALAN Library — Basic",
+    family: "Parts & Vendor Library",
+    tier: "Basic",
     tagline: "Get the lay of the land.",
     description:
       "Combined parts + vendor library with the essentials: search, summary, code definitions, and award history.",
@@ -17,7 +18,8 @@ const products = [
   },
   {
     icon: DatabaseIcon,
-    name: "ALAN Library — Full",
+    family: "Parts & Vendor Library",
+    tier: "Advanced",
     tagline: "The complete procurement picture.",
     description:
       "Everything in Basic plus procurement history, manufacturers, packaging, bookings, technical characteristics, end-use, and live solicitations.",
@@ -26,15 +28,17 @@ const products = [
       "Procurement history & bookings",
       "Manufacturers & packaging",
       "Active solicitations feed",
+      "Bid Matching Basic Included"
     ],
     highlighted: true,
   },
   {
     icon: TargetIcon,
-    name: "Bid Matching Pro",
+    family: "Bid Matching",
+    tier: "Advanced",
     tagline: "Never miss a relevant RFQ.",
     description:
-      "Unlimited matching profiles and conditions across DLA, Army, Navy, Air Force, and Marines — plus priority queue and advanced filters.",
+      "Unlimited matching profiles and conditions across DLA, Army, Navy, and Air Force — plus priority queue and advanced filters.",
     features: [
       "Unlimited profiles",
       "Unlimited conditions per profile",
@@ -64,9 +68,10 @@ export function Products() {
         <div className="mt-16 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((product) => {
             const Icon = product.icon;
+            const productKey = `${product.family}-${product.tier}`;
             return (
               <div
-                key={product.name}
+                key={productKey}
                 className={`relative bg-white dark:bg-card-bg rounded-2xl p-8 border transition-all duration-300 flex flex-col ${
                   product.highlighted
                     ? "border-primary shadow-xl shadow-primary/10 lg:-translate-y-2"
@@ -81,9 +86,14 @@ export function Products() {
                 <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center">
                   <Icon className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="mt-5 text-xl font-semibold text-secondary dark:text-card-foreground">
-                  {product.name}
-                </h3>
+                <div className="mt-5 flex items-center gap-2 flex-wrap">
+                  <h3 className="text-xl font-semibold text-secondary dark:text-card-foreground">
+                    {product.family}
+                  </h3>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {product.tier}
+                  </span>
+                </div>
                 <p className="mt-1 text-sm font-medium text-primary">
                   {product.tagline}
                 </p>

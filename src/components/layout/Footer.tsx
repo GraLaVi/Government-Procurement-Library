@@ -40,6 +40,18 @@ export function Footer() {
             <p className="text-white/70 text-sm">
               Your DoD Solicitation Intelligence Platform
             </p>
+            <address className="not-italic text-white/70 text-sm mt-3">
+              <span className="whitespace-nowrap">Government Procurement Hub LLC</span>
+              <br />
+              New Ulm, MN 56073
+              <br />
+              <a
+                href="mailto:support@gphusa.com"
+                className="hover:text-white transition-colors duration-200"
+              >
+                support@gphusa.com
+              </a>
+            </address>
           </div>
 
           {/* Links */}
@@ -72,17 +84,6 @@ export function Footer() {
             &copy; {new Date().getFullYear()} GPH. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <a
-              href="https://twitter.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white/50 hover:text-white transition-colors"
-              aria-label="Twitter"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-            </a>
             <a
               href="https://linkedin.com"
               target="_blank"
