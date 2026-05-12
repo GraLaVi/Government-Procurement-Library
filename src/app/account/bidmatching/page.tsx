@@ -35,7 +35,7 @@ interface ConditionForm {
 
 interface BidMatchingAccess {
   has_access: boolean;
-  tier: "pro" | "bundled" | null;
+  tier: "advanced" | "bundled" | null;
   limits: {
     max_profiles: number | null; // null = unlimited
     max_conditions_per_profile: number | null;
@@ -338,7 +338,7 @@ export default function BidMatchingPage() {
       {access && (
         <div
           className={`mb-6 rounded-xl border p-4 ${
-            access.tier === "pro"
+            access.tier === "advanced"
               ? "bg-primary/5 border-primary/30"
               : access.has_access
                 ? "bg-card-bg border-border"
@@ -349,15 +349,15 @@ export default function BidMatchingPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-foreground">
-                  {access.tier === "pro"
+                  {access.tier === "advanced"
                     ? "Bid Matching Advanced"
                     : access.tier === "bundled"
                       ? "Bid Matching (bundled with your plan)"
                       : "No active plan"}
                 </span>
-                {access.tier === "pro" && (
+                {access.tier === "advanced" && (
                   <span className="text-[11px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                    PRO
+                    ADVANCED
                   </span>
                 )}
               </div>

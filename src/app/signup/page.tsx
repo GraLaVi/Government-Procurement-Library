@@ -39,7 +39,7 @@ const DEV_SIGNUP_ENABLED =
 // The current beta only offers Parts and Vendor Library — Advanced. To re-add Library
 // Basic or Bid Matching Advanced later, append entries here:
 //   { key: "library_search_basic", label: "Parts and Vendor Library — Basic", description: "..." },
-//   { key: "bid_matching_pro",     label: "Bid Matching Advanced",     description: "..." },
+//   { key: "bid_matching_advanced", label: "Bid Matching Advanced",     description: "..." },
 const PLAN_OPTIONS: Array<{ key: string; label: string; description: string }> = [
   {
     key: "library_search_advanced",
