@@ -23,15 +23,11 @@ import {
 export const DEFAULT_REJECTED: ConsentChoice = {
   necessary: true,
   functional: false,
-  analytics: false,
-  marketing: false,
 };
 
 export const DEFAULT_ACCEPTED: ConsentChoice = {
   necessary: true,
   functional: true,
-  analytics: true,
-  marketing: true,
 };
 
 function isBrowser(): boolean {
@@ -82,16 +78,17 @@ export function clearStoredConsent(): void {
 }
 
 /**
- * True only if the visitor has explicitly opted in to the named
- * category. Used by storage gates (theme, signup, waitlist) to decide
- * whether to write to localStorage / sessionStorage.
+ * True if the visitor's choice opts in to the named category. Used by
+ * storage gates (theme, signup, waitlist) to decide whether to write
+ * to localStorage / sessionStorage.
  *
- * Returns false when no choice has been made yet — the safe default.
+ * When no choice has been made yet, returns the DEFAULT_ACCEPTED value
+ * for the category — matches the consent context, which now uses
+ * "accepted" as the pre-decision default (so functional storage works
+ * for visitors who haven't engaged with the banner).
  */
-export function hasConsent(
-  category: "functional" | "analytics" | "marketing",
-): boolean {
+export function hasConsent(category: "functional"): boolean {
   const stored = readStoredConsent();
-  if (!stored) return false;
+  if (!stored) return DEFAULT_ACCEPTED[category] === true;
   return stored.choices[category] === true;
 }

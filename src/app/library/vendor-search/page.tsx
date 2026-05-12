@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { Suspense, useState, useCallback, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { VendorSearchForm, VendorSearchFormRef } from "@/components/library/VendorSearchForm";
@@ -23,6 +23,14 @@ import { VendorSearchActionData, RecentActionEntry } from "@/lib/preferences/typ
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 export default function VendorSearchPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted">Loading…</div>}>
+      <VendorSearchPageContent />
+    </Suspense>
+  );
+}
+
+function VendorSearchPageContent() {
   const { isLoading: authLoading, hasAnyProductAccess } = useAuth();
 
   // Recent actions hook

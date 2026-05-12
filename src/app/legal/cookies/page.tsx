@@ -8,7 +8,7 @@ import { Footer } from "@/components/layout/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsent } from "@/contexts/ConsentContext";
 
-const LAST_UPDATED = "May 5, 2026";
+const LAST_UPDATED = "May 11, 2026";
 
 interface CookieRow {
   name: string;
@@ -81,9 +81,13 @@ export default function CookiePolicyPage() {
         <p className="text-sm text-muted mt-6 leading-relaxed">
           This page lists every cookie and browser-storage entry the
           Government Procurement Hub website uses, what it&rsquo;s for, and how
-          long it lives. We don&rsquo;t use Google Analytics, advertising
-          pixels, or any third-party tracking tools today. If that
-          changes we&rsquo;ll update this page and re-prompt you for consent.
+          long it lives. We don&rsquo;t use analytics or marketing
+          storage of any kind — no Google Analytics, no advertising
+          pixels, no cross-site tracking. The only categories you can
+          toggle are strictly-necessary (always on) and functional (on
+          by default). If we ever add analytics or marketing in the
+          future we&rsquo;ll add them back to this page and re-prompt
+          you for consent.
         </p>
 
         <div className="mt-6 flex flex-wrap gap-2">
@@ -136,23 +140,8 @@ export default function CookiePolicyPage() {
             <dt className="font-semibold text-foreground">Functional</dt>
             <dd className="text-muted leading-relaxed">
               Remember preferences (like dark mode) and let multi-step
-              forms keep their state across pages. Off by default; turn
-              them on through the consent banner if you want them.
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-foreground">Analytics</dt>
-            <dd className="text-muted leading-relaxed">
-              Not used today. Reserved so we can ask permission cleanly
-              if we ever add page-view or feature-usage measurement.
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-foreground">Marketing</dt>
-            <dd className="text-muted leading-relaxed">
-              Not used today. We don&rsquo;t run advertising, pixels, or
-              cross-site tracking. Reserved category so the choice
-              carries forward if that ever changes.
+              forms keep their state across pages. On by default; you
+              can disable them in the consent preferences modal.
             </dd>
           </div>
         </dl>

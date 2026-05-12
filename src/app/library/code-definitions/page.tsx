@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
@@ -46,6 +46,14 @@ const CODE_TYPE_NAMES: Record<string, string> = {
 };
 
 export default function CodeDefinitionsPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted">Loading…</div>}>
+      <CodeDefinitionsPageContent />
+    </Suspense>
+  );
+}
+
+function CodeDefinitionsPageContent() {
   const searchParams = useSearchParams();
   const targetCodeType = searchParams.get('code_type');
   const targetCodeValue = searchParams.get('code_value');

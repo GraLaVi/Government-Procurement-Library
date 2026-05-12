@@ -40,10 +40,12 @@ interface ConsentContextValue {
 const ConsentContext = createContext<ConsentContextValue | null>(null);
 
 export function ConsentProvider({ children }: { children: ReactNode }) {
-  // Render-stable defaults during SSR + before mount: we treat the
-  // visitor as if they rejected non-essential storage. The banner is
-  // hidden until mount completes to avoid a hydration flash.
-  const [consent, setConsentState] = useState<ConsentChoice>(DEFAULT_REJECTED);
+  // Pre-decision default: functional storage is on. The visitor can
+  // still toggle it off via the banner or the preferences modal. This
+  // mirrors hasConsent()'s no-choice behavior so storage gates that
+  // run before the user engages with the banner see a consistent state.
+  // The banner is hidden until mount completes to avoid a hydration flash.
+  const [consent, setConsentState] = useState<ConsentChoice>(DEFAULT_ACCEPTED);
   const [hasDecided, setHasDecided] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

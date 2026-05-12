@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/Modal";
 import { ConsentChoice } from "@/lib/consent/types";
 
 interface CategoryDef {
-  key: "necessary" | "functional" | "analytics" | "marketing";
+  key: "necessary" | "functional";
   label: string;
   description: string;
   examples: string;
@@ -28,22 +28,8 @@ const CATEGORIES: CategoryDef[] = [
     key: "functional",
     label: "Functional",
     description:
-      "Remembers preferences and in-progress forms across pages so you don't lose work.",
+      "Remembers preferences and in-progress forms across pages so you don't lose work. On by default — uncheck if you'd rather not store these.",
     examples: "theme (light/dark), gph_pending_signup, gph_waitlist",
-  },
-  {
-    key: "analytics",
-    label: "Analytics",
-    description:
-      "We don't use any analytics today. Reserved so this choice carries forward if we ever add page-view or feature-usage measurement.",
-    examples: "(none today)",
-  },
-  {
-    key: "marketing",
-    label: "Marketing",
-    description:
-      "We don't use any advertising or cross-site tracking today. Reserved so this choice carries forward if we ever add it.",
-    examples: "(none today)",
   },
 ];
 

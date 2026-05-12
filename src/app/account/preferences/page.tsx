@@ -17,19 +17,7 @@ const COOKIE_CATEGORIES = [
     key: "functional" as const,
     label: "Functional",
     description:
-      "Remembers preferences like theme and partially-completed signup forms.",
-  },
-  {
-    key: "analytics" as const,
-    label: "Analytics",
-    description:
-      "Anonymous usage data so we can improve the product. Reserved — not in use today.",
-  },
-  {
-    key: "marketing" as const,
-    label: "Marketing",
-    description:
-      "Personalized content and ads. Reserved — not in use today.",
+      "Remembers preferences like theme and partially-completed signup forms. On by default.",
   },
 ];
 

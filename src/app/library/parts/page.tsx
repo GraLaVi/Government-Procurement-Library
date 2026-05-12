@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { Suspense, useState, useCallback, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { PartsSearchForm, PartsSearchFormRef } from "@/components/library/PartsSearchForm";
@@ -21,6 +21,14 @@ import { PartsSearchActionData, RecentActionEntry } from "@/lib/preferences/type
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 export default function PartsSearchPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted">Loading…</div>}>
+      <PartsSearchPageContent />
+    </Suspense>
+  );
+}
+
+function PartsSearchPageContent() {
   const { isLoading: authLoading, hasAnyProductAccess } = useAuth();
 
   // Recent actions hook

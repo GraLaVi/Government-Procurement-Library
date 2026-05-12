@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
@@ -156,6 +156,14 @@ type ActiveModal =
   | null;
 
 export default function BillingPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted">Loading…</div>}>
+      <BillingPageContent />
+    </Suspense>
+  );
+}
+
+function BillingPageContent() {
   const router = useRouter();
   const { user, isLoading: authLoading, refreshUser } = useAuth();
   const searchParams = useSearchParams();

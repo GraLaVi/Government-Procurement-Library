@@ -29,8 +29,10 @@ export function ConsentBanner({
             </p>
             <p className="text-xs text-muted leading-relaxed">
               Strictly-necessary cookies (authentication and this consent
-              choice) are always on. Functional, analytics, and marketing
-              storage is off until you opt in. Read our{" "}
+              choice) are always on. Functional storage (preferences,
+              in-progress forms) is on by default — you can disable it
+              from the preferences modal. We don&rsquo;t use analytics or
+              marketing storage at all. Read our{" "}
               <Link href="/legal/cookies" className="text-primary hover:underline">
                 cookie policy
               </Link>{" "}

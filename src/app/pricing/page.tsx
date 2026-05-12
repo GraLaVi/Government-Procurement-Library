@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
@@ -51,6 +51,18 @@ function formatMoney(cents: number, currency: string): string {
     style: "currency",
     currency: currency || "USD",
   }).format(cents / 100);
+}
+
+// Split "Parts and Vendor Library — Advanced" into family + tier so the
+// pricing card can render the tier as a small pill next to the family name —
+// same pattern as the landing-page Products component. Names without an
+// em-dash come back with tier=null.
+function splitFamilyTier(name: string): { family: string; tier: string | null } {
+  const match = name.match(/^(.+?)\s*—\s*(.+)$/);
+  if (match) {
+    return { family: match[1].trim(), tier: match[2].trim() };
+  }
+  return { family: name, tier: null };
 }
 
 function intervalLabel(months: number): string {
@@ -112,6 +124,14 @@ function perMonthSuffix(totalCents: number, intervalCount: number, currency: str
 }
 
 export default function PricingPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted">Loading…</div>}>
+      <PricingPageContent />
+    </Suspense>
+  );
+}
+
+function PricingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading: authLoading } = useAuth();
@@ -414,7 +434,21 @@ export default function PricingPage() {
               key={`${plan.kind}-${plan.id}`}
               className="bg-card-bg border border-border rounded-xl p-6 flex flex-col"
             >
-              <h2 className="text-xl font-semibold text-card-foreground">{plan.name}</h2>
+              {(() => {
+                const { family, tier } = splitFamilyTier(plan.name);
+                return (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-xl font-semibold text-card-foreground">
+                      {family}
+                    </h2>
+                    {tier && (
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                        {tier}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
               {plan.description && (
                 <p className="text-muted text-sm mt-2">{plan.description}</p>
               )}

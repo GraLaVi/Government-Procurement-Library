@@ -100,44 +100,6 @@ function BasicDashboard() {
       <QuickSearchLauncher />
       <OnboardingChecklist />
       <RecentSearches />
-
-      <div className="bg-card-bg border border-border rounded-xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-            <svg
-              className="w-5 h-5 text-primary"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-base font-semibold text-foreground">
-              Procurement Analytics
-            </h2>
-            <p className="text-sm text-muted mt-0.5">
-              Available on a higher plan. Upgrade to see solicitations matched
-              to your parts, contract history, and competitor activity on your
-              CAGE.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <Button href="/pricing" variant="primary" size="sm">
-            View Pricing
-          </Button>
-          <Button href="/account/billing" variant="outline" size="sm">
-            Manage Billing
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }

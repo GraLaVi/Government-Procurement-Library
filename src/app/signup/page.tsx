@@ -63,7 +63,12 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [requestedPlans, setRequestedPlans] = useState<string[]>([]);
+  // Pre-select when there's only one plan option (which is true today —
+  // see PLAN_OPTIONS above). The auto-select naturally disappears if more
+  // plans are added later, forcing an explicit choice.
+  const [requestedPlans, setRequestedPlans] = useState<string[]>(
+    PLAN_OPTIONS.length === 1 ? [PLAN_OPTIONS[0].key] : [],
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

@@ -4,21 +4,19 @@
  *
  * `necessary` is always true (we list it so /cookies can render a
  * consistent table) and the corresponding toggle in the UI is
- * disabled. `functional`, `analytics`, and `marketing` are the user's
- * actual choice.
+ * disabled. `functional` is the only currently-offered optional
+ * category. Analytics and marketing categories were removed in v2
+ * because we have no plans to add either anytime soon — they'll come
+ * back as a version bump if/when that changes.
  */
 
 export type ConsentCategory =
   | "necessary"
-  | "functional"
-  | "analytics"
-  | "marketing";
+  | "functional";
 
 export interface ConsentChoice {
   necessary: true;
   functional: boolean;
-  analytics: boolean;
-  marketing: boolean;
 }
 
 export interface StoredConsent {
@@ -26,6 +24,9 @@ export interface StoredConsent {
    * Bumping this invalidates all stored consent and re-prompts every
    * visitor. Bump when the categories change or new cookies are
    * introduced that materially shift what consenting means.
+   *
+   * v2 (2026-05-11): dropped `analytics` and `marketing` categories.
+   * v1 stored choices are invalidated by the version check.
    */
   version: number;
   choices: ConsentChoice;
@@ -33,7 +34,7 @@ export interface StoredConsent {
   timestamp: string;
 }
 
-export const CONSENT_VERSION = 1;
+export const CONSENT_VERSION = 2;
 export const CONSENT_COOKIE_NAME = "gph_cookie_consent";
 /** 12 months in seconds. */
 export const CONSENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
