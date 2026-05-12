@@ -3,6 +3,20 @@ import { DatabaseIcon, SearchIcon, TargetIcon, CheckIcon } from "@/components/ic
 
 const products = [
   {
+    icon: TargetIcon,
+    family: "Parts & Vendor Library",
+    tier: "Free",
+    tagline: "Start with the essentials, no card required.",
+    description:
+      "Look up parts and vendors right after signup — no commitment. See recent-solicitation activity per part and basic vendor demographics.",
+    features: [
+      "Parts overview + recent-solicitation count",
+      "Vendor demographics lookup",
+      "Bid matching: 1 profile (NIIN or NSN)",
+      "1 user",
+    ],
+  },
+  {
     icon: SearchIcon,
     family: "Parts & Vendor Library",
     tier: "Basic",
@@ -13,6 +27,7 @@ const products = [
       "Parts + Vendor search",
       "Awards history",
       "Code definitions",
+      "Bid Matching Basic included (5 profiles)",
       "Per-seat pricing",
     ],
   },
@@ -28,23 +43,9 @@ const products = [
       "Procurement history & bookings",
       "Manufacturers & packaging",
       "Active solicitations feed",
-      "Bid Matching Basic Included"
+      "Bid Matching Basic included (15 profiles)",
     ],
     highlighted: true,
-  },
-  {
-    icon: TargetIcon,
-    family: "Bid Matching",
-    tier: "Advanced",
-    tagline: "Never miss a relevant RFQ.",
-    description:
-      "Unlimited matching profiles and conditions across DLA, Army, Navy, and Air Force — plus priority queue and advanced filters.",
-    features: [
-      "Unlimited profiles",
-      "Unlimited conditions per profile",
-      "Priority match queue",
-      "Advanced filters",
-    ],
   },
 ];
 

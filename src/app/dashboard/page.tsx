@@ -22,13 +22,16 @@ export default function DashboardPage() {
   const userName = user?.first_name || user?.email?.split("@")[0] || "User";
 
   // Three branches:
-  //   - tier === null  → no library access (subscription expired) — full
-  //                      resubscribe prompt, no product surface
-  //   - forbidden=true → library_search_basic — search-launcher dashboard
-  //   - otherwise      → library_search_full — analytics dashboard
+  //   - tier === null      → no library access (subscription expired) —
+  //                          full resubscribe prompt, no product surface
+  //   - forbidden=true and
+  //     tier ∈ {basic,free} → search-launcher dashboard (Free is the
+  //                          baseline; Basic adds bid-matching caps;
+  //                          analytics is gated either way)
+  //   - otherwise          → Advanced — analytics dashboard
   const showResubscribe = business.forbidden && business.tier === null;
-  const showBasic = business.forbidden && business.tier === "basic";
-  const showFull = !business.forbidden;
+  const showLauncher = business.forbidden && (business.tier === "basic" || business.tier === "free");
+  const showAdvanced = !business.forbidden;
 
   return (
     <>
@@ -42,7 +45,7 @@ export default function DashboardPage() {
             Here&apos;s what&apos;s happening with your government contract opportunities.
           </p>
         </div>
-        {showFull && (
+        {showAdvanced && (
           <Button href="/analytics" variant="outline" size="sm">
             View Full Analytics →
           </Button>
@@ -50,8 +53,8 @@ export default function DashboardPage() {
       </div>
 
       {showResubscribe && <ResubscribePrompt />}
-      {showBasic && <BasicDashboard />}
-      {showFull && <FullDashboard business={business} />}
+      {showLauncher && <BasicDashboard />}
+      {showAdvanced && <FullDashboard business={business} />}
     </>
   );
 }

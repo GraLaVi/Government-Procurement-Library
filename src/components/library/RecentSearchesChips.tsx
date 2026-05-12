@@ -7,10 +7,13 @@ interface RecentSearchesChipsProps {
   actions: RecentActionEntry[];
   onSelectSearch: ((action: RecentActionEntry) => void) | ((searchType: VendorSearchType | PartsSearchType, query: string) => void);
   onDelete?: (actionId: number) => void;
+  // Provided only when the user is on the Advanced tier — enables the
+  // pin/unpin button. When undefined, pin UI is hidden.
+  onTogglePin?: (actionId: number, nextPinned: boolean) => void;
   isLoading?: boolean;
 }
 
-export function RecentSearchesChips({ actions, onSelectSearch, onDelete, isLoading }: RecentSearchesChipsProps) {
+export function RecentSearchesChips({ actions, onSelectSearch, onDelete, onTogglePin, isLoading }: RecentSearchesChipsProps) {
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 px-1 py-2">
@@ -53,11 +56,27 @@ export function RecentSearchesChips({ actions, onSelectSearch, onDelete, isLoadi
             }
           }
 
+          const isPinned = !!action.is_pinned;
           return (
             <div
               key={action.id}
-              className="group relative inline-flex items-center gap-1 bg-muted-light dark:bg-muted-light hover:bg-muted/5 dark:hover:bg-muted/15 border border-border rounded-md pl-1.5 pr-0.5 py-0.5 text-[11px] transition-colors cursor-pointer"
+              className={`group relative inline-flex items-center gap-1 border rounded-md pl-1.5 pr-0.5 py-0.5 text-[11px] transition-colors cursor-pointer ${
+                isPinned
+                  ? "bg-primary/10 border-primary/30"
+                  : "bg-muted-light dark:bg-muted-light hover:bg-muted/5 dark:hover:bg-muted/15 border-border"
+              }`}
             >
+              {isPinned && (
+                <span
+                  className="text-primary flex-shrink-0"
+                  aria-label="Pinned search"
+                  title="Pinned"
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14 4l6 6-3.5 3.5L18 17l-1.5 1.5-3.5-3.5-4 4-1-1 4-4-3.5-3.5L10 9l3.5 3.5L14 4z" />
+                  </svg>
+                </span>
+              )}
               <button
                 onClick={() => {
                   // Support both function signatures
@@ -79,6 +98,25 @@ export function RecentSearchesChips({ actions, onSelectSearch, onDelete, isLoadi
                   {query}
                 </span>
               </button>
+              {onTogglePin && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTogglePin(action.id, !isPinned);
+                  }}
+                  className={`ml-0.5 p-0.5 transition-opacity flex-shrink-0 ${
+                    isPinned
+                      ? "text-primary hover:text-primary/70"
+                      : "opacity-0 group-hover:opacity-100 text-muted hover:text-primary"
+                  }`}
+                  title={isPinned ? "Unpin" : "Pin"}
+                  aria-label={isPinned ? "Unpin search" : "Pin search"}
+                >
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14 4l6 6-3.5 3.5L18 17l-1.5 1.5-3.5-3.5-4 4-1-1 4-4-3.5-3.5L10 9l3.5 3.5L14 4z" />
+                  </svg>
+                </button>
+              )}
               {onDelete && (
                 <button
                   onClick={(e) => {

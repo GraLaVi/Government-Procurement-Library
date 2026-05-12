@@ -8,6 +8,7 @@ import { VendorResultsList } from "@/components/library/VendorResultsList";
 import { VendorDetail } from "@/components/library/VendorDetail";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RecentSearchesChips } from "@/components/library/RecentSearchesChips";
+import { resolveVendorTier } from "@/lib/library/tier";
 import { useRecentActions, useLastAction } from "@/lib/hooks/useRecentActions";
 import {
   VendorSearchType,
@@ -34,7 +35,9 @@ function VendorSearchPageContent() {
   const { isLoading: authLoading, hasAnyProductAccess } = useAuth();
 
   // Recent actions hook
-  const { actions: recentActions, addAction, deleteAction, isLoading: isLoadingActions } = useRecentActions('vendor_search');
+  const tier = resolveVendorTier(hasAnyProductAccess);
+  const canPin = tier === "advanced";
+  const { actions: recentActions, addAction, deleteAction, setPinned, isLoading: isLoadingActions } = useRecentActions('vendor_search');
   const { lastAction } = useLastAction('vendor_search');
 
   // Search state
@@ -306,15 +309,15 @@ function VendorSearchPageContent() {
 
   // Check if user has access to vendor search (any tier: full or basic)
   if (!hasAnyProductAccess([
-    "library_search_full",
-    "library_vendor_search_full",
+    "library_search_advanced",
+    "library_vendor_search_advanced",
     "library_search_basic",
     "library_vendor_search_basic",
   ])) {
     return (
       <AccessDeniedPage
         featureName="Vendor Search"
-        featureKey="library_vendor_search_full"
+        featureKey="library_vendor_search_advanced"
         description="Search and explore government vendor information including CAGE codes, UEI, business details, recent awards, contracts, and open solicitations."
         benefits={[
           "Find vendors by CAGE code, UEI, or business name",
@@ -380,6 +383,7 @@ function VendorSearchPageContent() {
                     handleSearch(actionData.query_type as VendorSearchType, actionData.query);
                   }}
                   onDelete={deleteAction}
+                  onTogglePin={canPin ? setPinned : undefined}
                   isLoading={isLoadingActions}
                 />
               </div>
@@ -423,6 +427,7 @@ function VendorSearchPageContent() {
                     handleSearch(actionData.query_type as VendorSearchType, actionData.query);
                   }}
                   onDelete={deleteAction}
+                  onTogglePin={canPin ? setPinned : undefined}
                   isLoading={isLoadingActions}
                 />
               </div>

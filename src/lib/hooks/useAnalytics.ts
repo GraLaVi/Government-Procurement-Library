@@ -121,10 +121,10 @@ export function useMarketAnalytics() {
 }
 
 // Effective library tier returned alongside a 403 from the analytics endpoint.
-// "basic" → render the search-launcher dashboard.
-// null    → no library product at all (subscription expired) — render the
-//           resubscribe prompt.
-export type LibraryTier = "basic" | null;
+// "basic" / "free" → render the search-launcher dashboard.
+// null             → no library product at all (subscription expired) —
+//                    render the resubscribe prompt.
+export type LibraryTier = "basic" | "free" | null;
 
 export function useMyBusinessAnalytics() {
   const [data, setData] = useState<CustomerAnalytics | null>(null);
@@ -151,7 +151,8 @@ export function useMyBusinessAnalytics() {
       if (response.status === 403) {
         const errData = await response.json().catch(() => ({}));
         setForbidden(true);
-        setTier(errData.tier === "basic" ? "basic" : null);
+        const t = errData.tier;
+        setTier(t === "basic" || t === "free" ? t : null);
         setData(null);
         return;
       }

@@ -37,6 +37,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
+import { resolveVendorTier, tierMeets } from "@/lib/library/tier";
 
 interface VendorDetailProps {
   vendor: VendorDetailType;
@@ -47,10 +48,7 @@ type TabId = "demographics" | "contacts" | "awards" | "bookings" | "solicitation
 
 export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps) {
   const { hasAnyProductAccess } = useAuth();
-  const isFullTier = hasAnyProductAccess([
-    "library_search_full",
-    "library_vendor_search_full",
-  ]);
+  const tier = resolveVendorTier(hasAnyProductAccess);
 
   const [activeTab, setActiveTab] = useState<TabId>("demographics");
 
@@ -243,24 +241,29 @@ export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps)
       ? `Open Solicitations (${tabCounts.solicitations_count})`
       : "Open Solicitations";
 
-  const allTabs: Array<{ id: TabId; label: string; disabled: boolean; fullOnly?: boolean }> = [
-    { id: "demographics", label: "Demographics", disabled: false },
+  // `minTier`:
+  //   free     → Demographics + Contacts (lightweight; no count joins)
+  //   basic    → adds Awards
+  //   advanced → adds Bookings and Solicitations
+  const allTabs: Array<{ id: TabId; label: string; disabled: boolean; minTier: "free" | "basic" | "advanced" }> = [
+    { id: "demographics", label: "Demographics", disabled: false, minTier: "free" },
     {
       id: "contacts",
       label: hasContacts ? `Contacts (${contactCount})` : "Contacts",
       disabled: false,
+      minTier: "free",
     },
-    { id: "awards", label: awardsLabel, disabled: false },
-    { id: "bookings", label: bookingsLabel, disabled: false, fullOnly: true },
-    { id: "solicitations", label: solicitationsLabel, disabled: false, fullOnly: true },
+    { id: "awards", label: awardsLabel, disabled: false, minTier: "basic" },
+    { id: "bookings", label: bookingsLabel, disabled: false, minTier: "advanced" },
+    { id: "solicitations", label: solicitationsLabel, disabled: false, minTier: "advanced" },
   ];
-  const tabs = allTabs.filter((t) => isFullTier || !t.fullOnly);
+  const tabs = allTabs.filter((t) => tierMeets(tier, t.minTier));
 
   useEffect(() => {
     if (!tabs.some((t) => t.id === activeTab)) {
       setActiveTab("demographics");
     }
-  }, [isFullTier, activeTab, tabs]);
+  }, [tier, activeTab, tabs]);
 
   return (
     <div className="bg-card-bg rounded-lg border border-border overflow-hidden">

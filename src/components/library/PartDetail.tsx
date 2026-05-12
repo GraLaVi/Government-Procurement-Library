@@ -42,6 +42,7 @@ import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
+import { resolvePartsTier, tierMeets } from "@/lib/library/tier";
 
 // ============================================================================
 // CodeTooltip Component - Shared tooltip for code definitions
@@ -232,10 +233,8 @@ type TabId = "overview" | "procurement" | "solicitations" | "manufacturers" | "t
 
 export function PartDetail({ part }: PartDetailProps) {
   const { hasAnyProductAccess } = useAuth();
-  const isFullTier = hasAnyProductAccess([
-    "library_search_full",
-    "library_parts_search_full",
-  ]);
+  const tier = resolvePartsTier(hasAnyProductAccess);
+  const isFreeOnly = tier === "free";
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   
@@ -668,23 +667,34 @@ export function PartDetail({ part }: PartDetailProps) {
       ? `Procurement Item Description (${tabCounts.has_procurement_item_description ? 1 : 0})`
       : "Procurement Item Description";
 
-  const allTabs: Array<{ id: TabId; label: string; disabled: boolean; fullOnly?: boolean }> = [
-    { id: "overview", label: "Overview", disabled: false },
-    { id: "procurement", label: procurementLabel, disabled: false, fullOnly: true },
-    { id: "solicitations", label: solicitationsLabel, disabled: false },
-    { id: "manufacturers", label: manufacturersLabel, disabled: false, fullOnly: true },
-    { id: "technical", label: technicalLabel, disabled: false },
-    { id: "enduse", label: endUseLabel, disabled: false },
-    { id: "packaging", label: packagingLabel, disabled: false, fullOnly: true },
-    { id: "procurementitemdesc", label: pidLabel, disabled: false },
+  // `minTier` declares the lowest tier that can see each tab:
+  //   free     → Overview + (light) Solicitations
+  //   basic    → adds Technical, End Use, Procurement Item Description
+  //   advanced → adds Procurement, Manufacturers, Packaging
+  // The Solicitations tab content branches by tier internally — Free
+  // sees a count + upgrade CTA; Basic+ sees the full list.
+  const solicitationsLabelForTier = isFreeOnly
+    ? (tabCounts?.solicitations_count_30d != null
+        ? `Solicitations (${tabCounts.solicitations_count_30d})`
+        : "Solicitations")
+    : solicitationsLabel;
+  const allTabs: Array<{ id: TabId; label: string; disabled: boolean; minTier: "free" | "basic" | "advanced" }> = [
+    { id: "overview", label: "Overview", disabled: false, minTier: "free" },
+    { id: "procurement", label: procurementLabel, disabled: false, minTier: "advanced" },
+    { id: "solicitations", label: solicitationsLabelForTier, disabled: false, minTier: "free" },
+    { id: "manufacturers", label: manufacturersLabel, disabled: false, minTier: "advanced" },
+    { id: "technical", label: technicalLabel, disabled: false, minTier: "basic" },
+    { id: "enduse", label: endUseLabel, disabled: false, minTier: "basic" },
+    { id: "packaging", label: packagingLabel, disabled: false, minTier: "advanced" },
+    { id: "procurementitemdesc", label: pidLabel, disabled: false, minTier: "basic" },
   ];
-  const tabs = allTabs.filter((t) => isFullTier || !t.fullOnly);
+  const tabs = allTabs.filter((t) => tierMeets(tier, t.minTier));
 
   useEffect(() => {
     if (!tabs.some((t) => t.id === activeTab)) {
       setActiveTab("overview");
     }
-  }, [isFullTier, activeTab, tabs]);
+  }, [tier, activeTab, tabs]);
 
   return (
     <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
@@ -728,13 +738,17 @@ export function PartDetail({ part }: PartDetailProps) {
         </TabPanel>
 
         <TabPanel tabId="solicitations" activeTab={activeTab}>
-          <SolicitationsPanel
-            solicitations={solicitations}
-            totalCount={solicitationsTotal}
-            isLoading={isLoadingSolicitations}
-            error={solicitationsError}
-            onRetry={fetchSolicitations}
-          />
+          {isFreeOnly ? (
+            <FreeSolicitationsView count={tabCounts?.solicitations_count_30d ?? null} />
+          ) : (
+            <SolicitationsPanel
+              solicitations={solicitations}
+              totalCount={solicitationsTotal}
+              isLoading={isLoadingSolicitations}
+              error={solicitationsError}
+              onRetry={fetchSolicitations}
+            />
+          )}
         </TabPanel>
 
         <TabPanel tabId="manufacturers" activeTab={activeTab}>
@@ -2098,6 +2112,31 @@ function ProcurementItemDescriptionPanel({ description, isLoading, error, onRetr
         className="procurement-description [&_a.sddt-link]:text-primary [&_a.sddt-link]:underline [&_a.sddt-link]:decoration-dotted [&_a.sddt-link]:hover:decoration-solid [&_a.sddt-link]:cursor-pointer"
         dangerouslySetInnerHTML={{ __html: description.description }}
       />
+    </div>
+  );
+}
+
+// Free-tier Solicitations view — just a count of the last 30 days plus
+// an upgrade CTA. Basic/Advanced tiers see the full table via
+// SolicitationsPanel.
+function FreeSolicitationsView({ count }: { count: number | null }) {
+  const message =
+    count === null
+      ? "Loading recent solicitation activity…"
+      : count === 0
+        ? "No solicitations posted for this part in the last 30 days."
+        : count === 1
+          ? "1 solicitation posted for this part in the last 30 days."
+          : `${count} solicitations posted for this part in the last 30 days.`;
+  return (
+    <div className="text-center py-8 px-4">
+      <p className="text-sm text-foreground mb-2">{message}</p>
+      <Link
+        href="/pricing"
+        className="text-xs text-primary hover:underline"
+      >
+        Upgrade to see details
+      </Link>
     </div>
   );
 }

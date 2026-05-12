@@ -77,6 +77,31 @@ export function useRecentActions(actionType: string) {
     }
   }, [actionType, fetchActions]);
 
+  // Advanced-tier-only pin/unpin. Backend returns 403 for Free/Basic so
+  // the UI also gates the button visibility; this method surfaces the
+  // error message verbatim if a non-Advanced user somehow reaches it.
+  const setPinned = useCallback(async (actionId: number, isPinned: boolean) => {
+    try {
+      setError(null);
+      const response = await fetchWithAuth(`/api/auth/me/recent-actions/${actionId}/pin`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ is_pinned: isPinned }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update pin state');
+      }
+      await fetchActions();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(errorMessage);
+      console.error('Failed to pin/unpin recent action:', err);
+      throw err;
+    }
+  }, [fetchActions]);
+
   const deleteAction = useCallback(async (actionId: number) => {
     try {
       setError(null);
@@ -110,6 +135,7 @@ export function useRecentActions(actionType: string) {
     error,
     addAction,
     deleteAction,
+    setPinned,
     refetch: fetchActions,
   };
 }

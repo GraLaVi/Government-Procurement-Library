@@ -8,6 +8,7 @@ import { PartsResultsList } from "@/components/library/PartsResultsList";
 import { PartDetail } from "@/components/library/PartDetail";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RecentSearchesChips } from "@/components/library/RecentSearchesChips";
+import { resolvePartsTier } from "@/lib/library/tier";
 import { useRecentActions, useLastAction } from "@/lib/hooks/useRecentActions";
 import {
   PartsSearchType,
@@ -30,9 +31,11 @@ export default function PartsSearchPage() {
 
 function PartsSearchPageContent() {
   const { isLoading: authLoading, hasAnyProductAccess } = useAuth();
+  const tier = resolvePartsTier(hasAnyProductAccess);
+  const canPin = tier === "advanced";
 
   // Recent actions hook
-  const { actions: recentActions, addAction, deleteAction, isLoading: isLoadingActions } = useRecentActions('parts_search');
+  const { actions: recentActions, addAction, deleteAction, setPinned, isLoading: isLoadingActions } = useRecentActions('parts_search');
   const { lastAction } = useLastAction('parts_search');
 
   // Search state
@@ -236,15 +239,15 @@ function PartsSearchPageContent() {
 
   // Check if user has access to parts search (any tier: full or basic)
   if (!hasAnyProductAccess([
-    "library_search_full",
-    "library_parts_search_full",
+    "library_search_advanced",
+    "library_parts_search_advanced",
     "library_search_basic",
     "library_parts_search_basic",
   ])) {
     return (
       <AccessDeniedPage
         featureName="Parts Search"
-        featureKey="library_parts_search_full"
+        featureKey="library_parts_search_advanced"
         description="Search the parts library to find National Stock Numbers (NSN), part descriptions, pricing information, and related contract data."
         benefits={[
           "Search parts by NSN/NIIN, solicitation, mfg part number, contract number, description, or keywords",
@@ -311,6 +314,7 @@ function PartsSearchPageContent() {
                     handleSearch(type, actionData.query);
                   }}
                   onDelete={deleteAction}
+                  onTogglePin={canPin ? setPinned : undefined}
                   isLoading={isLoadingActions}
                 />
               </div>
@@ -355,6 +359,7 @@ function PartsSearchPageContent() {
                     handleSearch(type, actionData.query);
                   }}
                   onDelete={deleteAction}
+                  onTogglePin={canPin ? setPinned : undefined}
                   isLoading={isLoadingActions}
                 />
               </div>

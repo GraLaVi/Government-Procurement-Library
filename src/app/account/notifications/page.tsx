@@ -18,6 +18,10 @@ interface NotificationType {
   description: string | null;
   category: string | null;
   available_frequencies: string[] | null;
+  // Per-tier restriction. When present, the dropdown should ONLY offer
+  // these values plus "off". null = no tier restriction (Advanced or
+  // unrestricted type) — fall back to available_frequencies.
+  allowed_frequencies: string[] | null;
   default_frequency: string | null;
   requires_product_group: string | null;
   requires_product: string | null;
@@ -272,11 +276,15 @@ export default function NotificationsPage() {
                 {grouped[category].map((t) => {
                   const effective = getEffectiveFrequency(t);
                   const locked = isLocked(t);
+                  // Per-tier `allowed_frequencies` (set by the backend
+                  // from the library tier's feature_limits) restricts
+                  // which frequencies the UI offers. Null = no
+                  // restriction, fall back to available_frequencies.
+                  // "none" (Off) is ALWAYS offered — even restricted
+                  // tiers need to be able to opt out entirely.
+                  const baseFrequencies = t.allowed_frequencies ?? t.available_frequencies ?? ["immediate", "digest"];
                   const frequencies = [
-                    ...new Set([
-                      ...(t.available_frequencies || ["immediate", "digest"]),
-                      "none",
-                    ]),
+                    ...new Set([...baseFrequencies, "none"]),
                   ];
                   const isDefault = !t.current_subscription;
                   const isSaving = savingId === t.id;

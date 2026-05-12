@@ -26,6 +26,9 @@ export interface RecentActionEntry {
   action_type: string;
   action_data: Record<string, any>;
   actioned_at: string; // ISO datetime string
+  // Pinned rows are exempt from the rotating cleanup (Advanced-tier feature).
+  // Defaults to false when omitted by older clients.
+  is_pinned?: boolean;
 }
 
 export interface RecentActionsResponse {

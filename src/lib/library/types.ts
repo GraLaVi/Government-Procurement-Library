@@ -580,13 +580,19 @@ export interface PartPackagingResponse {
 
 export interface PartTabCounts {
   nsn: string;
-  procurement_history_count: number;
-  solicitations_count: number;
-  manufacturers_count: number;
-  technical_characteristics_count: number;
-  end_use_description_count: number;
-  has_packaging: boolean;
-  has_procurement_item_description: boolean;
+  // All count fields are nullable on the wire — Basic users get
+  // procurement / manufacturers / packaging as null; Free users get
+  // everything except solicitations_count_30d as null.
+  procurement_history_count: number | null;
+  solicitations_count: number | null;
+  manufacturers_count: number | null;
+  technical_characteristics_count: number | null;
+  end_use_description_count: number | null;
+  has_packaging: boolean | null;
+  has_procurement_item_description: boolean | null;
+  // Free-tier-only: count of solicitations posted in the last 30 days.
+  // Null for Basic and Advanced.
+  solicitations_count_30d?: number | null;
 }
 
 // Parts search type configuration

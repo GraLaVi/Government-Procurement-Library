@@ -39,12 +39,15 @@ interface BidMatchingAccess {
   limits: {
     max_profiles: number | null; // null = unlimited
     max_conditions_per_profile: number | null;
+    // null = no restriction; otherwise the dropdown is filtered to this list.
+    allowed_condition_types?: string[] | null;
   };
   usage: { profile_count: number };
 }
 
 const ALLOWED_CONDITION_TYPES = [
   "NIIN",
+  "NSN",
   "FSC",
   "MFG_PART_NUMBER",
   "PART_DESCRIPTION",
@@ -55,6 +58,7 @@ const ALLOWED_CONDITION_TYPES = [
 
 const CONDITION_TYPE_LABELS: Record<string, string> = {
   NIIN: "NIIN",
+  NSN: "NSN (FSC + NIIN)",
   FSC: "FSC Code",
   MFG_PART_NUMBER: "Mfg Part Number",
   PART_DESCRIPTION: "Part Description",
@@ -252,7 +256,12 @@ export default function BidMatchingPage() {
   };
 
   const addCondition = () => {
-    setFormConditions((prev) => [...prev, { condition_type: "NIIN", match_value: "" }]);
+    // Default the new row to the first condition type the user's tier
+    // allows — for Free that's NIIN today; for Basic/Advanced it's also
+    // NIIN. Keeps the new row from defaulting to a value that'd be
+    // rejected on save.
+    const defaultType = access?.limits.allowed_condition_types?.[0] ?? "NIIN";
+    setFormConditions((prev) => [...prev, { condition_type: defaultType, match_value: "" }]);
   };
 
   const removeCondition = (idx: number) => {
@@ -620,7 +629,7 @@ export default function BidMatchingPage() {
                         onChange={(e) => updateCondition(idx, "condition_type", e.target.value)}
                         className="text-sm border border-border bg-card-bg text-foreground rounded-lg px-2 py-2 focus:ring-2 focus:ring-primary"
                       >
-                        {ALLOWED_CONDITION_TYPES.map((ct) => (
+                        {(access?.limits.allowed_condition_types ?? ALLOWED_CONDITION_TYPES).map((ct) => (
                           <option key={ct} value={ct}>
                             {CONDITION_TYPE_LABELS[ct] || ct}
                           </option>

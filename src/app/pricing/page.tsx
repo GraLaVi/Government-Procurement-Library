@@ -244,13 +244,24 @@ function PricingPageContent() {
     const priceId = selected[plan.id];
     if (!priceId) return;
     const seatCount = Math.max(1, seats[plan.id] || plan.default_seat_count || 1);
+    // Tier slug (basic / advanced / …) lets /signup show a specific
+    // "Parts and Vendor Library — <Tier>" badge instead of the generic
+    // "the plan you selected". Pulled from the plan name via the same
+    // splitter the card uses.
+    const tierSlug = splitFamilyTier(plan.name).tier?.toLowerCase();
 
     // Anonymous visitors who haven't started /signup get bounced there
     // first — no point opening the consent modal yet, since they'll
     // re-consent right after signup completes anyway.
     if (!authLoading && !user && !readPendingSignup()) {
       const next = `/pricing?plan=${priceId}&seats=${seatCount}`;
-      router.push(`/signup?plan=${priceId}&seats=${seatCount}&next=${encodeURIComponent(next)}`);
+      const qs = new URLSearchParams({
+        plan: String(priceId),
+        seats: String(seatCount),
+        next,
+      });
+      if (tierSlug) qs.set("tier", tierSlug);
+      router.push(`/signup?${qs.toString()}`);
       return;
     }
 
@@ -273,7 +284,14 @@ function PricingPageContent() {
           // Defensive: pending blob disappeared between handleSubscribe
           // and confirm. Send them back through /signup.
           const next = `/pricing?plan=${priceId}&seats=${seatCount}`;
-          router.push(`/signup?plan=${priceId}&seats=${seatCount}&next=${encodeURIComponent(next)}`);
+          const tierSlug = splitFamilyTier(plan.name).tier?.toLowerCase();
+          const qs = new URLSearchParams({
+            plan: String(priceId),
+            seats: String(seatCount),
+            next,
+          });
+          if (tierSlug) qs.set("tier", tierSlug);
+          router.push(`/signup?${qs.toString()}`);
           return;
         }
         const resp = await fetch("/api/billing/signup-and-checkout", {
@@ -414,6 +432,39 @@ function PricingPageContent() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Free tier — auto-granted on signup, no Stripe involvement. */}
+        <div className="bg-card-bg border border-border rounded-xl p-6 flex flex-col">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-xl font-semibold text-card-foreground">Parts & Vendor Library</h2>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+              Free
+            </span>
+          </div>
+          <p className="text-muted text-sm mt-2">
+            Get started with basic part lookup and vendor demographics — no card required.
+          </p>
+          <div className="my-6">
+            <div className="text-3xl font-bold text-card-foreground">$0</div>
+            <div className="text-sm text-muted mt-1">Comes with your account</div>
+          </div>
+          <ul className="space-y-2 text-sm text-card-foreground/90 mb-6">
+            <li>• Parts search</li>
+            <li>• Vendor search</li>
+            <li>• Recent-solicitation count</li>
+            <li>• Bid matching: 1 profile, 1 NIIN or NSN condition</li>
+            <li>• 1 user</li>
+          </ul>
+          <div className="mt-auto">
+            <Button
+              variant={user ? "outline" : "primary"}
+              className="w-full"
+              href={user ? "/dashboard" : "/signup?tier=free"}
+            >
+              {user ? "Already included" : "Get started free"}
+            </Button>
+          </div>
+        </div>
+
         {plans.map((plan) => {
           const activePriceId = selected[plan.id];
           const activePrice = plan.prices.find((p) => p.id === activePriceId);

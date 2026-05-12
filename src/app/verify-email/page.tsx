@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { useAuth } from "@/contexts/AuthContext";
 
 type VerificationStatus = "loading" | "success" | "error" | "no-token";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   const [status, setStatus] = useState<VerificationStatus>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -100,10 +102,15 @@ function VerifyEmailContent() {
                 Your email address has been successfully verified. You can now access all features of your account.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button href="/login" variant="primary">
-                  Sign In
-                </Button>
-                <Button href="/dashboard" variant="outline">
+                {!isAuthLoading && !isAuthenticated && (
+                  <Button href="/login" variant="primary">
+                    Sign In
+                  </Button>
+                )}
+                <Button
+                  href="/dashboard"
+                  variant={!isAuthLoading && isAuthenticated ? "primary" : "outline"}
+                >
                   Go to Dashboard
                 </Button>
               </div>
@@ -130,9 +137,11 @@ function VerifyEmailContent() {
                 <Button href="/account" variant="primary">
                   Go to Account
                 </Button>
-                <Button href="/login" variant="outline">
-                  Sign In
-                </Button>
+                {!isAuthLoading && !isAuthenticated && (
+                  <Button href="/login" variant="outline">
+                    Sign In
+                  </Button>
+                )}
               </div>
             </>
           )}
