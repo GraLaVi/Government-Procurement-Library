@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { MenuIcon, CloseIcon } from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
+import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 
 // Links shown to authenticated users (excludes Pricing — they reach it via /account/billing).
 const navLinks = [
@@ -59,6 +60,7 @@ export function Navbar() {
   }, []);
 
   return (
+    <>
     <header className="fixed top-0 left-0 right-0 z-50 bg-card-bg/95 backdrop-blur-sm border-b border-border">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -315,5 +317,16 @@ export function Navbar() {
         )}
       </nav>
     </header>
+    {/* System-announcement banner — sibling of the fixed <header> so
+        it lives *outside* the navbar in the DOM. The marketing-area
+        Navbar uses position:fixed (height h-16 = 64px), so we mirror
+        that with our own fixed wrapper anchored at top:64px to keep
+        the banner pinned directly beneath the nav row on scroll. */}
+    <div className="fixed top-16 left-0 right-0 z-40 pointer-events-none">
+      <div className="pointer-events-auto">
+        <AnnouncementBanner />
+      </div>
+    </div>
+    </>
   );
 }

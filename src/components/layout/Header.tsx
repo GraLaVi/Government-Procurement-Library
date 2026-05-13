@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
+import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 
 const librarySearchItems = [
   { href: "/library/parts", label: "Parts Search" },
@@ -63,6 +64,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
   const userInitial = user?.first_name?.[0] || user?.email?.[0] || "U";
 
   return (
+    <>
     <header className="bg-card-bg border-b border-border">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -298,5 +300,11 @@ export function Header({ showAccountLink = true }: HeaderProps) {
         )}
       </div>
     </header>
+    {/* System-announcement banner stack — sibling of the header so it
+        sits *under* it in document order rather than rendering inside
+        the header element. Header is normal-flow, so the banner just
+        appears beneath it on the page. */}
+    <AnnouncementBanner />
+    </>
   );
 }
