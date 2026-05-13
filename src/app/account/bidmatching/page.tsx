@@ -325,7 +325,7 @@ export default function BidMatchingPage() {
             disabled={!!access && access.has_access && access.limits.max_profiles !== null && access.usage.profile_count >= access.limits.max_profiles}
             title={
               !!access && access.has_access && access.limits.max_profiles !== null && access.usage.profile_count >= access.limits.max_profiles
-                ? "You're at the profile cap — upgrade to Pro for unlimited profiles, or delete an existing profile."
+                ? "You're at the profile cap — upgrade to Advanced for unlimited profiles, or delete an existing profile."
                 : undefined
             }
           >
@@ -386,13 +386,13 @@ export default function BidMatchingPage() {
                 </p>
               )}
             </div>
-            {access.tier !== "pro" && (
+            {access.tier !== "advanced" && (
               <Link
                 href="/pricing"
                 className="text-xs text-primary hover:underline whitespace-nowrap"
               >
                 {access.has_access
-                  ? "Need more? Upgrade to Pro →"
+                  ? "Need more? Upgrade to Advanced →"
                   : "View plans →"}
               </Link>
             )}
@@ -402,7 +402,7 @@ export default function BidMatchingPage() {
             access.usage.profile_count >= access.limits.max_profiles && (
               <p className="mt-3 text-xs text-warning">
                 You&apos;ve reached your profile cap. Delete an existing
-                profile or upgrade to Pro for unlimited profiles.
+                profile or upgrade to Advanced for unlimited profiles.
               </p>
             )}
         </div>

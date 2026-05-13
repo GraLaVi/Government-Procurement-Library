@@ -60,8 +60,8 @@ export function Products() {
           </h2>
           <p className="mt-4 text-lg text-muted dark:text-foreground/70">
             Subscribe to one, mix-and-match, or bundle. Bid Matching is
-            included free with any active subscription — upgrade to Pro for
-            unlimited use.
+            included free with any active subscription — upgrade to Advanced
+            for unlimited use.
           </p>
         </div>
 
