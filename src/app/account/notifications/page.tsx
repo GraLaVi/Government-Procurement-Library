@@ -276,16 +276,23 @@ export default function NotificationsPage() {
                 {grouped[category].map((t) => {
                   const effective = getEffectiveFrequency(t);
                   const locked = isLocked(t);
-                  // Per-tier `allowed_frequencies` (set by the backend
-                  // from the library tier's feature_limits) restricts
-                  // which frequencies the UI offers. Null = no
-                  // restriction, fall back to available_frequencies.
-                  // "none" (Off) is ALWAYS offered — even restricted
-                  // tiers need to be able to opt out entirely.
-                  const baseFrequencies = t.allowed_frequencies ?? t.available_frequencies ?? ["immediate", "digest"];
+                  // Always render every `available_frequencies` value so
+                  // the user can see the full menu. `allowed_frequencies`
+                  // (set by the backend from the library tier's
+                  // feature_limits) tells us which ones the current tier
+                  // can actually select — anything outside that set
+                  // renders disabled so the user sees the upgrade path
+                  // without us hiding the option entirely.
+                  // "none" (Off) is ALWAYS selectable — opt-out must work
+                  // regardless of tier.
                   const frequencies = [
-                    ...new Set([...baseFrequencies, "none"]),
+                    ...new Set([...(t.available_frequencies ?? ["immediate", "weekly_digest"]), "none"]),
                   ];
+                  const allowedSet = t.allowed_frequencies
+                    ? new Set(t.allowed_frequencies)
+                    : null;
+                  const isFrequencyAllowed = (freq: string) =>
+                    freq === "none" || allowedSet === null || allowedSet.has(freq);
                   const isDefault = !t.current_subscription;
                   const isSaving = savingId === t.id;
 
@@ -321,25 +328,38 @@ export default function NotificationsPage() {
                           )}
                           {frequencies.map((freq) => {
                             const isSelected = effective === freq;
+                            const allowed = isFrequencyAllowed(freq);
+                            const isDisabled = locked || isSaving || !allowed;
                             const label =
                               freq === "none"
                                 ? "Off"
-                                : freq.charAt(0).toUpperCase() + freq.slice(1);
+                                : freq === "weekly_digest"
+                                  ? "Weekly"
+                                  : freq === "daily_digest"
+                                    ? "Daily"
+                                    : freq.charAt(0).toUpperCase() + freq.slice(1);
 
                             return (
                               <button
                                 key={freq}
-                                disabled={locked || isSaving}
+                                disabled={isDisabled}
                                 onClick={() =>
-                                  handleFrequencyChange(t.id, freq)
+                                  allowed && handleFrequencyChange(t.id, freq)
+                                }
+                                title={
+                                  !allowed && !locked
+                                    ? "Not available on your current plan — upgrade to unlock."
+                                    : undefined
                                 }
                                 className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
                                   isSelected
                                     ? freq === "none"
                                       ? "bg-error/10 border-error/30 text-error"
                                       : "bg-primary/10 border-primary/30 text-primary"
-                                    : "bg-card-bg border-border text-muted hover:border-primary/30 hover:text-foreground"
-                                } ${locked || isSaving ? "cursor-not-allowed" : "cursor-pointer"}`}
+                                    : !allowed
+                                      ? "bg-muted-light/40 border-border text-muted/60 opacity-60"
+                                      : "bg-card-bg border-border text-muted hover:border-primary/30 hover:text-foreground"
+                                } ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
                               >
                                 {label}
                                 {isSelected && isDefault && (

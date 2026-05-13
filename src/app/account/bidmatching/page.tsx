@@ -415,8 +415,10 @@ export default function BidMatchingPage() {
         </div>
       )}
 
-      {/* Error */}
-      {error && (
+      {/* Page-level error — only shown when the modal is closed. When the
+          modal is open the same error renders inside the modal body so it
+          stays visible (the modal overlay z-50 covers anything on the page). */}
+      {error && !showModal && (
         <div className="mb-4 px-4 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-center justify-between">
           <span>{error}</span>
           <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700 ml-4">
@@ -548,6 +550,24 @@ export default function BidMatchingPage() {
               </div>
             </div>
             <div className="p-6 space-y-4">
+              {/* In-modal error banner — surfaces backend failures (e.g.
+                  per-tier condition limit, allowed-types rejection) right
+                  next to the form where the user is working. */}
+              {error && (
+                <div className="px-3 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-start justify-between gap-3">
+                  <span>{error}</span>
+                  <button
+                    onClick={() => setError(null)}
+                    className="text-red-500 hover:text-red-700 flex-shrink-0"
+                    aria-label="Dismiss"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
               {/* Profile Name */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">
@@ -605,17 +625,49 @@ export default function BidMatchingPage() {
 
               {/* Conditions */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium text-foreground">
-                    Conditions
-                  </label>
-                  <button
-                    onClick={addCondition}
-                    className="text-sm text-primary hover:text-primary/80 font-medium"
-                  >
-                    + Add Condition
-                  </button>
-                </div>
+                {(() => {
+                  const maxConditions = access?.limits.max_conditions_per_profile ?? null;
+                  const atCap = maxConditions !== null && formConditions.length >= maxConditions;
+                  return (
+                    <>
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="text-sm font-medium text-foreground">
+                          Conditions
+                          {maxConditions !== null && (
+                            <span className="ml-2 text-xs text-muted font-normal">
+                              {formConditions.length} / {maxConditions}
+                            </span>
+                          )}
+                        </label>
+                        <button
+                          onClick={addCondition}
+                          disabled={atCap}
+                          title={
+                            atCap
+                              ? `Up to ${maxConditions} conditions per profile on this tier. Upgrade for more.`
+                              : undefined
+                          }
+                          className={`text-sm font-medium ${
+                            atCap
+                              ? "text-muted cursor-not-allowed"
+                              : "text-primary hover:text-primary/80 cursor-pointer"
+                          }`}
+                        >
+                          + Add Condition
+                        </button>
+                      </div>
+                      {atCap && (
+                        <p className="text-xs text-muted mb-2">
+                          You&apos;ve reached your plan&apos;s {maxConditions}-condition limit.{" "}
+                          <a href="/pricing" className="text-primary hover:underline">
+                            Upgrade
+                          </a>{" "}
+                          to add more.
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
                 {formConditions.length === 0 && (
                   <p className="text-sm text-muted italic">
                     No conditions added yet.

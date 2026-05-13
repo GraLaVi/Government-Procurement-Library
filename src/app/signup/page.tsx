@@ -422,7 +422,7 @@ function SignupPageContent() {
               )}
 
               <p className="text-xs text-muted">
-                Don&apos;t have a CAGE code yet? You&apos;ll need one from{" "}
+                Don&apos;t have a CAGE code yet? You can apply one from{" "}
                 <a
                   href="https://sam.gov"
                   target="_blank"

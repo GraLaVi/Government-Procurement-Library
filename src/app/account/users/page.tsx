@@ -82,6 +82,12 @@ export default function UsersPage() {
   };
   const [seatUsage, setSeatUsage] = useState<SeatUsageRow[]>([]);
 
+  // Org-level user-cap from feature_limits.max_customer_users (or
+  // seat_quantity on an active library subscription). Drives the
+  // "X / Y users" pill and disables the Add User button at cap.
+  // `cap: null` = uncapped (Advanced or no library tier at all).
+  const [userCap, setUserCap] = useState<{ used: number; cap: number | null } | null>(null);
+
   // User products modal state
   const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
   const [selectedUserProducts, setSelectedUserProducts] = useState<UserProductsResponse | null>(null);
@@ -164,6 +170,20 @@ export default function UsersPage() {
       }
     } catch {
       // Soft-fail — seat info is informational; the rest of the page still works.
+    }
+  }, []);
+
+  // Fetch the org-level user cap (active customer_users count vs.
+  // feature_limits.max_customer_users). Re-fetched after create / delete
+  // so the pill and the Add User button reflect the new state.
+  const fetchUserCap = useCallback(async () => {
+    try {
+      const response = await fetch("/api/billing/user-cap", { credentials: 'include' });
+      if (response.ok) {
+        setUserCap(await response.json());
+      }
+    } catch {
+      // Soft-fail — the backend still enforces the cap on POST /users.
     }
   }, []);
 
@@ -287,8 +307,9 @@ export default function UsersPage() {
       fetchUsers();
       fetchOrgProducts();
       fetchSeatUsage();
+      fetchUserCap();
     }
-  }, [authLoading, user, router, fetchUsers, fetchOrgProducts, fetchSeatUsage]);
+  }, [authLoading, user, router, fetchUsers, fetchOrgProducts, fetchSeatUsage, fetchUserCap]);
 
   // Close menus when clicking outside, scrolling, or resizing
   useEffect(() => {
@@ -386,8 +407,10 @@ export default function UsersPage() {
       };
       setSuccess(actionMessages[confirmAction]);
 
-      // Refresh user list
+      // Refresh user list + user-cap pill (delete/deactivate/activate
+      // all change the active count).
       await fetchUsers();
+      fetchUserCap();
     } catch {
       setError("An unexpected error occurred");
     } finally {
@@ -441,94 +464,108 @@ export default function UsersPage() {
         </ol>
       </nav>
 
-      {/* Page header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-secondary">Manage Users</h1>
-          <p className="text-muted mt-1">
-            Add, edit, and manage team members in your organization
-          </p>
-        </div>
-        <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
-          <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          Add User
-        </Button>
-      </div>
-
-      {/* Seat Allocations Summary (Phase 7c) */}
-      {seatUsage.length > 0 && (
-        <div className="mb-6 bg-card-bg rounded-xl border border-border p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
+      {/* Page header — user-cap status is folded into the subtitle line so
+          the header stays clean. At cap, an inline "Upgrade →" link in the
+          warning color routes to /pricing. The Add User button mirrors
+          the cap (disabled + tooltip at cap). */}
+      {(() => {
+        const hasCap = userCap !== null && userCap.cap !== null;
+        const atCap = hasCap && (userCap!.used >= (userCap!.cap as number));
+        return (
+          <div className="flex items-start justify-between mb-8 gap-4">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Seat Allocations</h3>
-              <p className="text-xs text-muted">Per-user seats your team has used vs. purchased.</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {seatUsage.map((row) => {
-              const atCap = row.cap !== null && row.cap > 0 && row.used >= row.cap;
-              const noSub = row.requires_seat_assignment && (row.cap === null || row.cap === 0);
-              const pct = row.cap && row.cap > 0 ? Math.min(100, (row.used / row.cap) * 100) : 0;
-              return (
-                <div
-                  key={`${row.kind}-${row.id}`}
-                  className={`p-3 rounded-lg border ${atCap || noSub
-                    ? 'border-warning/40 bg-warning/5'
-                    : 'border-border bg-muted-light/30'}`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="text-sm font-medium text-foreground truncate">{row.name}</div>
-                    {row.requires_seat_assignment ? (
-                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 whitespace-nowrap">
-                        seat-allocated
-                      </span>
-                    ) : (
-                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted-light text-muted border border-border whitespace-nowrap">
-                        org-wide
-                      </span>
-                    )}
-                  </div>
-                  {row.requires_seat_assignment ? (
+              <h1 className="text-2xl font-bold text-secondary">Manage Users</h1>
+              <p className="text-muted mt-1">
+                Add, edit, and manage team members in your organization
+              </p>
+              {hasCap && (
+                <p className="text-muted mt-0.5">
+                  <span className={atCap ? "text-warning font-medium" : "font-medium"}>
+                    {userCap!.used} of {userCap!.cap} users used
+                  </span>
+                  {atCap && (
                     <>
-                      <div className="text-xs text-muted mt-1">
-                        {noSub ? (
-                          <span className="text-error">No active subscription — assignments blocked</span>
-                        ) : (
-                          <>
-                            <span className={atCap ? 'text-warning font-medium' : ''}>
-                              {row.used} / {row.cap} seats used
-                            </span>
-                            {row.remaining !== null && row.remaining > 0 && (
-                              <span className="ml-1 text-muted">({row.remaining} available)</span>
-                            )}
-                          </>
-                        )}
-                      </div>
-                      {row.cap !== null && row.cap > 0 && (
-                        <div className="mt-1.5 h-1 bg-muted-light rounded-full overflow-hidden">
-                          <div
-                            className={`h-full ${atCap ? 'bg-warning' : 'bg-primary'}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      )}
+                      {" · "}
+                      <Link
+                        href="/pricing"
+                        className="text-warning font-medium hover:underline"
+                      >
+                        Upgrade &rarr;
+                      </Link>
                     </>
-                  ) : (
-                    <div className="text-xs text-muted mt-1">
-                      All team members get access automatically
-                    </div>
                   )}
-                </div>
-              );
-            })}
+                </p>
+              )}
+            </div>
+            <Button
+              variant="primary"
+              onClick={() => setIsCreateModalOpen(true)}
+              disabled={atCap}
+              title={
+                atCap
+                  ? "You've reached your plan's user limit. Upgrade to add more team members."
+                  : undefined
+              }
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Add User
+            </Button>
           </div>
+        );
+      })()}
+
+      {/* Seats — compact chip strip. Each chip shows the product name
+          plus its allocation state ("org-wide" or "X/Y"). Seat-allocated
+          chips include a thin progress bar; warning tone when at cap or
+          when a seat-required product has no active subscription. */}
+      {seatUsage.length > 0 && (
+        <div className="mb-6 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-muted font-medium uppercase tracking-wide text-[11px]">
+            Seats
+          </span>
+          {seatUsage.map((row) => {
+            const atCap = row.cap !== null && row.cap > 0 && row.used >= row.cap;
+            const noSub = row.requires_seat_assignment && (row.cap === null || row.cap === 0);
+            const pct = row.cap && row.cap > 0 ? Math.min(100, (row.used / row.cap) * 100) : 0;
+            const tone = atCap || noSub
+              ? "bg-warning/10 border-warning/30 text-warning"
+              : "bg-muted-light/60 border-border text-foreground";
+            const allocationLabel = !row.requires_seat_assignment
+              ? "org-wide"
+              : noSub
+                ? "no subscription"
+                : `${row.used}/${row.cap}`;
+            return (
+              <span
+                key={`${row.kind}-${row.id}`}
+                className={`inline-flex flex-col gap-1 px-2.5 py-1 rounded-full border ${tone}`}
+                title={
+                  noSub
+                    ? `${row.name}: no active subscription — assignments blocked`
+                    : row.requires_seat_assignment
+                      ? `${row.name}: ${row.used} of ${row.cap} seats used${row.remaining !== null && row.remaining > 0 ? ` (${row.remaining} available)` : ""}`
+                      : `${row.name}: every team member gets access automatically`
+                }
+              >
+                <span className="inline-flex items-center gap-2 leading-tight">
+                  <span className="font-medium">{row.name}</span>
+                  <span className={atCap || noSub ? "" : "text-muted"}>
+                    {allocationLabel}
+                  </span>
+                </span>
+                {row.requires_seat_assignment && row.cap !== null && row.cap > 0 && (
+                  <span className="h-0.5 w-full bg-muted-light rounded-full overflow-hidden">
+                    <span
+                      className={`block h-full ${atCap ? "bg-warning" : "bg-primary"}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </span>
+                )}
+              </span>
+            );
+          })}
         </div>
       )}
 
@@ -840,6 +877,7 @@ export default function UsersPage() {
             setTempPasswordUser(email);
           }
           fetchUsers();
+          fetchUserCap();
         }}
       />
 

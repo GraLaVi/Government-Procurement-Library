@@ -349,6 +349,19 @@ function BillingPageContent() {
 
   return (
     <>
+      {/* Breadcrumb — matches /account/users and /account/notifications. */}
+      <nav className="mb-6">
+        <ol className="flex items-center gap-2 text-sm">
+          <li>
+            <Link href="/account" className="text-muted hover:text-primary transition-colors">
+              Account
+            </Link>
+          </li>
+          <li className="text-muted">/</li>
+          <li className="text-foreground font-medium">Billing &amp; Subscriptions</li>
+        </ol>
+      </nav>
+
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Billing & Subscriptions</h1>

@@ -237,12 +237,16 @@ function PartsSearchPageContent() {
     );
   }
 
-  // Check if user has access to parts search (any tier: full or basic)
+  // Check if user has access to parts search at ANY tier (free/basic/advanced).
+  // Per-tier feature gating happens downstream via resolvePartsTier; this
+  // gate just keeps users without any library grant out of the page.
   if (!hasAnyProductAccess([
     "library_search_advanced",
     "library_parts_search_advanced",
     "library_search_basic",
     "library_parts_search_basic",
+    "library_search_free",
+    "library_parts_search_free",
   ])) {
     return (
       <AccessDeniedPage
