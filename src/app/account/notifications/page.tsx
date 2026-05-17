@@ -18,15 +18,26 @@ interface NotificationType {
   description: string | null;
   category: string | null;
   available_frequencies: string[] | null;
-  // Per-tier restriction. When present, the dropdown should ONLY offer
-  // these values plus "off". null = no tier restriction (Advanced or
-  // unrestricted type) — fall back to available_frequencies.
+  // Entitlement restriction. Server computes this from
+  // product_notification_entitlements UNIONed across the customer's
+  // products (same logic the worker uses at dispatch). `null` falls
+  // back to `available_frequencies`. The dropdown should ONLY offer
+  // values present here (plus "off"/"none"). `allowed_frequencies` is
+  // kept as a legacy alias of this same data.
   allowed_frequencies: string[] | null;
+  entitled_frequencies?: string[];
   default_frequency: string | null;
   requires_product_group: string | null;
   requires_product: string | null;
   entitled: boolean;
   current_subscription: CurrentSubscription | null;
+  // What the user picked (or the type default when no row). Same value
+  // as `current_subscription.frequency` when a row exists.
+  stored_frequency?: string;
+  // What the worker will actually dispatch at. Differs from `stored_frequency`
+  // when entitlements have shrunk after the user picked something. UI shows
+  // an "auto-downgraded" badge when these differ.
+  effective_frequency?: string;
 }
 
 // Group types by category
@@ -319,6 +330,19 @@ export default function NotificationsPage() {
                               {t.description}
                             </p>
                           )}
+                          {t.stored_frequency &&
+                            t.effective_frequency &&
+                            t.stored_frequency !== t.effective_frequency && (
+                              <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-warning/10 text-warning border border-warning/20">
+                                <span>↓</span>
+                                <span>
+                                  Auto-downgraded from{" "}
+                                  <strong>{t.stored_frequency.replace("_", " ")}</strong> to{" "}
+                                  <strong>{t.effective_frequency.replace("_", " ")}</strong>{" "}
+                                  by your plan
+                                </span>
+                              </p>
+                            )}
                         </div>
 
                         {/* Frequency selector */}

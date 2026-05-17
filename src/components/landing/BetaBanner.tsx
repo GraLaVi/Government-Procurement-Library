@@ -8,7 +8,7 @@ export function BetaBanner() {
           Beta
         </span>
         <span className="hidden sm:inline">
-          GPH is now in private beta with select defense contractors.
+          GPH is now in private beta with select defense suppliers.
         </span>
         <span className="sm:hidden">Now in private beta.</span>
         <Link

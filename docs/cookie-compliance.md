@@ -20,7 +20,6 @@ src/
 │       ├── cookies/page.tsx                  # Cookie policy + inventory table
 │       ├── privacy/page.tsx                  # Stub (placeholder pending counsel)
 │       ├── terms/page.tsx                    # Stub
-│       └── security/page.tsx                 # Stub
 ├── components/
 │   ├── consent/
 │   │   ├── ConsentBanner.tsx                 # First-visit bottom banner
@@ -163,7 +162,7 @@ Saving from the modal persists the cookie and closes the banner.
 **Versioning** — manually edit the stored cookie in DevTools to `version: 0`, reload:
 1. Banner reappears as if it's a first visit.
 
-**Stub pages** — visit `/legal/privacy`, `/legal/terms`, `/legal/security`, `/legal/cookies` from the footer:
+**Stub pages** — visit `/legal/privacy`, `/legal/terms`, `/legal/cookies` from the footer:
 1. All four render (no 404).
 2. `/legal/cookies` shows the inventory table.
 3. The other three show the "draft pending legal review" notice.
@@ -180,6 +179,6 @@ Saving from the modal persists the cookie and closes the banner.
 
 ## What real-world legal text is still needed
 
-The placeholder pages (`/legal/privacy`, `/legal/terms`, `/legal/security`) need real copy from counsel before we go to general availability. Each renders a yellow "draft pending legal review" notice in-page so anyone landing there sees that clearly.
+The placeholder pages (`/legal/privacy`, `/legal/terms`) need real copy from counsel before we go to general availability. Each renders a yellow "draft pending legal review" notice in-page so anyone landing there sees that clearly.
 
 `/legal/cookies` is intentionally NOT in this category — it's a technical disclosure (what we store, what for, how long), and the engineering team owns its accuracy. Update it whenever a cookie is added/removed.

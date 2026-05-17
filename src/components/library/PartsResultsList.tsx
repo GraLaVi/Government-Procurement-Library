@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import { PartSearchResult, formatNSN, formatCurrency } from "@/lib/library/types";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
+import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
+import type { LibraryTier } from "@/lib/library/tier";
 
 interface PartsResultsListProps {
   results: PartSearchResult[];
@@ -10,6 +12,11 @@ interface PartsResultsListProps {
   onSelect: (nsn: string) => void;
   selectedNSN?: string;
   isLoading?: boolean;
+  /** Highest parts-library tier the current user holds. Drives the CSV
+   *  export button (enabled on Advanced, upsell-locked on Basic/Free,
+   *  hidden when null). Resolved by the parent page from
+   *  `resolvePartsTier(hasAnyProductAccess)`. */
+  tier?: LibraryTier;
 }
 
 export function PartsResultsList({
@@ -17,6 +24,7 @@ export function PartsResultsList({
   total,
   onSelect,
   isLoading,
+  tier = null,
 }: PartsResultsListProps) {
   // Define columns using TanStack Table column definitions
   const columns = useMemo<ColumnDef<PartSearchResult>[]>(
@@ -88,6 +96,20 @@ export function PartsResultsList({
     []
   );
 
+  // CSV column spec — mirrors the on-screen columns the user sees.
+  // Values are plain strings (the visible cells use JSX with formatters
+  // and icons, which doesn't translate cleanly to CSV).
+  const csvColumns = useMemo<CsvColumn<PartSearchResult>[]>(
+    () => [
+      { header: "NSN", value: (r) => formatNSN(r.nsn) || r.nsn },
+      { header: "Description", value: (r) => r.description ?? "" },
+      { header: "Unit", value: (r) => r.unit_of_issue ?? "" },
+      // Unit price as a plain number so spreadsheets can sum it.
+      { header: "Unit Price", value: (r) => r.unit_price ?? "" },
+    ],
+    [],
+  );
+
   // Custom empty state
   const emptyComponent = (
     <div className="bg-card-bg rounded-lg border border-border p-6 text-center">
@@ -127,11 +149,27 @@ export function PartsResultsList({
   return (
     <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-2 bg-muted-light border-b border-border flex items-center justify-between">
-        <span className="text-xs font-medium text-muted">
-          {total} part{total !== 1 ? "s" : ""} found
-        </span>
-        <span className="text-xs text-muted">Click a row to view details</span>
+      <div className="px-4 py-2 bg-muted-light border-b border-border flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-xs font-medium text-muted">
+            {total} part{total !== 1 ? "s" : ""} found
+          </span>
+          <span className="text-xs text-muted hidden sm:inline">
+            Click a row to view details
+          </span>
+        </div>
+        {/* CSV export — only renders when the user holds any parts-library
+            tier. Advanced exports immediately; Basic/Free see an upsell.
+            Compact mode keeps the button inline with the header chrome;
+            the custom-reports upsell hint renders below the table so
+            the data stays high on the page. */}
+        <ExportCsvButton
+          tier={tier}
+          rows={results}
+          columns={csvColumns}
+          filename="parts-search"
+          compact
+        />
       </div>
 
       {/* DataTable */}
@@ -154,6 +192,13 @@ export function PartsResultsList({
           },
         }}
       />
+      {/* Custom-reports upsell — under the table so the data stays
+          at the top of the panel. */}
+      {tier !== null && (
+        <div className="px-4 py-2 border-t border-border bg-muted-light/30 flex justify-end">
+          <CustomReportLink />
+        </div>
+      )}
     </div>
   );
 }

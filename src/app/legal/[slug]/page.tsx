@@ -7,7 +7,7 @@ import { LegalArticle } from "./LegalArticle";
 
 // Slugs that have a corresponding markdown file in src/content/legal/.
 // Add new entries here when you drop in `compliance.md`, `security.md`, etc.
-const KNOWN_SLUGS = ["privacy", "terms"] as const;
+const KNOWN_SLUGS = ["privacy", "terms", "beta_terms"] as const;
 type KnownSlug = (typeof KNOWN_SLUGS)[number];
 
 interface Frontmatter {

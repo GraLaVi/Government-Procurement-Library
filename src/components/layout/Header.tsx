@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
@@ -21,6 +22,18 @@ const mainNavItems = [
   { href: "/bidmatching", label: "Bid-Matching" },
 ];
 
+// Match the current path against a nav target. Exact match or sub-path
+// (so /library/parts/123 still highlights the /library/parts entry).
+function isLinkActive(href: string, pathname: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
+// A dropdown trigger is active when any of its child items match.
+function isGroupActive(items: { href: string }[], pathname: string): boolean {
+  return items.some((it) => isLinkActive(it.href, pathname));
+}
+
 interface HeaderProps {
   /** Show the Account link with avatar (default: true). Set to false on main account page. */
   showAccountLink?: boolean;
@@ -36,6 +49,38 @@ export function Header({ showAccountLink = true }: HeaderProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const helpDropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname() || "/";
+
+  const libraryGroupActive = isGroupActive(librarySearchItems, pathname);
+  const helpGroupActive = isGroupActive(helpItems, pathname);
+
+  // Class builders. Idle styling matches the existing nav; active state
+  // applies the primary color (and a soft tinted background on dropdown
+  // items / mobile rows where there's room for it).
+  const topLinkClass = (active: boolean) =>
+    `transition-colors ${
+      active
+        ? "text-primary font-semibold"
+        : "text-card-foreground hover:text-foreground"
+    }`;
+  const dropdownItemClass = (active: boolean) =>
+    `block px-4 py-2 text-sm transition-colors ${
+      active
+        ? "bg-primary/10 text-primary font-medium"
+        : "text-card-foreground hover:text-foreground hover:bg-muted-light"
+    }`;
+  const mobileRowClass = (active: boolean) =>
+    `px-4 py-3 rounded-lg transition-colors ${
+      active
+        ? "bg-primary/10 text-primary font-medium"
+        : "text-card-foreground hover:text-foreground hover:bg-muted-light"
+    }`;
+  const mobileDropdownItemClass = (active: boolean) =>
+    `block px-4 py-2 text-sm rounded-lg transition-colors ${
+      active
+        ? "bg-primary/10 text-primary font-medium"
+        : "text-card-foreground hover:text-foreground hover:bg-muted-light"
+    }`;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -96,14 +141,17 @@ export function Header({ showAccountLink = true }: HeaderProps) {
           {/* Desktop Nav Links + User menu (right-justified) */}
           <div className="hidden md:flex items-center gap-6">
             <nav className="flex items-center gap-6">
-              <Link href="/dashboard" className="text-card-foreground hover:text-foreground transition-colors">
+              <Link
+                href="/dashboard"
+                className={topLinkClass(isLinkActive("/dashboard", pathname))}
+              >
                 Dashboard
               </Link>
               {/* Library Search Dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsLibraryDropdownOpen(!isLibraryDropdownOpen)}
-                  className="flex items-center gap-1 text-card-foreground hover:text-foreground transition-colors"
+                  className={`flex items-center gap-1 ${topLinkClass(libraryGroupActive)}`}
                 >
                   Library Search
                   <svg
@@ -122,7 +170,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className="block px-4 py-2 text-sm text-card-foreground hover:text-foreground hover:bg-muted-light transition-colors"
+                        className={dropdownItemClass(isLinkActive(item.href, pathname))}
                         onClick={() => setIsLibraryDropdownOpen(false)}
                       >
                         {item.label}
@@ -131,14 +179,17 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   </div>
                 )}
               </div>
-              <Link href="/bidmatching" className="text-card-foreground hover:text-foreground transition-colors">
+              <Link
+                href="/bidmatching"
+                className={topLinkClass(isLinkActive("/bidmatching", pathname))}
+              >
                 Bid-Matching
               </Link>
               {/* Help Dropdown */}
               <div className="relative" ref={helpDropdownRef}>
                 <button
                   onClick={() => setIsHelpDropdownOpen(!isHelpDropdownOpen)}
-                  className="flex items-center gap-1 text-card-foreground hover:text-foreground transition-colors"
+                  className={`flex items-center gap-1 ${topLinkClass(helpGroupActive)}`}
                 >
                   Help
                   <svg
@@ -157,7 +208,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className="block px-4 py-2 text-sm text-card-foreground hover:text-foreground hover:bg-muted-light transition-colors"
+                        className={dropdownItemClass(isLinkActive(item.href, pathname))}
                         onClick={() => setIsHelpDropdownOpen(false)}
                       >
                         {item.label}
@@ -199,7 +250,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="px-4 py-3 text-card-foreground hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
+                  className={mobileRowClass(isLinkActive(item.href, pathname))}
                   onClick={closeMobileMenu}
                 >
                   {item.label}
@@ -209,7 +260,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               {/* Library Search expandable section */}
               <button
                 onClick={() => setIsMobileLibraryOpen(!isMobileLibraryOpen)}
-                className="flex items-center justify-between px-4 py-3 text-card-foreground hover:text-foreground hover:bg-muted-light rounded-lg transition-colors w-full text-left"
+                className={`flex items-center justify-between w-full text-left ${mobileRowClass(libraryGroupActive)}`}
               >
                 <span>Library Search</span>
                 <svg
@@ -228,7 +279,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="block px-4 py-2 text-sm text-card-foreground hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
+                      className={mobileDropdownItemClass(isLinkActive(item.href, pathname))}
                       onClick={closeMobileMenu}
                     >
                       {item.label}
@@ -240,7 +291,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               {/* Help expandable section */}
               <button
                 onClick={() => setIsMobileHelpOpen(!isMobileHelpOpen)}
-                className="flex items-center justify-between px-4 py-3 text-card-foreground hover:text-foreground hover:bg-muted-light rounded-lg transition-colors w-full text-left"
+                className={`flex items-center justify-between w-full text-left ${mobileRowClass(helpGroupActive)}`}
               >
                 <span>Help</span>
                 <svg
@@ -259,7 +310,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="block px-4 py-2 text-sm text-card-foreground hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
+                      className={mobileDropdownItemClass(isLinkActive(item.href, pathname))}
                       onClick={closeMobileMenu}
                     >
                       {item.label}

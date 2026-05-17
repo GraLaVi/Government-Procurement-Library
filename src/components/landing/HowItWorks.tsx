@@ -11,11 +11,11 @@ const steps = [
     number: "02",
     title: "Pick a Plan & Set Your Profile",
     description:
-      "Once approved, subscribe to ALAN Library Basic, Full, or Bid Matching Advanced. Configure your CAGE code, NSN categories, and bid-matching profiles.",
+      "Once approved, choose Free, Basic, or Advanced. Configure your CAGE code, NSN categories, and bid-matching profiles.",
   },
   {
     number: "03",
-    title: "Win DoD Contracts",
+    title: "Win Federal Contracts",
     description:
       "Receive matched solicitations daily, analyze competitor activity with CAGE-code intelligence, and submit stronger proposals backed by real procurement data.",
   },
@@ -31,7 +31,7 @@ export function HowItWorks() {
             How GPH Works
           </h2>
           <p className="mt-4 text-lg text-muted dark:text-foreground/70">
-            From beta application to your first matched contract
+            From beta application to your first matched solicitation
           </p>
         </div>
 

@@ -456,6 +456,7 @@ function PartsSearchPageContent() {
               onSelect={handleSelectPart}
               selectedNSN={undefined}
               isLoading={isSearching}
+              tier={tier}
             />
           )}
         </>

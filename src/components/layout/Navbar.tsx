@@ -1,17 +1,36 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { MenuIcon, CloseIcon } from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 
+// Whether the given href should render as "current". Real routes match
+// on exact path or sub-path (so /library/parts/123 still highlights the
+// /library/parts link). Hash links (e.g. "/#features") are anchor jumps
+// on the home page — there's no concept of "being on" one of them, so
+// they never highlight (otherwise every anchor link would light up
+// simultaneously while sitting on "/").
+function isLinkActive(href: string, pathname: string): boolean {
+  if (href.includes("#")) return false;
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
+// A dropdown trigger is "active" when any of its child items is the
+// current page — so navigating to /library/parts highlights the
+// "Library Search" button.
+function isGroupActive(items: { href: string }[], pathname: string): boolean {
+  return items.some((it) => isLinkActive(it.href, pathname));
+}
+
 // Links shown to authenticated users (excludes Pricing — they reach it via /account/billing).
 const navLinks = [
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How It Works" },
-  { href: "/about", label: "About" },
 ];
 
 // Links shown to unauthenticated visitors. Pricing is surfaced here so visitors
@@ -21,7 +40,6 @@ const visitorNavLinks = [
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How It Works" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/about", label: "About" },
 ];
 
 const librarySearchItems = [
@@ -42,8 +60,39 @@ export function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const helpDropdownRef = useRef<HTMLDivElement>(null);
   const { user, isAuthenticated, isLoading } = useAuth();
+  const pathname = usePathname() || "/";
 
   const userInitial = user?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || "U";
+
+  // Visual treatment for active vs idle nav targets. Kept inline so the
+  // same classes apply to <Link> rows and dropdown <button> triggers.
+  const topLinkClass = (active: boolean) =>
+    `transition-colors duration-200 ${
+      active
+        ? "text-primary font-semibold"
+        : "text-card-foreground hover:text-foreground"
+    }`;
+  const dropdownItemClass = (active: boolean) =>
+    `block px-4 py-2 text-sm transition-colors ${
+      active
+        ? "bg-primary/10 text-primary font-medium"
+        : "text-card-foreground hover:text-foreground hover:bg-muted-light"
+    }`;
+  const mobileLinkClass = (active: boolean) =>
+    `transition-colors duration-200 py-2 ${
+      active
+        ? "text-primary font-semibold"
+        : "text-card-foreground hover:text-foreground"
+    }`;
+  const mobileDropdownItemClass = (active: boolean) =>
+    `block text-sm transition-colors py-1 ${
+      active
+        ? "text-primary font-medium"
+        : "text-card-foreground hover:text-foreground"
+    }`;
+
+  const libraryGroupActive = isGroupActive(librarySearchItems, pathname);
+  const helpGroupActive = isGroupActive(helpItems, pathname);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -79,7 +128,7 @@ export function Navbar() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsLibraryDropdownOpen(!isLibraryDropdownOpen)}
-                  className="flex items-center gap-1 text-card-foreground hover:text-foreground transition-colors duration-200"
+                  className={`flex items-center gap-1 ${topLinkClass(libraryGroupActive)}`}
                 >
                   Library Search
                   <svg
@@ -98,7 +147,7 @@ export function Navbar() {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className="block px-4 py-2 text-sm text-card-foreground hover:text-foreground hover:bg-muted-light transition-colors"
+                        className={dropdownItemClass(isLinkActive(item.href, pathname))}
                         onClick={() => setIsLibraryDropdownOpen(false)}
                       >
                         {item.label}
@@ -113,7 +162,7 @@ export function Navbar() {
               <div className="relative" ref={helpDropdownRef}>
                 <button
                   onClick={() => setIsHelpDropdownOpen(!isHelpDropdownOpen)}
-                  className="flex items-center gap-1 text-card-foreground hover:text-foreground transition-colors duration-200"
+                  className={`flex items-center gap-1 ${topLinkClass(helpGroupActive)}`}
                 >
                   Help
                   <svg
@@ -132,7 +181,7 @@ export function Navbar() {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className="block px-4 py-2 text-sm text-card-foreground hover:text-foreground hover:bg-muted-light transition-colors"
+                        className={dropdownItemClass(isLinkActive(item.href, pathname))}
                         onClick={() => setIsHelpDropdownOpen(false)}
                       >
                         {item.label}
@@ -146,7 +195,7 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-card-foreground hover:text-foreground transition-colors duration-200"
+                className={topLinkClass(isLinkActive(link.href, pathname))}
               >
                 {link.label}
               </Link>
@@ -203,7 +252,7 @@ export function Navbar() {
                 <div>
                   <button
                     onClick={() => setIsMobileLibraryOpen(!isMobileLibraryOpen)}
-                    className="flex items-center justify-between w-full text-card-foreground hover:text-foreground transition-colors duration-200 py-2"
+                    className={`flex items-center justify-between w-full ${mobileLinkClass(libraryGroupActive)}`}
                   >
                     <span>Library Search</span>
                     <svg
@@ -222,7 +271,7 @@ export function Navbar() {
                         <Link
                           key={item.href}
                           href={item.href}
-                          className="block text-sm text-card-foreground hover:text-foreground transition-colors py-1"
+                          className={mobileDropdownItemClass(isLinkActive(item.href, pathname))}
                           onClick={() => {
                             setIsMenuOpen(false);
                             setIsMobileLibraryOpen(false);
@@ -240,7 +289,7 @@ export function Navbar() {
                 <div>
                   <button
                     onClick={() => setIsMobileHelpOpen(!isMobileHelpOpen)}
-                    className="flex items-center justify-between w-full text-card-foreground hover:text-foreground transition-colors duration-200 py-2"
+                    className={`flex items-center justify-between w-full ${mobileLinkClass(helpGroupActive)}`}
                   >
                     <span>Help</span>
                     <svg
@@ -259,7 +308,7 @@ export function Navbar() {
                         <Link
                           key={item.href}
                           href={item.href}
-                          className="block text-sm text-card-foreground hover:text-foreground transition-colors py-1"
+                          className={mobileDropdownItemClass(isLinkActive(item.href, pathname))}
                           onClick={() => {
                             setIsMenuOpen(false);
                             setIsMobileHelpOpen(false);
@@ -276,7 +325,7 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-card-foreground hover:text-foreground transition-colors duration-200 py-2"
+                  className={mobileLinkClass(isLinkActive(link.href, pathname))}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {link.label}

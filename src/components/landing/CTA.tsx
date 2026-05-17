@@ -18,11 +18,11 @@ export function CTA() {
                 Beta seats available
               </div>
               <h2 className="mt-5 text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
-                Ready to Win More DoD Bids?
+                Ready to Win More Federal Contracts?
               </h2>
               <p className="mt-6 text-lg text-white/80 leading-relaxed">
                 Apply for a beta seat to get hands-on with live DLA solicitation
-                feeds, NSN/NIIN search, and bid matching. Pick a plan when
+                feeds, NSN/NIIN search, and bid-matching. Pick a plan when
                 you&apos;re ready — your team is approved before any charge.
               </p>
 
@@ -51,22 +51,19 @@ export function CTA() {
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
                 <ZapIcon className="w-8 h-8 text-white/80 mb-4" />
                 <div className="text-3xl font-bold text-white">15K+</div>
-                <div className="text-white/70 mt-1">DoD Solicitations Indexed Monthly</div>
+                <div className="text-white/70 mt-1">Federal Solicitations Indexed Monthly</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
                 <ShieldIcon className="w-8 h-8 text-white/80 mb-4" />
                 <div className="text-3xl font-bold text-white">$4.2B+</div>
-                <div className="text-white/70 mt-1">DoD Contract Value Tracked</div>
+                <div className="text-white/70 mt-1">Federal Contract Value Tracked</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 sm:col-span-2">
                 <div className="text-white/70 text-sm mb-3">Covering solicitations from:</div>
                 <div className="flex flex-wrap gap-4 text-white font-medium">
                   <span>DLA</span>
-                  <span>Army</span>
-                  <span>Navy</span>
-                  <span>Air Force</span>
-                  <span>Marines</span>
-                  <span>Space Force</span>
+                  <span>DIBBS</span>
+                  <span>SAM.gov</span>
                 </div>
               </div>
             </div>

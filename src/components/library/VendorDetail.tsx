@@ -38,6 +38,51 @@ import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveVendorTier, tierMeets } from "@/lib/library/tier";
+import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
+
+// Module-scope CSV column specs for the vendor-detail tab exports.
+// Kept outside the component bodies so the parent-level export button
+// (rendered next to the tab strip) can reach them without prop-drilling
+// the column lists.
+const AWARDS_CSV_COLUMNS: CsvColumn<VendorAward>[] = [
+  { header: "Award Date", value: (r) => r.award_date },
+  { header: "Contract #", value: (r) => r.contract_number ?? "" },
+  { header: "PR #", value: (r) => r.pr_number ?? "" },
+  { header: "NIIN", value: (r) => r.niin ?? "" },
+  { header: "FSC", value: (r) => r.fsc ?? "" },
+  { header: "Description", value: (r) => r.description ?? "" },
+  { header: "Qty", value: (r) => r.award_quantity ?? "" },
+  { header: "Unit Price", value: (r) => r.unit_price ?? "" },
+  { header: "Total Value", value: (r) => r.total_value ?? "" },
+  { header: "Agency", value: (r) => r.agency_code ?? "" },
+];
+
+const BOOKINGS_CSV_COLUMNS: CsvColumn<VendorBookingMonth>[] = [
+  { header: "Month", value: (r) => r.month_label },
+  { header: "DSCP Booked", value: (r) => r.dscp_booked },
+  { header: "DSCP Rank", value: (r) => r.dscp_rank ?? "" },
+  { header: "DSCR Booked", value: (r) => r.dscr_booked },
+  { header: "DSCR Rank", value: (r) => r.dscr_rank ?? "" },
+  { header: "DSCC Booked", value: (r) => r.dscc_booked },
+  { header: "DSCC Rank", value: (r) => r.dscc_rank ?? "" },
+  { header: "Other Booked", value: (r) => r.other_booked },
+  { header: "Other Rank", value: (r) => r.other_rank ?? "" },
+  { header: "Month Total", value: (r) => r.month_total },
+];
+
+const VENDOR_SOLICITATIONS_CSV_COLUMNS: CsvColumn<VendorSolicitation>[] = [
+  { header: "Close Date", value: (r) => r.close_date },
+  { header: "Solicitation #", value: (r) => r.solicitation_number },
+  { header: "Status", value: (r) => r.status },
+  { header: "Agency", value: (r) => r.agency_code ?? "" },
+  { header: "NIIN", value: (r) => r.niin ?? "" },
+  { header: "FSC", value: (r) => r.fsc ?? "" },
+  { header: "Description", value: (r) => r.description ?? "" },
+  { header: "Qty", value: (r) => r.quantity ?? "" },
+  { header: "Unit Price", value: (r) => r.unit_price ?? "" },
+  { header: "Estimated Value", value: (r) => r.estimated_value ?? "" },
+  { header: "Set-Aside", value: (r) => r.set_aside ?? "" },
+];
 
 interface VendorDetailProps {
   vendor: VendorDetailType;
@@ -294,13 +339,43 @@ export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps)
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="px-4 pt-3">
+      {/* Tabs — paired with a right-side export button so the action
+          sits inline with the tab labels and doesn't push the table
+          content down. Only the awards and solicitations tabs export
+          today; other tabs render nothing on the right. */}
+      <div className="px-4 pt-3 flex items-end justify-between gap-3">
         <Tabs
           tabs={tabs}
           activeTab={activeTab}
           onTabChange={handleTabChange}
         />
+        {activeTab === "awards" && (
+          <ExportCsvButton
+            tier={tier}
+            rows={awards}
+            columns={AWARDS_CSV_COLUMNS}
+            filename={`vendor-awards-${vendor.cage_code}`}
+            compact
+          />
+        )}
+        {activeTab === "bookings" && (
+          <ExportCsvButton
+            tier={tier}
+            rows={bookingMonths}
+            columns={BOOKINGS_CSV_COLUMNS}
+            filename={`vendor-bookings-${vendor.cage_code}`}
+            compact
+          />
+        )}
+        {activeTab === "solicitations" && (
+          <ExportCsvButton
+            tier={tier}
+            rows={solicitations}
+            columns={VENDOR_SOLICITATIONS_CSV_COLUMNS}
+            filename={`vendor-solicitations-${vendor.cage_code}`}
+            compact
+          />
+        )}
       </div>
 
       {/* Tab Panels */}
@@ -876,14 +951,15 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
         isLoading={isLoading}
         emptyComponent={emptyComponent}
         exportFilename="vendor-awards"
-        showToolbar={awards.length > 0}
         config={{
           features: {
             sorting: true,
             multiSort: false,
             rowSelection: false,
             copyRow: true,
-            export: true,
+            // DataTable's built-in export is disabled — the tab strip
+            // hosts our tier-aware ExportCsvButton instead.
+            export: false,
             exportFormats: ["csv"],
             columnResize: false,
             columnVisibility: false,
@@ -913,6 +989,14 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
             />
           </div>
         </Modal>
+      )}
+      {/* Custom-reports upsell — below the table so the data stays at
+          the top of the panel. Only shown when there are awards to
+          contextualize it. */}
+      {awards.length > 0 && (
+        <div className="mt-2 flex justify-end">
+          <CustomReportLink />
+        </div>
       )}
     </>
   );
@@ -1097,20 +1181,28 @@ function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPa
         isLoading={isLoading}
         emptyComponent={emptyComponent}
         exportFilename="vendor-bookings"
-        showToolbar={months.length > 0}
         config={{
           features: {
             sorting: true,
             multiSort: false,
             rowSelection: false,
             copyRow: true,
-            export: true,
+            // DataTable's built-in export is disabled — the tab strip
+            // hosts our tier-aware ExportCsvButton instead.
+            export: false,
             exportFormats: ["csv"],
             columnResize: false,
             columnVisibility: false,
           },
         }}
       />
+      {/* Custom-reports upsell — below the table so the data stays at
+          the top of the panel. */}
+      {months.length > 0 && (
+        <div className="mt-2 flex justify-end">
+          <CustomReportLink />
+        </div>
+      )}
     </div>
   );
 }
@@ -1313,7 +1405,6 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         isLoading={isLoading}
         emptyComponent={emptyComponent}
         exportFilename="vendor-solicitations"
-        showToolbar={solicitations.length > 0}
         getRowId={(row) => String(row.solicitation_id)}
         config={{
           features: {
@@ -1321,7 +1412,9 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
             multiSort: false,
             rowSelection: false,
             copyRow: true,
-            export: true,
+            // DataTable's built-in export is disabled — the tab strip
+            // hosts our tier-aware ExportCsvButton instead.
+            export: false,
             exportFormats: ["csv"],
             columnResize: false,
             columnVisibility: false,
@@ -1351,6 +1444,13 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
             />
           </div>
         </Modal>
+      )}
+      {/* Custom-reports upsell — below the table so the data stays at
+          the top of the panel. */}
+      {solicitations.length > 0 && (
+        <div className="mt-2 flex justify-end">
+          <CustomReportLink />
+        </div>
       )}
     </>
   );

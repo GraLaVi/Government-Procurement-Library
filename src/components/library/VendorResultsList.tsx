@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { VendorSearchResult, formatSamStatus } from "@/lib/library/types";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
+import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
+import type { LibraryTier } from "@/lib/library/tier";
 
 interface VendorResultsListProps {
   results: VendorSearchResult[];
@@ -11,6 +13,11 @@ interface VendorResultsListProps {
   onSelect: (cageCode: string) => void;
   selectedCageCode?: string;
   isLoading?: boolean;
+  /** Highest vendor-library tier the current user holds. Drives the
+   *  CSV export button (Advanced enabled, Basic/Free upsell-locked,
+   *  hidden when null). Resolved by the parent page from
+   *  `resolveVendorTier(hasAnyProductAccess)`. */
+  tier?: LibraryTier;
 }
 
 export function VendorResultsList({
@@ -18,6 +25,7 @@ export function VendorResultsList({
   total,
   onSelect,
   isLoading,
+  tier = null,
 }: VendorResultsListProps) {
   // Define columns using TanStack Table column definitions
   const columns = useMemo<ColumnDef<VendorSearchResult>[]>(
@@ -110,6 +118,24 @@ export function VendorResultsList({
     []
   );
 
+  // CSV column spec — mirrors the on-screen columns. The location is
+  // split into city + state so spreadsheet filters work cleanly; the
+  // SB / SAM status flags are flattened to plain strings.
+  const csvColumns = useMemo<CsvColumn<VendorSearchResult>[]>(
+    () => [
+      { header: "CAGE", value: (r) => r.cage_code },
+      { header: "Vendor Name", value: (r) => r.legal_business_name ?? "" },
+      { header: "DBA Name", value: (r) => r.dba_name ?? "" },
+      { header: "City", value: (r) => r.city ?? "" },
+      { header: "State", value: (r) => r.state ?? "" },
+      { header: "UEI", value: (r) => r.uei ?? "" },
+      { header: "DUNS", value: (r) => r.duns ?? "" },
+      { header: "SAM Status", value: (r) => formatSamStatus(r.sam_status) ?? "" },
+      { header: "Small Business", value: (r) => (r.small_business ? "Yes" : "No") },
+    ],
+    [],
+  );
+
   // Custom empty state
   const emptyComponent = (
     <div className="bg-card-bg rounded-lg border border-border p-6 text-center">
@@ -149,11 +175,27 @@ export function VendorResultsList({
   return (
     <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-2 bg-muted-light border-b border-border flex items-center justify-between">
-        <span className="text-xs font-medium text-muted">
-          {total} vendor{total !== 1 ? "s" : ""} found
-        </span>
-        <span className="text-xs text-muted">Click a row to view details</span>
+      <div className="px-4 py-2 bg-muted-light border-b border-border flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-xs font-medium text-muted">
+            {total} vendor{total !== 1 ? "s" : ""} found
+          </span>
+          <span className="text-xs text-muted hidden sm:inline">
+            Click a row to view details
+          </span>
+        </div>
+        {/* CSV export — only renders when the user holds any vendor-library
+            tier. Advanced exports immediately; Basic/Free see an upsell.
+            Compact mode keeps the button inline with the header chrome;
+            the custom-reports hint renders below the table so the data
+            stays high on the page. */}
+        <ExportCsvButton
+          tier={tier}
+          rows={results}
+          columns={csvColumns}
+          filename="vendor-search"
+          compact
+        />
       </div>
 
       {/* DataTable */}
@@ -176,6 +218,13 @@ export function VendorResultsList({
           },
         }}
       />
+      {/* Custom-reports upsell — under the table so the data stays
+          at the top of the panel. */}
+      {tier !== null && (
+        <div className="px-4 py-2 border-t border-border bg-muted-light/30 flex justify-end">
+          <CustomReportLink />
+        </div>
+      )}
     </div>
   );
 }

@@ -13,13 +13,12 @@ const footerLinks = {
     { href: "/contact", label: "Contact" },
   ],
   Resources: [
-    { href: "/docs", label: "Documentation" },
+    { href: "/documentation", label: "Documentation" },
     { href: "/support", label: "Support" },
   ],
   Legal: [
     { href: "/legal/privacy", label: "Privacy Policy" },
     { href: "/legal/terms", label: "Terms of Service" },
-    { href: "/legal/security", label: "Security" },
     { href: "/legal/cookies", label: "Cookies" },
   ],
 };
@@ -38,19 +37,22 @@ export function Footer() {
               <span className="text-xl font-bold">GPH</span>
             </Link>
             <p className="text-white/70 text-sm">
-              Your DoD Solicitation Intelligence Platform
+              Your DoD Procurement Platform
             </p>
             <address className="not-italic text-white/70 text-sm mt-3">
               <span className="whitespace-nowrap">Government Procurement Hub LLC</span>
               <br />
               New Ulm, MN 56073
               <br />
+              <br />
               <a
                 href="mailto:support@gphusa.com"
                 className="hover:text-white transition-colors duration-200"
               >
-                support@gphusa.com
+                Email: support@gphusa.com
               </a>
+              <br />
+              Phone: (507) 246-1551
             </address>
           </div>
 

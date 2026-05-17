@@ -524,6 +524,7 @@ function VendorSearchPageContent() {
               onSelect={handleSelectVendor}
               selectedCageCode={undefined}
               isLoading={isSearching}
+              tier={tier}
             />
           )}
         </>

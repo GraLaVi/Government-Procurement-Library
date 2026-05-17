@@ -10,39 +10,39 @@ import {
 const features = [
   {
     icon: TargetIcon,
-    title: "DLA Solicitation Matching",
+    title: "Bid-Matching",
     description:
-      "Automatically scan and match DLA solicitations from DIBBS and other DoD procurement channels to your company's capabilities, CAGE code, and past performance.",
+      "Set up profiles based on NIIN/NSN, part descriptions, set-asides, and other criteria. GPH automatically matches incoming solicitations from DIBBS, DLA, and SAM.gov against your profiles so relevant opportunities surface without manual searching.",
   },
   {
     icon: BellIcon,
-    title: "Real-Time DoD Alerts",
+    title: "Solicitation Match Alerts",
     description:
-      "Get instant notifications when new RFQs, RFPs, and solicitations are posted by DLA, Army, Navy, Air Force, and Marine Corps contracting offices.",
+      "Get notified when new solicitations match your bid-matching profiles. Weekly on Free, daily on Basic, immediate on Advanced — delivered by email so you never miss a window.",
   },
   {
     icon: DatabaseIcon,
     title: "NSN/NIIN Parts Database",
     description:
-      "Search millions of National Stock Numbers and NIINs with complete part data, cross-references, management codes, and linked solicitation history.",
+      "Search by NIIN, NSN, part description, solicitation number, contract number, and more. See complete part data, cross-references, management codes, and linked solicitation history — all in one record.",
   },
   {
     icon: ChartIcon,
     title: "CAGE Code Intelligence",
     description:
-      "Look up any CAGE or DoDAAC code to see associated contracts, award history, and active solicitations. Understand who is competing and winning.",
+      "Look up any vendor by CAGE code, entity name, or UEI to see associated contracts, award history, and active solicitations. Understand who is competing and winning.",
   },
   {
     icon: UsersIcon,
-    title: "Competitor Analysis",
+    title: "Award & Vendor Intelligence",
     description:
-      "Track which contractors are winning DoD awards in your space. See their CAGE codes, contract values, and bidding patterns across DLA and service branches.",
+      "See which vendors have won past awards for a specific part and which vendors have previously won on parts with open solicitations now — so you know who you're up against before you bid.",
   },
   {
     icon: SearchIcon,
-    title: "DIBBS & Solicitation Search",
+    title: "Unified Federal Data",
     description:
-      "Search and filter DIBBS solicitations, packaging requirements, and qualification criteria so you can respond to DoD opportunities faster and more accurately.",
+      "DIBBS, DLA, and SAM.gov solicitations aggregated into a single searchable platform. No more toggling between portals or running the same search three different ways.",
   },
 ];
 
@@ -53,10 +53,10 @@ export function Features() {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-bold text-secondary dark:text-foreground">
-            Everything You Need to Win DoD Bids
+            Everything You Need to Win Federal Contracts
           </h2>
           <p className="mt-4 text-lg text-muted dark:text-foreground/70">
-            Purpose-built tools for defense contractors working with DLA, DIBBS, and military service branches
+            Purpose-built tools for defense suppliers working with DLA, DIBBS, and military service branches
           </p>
         </div>
 

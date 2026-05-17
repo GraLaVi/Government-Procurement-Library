@@ -9,6 +9,7 @@ import { Footer } from "@/components/layout/Footer";
 import { PasswordRulesChecklist } from "@/components/auth/PasswordRulesChecklist";
 import { firstPasswordViolation, isPasswordStrong } from "@/lib/auth/passwordRules";
 import { useAuth } from "@/contexts/AuthContext";
+import { BETA_TERMS_VERSION, TOS_VERSION } from "@/components/billing/TermsAcceptanceModal";
 
 type ValidateResponse = {
   eligible: boolean;
@@ -125,6 +126,10 @@ function SignupPageContent() {
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Paid-tier signups need ToS acceptance before we can create a Stripe
+  // subscription. The checkbox is only rendered when the URL intent is
+  // paid; Free / beta paths don't surface it.
+  const [tosAccepted, setTosAccepted] = useState(false);
 
   const togglePlan = (key: string) => {
     setRequestedPlans((prev) =>
@@ -201,13 +206,63 @@ function SignupPageContent() {
       return;
     }
 
+    // Paid self-serve: the visitor picked a paid plan on /pricing and we
+    // ship them through Stripe Checkout to start the trial. /signup-and-
+    // checkout creates the customer + Stripe customer + Checkout session
+    // atomically; the price's `trial_period_days` + `payment_method_
+    // collection="if_required"` make Stripe skip the card form, so the
+    // visitor sees a "Start trial" confirmation page and lands back on
+    // /finalize-checkout signed in with the tier granted by the webhook.
+    if (signupPath === "self_serve" && intentIsPaid) {
+      if (!tosAccepted) {
+        setError("Please accept the Terms of Service and Privacy Policy to continue.");
+        return;
+      }
+      const priceIdNum = planParam ? parseInt(planParam, 10) : NaN;
+      const seatQuantity = seatsParam ? Math.max(1, parseInt(seatsParam, 10) || 1) : 1;
+      if (!Number.isFinite(priceIdNum)) {
+        setError("This plan link looks invalid. Please return to the pricing page and pick a plan again.");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        const resp = await fetch("/api/billing/signup-and-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cage_code: cageInput.trim().toUpperCase(),
+            email: email.trim().toLowerCase(),
+            password,
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            company_name: companyName.trim() || undefined,
+            price_id: priceIdNum,
+            seat_quantity: seatQuantity,
+            tos_version: TOS_VERSION,
+            tos_accepted_at: new Date().toISOString(),
+          }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.checkout_url) {
+          setError(data.error || "Failed to start your subscription. Please try again.");
+          setSubmitting(false);
+          return;
+        }
+        // Hand off to Stripe — full page navigation, not router.push.
+        window.location.href = data.checkout_url;
+      } catch {
+        setError("Unable to start your subscription. Please try again.");
+        setSubmitting(false);
+      }
+      return;
+    }
+
     setSubmitting(true);
 
-    // Self-serve path: posts to /api/billing/signup/customer. The proxy
-    // sets auth cookies on success; we then refresh the auth context and
-    // route the visitor based on which tier they picked on /pricing:
+    // Free / no-URL-intent self-serve: posts to /api/billing/signup/
+    // customer. The proxy sets auth cookies on success; we then refresh
+    // the auth context and route the visitor based on the URL intent:
     //   ?tier=free       → /dashboard (Free already comp-granted)
-    //   ?plan=X&seats=N  → /pricing?plan=X&seats=N to start checkout
     //   (no URL intent)  → /pricing (dev path picker case)
     if (signupPath === "self_serve") {
       try {
@@ -232,10 +287,6 @@ function SignupPageContent() {
         await refreshUser();
         if (intentIsFree) {
           router.push("/dashboard");
-        } else if (intentIsPaid) {
-          const qs = new URLSearchParams({ plan: planParam! });
-          if (seatsParam) qs.set("seats", seatsParam);
-          router.push(`/pricing?${qs.toString()}`);
         } else {
           router.push("/pricing");
         }
@@ -246,7 +297,16 @@ function SignupPageContent() {
       return;
     }
 
-    // Beta-application path (production default).
+    // Beta-application path (production default). setSubmitting(true) was
+    // called above; release it if we bail out on the consent check.
+    if (!tosAccepted) {
+      setError(
+        "Please accept the Terms of Service, Privacy Policy, and Beta Program Terms to continue.",
+      );
+      setSubmitting(false);
+      return;
+    }
+    const acceptedAtIso = new Date().toISOString();
     try {
       const resp = await fetch("/api/auth/beta-application", {
         method: "POST",
@@ -258,6 +318,10 @@ function SignupPageContent() {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           requested_plans: requestedPlans,
+          tos_version: TOS_VERSION,
+          tos_accepted_at: acceptedAtIso,
+          beta_terms_version: BETA_TERMS_VERSION,
+          beta_terms_accepted_at: acceptedAtIso,
         }),
       });
       const data = await resp.json();
@@ -620,6 +684,45 @@ function SignupPageContent() {
               </div>
               <PasswordRulesChecklist password={password} className="-mt-2" />
 
+              {/* ToS — required for paid signups because the next step
+                  creates a Stripe subscription in our name. Free / beta
+                  signups don't surface this; their flow doesn't open a
+                  Stripe subscription at signup time. */}
+              {intentIsPaid && (
+                <div className="border border-border rounded-lg p-3 bg-muted-light/40">
+                  <label className="flex gap-3 items-start cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tosAccepted}
+                      onChange={(e) => setTosAccepted(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded text-primary focus:ring-primary border-border"
+                    />
+                    <span className="text-sm text-foreground">
+                      I have read and agree to the{" "}
+                      <a
+                        href="/legal/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline hover:no-underline"
+                      >
+                        Terms of Service
+                      </a>{" "}
+                      and{" "}
+                      <a
+                        href="/legal/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline hover:no-underline"
+                      >
+                        Privacy Policy
+                      </a>
+                      . Your trial starts immediately after signup &mdash; no
+                      payment method is required up front.
+                    </span>
+                  </label>
+                </div>
+              )}
+
               {signupPath === "beta" && (
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
@@ -647,6 +750,52 @@ function SignupPageContent() {
                 </div>
               )}
 
+              {/* Beta-application legal acceptance — ToS, Privacy, and the
+                  Beta Program Terms must all be acknowledged before we
+                  record an application. */}
+              {signupPath === "beta" && (
+                <div className="border border-border rounded-lg p-3 bg-muted-light/40">
+                  <label className="flex gap-3 items-start cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={tosAccepted}
+                      onChange={(e) => setTosAccepted(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded text-primary focus:ring-primary border-border"
+                    />
+                    <span className="text-sm text-foreground">
+                      I have read and agree to the{" "}
+                      <a
+                        href="/legal/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline hover:no-underline"
+                      >
+                        Terms of Service
+                      </a>
+                      ,{" "}
+                      <a
+                        href="/legal/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline hover:no-underline"
+                      >
+                        Privacy Policy
+                      </a>
+                      , and{" "}
+                      <a
+                        href="/legal/beta_terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline hover:no-underline"
+                      >
+                        Beta Program Terms
+                      </a>
+                      . The Beta Program is free; no payment method is required.
+                    </span>
+                  </label>
+                </div>
+              )}
+
               <div className="flex justify-between gap-2 pt-2">
                 <Button
                   variant="outline"
@@ -666,15 +815,20 @@ function SignupPageContent() {
                   disabled={
                     submitting ||
                     !isPasswordStrong(password) ||
-                    password !== confirmPassword
+                    password !== confirmPassword ||
+                    ((intentIsPaid || signupPath === "beta") && !tosAccepted)
                   }
                 >
                   {submitting
                     ? signupPath === "self_serve"
-                      ? "Creating account…"
+                      ? intentIsPaid
+                        ? "Starting checkout…"
+                        : "Creating account…"
                       : "Submitting…"
                     : signupPath === "self_serve"
-                      ? "Create account"
+                      ? intentIsPaid
+                        ? "Start trial"
+                        : "Create account"
                       : "Submit application"}
                 </Button>
               </div>

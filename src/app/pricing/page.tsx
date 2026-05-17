@@ -9,6 +9,25 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { TermsAcceptanceModal } from "@/components/billing/TermsAcceptanceModal";
 import { clearPendingSignup, readPendingSignup } from "@/lib/signup/pendingSignup";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
+
+// Minimal shape of a Subscription row from /api/billing/subscriptions —
+// only the fields the pricing page needs to identify the user's current plan.
+type CurrentSub = {
+  status: string;
+  plan_kind: "product" | "product_group" | null;
+  plan_id: number | null;
+};
+
+// Statuses that count as "currently on this plan" for the pricing-page badge.
+// Must mirror the backend access-granting set in src/billing/grants.py:_GRANT_STATUSES.
+const CURRENT_SUB_STATUSES = new Set([
+  "trialing",
+  "active",
+  "past_due",
+  "unpaid",
+  "active_check",
+]);
 
 type PriceTier = {
   up_to_quantity: number | null; // null = infinity
@@ -152,6 +171,11 @@ function PricingPageContent() {
   const [checkoutPending, setCheckoutPending] = useState<number | null>(null);
   const [resendingVerification, setResendingVerification] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
+  // Logged-in user's currently-active subscription (if any). Used to badge
+  // their plan and route the card's CTA to the Stripe Customer Portal
+  // instead of starting a duplicate Checkout.
+  const [currentSub, setCurrentSub] = useState<CurrentSub | null>(null);
+  const [portalPending, setPortalPending] = useState(false);
   // Captured when the user clicks Subscribe; consumed by the ToS modal's
   // confirm handler to fire the actual checkout request. Null while no
   // modal is open.
@@ -216,6 +240,63 @@ function PricingPageContent() {
   useEffect(() => {
     loadPlans();
   }, [loadPlans]);
+
+  // Fetch the user's current subscription once we know they're logged in.
+  // Used to badge "Currently on this plan" and swap the Subscribe CTA for
+  // "Manage in portal" on the matching plan card.
+  useEffect(() => {
+    if (authLoading || !user) {
+      setCurrentSub(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetchWithAuth("/api/billing/subscriptions");
+        if (cancelled) return;
+        if (!resp.ok) {
+          setCurrentSub(null);
+          return;
+        }
+        const data = await resp.json();
+        if (!Array.isArray(data)) {
+          setCurrentSub(null);
+          return;
+        }
+        const active = (data as CurrentSub[]).find(
+          (s) => CURRENT_SUB_STATUSES.has(s.status) && s.plan_id !== null,
+        );
+        setCurrentSub(active || null);
+      } catch {
+        if (!cancelled) setCurrentSub(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user]);
+
+  const openPortal = async () => {
+    setPortalPending(true);
+    setError(null);
+    try {
+      const resp = await fetchWithAuth("/api/billing/portal-link");
+      const data = await resp.json();
+      if (!resp.ok || !data.portal_url) {
+        setError(data.error || "Failed to open the customer portal");
+        return;
+      }
+      window.location.href = data.portal_url;
+    } catch (err) {
+      console.error(err);
+      setError("An unexpected error occurred");
+    } finally {
+      setPortalPending(false);
+    }
+  };
+
+  const isCurrentPlan = (plan: Plan): boolean =>
+    !!currentSub && currentSub.plan_kind === plan.kind && currentSub.plan_id === plan.id;
 
   const resendVerification = async () => {
     if (!user?.email) return;
@@ -431,15 +512,20 @@ function PricingPageContent() {
         </div>
       )}
 
+      {/* Kicker — names the product family once, so each card heading
+          below can be just the tier name. Matches the landing page. */}
+      <div className="flex items-center justify-center gap-4 mb-6">
+        <span className="h-px w-8 bg-border" aria-hidden="true" />
+        <span className="text-xs font-semibold tracking-widest uppercase text-muted">
+          Federal Procurement Intelligence
+        </span>
+        <span className="h-px w-8 bg-border" aria-hidden="true" />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Free tier — auto-granted on signup, no Stripe involvement. */}
         <div className="bg-card-bg border border-border rounded-xl p-6 flex flex-col">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-xl font-semibold text-card-foreground">Parts & Vendor Library</h2>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-              Free
-            </span>
-          </div>
+          <h2 className="text-xl font-semibold text-card-foreground">Free</h2>
           <p className="text-muted text-sm mt-2">
             Get started with basic part lookup and vendor demographics — no card required.
           </p>
@@ -487,14 +573,15 @@ function PricingPageContent() {
             >
               {(() => {
                 const { family, tier } = splitFamilyTier(plan.name);
+                const onThisPlan = isCurrentPlan(plan);
                 return (
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 className="text-xl font-semibold text-card-foreground">
-                      {family}
+                      {tier || family}
                     </h2>
-                    {tier && (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                        {tier}
+                    {onThisPlan && (
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/20">
+                        Currently on this plan
                       </span>
                     )}
                   </div>
@@ -522,9 +609,14 @@ function PricingPageContent() {
                             : ` · ${seatCount} seat${seatCount === 1 ? "" : "s"}`}
                     </div>
                     {plan.default_trial_days && plan.default_trial_days > 0 && (
-                      <div className="text-xs text-primary mt-1">
-                        Free for {plan.default_trial_days} days, cancel anytime.
-                      </div>
+                      <>
+                        <div className="text-xs text-primary mt-1">
+                          Free for {plan.default_trial_days} days. No card required.
+                        </div>
+                        <div className="text-xs text-muted mt-0.5">
+                          Add a payment method before the trial ends to keep your access.
+                        </div>
+                      </>
                     )}
                   </>
                 ) : activePrice && isGraduated ? (
@@ -648,30 +740,88 @@ function PricingPageContent() {
               )}
 
               <div className="mt-auto">
-                <Button
-                  variant="primary"
-                  className="w-full"
-                  onClick={() => handleSubscribe(plan)}
-                  disabled={
-                    !activePrice ||
-                    isGraduated ||
-                    totalCents === null ||
-                    checkoutPending === plan.id ||
-                    (!!user && !user.email_verified)
-                  }
-                >
-                  {checkoutPending === plan.id
-                    ? "Starting checkout…"
-                    : !user
-                      ? "Sign up to subscribe"
-                      : !user.email_verified
-                        ? "Verify email to subscribe"
-                        : "Subscribe"}
-                </Button>
+                {isCurrentPlan(plan) ? (
+                  // User is already on this plan — sending them through Checkout
+                  // would create a duplicate subscription. Route to the Stripe
+                  // Customer Portal where they can add a card / change seats / cancel.
+                  <Button
+                    variant="primary"
+                    className="w-full"
+                    onClick={openPortal}
+                    disabled={portalPending}
+                  >
+                    {portalPending ? "Opening…" : "Manage in portal"}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    className="w-full"
+                    onClick={() => handleSubscribe(plan)}
+                    disabled={
+                      !activePrice ||
+                      isGraduated ||
+                      totalCents === null ||
+                      checkoutPending === plan.id ||
+                      (!!user && !user.email_verified)
+                    }
+                  >
+                    {checkoutPending === plan.id
+                      ? "Starting checkout…"
+                      : !user
+                        ? "Sign up to subscribe"
+                        : !user.email_verified
+                          ? "Verify email to subscribe"
+                          : "Subscribe"}
+                  </Button>
+                )}
               </div>
             </div>
           );
         })}
+
+      </div>
+
+      {/* Data Reports — bespoke engagements, no Stripe product. Rendered
+          outside the tier grid as a full-width horizontal panel (same
+          treatment as the landing page) so it reads as "different kind
+          of product" instead of competing as a 4th tier. */}
+      <div className="mt-6 rounded-xl border border-border bg-muted-light/40 dark:bg-card-bg p-6 lg:p-8">
+        <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8 items-start">
+          {/* Left: identity + pitch */}
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-semibold text-card-foreground">Data Reports</h2>
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                Quote
+              </span>
+            </div>
+            <p className="text-muted text-sm mt-2">
+              Bespoke procurement reports — sourcing, vendor, contract, or
+              data-pull engagements scoped to your needs.
+            </p>
+            <div className="mt-5">
+              <div className="text-3xl font-bold text-card-foreground">Custom pricing</div>
+              <div className="text-sm text-muted mt-1">Contact sales for a quote</div>
+            </div>
+          </div>
+
+          {/* Right: features + CTA */}
+          <div className="lg:border-l lg:border-border lg:pl-8">
+            <ul className="space-y-2 text-sm text-card-foreground/90">
+              <li>• One-time deliverables or recurring cadence</li>
+              <li>• Custom data extracts</li>
+              <li>• Engagement-scoped pricing</li>
+            </ul>
+            <div className="mt-6">
+              <Button
+                variant="primary"
+                href="mailto:sales@gphusa.com?subject=Custom%20Reports%20Quote%20Request"
+              >
+                Contact sales
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <p className="text-center text-sm text-muted mt-8">

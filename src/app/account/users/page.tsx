@@ -16,11 +16,12 @@ import { ManagedUser, CreateUserRequest, UpdateUserRequest, AssignedProduct, Ass
 // with id=4).
 const itemKey = (kind: "product" | "product_group", id: number): string => `${kind}:${id}`;
 
-// Available permission roles that can be assigned
+// Available permission roles that can be assigned. The "read_only"
+// permission isn't actually wired anywhere on the backend, so it's not
+// exposed in the customer UI — admins can grant Admin or User only.
 const PERMISSION_ROLES = [
   { value: "admin", label: "Admin", description: "Can manage users in the organization" },
   { value: "user", label: "User", description: "Standard user access" },
-  { value: "read_only", label: "Read Only", description: "View-only access" },
 ];
 
 // Helper to format role name for display
@@ -28,7 +29,6 @@ const formatRoleName = (role: string): string => {
   const roleLabels: Record<string, string> = {
     admin: "Admin",
     user: "User",
-    read_only: "Read Only",
   };
   return roleLabels[role] || role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 };

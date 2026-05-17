@@ -62,6 +62,21 @@ type Invoice = {
 
 type InvoiceListResponse = { invoices: Invoice[]; total: number };
 
+type PaymentMethodStatus = {
+  is_subscriber: boolean;
+  has_payment_method: boolean;
+  subscription_status: string | null;
+  trial_end: string | null;
+  days_remaining: number | null;
+};
+
+function trialDeadlineSentence(days: number | null | undefined): string {
+  if (days == null) return "soon";
+  if (days <= 0) return "today";
+  if (days === 1) return "tomorrow";
+  return `in ${days} days`;
+}
+
 function formatMoney(cents: number | null | undefined, currency: string | null | undefined): string {
   if (cents === null || cents === undefined) return "—";
   return new Intl.NumberFormat("en-US", {
@@ -174,6 +189,7 @@ function BillingPageContent() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [products, setProducts] = useState<AssignedProduct[]>([]);
+  const [pmStatus, setPmStatus] = useState<PaymentMethodStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [portalPending, setPortalPending] = useState(false);
@@ -188,11 +204,12 @@ function BillingPageContent() {
     setIsLoading(true);
     setError(null);
     try {
-      const [subsResp, invsResp, plansResp, prodsResp] = await Promise.all([
+      const [subsResp, invsResp, plansResp, prodsResp, pmResp] = await Promise.all([
         fetchWithAuth("/api/billing/subscriptions"),
         fetchWithAuth("/api/billing/invoices"),
         fetch("/api/billing/plans"),
         fetchWithAuth("/api/users/organization/products"),
+        fetchWithAuth("/api/billing/payment-method-status"),
       ]);
 
       if (!subsResp.ok) {
@@ -217,6 +234,10 @@ function BillingPageContent() {
       // Products is informational; if it fails, show the rest of the page anyway.
       if (prodsResp.ok) setProducts(await prodsResp.json());
       else setProducts([]);
+      // Payment-method/trial status drives the top banner + CTA swap. A failed
+      // fetch shouldn't block the page; just treat as non-subscriber.
+      if (pmResp.ok) setPmStatus(await pmResp.json());
+      else setPmStatus(null);
     } catch (err) {
       console.error(err);
       setError("An unexpected error occurred");
@@ -328,6 +349,11 @@ function BillingPageContent() {
   // needs it.) We just enable Portal whenever there's at least one sub.
   const hasStripeCustomer = subscriptions.length > 0;
 
+  // Trial-state banner drivers.
+  const isTrialing = pmStatus?.subscription_status === "trialing";
+  const trialingNoCard = !!pmStatus && pmStatus.is_subscriber && isTrialing && !pmStatus.has_payment_method;
+  const trialingWithCard = !!pmStatus && pmStatus.is_subscriber && isTrialing && pmStatus.has_payment_method;
+
   if (authLoading) return <div className="p-6">Loading...</div>;
 
   // Post-Checkout finalize for the self-serve signup-and-checkout flow:
@@ -349,6 +375,32 @@ function BillingPageContent() {
 
   return (
     <>
+      {/* Trial-state banner. Urgent (warning) for trialing customers without a
+          card on file — the trial will cancel at the deadline. Soft (info) for
+          trialing customers who already have a card — they're set, just
+          informing them when the first charge lands. */}
+      {trialingNoCard && (
+        <div className="mb-6 flex items-start justify-between gap-4 flex-wrap rounded-xl border border-warning/30 bg-warning/5 p-4">
+          <div className="text-sm">
+            <p className="font-medium text-foreground">
+              Your trial ends {trialDeadlineSentence(pmStatus?.days_remaining)}.
+            </p>
+            <p className="mt-1 text-muted">
+              Add a payment method to keep your access — without one, your subscription will cancel automatically when the trial ends.
+            </p>
+          </div>
+          <Button onClick={openPortal} disabled={portalPending}>
+            {portalPending ? "Opening…" : "Add Payment Method"}
+          </Button>
+        </div>
+      )}
+      {trialingWithCard && (
+        <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
+          <span className="font-medium">Trial ends {trialDeadlineSentence(pmStatus?.days_remaining)}</span>
+          <span className="text-muted"> — you&apos;ll be auto-charged once it does.</span>
+        </div>
+      )}
+
       {/* Breadcrumb — matches /account/users and /account/notifications. */}
       <nav className="mb-6">
         <ol className="flex items-center gap-2 text-sm">
@@ -380,9 +432,14 @@ function BillingPageContent() {
               {portalPending ? "Opening…" : "Manage payment method"}
             </Button>
           )}
-          <Button href="/pricing" variant="outline" size="sm">
-            View plans
-          </Button>
+          {/* Hide "View plans" for trialing customers without a card — picking
+              a plan there creates a duplicate Stripe subscription instead of
+              adding a card. Banner above directs them to the Customer Portal. */}
+          {!trialingNoCard && (
+            <Button href="/pricing" variant="outline" size="sm">
+              View plans
+            </Button>
+          )}
         </div>
       </div>
 

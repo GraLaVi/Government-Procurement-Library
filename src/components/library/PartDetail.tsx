@@ -42,7 +42,41 @@ import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
-import { resolvePartsTier, tierMeets } from "@/lib/library/tier";
+import { resolvePartsTier, tierMeets, type LibraryTier } from "@/lib/library/tier";
+import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
+
+// Module-scope CSV column specs for the part-detail tab exports. Kept
+// outside the component bodies so the parent-level export button
+// (rendered next to the tab strip) can reach them without prop-drilling
+// the column lists. Mirrors the on-screen columns; values are pre-
+// formatted strings/numbers so the resulting CSV is safe to open in
+// Excel/Sheets without further work.
+const PROCUREMENT_CSV_COLUMNS: CsvColumn<PartProcurementRecord>[] = [
+  { header: "Contract #", value: (r) => r.contract_number ?? "" },
+  { header: "Date", value: (r) => r.contract_date ?? "" },
+  { header: "CAGE", value: (r) => r.cage_code ?? "" },
+  { header: "Vendor", value: (r) => r.vendor_name ?? "" },
+  { header: "Qty", value: (r) => r.quantity ?? "" },
+  { header: "Unit Price", value: (r) => r.unit_price ?? "" },
+  { header: "Total", value: (r) => r.total_value ?? "" },
+];
+
+// "Buyer Contact" is rendered as a composite cell on screen (email +
+// phone). For CSV we split them so spreadsheets can filter on either.
+const SOLICITATIONS_CSV_COLUMNS: CsvColumn<PartSolicitation>[] = [
+  { header: "Close Date", value: (r) => r.close_date ?? "" },
+  { header: "Solicitation #", value: (r) => r.solicitation_number ?? "" },
+  { header: "Qty", value: (r) => r.quantity ?? "" },
+  { header: "Qty Unit", value: (r) => r.quantity_unit ?? "" },
+  { header: "Unit Price", value: (r) => r.unit_price ?? "" },
+  { header: "Estimated Value", value: (r) => r.estimated_value ?? "" },
+  { header: "Status", value: (r) => r.status ?? "" },
+  { header: "Agency", value: (r) => r.agency_code ?? "" },
+  { header: "Set-Aside", value: (r) => r.set_aside ?? "" },
+  { header: "Buyer Name", value: (r) => r.buyer_name ?? "" },
+  { header: "Buyer Email", value: (r) => r.buyer_email ?? "" },
+  { header: "Buyer Phone", value: (r) => r.buyer_phone ?? "" },
+];
 
 // ============================================================================
 // CodeTooltip Component - Shared tooltip for code definitions
@@ -712,13 +746,34 @@ export function PartDetail({ part }: PartDetailProps) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="px-4 pt-3">
+      {/* Tabs — paired with a right-side export button so the action
+          sits inline with the tab labels and doesn't push the table
+          content down. Only the procurement and solicitations tabs
+          export today; other tabs render nothing on the right. */}
+      <div className="px-4 pt-3 flex items-end justify-between gap-3">
         <Tabs
           tabs={tabs}
           activeTab={activeTab}
           onTabChange={handleTabChange}
         />
+        {activeTab === "procurement" && (
+          <ExportCsvButton
+            tier={tier}
+            rows={procurementRecords}
+            columns={PROCUREMENT_CSV_COLUMNS}
+            filename={`procurement-history-${part.nsn}`}
+            compact
+          />
+        )}
+        {activeTab === "solicitations" && !isFreeOnly && (
+          <ExportCsvButton
+            tier={tier}
+            rows={solicitations}
+            columns={SOLICITATIONS_CSV_COLUMNS}
+            filename={`solicitations-${part.nsn}`}
+            compact
+          />
+        )}
       </div>
 
       {/* Tab Panels */}
@@ -1146,9 +1201,6 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
 
   return (
     <div className="space-y-3">
-      <div className="text-xs text-muted">
-        Showing {records.length} of {totalCount} records
-      </div>
       <DataTable
         data={records}
         columns={columns}
@@ -1191,6 +1243,11 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
           </div>
         </Modal>
       )}
+      {/* Custom-reports upsell — sits below the table so it doesn't push
+          the data the user is looking at down the page. */}
+      <div className="flex justify-end">
+        <CustomReportLink />
+      </div>
     </div>
   );
 }
@@ -1415,9 +1472,6 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
 
   return (
     <div className="space-y-3">
-      <div className="text-xs text-muted">
-        Showing {solicitations.length} of {totalCount} solicitations
-      </div>
       <DataTable
         data={solicitations}
         columns={columns}
@@ -1460,6 +1514,11 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           </div>
         </Modal>
       )}
+      {/* Custom-reports upsell — below the table so the data stays at
+          the top of the panel. */}
+      <div className="flex justify-end">
+        <CustomReportLink />
+      </div>
     </div>
   );
 }
