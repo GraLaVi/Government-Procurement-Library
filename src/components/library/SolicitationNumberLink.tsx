@@ -178,12 +178,12 @@ export function SolicitationNumberLink({
                         >
                           {p.description || "—"}
                         </td>
-                        <td className="px-4 py-2 text-right text-foreground whitespace-nowrap">
+                        <td className="px-4 py-2 text-right text-foreground whitespace-nowrap font-mono tabular-nums">
                           {p.quantity != null
                             ? `${p.quantity.toLocaleString()}${p.unit_of_issue ? `/${p.unit_of_issue}` : ""}`
                             : p.unit_of_issue || "—"}
                         </td>
-                        <td className="px-4 py-2 text-right text-foreground whitespace-nowrap">
+                        <td className="px-4 py-2 text-right text-foreground whitespace-nowrap font-mono tabular-nums">
                           {formatCurrency(p.unit_price)}
                         </td>
                       </tr>

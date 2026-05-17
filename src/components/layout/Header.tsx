@@ -113,12 +113,10 @@ export function Header({ showAccountLink = true }: HeaderProps) {
     <header className="bg-card-bg border-b border-border">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">G</span>
-            </div>
-            <span className="text-xl font-bold text-card-foreground">GPH</span>
+          {/* Logo — nav-lockup: teal vertical bar + GPH wordmark.
+              See docs/plans/branding_guidelines.md. */}
+          <Link href="/" className="nav-lockup" aria-label="GPH home">
+            <span className="wordmark text-xl text-card-foreground">GPH</span>
           </Link>
 
           {/* Mobile hamburger button */}

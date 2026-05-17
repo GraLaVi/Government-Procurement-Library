@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Figtree, Roboto_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SessionExpiredProvider } from "@/contexts/SessionExpiredContext";
@@ -7,14 +7,23 @@ import { SessionExpiredModal } from "@/components/auth/SessionExpiredModal";
 import { ConsentProvider } from "@/contexts/ConsentContext";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Brand display + body. Figtree handles the wordmark (700 with tight overlap),
+// headings (600), and body/UI (400, 500) per docs/plans/branding_guidelines.md.
+const figtree = Figtree({
+  variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Monospace for structured data fields: NSNs, CAGE codes, contract numbers,
+// $ amounts, quantities. Apply via `.data-field` utility class.
+// Loading 400/500/600/700 so common Tailwind weight modifiers
+// (`font-medium`, `font-semibold`, `font-bold`) render the real cut rather
+// than a browser-synthesized "faux bold" that looks blurry/3D.
+const robotoMono = Roboto_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -44,7 +53,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${figtree.variable} ${robotoMono.variable} antialiased`}
       >
         <ConsentProvider>
           <ThemeProvider>

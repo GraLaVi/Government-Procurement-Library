@@ -25,19 +25,16 @@ const footerLinks = {
 
 export function Footer() {
   return (
-    <footer className="bg-secondary dark:bg-[#1C2C54] text-white">
+    <footer className="bg-[#0F1D2F] text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">G</span>
-              </div>
-              <span className="text-xl font-bold">GPH</span>
+            <Link href="/" className="nav-lockup mb-4" aria-label="GPH home">
+              <span className="wordmark text-xl text-white">GPH</span>
             </Link>
             <p className="text-white/70 text-sm">
-              Your DoD Procurement Platform
+              Your Federal Procurement Intelligence platform
             </p>
             <address className="not-italic text-white/70 text-sm mt-3">
               <span className="whitespace-nowrap">Government Procurement Hub LLC</span>

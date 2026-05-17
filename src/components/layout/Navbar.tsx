@@ -113,12 +113,10 @@ export function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-card-bg/95 backdrop-blur-sm border-b border-border">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">G</span>
-            </div>
-            <span className="text-xl font-bold text-card-foreground">GPH</span>
+          {/* Logo — nav-lockup: teal vertical bar + GPH wordmark (Figtree 700,
+              -10.8% tracking). See docs/plans/branding_guidelines.md. */}
+          <Link href="/" className="nav-lockup" aria-label="GPH home">
+            <span className="wordmark text-xl text-card-foreground">GPH</span>
           </Link>
 
           {/* Desktop Navigation */}
