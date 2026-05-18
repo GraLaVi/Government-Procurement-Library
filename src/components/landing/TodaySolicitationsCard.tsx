@@ -61,18 +61,15 @@ export function TodaySolicitationsCard() {
           value: formatCurrency(stats.dibbs_est_value_usd),
         },
         {
-          label: "SAM.gov estimated value",
-          sublabel: "Added today",
-          value: formatCurrency(stats.sam_dod_est_value_usd),
+          label: "Awarded today",
+          sublabel: "Federal contracts",
+          value: formatCurrency(stats.awards_today_usd),
         },
       ]
     : [];
 
   return (
-    <>
-      {/* Bottom padding leaves clearance for the floating "Awarded today" stat,
-          which sits at -bottom-4 -left-4 and would otherwise overlap the last row. */}
-      <div className="relative bg-white dark:bg-card-bg rounded-2xl shadow-2xl shadow-primary/10 border border-border p-6 lg:p-8 pb-20 lg:pb-24">
+    <div className="relative bg-white dark:bg-card-bg rounded-2xl shadow-2xl shadow-primary/10 border border-border p-6 lg:p-8">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-secondary dark:text-card-foreground">
@@ -120,21 +117,6 @@ export function TodaySolicitationsCard() {
                 </div>
               ))}
         </div>
-      </div>
-
-      {/* Floating awards-today stat — replaces the static "$4.2B+ DoD Solicitations Tracked" */}
-      <div className="absolute -bottom-4 -left-4 bg-white dark:bg-card-bg rounded-xl shadow-lg border border-border p-4">
-        <div className="text-2xl font-bold text-primary">
-          {isLoading || !stats ? (
-            <span className="inline-block h-7 w-20 bg-muted/30 rounded animate-pulse align-middle" />
-          ) : (
-            formatCurrency(stats.awards_today_usd)
-          )}
-        </div>
-        <div className="text-xs text-muted dark:text-card-foreground/70">
-          Awarded today so far
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
