@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
@@ -62,6 +63,30 @@ export default function BidMatchingPage() {
   const [isLoadingDates, setIsLoadingDates] = useState(true);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasProfiles, setHasProfiles] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/bid-matching/profiles", {
+          credentials: "include",
+        });
+        if (cancelled) return;
+        if (!res.ok) {
+          setHasProfiles(null);
+          return;
+        }
+        const data = await res.json();
+        setHasProfiles(Array.isArray(data) && data.length > 0);
+      } catch {
+        if (!cancelled) setHasProfiles(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Fetch date tree on mount
   useEffect(() => {
@@ -177,16 +202,41 @@ export default function BidMatchingPage() {
           <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
         </div>
       ) : dateTree.length === 0 ? (
-        /* No match history */
+        /* Empty state — branch on whether the user has any profile yet so the
+           CTA points to the right next step (set one up vs. wait for the engine). */
         <div className="text-center py-16 bg-card-bg rounded-lg border border-border">
           <svg className="mx-auto h-16 w-16 text-muted-foreground/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <h2 className="mt-4 text-lg font-semibold text-foreground">No match history yet</h2>
-          <p className="mt-2 text-muted-foreground max-w-md mx-auto">
-            Once the bid-matching engine finds solicitations that match your profiles, they will appear here.
-            Make sure you have active profiles configured in your account settings.
-          </p>
+          {hasProfiles === false ? (
+            <>
+              <h2 className="mt-4 text-lg font-semibold text-foreground">No bid-matching profile yet</h2>
+              <p className="mt-2 text-muted-foreground max-w-md mx-auto">
+                Create a profile to tell the bid-matching engine which solicitations
+                you care about — by NIIN, FSC, CAGE code, set-aside, and more.
+              </p>
+              <Link
+                href="/account/bidmatching"
+                className="mt-6 inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Set up a profile →
+              </Link>
+            </>
+          ) : (
+            <>
+              <h2 className="mt-4 text-lg font-semibold text-foreground">No match history yet</h2>
+              <p className="mt-2 text-muted-foreground max-w-md mx-auto">
+                Once the bid-matching engine finds solicitations that match your profiles, they will appear here.
+                Make sure you have active profiles configured in your account settings.
+              </p>
+              <Link
+                href="/account/bidmatching"
+                className="mt-6 inline-flex items-center text-sm font-medium text-primary hover:underline"
+              >
+                Manage profiles →
+              </Link>
+            </>
+          )}
         </div>
       ) : (
         /* Two-column layout: date panel + results */

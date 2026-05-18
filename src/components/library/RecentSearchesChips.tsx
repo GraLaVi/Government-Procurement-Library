@@ -35,7 +35,7 @@ export function RecentSearchesChips({ actions, onSelectSearch, onDelete, onToggl
           <span className="text-xs text-muted">({actions.length})</span>
         )}
       </div>
-      <div className="flex flex-wrap gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+      <div className="flex flex-wrap gap-1.5 overflow-x-auto py-1 -mx-1 px-1">
         {actions.map((action) => {
           // Try to determine if this is a vendor or parts search
           const actionData = action.action_data as VendorSearchActionData | PartsSearchActionData;
@@ -57,13 +57,27 @@ export function RecentSearchesChips({ actions, onSelectSearch, onDelete, onToggl
           }
 
           const isPinned = !!action.is_pinned;
+          // Compact chip with a hairline ring so each item still reads as
+          // a discrete pill. Rings overlay (don't take layout space), so
+          // chips stay the same physical size as the borderless variant.
+          // Pinned chips carry a low-opacity brand tint and a matching
+          // teal ring.
+          //
+          // Previous "bulky" styling preserved for one-line revert
+          // (per user request 2026-05-18). To restore, swap the
+          // className expression below with:
+          //   `group relative inline-flex items-center gap-1 border rounded-md pl-1.5 pr-0.5 py-0.5 text-[11px] transition-colors cursor-pointer ${
+          //     isPinned
+          //       ? "bg-primary/10 border-primary/30"
+          //       : "bg-muted-light dark:bg-muted-light hover:bg-muted/5 dark:hover:bg-muted/15 border-border"
+          //   }`
           return (
             <div
               key={action.id}
-              className={`group relative inline-flex items-center gap-1 border rounded-md pl-1.5 pr-0.5 py-0.5 text-[11px] transition-colors cursor-pointer ${
+              className={`group relative inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] transition-colors cursor-pointer ${
                 isPinned
-                  ? "bg-primary/10 border-primary/30"
-                  : "bg-muted-light dark:bg-muted-light hover:bg-muted/5 dark:hover:bg-muted/15 border-border"
+                  ? "bg-primary/10 ring-1 ring-primary/25 hover:bg-primary/15"
+                  : "text-foreground ring-1 ring-border/40 hover:bg-muted-light/70 hover:ring-border/70"
               }`}
             >
               {isPinned && (

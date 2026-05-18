@@ -13,6 +13,7 @@ import {
 } from "@/components/analytics";
 import { QuickSearchLauncher } from "@/components/dashboard/QuickSearchLauncher";
 import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
+import { PaymentMethodAlert } from "@/components/dashboard/PaymentMethodAlert";
 import { RecentSearches } from "@/components/dashboard/RecentSearches";
 
 export default function DashboardPage() {
@@ -36,20 +37,13 @@ export default function DashboardPage() {
   return (
     <>
       {/* Welcome strip */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Welcome back, {userName}
-          </h1>
-          <p className="text-muted mt-1">
-            Here&apos;s what&apos;s happening with your government contract opportunities.
-          </p>
-        </div>
-        {showAdvanced && (
-          <Button href="/analytics" variant="outline" size="sm">
-            View Full Analytics →
-          </Button>
-        )}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-foreground">
+          Welcome back, {userName}
+        </h1>
+        <p className="text-muted mt-1">
+          Here&apos;s what&apos;s happening with your government contract opportunities.
+        </p>
       </div>
 
       {showResubscribe && <ResubscribePrompt />}
@@ -100,6 +94,7 @@ function ResubscribePrompt() {
 function BasicDashboard() {
   return (
     <div className="space-y-6">
+      <PaymentMethodAlert />
       <QuickSearchLauncher />
       <OnboardingChecklist />
       <RecentSearches />
@@ -114,7 +109,9 @@ interface FullDashboardProps {
 function FullDashboard({ business }: FullDashboardProps) {
   return (
     <div className="space-y-6">
+      <PaymentMethodAlert />
       <QuickSearchLauncher />
+      <OnboardingChecklist />
 
       {business.isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -136,10 +133,11 @@ function FullDashboard({ business }: FullDashboardProps) {
       ) : business.data ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <KPICard
-            label="Open Matched Solicitations"
+            label="Open Solicitations"
             value={formatNumber(business.data.open_solicitations_count)}
             subtitle="Matching your manufactured parts"
             href="/analytics#your-business"
+            tooltip="Based on your Procurement History, items sold by your CAGE, this is the number of open solicitations."
           />
           <KPICard
             label="Historical Contract Value"

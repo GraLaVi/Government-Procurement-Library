@@ -235,6 +235,42 @@ export default function BidMatchingPage() {
     }
   };
 
+  const handleToggleActive = async (profile: BidMatchProfile) => {
+    const next = !profile.is_active;
+    // Optimistic update so the badge flips immediately; rollback on failure.
+    setProfiles((prev) =>
+      prev.map((p) =>
+        p.profile_id === profile.profile_id ? { ...p, is_active: next } : p,
+      ),
+    );
+    try {
+      const res = await fetch(`/api/bid-matching/profiles/${profile.profile_id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: next }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error || "Failed to update profile status");
+        setProfiles((prev) =>
+          prev.map((p) =>
+            p.profile_id === profile.profile_id ? { ...p, is_active: !next } : p,
+          ),
+        );
+        return;
+      }
+      setToast(next ? "Profile activated" : "Profile deactivated");
+    } catch {
+      setError("An unexpected error occurred");
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.profile_id === profile.profile_id ? { ...p, is_active: !next } : p,
+        ),
+      );
+    }
+  };
+
   const handleDelete = async (profileId: number) => {
     if (!confirm("Are you sure you want to delete this profile? All conditions will be removed.")) return;
     try {
@@ -386,16 +422,31 @@ export default function BidMatchingPage() {
                 </p>
               )}
             </div>
-            {access.tier !== "advanced" && (
-              <Link
-                href="/pricing"
-                className="text-xs text-primary hover:underline whitespace-nowrap"
-              >
-                {access.has_access
-                  ? "Need more? Upgrade to Advanced →"
-                  : "View plans →"}
-              </Link>
-            )}
+            {access.tier !== "advanced" &&
+              (() => {
+                if (!access.has_access) {
+                  return (
+                    <Link
+                      href="/pricing"
+                      className="text-xs text-primary hover:underline whitespace-nowrap"
+                    >
+                      View plans →
+                    </Link>
+                  );
+                }
+                const atCap =
+                  access.limits.max_profiles !== null &&
+                  access.usage.profile_count >= access.limits.max_profiles;
+                if (!atCap) return null;
+                return (
+                  <Link
+                    href="/pricing"
+                    className="text-xs text-primary hover:underline whitespace-nowrap"
+                  >
+                    Need more? Upgrade to Advanced →
+                  </Link>
+                );
+              })()}
           </div>
           {access.has_access &&
             access.limits.max_profiles !== null &&
@@ -480,6 +531,13 @@ export default function BidMatchingPage() {
                 </div>
                 {isAdmin && (
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleActive(profile)}
+                    >
+                      {profile.is_active ? "Deactivate" : "Activate"}
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => openEditModal(profile)}>
                       Edit
                     </Button>

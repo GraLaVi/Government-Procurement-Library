@@ -75,11 +75,18 @@ export interface DataTableConfig {
 export const dataTableConfig: DataTableConfig = {
   styling: {
     stripedRows: true,
-    stripeClass: "bg-muted-light",
+    // Soft neutral stripe — purpose is row-scanning, not branding,
+    // so it stays subtle and out of the way of the data.
+    stripeClass: "bg-muted-light/40",
     hoverHighlight: true,
-    hoverClass: "hover:bg-muted-light",
+    // Faint teal wash on hover — signals interactivity in the brand color
+    // without competing with the header.
+    hoverClass: "hover:bg-primary/8",
     compactMode: true,
-    headerBgClass: "bg-muted-light",
+    // Header anchors the table in the brand. Pale teal tint over the
+    // card background; brand-token-driven so it follows any future
+    // primary-color tweaks automatically.
+    headerBgClass: "bg-primary/10",
     borderClass: "border-border",
   },
 

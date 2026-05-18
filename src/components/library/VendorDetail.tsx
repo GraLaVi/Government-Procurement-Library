@@ -473,10 +473,10 @@ function DemographicsPanel({
   return (
     <div className="space-y-4">
       {/* Hero Card - Company Name */}
-      <div className="bg-gradient-to-br from-blue-500/5 to-blue-600/10 rounded-xl p-4 border border-blue-500/10">
+      <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/15">
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-blue-500/10 rounded-lg flex-shrink-0">
-            <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+            <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m2.25-18h15.75m-15.75 0v3.75M21 12H10.5m10.5 4.5H10.5M21 18H10.5m-7.5-6.75V12m0 4.5v1.5m0-6V9.75A2.25 2.25 0 019 7.5h1.5A2.25 2.25 0 0112.75 9.75V12m-3.75 3.75V18A2.25 2.25 0 009 20.25H7.5A2.25 2.25 0 015.25 18v-2.25" />
             </svg>
           </div>
@@ -492,18 +492,18 @@ function DemographicsPanel({
             )}
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                <span className="font-mono font-medium text-blue-600">{vendor.cage_code}</span>
+                <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                <span className="font-mono font-medium text-primary">{vendor.cage_code}</span>
               </div>
               {vendor.small_business === true && (
                 <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                  <span className="text-green-700 font-medium">Small Business</span>
+                  <div className="w-1.5 h-1.5 bg-success rounded-full"></div>
+                  <span className="text-success font-medium">Small Business</span>
                 </div>
               )}
               {vendor.sam_status && (
                 <div className="flex items-center gap-1.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${vendor.sam_status === 'Active' ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                  <div className={`w-1.5 h-1.5 rounded-full ${vendor.sam_status === 'Active' ? 'bg-success' : 'bg-warning'}`}></div>
                   <span className="text-muted font-medium">{formatSamStatus(vendor.sam_status)}</span>
                 </div>
               )}
@@ -528,7 +528,7 @@ function DemographicsPanel({
             {identifiers.map((item) => (
               <div key={item.label} className="flex items-center justify-between">
                 <span className="text-xs text-muted font-medium">{item.label}</span>
-                <span className="text-xs font-mono font-semibold text-blue-600 bg-blue-600/5 px-2 py-1 rounded">
+                <span className="text-xs font-mono font-semibold text-primary bg-primary/5 px-2 py-1 rounded">
                   {item.value}
                 </span>
               </div>
@@ -555,7 +555,7 @@ function DemographicsPanel({
                     href={item.value.startsWith("http") ? item.value : `https://${item.value}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium text-right max-w-[220px] break-words"
+                    className="text-xs text-primary hover:text-primary/80 hover:underline font-medium text-right max-w-[220px] break-words"
                   >
                     {item.value}
                   </a>
@@ -584,8 +584,8 @@ function DemographicsPanel({
               <div key={item.label} className="flex items-center justify-between gap-2">
                 <span className="text-xs text-muted font-medium">{item.label}</span>
                 <span className={`text-xs font-medium ${
-                  item.label === "SAM Status" && item.value === "Active" ? "text-green-700" :
-                  item.label === "Exclusion" && item.value === "Excluded" ? "text-red-700" :
+                  item.label === "SAM Status" && item.value === "Active" ? "text-success" :
+                  item.label === "Exclusion" && item.value === "Excluded" ? "text-error" :
                   "text-foreground"
                 }`}>
                   {item.value}

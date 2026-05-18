@@ -18,13 +18,6 @@ const shortcuts: ShortcutConfig[] = [
     buildHref: (q) => `/library/parts?search_type=nsn_niin&q=${encodeURIComponent(q)}`,
   },
   {
-    id: "mfg",
-    label: "Search by manufacturer part number",
-    placeholder: "e.g. AN6227-1",
-    buildHref: (q) =>
-      `/library/parts?search_type=mfg_part_number&q=${encodeURIComponent(q)}`,
-  },
-  {
     id: "cage",
     label: "Look up a vendor by CAGE",
     placeholder: "e.g. 0WMA8",
@@ -34,7 +27,7 @@ const shortcuts: ShortcutConfig[] = [
 
 export function QuickSearchLauncher() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {shortcuts.map((s) => (
         <ShortcutCard key={s.id} shortcut={s} />
       ))}

@@ -939,7 +939,7 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
               content={content}
               codeType={codeType}
             >
-              <span className="text-blue-600 underline decoration-dotted hover:decoration-solid">
+              <span className="text-primary underline decoration-dotted hover:decoration-solid">
                 {displayValue}
               </span>
             </CodeTooltip>
@@ -969,10 +969,10 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
   return (
     <div className="space-y-4">
       {/* Hero Card - Part Description */}
-      <div className="bg-gradient-to-br from-blue-500/5 to-blue-600/10 rounded-xl p-4 border border-blue-500/10">
+      <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/15">
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-blue-500/10 rounded-lg flex-shrink-0">
-            <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+            <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m18 0A2.25 2.25 0 0119.5 19.5h-15A2.25 2.25 0 012.25 17.25m18 0V9a2.25 2.25 0 00-2.25-2.25h-15A2.25 2.25 0 002.25 9v8.25" />
             </svg>
           </div>
@@ -982,8 +982,8 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
             </h2>
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                <span className="font-mono font-medium text-blue-600">{formatNSN(part.nsn)}</span>
+                <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                <span className="font-mono font-medium text-primary">{formatNSN(part.nsn)}</span>
               </div>
             </div>
           </div>
@@ -1006,7 +1006,7 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
             {identifiers.map((item) => (
               <div key={item.label} className="flex items-center justify-between">
                 <span className="text-xs text-muted font-medium">{item.label}</span>
-                <span className="text-xs font-mono font-semibold text-blue-600 bg-blue-600/5 px-2 py-1 rounded">
+                <span className="text-xs font-mono font-semibold text-primary bg-primary/5 px-2 py-1 rounded">
                   {item.value}
                 </span>
               </div>

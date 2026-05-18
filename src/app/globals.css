@@ -6,16 +6,16 @@
 
 /* =====================================================================
    GPH brand tokens — see docs/plans/branding_guidelines.md
-   Identity color is teal (#0D9488), consistent across both modes.
+   Identity color is teal (#0F8B7C), consistent across both modes.
    Token names below are kept stable (e.g., --primary, --card-bg, --muted)
    so existing Tailwind utility classes site-wide keep working; only the
    values change. Renaming tokens is a v2 cleanup.
    ===================================================================== */
 :root {
   /* Brand accent (teal) — primary interactive color */
-  --primary: #0D9488;
-  --primary-hover: #0F766E;
-  --primary-light: #CCFBF1;
+  --primary: #0F8B7C;
+  --primary-hover: #116D62;
+  --primary-light: #CDFBEC;
 
   /* Secondary — deep ink, used for body & headings in light mode */
   --secondary: #1E293B;
@@ -42,14 +42,14 @@
 }
 
 :root[data-theme="dark"] {
-  --primary: #0D9488;
-  --primary-hover: #14B8A6;
-  --primary-light: #155E75;
+  --primary: #0F8B7C;
+  --primary-hover: #16B19A;
+  --primary-light: #155E68;
 
   --secondary: #F3F4F6;
 
   --accent: #2DD4BF;
-  --accent-light: #155E75;
+  --accent-light: #155E68;
 
   --background: #0F1D2F;
   --foreground: #E2E8F0;
@@ -126,10 +126,10 @@ body {
 }
 .nav-lockup::before {
   content: '';
-  width: 3px;
+  width: 4px;
   height: 1.2em;
   background: var(--primary);
-  border-radius: 1.5px;
+  border-radius: 2px;
   flex-shrink: 0;
 }
 

@@ -61,11 +61,8 @@ function VerifyEmailContent() {
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">G</span>
-            </div>
-            <span className="text-2xl font-bold text-secondary">GPH</span>
+          <Link href="/" className="nav-lockup" aria-label="GPH home">
+            <span className="wordmark text-3xl text-secondary">GPH</span>
           </Link>
         </div>
 
@@ -188,11 +185,8 @@ function VerifyEmailLoading() {
     <div className="min-h-screen bg-muted-light flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">G</span>
-            </div>
-            <span className="text-2xl font-bold text-secondary">GPH</span>
+          <Link href="/" className="nav-lockup" aria-label="GPH home">
+            <span className="wordmark text-3xl text-secondary">GPH</span>
           </Link>
         </div>
         <div className="bg-white rounded-xl border border-border p-8 text-center">

@@ -11,8 +11,9 @@ const highlights = [
 export function Hero() {
   return (
     <section className="relative pt-40 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-light via-white to-accent-light opacity-50" />
+      {/* Background gradient — soft teal glow entering from the top-left
+          only, fading to clean white across the rest of the hero. */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-light/35 via-white to-white" />
 
       {/* Decorative shapes */}
       <div className="absolute top-20 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
@@ -29,8 +30,10 @@ export function Hero() {
             </div>
 
             <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold text-secondary dark:text-foreground leading-tight">
-              Federal Procurement Intelligence.{" "}
-              <span className="text-primary">Find Every Opportunity.</span>
+              Federal Procurement Intelligence.
+              <span className="block mt-3 text-2xl sm:text-3xl lg:text-4xl font-medium italic text-primary">
+                Find every opportunity.
+              </span>
             </h1>
             <p className="mt-6 text-lg sm:text-xl text-muted dark:text-foreground/70 leading-relaxed">
               Search DLA and DIBBS opportunities, track military branch RFQs,

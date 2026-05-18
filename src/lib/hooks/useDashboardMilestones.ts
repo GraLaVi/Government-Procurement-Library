@@ -1,20 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRecentActions } from '@/lib/hooks/useRecentActions';
+import { usePaymentMethodStatus } from '@/lib/hooks/usePaymentMethodStatus';
 import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
 
 export interface DashboardMilestone {
-  id: 'search_part' | 'search_vendor' | 'add_payment_method';
+  id:
+    | 'search_part'
+    | 'search_vendor'
+    | 'add_payment_method'
+    | 'create_bid_profile';
   label: string;
   href: string;
   completed: boolean;
 }
 
-interface PaymentMethodStatus {
-  is_subscriber: boolean;
-  has_payment_method: boolean;
-  subscription_status: string | null;
-  trial_end: string | null;
-  days_remaining: number | null;
+interface BidProfileSummary {
+  is_active: boolean;
+}
+
+// "has bid-matching access AND no active profile" → show the milestone.
+// 403/network error from the profile list = treat as "no access" so the
+// nudge stays hidden for users who can't use the feature anyway.
+interface BidProfileGate {
+  hasAccess: boolean;
+  hasActiveProfile: boolean;
 }
 
 function trialDeadlineSuffix(days: number | null | undefined): string {
@@ -39,43 +48,34 @@ export function useDashboardMilestones(): {
 } {
   const parts = useRecentActions('parts_search');
   const vendors = useRecentActions('vendor_search');
+  const { status: pmStatus, isLoading: pmLoading } = usePaymentMethodStatus();
 
-  const [pmStatus, setPmStatus] = useState<PaymentMethodStatus | null>(null);
-  const [pmLoading, setPmLoading] = useState(true);
+  const [bidGate, setBidGate] = useState<BidProfileGate | null>(null);
+  const [bidLoading, setBidLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetchWithAuth('/api/billing/payment-method-status', {
+        const response = await fetchWithAuth('/api/bid-matching/profiles', {
           credentials: 'include',
         });
         if (cancelled) return;
         if (!response.ok) {
-          // Unauthenticated / non-subscriber / server hiccup — treat as
-          // "don't show the nudge" rather than surfacing an error.
-          setPmStatus({
-            is_subscriber: false,
-            has_payment_method: false,
-            subscription_status: null,
-            trial_end: null,
-            days_remaining: null,
-          });
+          // 403 = no bid-matching access (free tier, etc.) — hide milestone.
+          setBidGate({ hasAccess: false, hasActiveProfile: false });
           return;
         }
-        const data: PaymentMethodStatus = await response.json();
-        setPmStatus(data);
+        const data: BidProfileSummary[] = await response.json();
+        setBidGate({
+          hasAccess: true,
+          hasActiveProfile: Array.isArray(data) && data.some((p) => p.is_active),
+        });
       } catch {
         if (cancelled) return;
-        setPmStatus({
-          is_subscriber: false,
-          has_payment_method: false,
-          subscription_status: null,
-          trial_end: null,
-          days_remaining: null,
-        });
+        setBidGate({ hasAccess: false, hasActiveProfile: false });
       } finally {
-        if (!cancelled) setPmLoading(false);
+        if (!cancelled) setBidLoading(false);
       }
     })();
     return () => {
@@ -107,12 +107,22 @@ export function useDashboardMilestones(): {
         completed: false,
       });
     }
+
+    if (bidGate && bidGate.hasAccess && !bidGate.hasActiveProfile) {
+      base.push({
+        id: 'create_bid_profile',
+        label: 'Set up a bid-matching profile',
+        href: '/account/bidmatching',
+        completed: false,
+      });
+    }
     return base;
-  }, [parts.actions, vendors.actions, pmStatus]);
+  }, [parts.actions, vendors.actions, pmStatus, bidGate]);
 
   return {
     milestones,
     allComplete: milestones.every((m) => m.completed),
-    isLoading: parts.isLoading || vendors.isLoading || pmLoading,
+    isLoading:
+      parts.isLoading || vendors.isLoading || pmLoading || bidLoading,
   };
 }

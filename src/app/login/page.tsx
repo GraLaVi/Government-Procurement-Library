@@ -34,9 +34,13 @@ function LoginForm() {
   // Validate redirect parameter - don't allow redirecting to auth pages to prevent loops
   const rawRedirect = searchParams.get("redirect");
   const authRoutes = [AUTH_CONFIG.ROUTES.LOGIN, '/forgot-password', '/trial'];
-  const redirect = rawRedirect && !authRoutes.includes(rawRedirect) 
-    ? rawRedirect 
-    : AUTH_CONFIG.ROUTES.ACCOUNT;
+  // Default landing after sign-in is /dashboard. Honor ?redirect=… if present
+  // (e.g., session-expired flow that wants to bounce the user back to where
+  // they were); fall back to /dashboard for the plain "go to /login + sign
+  // in" path.
+  const redirect = rawRedirect && !authRoutes.includes(rawRedirect)
+    ? rawRedirect
+    : '/dashboard';
 
   // Redirect if already authenticated (with timeout fallback)
   useEffect(() => {
@@ -135,12 +139,9 @@ function LoginForm() {
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-2xl" />
 
         <div className="relative z-10 flex flex-col justify-center px-16 xl:px-24">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">G</span>
-            </div>
-            <span className="text-2xl font-bold text-white">GPH</span>
+          {/* Logo — brand nav-lockup (teal bar + wordmark, see .nav-lockup in globals.css) */}
+          <Link href="/" className="nav-lockup text-4xl text-white mb-12">
+            <span className="wordmark">GPH</span>
           </Link>
 
           <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight">
@@ -167,13 +168,10 @@ function LoginForm() {
       {/* Right side - Login Form */}
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-md">
-          {/* Mobile Logo */}
+          {/* Mobile Logo — brand nav-lockup */}
           <div className="lg:hidden mb-8 text-center">
-            <Link href="/" className="inline-flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">G</span>
-              </div>
-              <span className="text-xl font-bold text-secondary">GPH</span>
+            <Link href="/" className="nav-lockup text-xl text-secondary">
+              <span className="wordmark">GPH</span>
             </Link>
           </div>
 

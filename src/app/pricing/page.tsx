@@ -63,6 +63,11 @@ type Plan = {
   // pricing page pre-selects this price instead of the cheapest interval.
   default_price_id: number | null;
   prices: Price[];
+  // From products/product_groups.feature_limits JSONB (set in admin
+  // /billing/settings). When set, clamp the seat picker at this value and
+  // surface a "Contact sales" CTA. null = uncapped.
+  max_seat_count: number | null;
+  max_customer_users: number | null;
 };
 
 function formatMoney(cents: number, currency: string): string {
@@ -565,7 +570,15 @@ function PricingPageContent() {
           const isTiered = activePrice?.billing_scheme === "tiered";
           const isVolume = isTiered && activePrice?.tiers_mode === "volume";
           const isGraduated = isTiered && activePrice?.tiers_mode === "graduated";
-          const maxSeats = activePrice ? maxPickerSeats(activePrice) : 1;
+          // Picker max is the tier-derived bound, clamped further by the
+          // admin-configured max_seat_count (feature_limits.max_seat_count).
+          // When at the cap we render a "Contact sales" CTA next to the picker.
+          const tierMax = activePrice ? maxPickerSeats(activePrice) : 1;
+          const planSeatCap = plan.max_seat_count ?? null;
+          const maxSeats = planSeatCap != null
+            ? Math.min(tierMax, planSeatCap)
+            : tierMax;
+          const atSeatCap = planSeatCap != null && seatCount >= planSeatCap;
           return (
             <div
               key={`${plan.kind}-${plan.id}`}
@@ -705,6 +718,17 @@ function PricingPageContent() {
                   {isVolume && activePrice.tiers.length > 1 && (
                     <p className="text-[11px] text-muted mt-1.5">
                       Volume pricing — your full team gets the rate of the bracket your seat count falls into.
+                    </p>
+                  )}
+                  {atSeatCap && planSeatCap != null && (
+                    <p className="text-[11px] text-muted mt-1.5">
+                      Need more than {planSeatCap} users?{" "}
+                      <a
+                        href={`mailto:sales@gphusa.com?subject=Enterprise%20pricing%20-%20%3E${planSeatCap}%20users&body=Plan%3A%20${encodeURIComponent(plan.name)}`}
+                        className="text-primary font-medium hover:underline"
+                      >
+                        Contact sales →
+                      </a>
                     </p>
                   )}
                 </div>
