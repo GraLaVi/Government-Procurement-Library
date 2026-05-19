@@ -7,8 +7,6 @@ interface TodayStats {
   total_new_count: number;
   dibbs_count: number;
   dibbs_est_value_usd: number;
-  sam_dod_count: number;
-  sam_dod_est_value_usd: number;
   awards_today_usd: number;
 }
 
@@ -16,8 +14,6 @@ const ZERO_STATS: TodayStats = {
   total_new_count: 0,
   dibbs_count: 0,
   dibbs_est_value_usd: 0,
-  sam_dod_count: 0,
-  sam_dod_est_value_usd: 0,
   awards_today_usd: 0,
 };
 
@@ -56,7 +52,7 @@ export function TodaySolicitationsCard() {
           value: stats.total_new_count.toLocaleString(),
         },
         {
-          label: "DIBBS estimated value",
+          label: "Estimated value",
           sublabel: "Added today",
           value: formatCurrency(stats.dibbs_est_value_usd),
         },

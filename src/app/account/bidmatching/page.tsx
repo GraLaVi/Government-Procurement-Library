@@ -5,12 +5,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
+import { ChipInput } from "@/components/ui/ChipInput";
+import { normalizeNiin, previewNiin } from "@/lib/niin";
 
 interface BidMatchCondition {
   condition_id: number;
   condition_type: string;
   match_value: string;
   match_operator: string;
+  is_negated: boolean;
   is_active: boolean;
   created_at: string;
 }
@@ -28,9 +31,16 @@ interface BidMatchProfile {
   conditions: BidMatchCondition[];
 }
 
+// In-form representation of a condition row. `chips` is the
+// canonical list state for `match_operator === 'in'`; we serialize it
+// to a comma-separated `match_value` at save time. For other operators
+// `chips` is ignored and `match_value` is the source of truth.
 interface ConditionForm {
   condition_type: string;
   match_value: string;
+  match_operator: string;
+  is_negated: boolean;
+  chips: string[];
 }
 
 interface BidMatchingAccess {
@@ -47,25 +57,117 @@ interface BidMatchingAccess {
 
 const ALLOWED_CONDITION_TYPES = [
   "NIIN",
-  "NSN",
   "FSC",
   "MFG_PART_NUMBER",
   "PART_DESCRIPTION",
   "SET_ASIDE",
+  "SET_ASIDE_CODE",
   "CAGE_CODE",
   "STATUS",
 ];
 
 const CONDITION_TYPE_LABELS: Record<string, string> = {
   NIIN: "NIIN",
-  NSN: "NSN (FSC + NIIN)",
   FSC: "FSC Code",
   MFG_PART_NUMBER: "Mfg Part Number",
   PART_DESCRIPTION: "Part Description",
-  SET_ASIDE: "Set-Aside",
+  SET_ASIDE: "DIBBS Set-Aside",
+  SET_ASIDE_CODE: "SAM Set-Aside Code",
   CAGE_CODE: "CAGE Code",
   STATUS: "Status",
 };
+
+// Operators the worker SQL actually evaluates per condition_type.
+// Anything outside the per-type set silently never matches — the API
+// enforces this server-side too. Source of truth:
+// ALAN-Worker/src/services/bid_matching/README.md.
+const CONDITION_TYPE_OPERATOR_MATRIX: Record<string, string[]> = {
+  NIIN: ["eq", "like", "ilike", "in"],
+  FSC: ["eq", "like", "ilike", "in"],
+  MFG_PART_NUMBER: ["eq", "like", "ilike", "in"],
+  CAGE_CODE: ["eq", "like", "ilike", "in"],
+  SET_ASIDE: ["eq", "like", "ilike", "in"],
+  SET_ASIDE_CODE: ["eq", "like", "ilike", "in"],
+  STATUS: ["eq", "like", "ilike", "in"],
+  PART_DESCRIPTION: ["tsquery"],
+};
+
+const CONDITION_TYPE_DEFAULT_OPERATOR: Record<string, string> = {
+  NIIN: "eq",
+  FSC: "eq",
+  MFG_PART_NUMBER: "eq",
+  CAGE_CODE: "eq",
+  SET_ASIDE: "eq",
+  SET_ASIDE_CODE: "eq",
+  STATUS: "eq",
+  PART_DESCRIPTION: "tsquery",
+};
+
+const OPERATOR_LABELS: Record<string, string> = {
+  eq: "is exactly",
+  like: "matches pattern (case-sensitive)",
+  ilike: "matches pattern (case-insensitive)",
+  in: "is any of",
+  tsquery: "full-text match",
+};
+
+function operatorsFor(condition_type: string): string[] {
+  return CONDITION_TYPE_OPERATOR_MATRIX[condition_type] ?? ["eq"];
+}
+
+function defaultOperatorFor(condition_type: string): string {
+  return CONDITION_TYPE_DEFAULT_OPERATOR[condition_type] ?? "eq";
+}
+
+// Short description of each condition type — used in the per-row hint
+// so customers know what the field actually represents.
+const CONDITION_TYPE_HINTS: Record<string, string> = {
+  NIIN: "Identifies one part by its 9-digit NIIN. Paste a full 13-digit NSN and we'll strip the FSC for you.",
+  FSC: "4-digit Federal Supply Class — the category a part belongs to.",
+  MFG_PART_NUMBER: "Manufacturer part number listed on the solicitation.",
+  CAGE_CODE: "5-character CAGE code of a supplier referenced on the solicitation.",
+  SET_ASIDE: "DIBBS / DLA set-aside designation (e.g. SBA, OPEN).",
+  SET_ASIDE_CODE: "SAM.gov set-aside code (e.g. SBA, 8A, WOSB). Use 'DIBBS Set-Aside' for DLA solicitations.",
+  STATUS: "Solicitation status (e.g. OPEN, CLOSED).",
+  PART_DESCRIPTION: "Free-text terms across the part description. Best for fuzzy keywords.",
+};
+
+// Per-operator example value, parameterized by condition type. Keeps the
+// example concrete so customers don't guess at format.
+function operatorExample(condition_type: string, operator: string): string {
+  if (operator === "in") {
+    if (condition_type === "NIIN") return "01-234-5678, 999-888-777";
+    if (condition_type === "FSC") return "5945, 5950, 5955";
+    if (condition_type === "SET_ASIDE_CODE") return "SBA, 8A, WOSB";
+    return "value1, value2, value3";
+  }
+  if (operator === "like" || operator === "ilike") {
+    if (condition_type === "PART_DESCRIPTION") return "%pump%";
+    if (condition_type === "MFG_PART_NUMBER") return "MS27%";
+    return "%pattern%";
+  }
+  if (operator === "tsquery") return "pump relay";
+  // eq examples
+  if (condition_type === "NIIN") return "01-234-5678";
+  if (condition_type === "FSC") return "5945";
+  if (condition_type === "CAGE_CODE") return "1ABC2";
+  if (condition_type === "SET_ASIDE") return "SBA";
+  if (condition_type === "SET_ASIDE_CODE") return "SBA";
+  if (condition_type === "STATUS") return "OPEN";
+  return "value";
+}
+
+// Short description of each operator's behavior on the selected type.
+function operatorHint(operator: string): string {
+  switch (operator) {
+    case "eq": return "Matches one exact value.";
+    case "like": return "Wildcard pattern, case-sensitive. You supply '%'.";
+    case "ilike": return "Wildcard pattern, case-insensitive. You supply '%'.";
+    case "in": return "Matches any value in your list.";
+    case "tsquery": return "Full-text search. Multiple words match in any order.";
+    default: return "";
+  }
+}
 
 export default function BidMatchingPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -85,6 +187,7 @@ export default function BidMatchingPage() {
   const [formNotes, setFormNotes] = useState("");
   const [formConditions, setFormConditions] = useState<ConditionForm[]>([]);
   const [saving, setSaving] = useState(false);
+  const [showOperatorHelp, setShowOperatorHelp] = useState(false);
 
   const isAdmin = user?.roles?.includes("admin");
 
@@ -157,20 +260,55 @@ export default function BidMatchingPage() {
     setFormLogic(profile.match_logic);
     setFormNotes(profile.notes || "");
     setFormConditions(
-      profile.conditions.map((c) => ({
-        condition_type: c.condition_type,
-        match_value: c.match_value,
-      }))
+      profile.conditions.map((c) => {
+        const op = c.match_operator || defaultOperatorFor(c.condition_type);
+        return {
+          condition_type: c.condition_type,
+          match_value: c.match_value,
+          match_operator: op,
+          is_negated: !!c.is_negated,
+          chips: op === "in" ? c.match_value.split(",").map((s) => s.trim()).filter(Boolean) : [],
+        };
+      })
     );
     setShowModal(true);
+  };
+
+  // Serialize a ConditionForm row into the API request shape. For `in`
+  // rows we join chips with a bare comma; the API rejects whitespace in
+  // the in-list (the worker SQL splits on `,` directly).
+  const serializeCondition = (c: ConditionForm) => ({
+    condition_type: c.condition_type,
+    match_value: c.match_operator === "in" ? c.chips.join(",") : c.match_value.trim(),
+    match_operator: c.match_operator,
+    is_negated: c.is_negated,
+  });
+
+  const validateConditions = (): string | null => {
+    if (formConditions.length === 0) return null;
+    if (formConditions.every((c) => c.is_negated)) {
+      return "A profile needs at least one non-excluded condition to produce matches. Turn off Exclude on at least one row.";
+    }
+    for (const c of formConditions) {
+      const isIn = c.match_operator === "in";
+      const empty = isIn ? c.chips.length === 0 : !c.match_value.trim();
+      if (empty) return `Each ${CONDITION_TYPE_LABELS[c.condition_type] || c.condition_type} condition needs a value.`;
+    }
+    return null;
   };
 
   const handleSave = async () => {
     setSaving(true);
     setError(null);
+    const validationError = validateConditions();
+    if (validationError) {
+      setError(validationError);
+      setSaving(false);
+      return;
+    }
     try {
+      const serialized = formConditions.map(serializeCondition);
       if (editingProfile) {
-        // Update profile
         const updateRes = await fetch(
           `/api/bid-matching/profiles/${editingProfile.profile_id}`,
           {
@@ -186,27 +324,25 @@ export default function BidMatchingPage() {
         );
         if (!updateRes.ok) {
           const d = await updateRes.json();
-          setError(d.error || "Failed to update profile");
+          setError(d.error || d.detail || "Failed to update profile");
           return;
         }
-        // Update conditions
         const condRes = await fetch(
           `/api/bid-matching/profiles/${editingProfile.profile_id}/conditions`,
           {
             method: "PUT",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formConditions),
+            body: JSON.stringify(serialized),
           }
         );
         if (!condRes.ok) {
           const d = await condRes.json();
-          setError(d.error || "Failed to update conditions");
+          setError(d.error || d.detail || "Failed to update conditions");
           return;
         }
         setToast("Profile updated");
       } else {
-        // Create profile
         const createRes = await fetch("/api/bid-matching/profiles", {
           method: "POST",
           credentials: "include",
@@ -215,12 +351,12 @@ export default function BidMatchingPage() {
             profile_name: formName,
             match_logic: formLogic,
             notes: formNotes || undefined,
-            conditions: formConditions,
+            conditions: serialized,
           }),
         });
         if (!createRes.ok) {
           const d = await createRes.json();
-          setError(d.error || "Failed to create profile");
+          setError(d.error || d.detail || "Failed to create profile");
           return;
         }
         setToast("Profile created");
@@ -292,21 +428,52 @@ export default function BidMatchingPage() {
   };
 
   const addCondition = () => {
-    // Default the new row to the first condition type the user's tier
-    // allows — for Free that's NIIN today; for Basic/Advanced it's also
-    // NIIN. Keeps the new row from defaulting to a value that'd be
-    // rejected on save.
     const defaultType = access?.limits.allowed_condition_types?.[0] ?? "NIIN";
-    setFormConditions((prev) => [...prev, { condition_type: defaultType, match_value: "" }]);
+    setFormConditions((prev) => [
+      ...prev,
+      {
+        condition_type: defaultType,
+        match_value: "",
+        match_operator: defaultOperatorFor(defaultType),
+        is_negated: false,
+        chips: [],
+      },
+    ]);
   };
 
   const removeCondition = (idx: number) => {
     setFormConditions((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const updateCondition = (idx: number, field: keyof ConditionForm, value: string) => {
+  // Mutate a single condition row. When condition_type changes we may
+  // need to reset the operator (the new type might not support the
+  // current operator) and clear chips/value if the row was an in-list.
+  const updateCondition = (idx: number, patch: Partial<ConditionForm>) => {
     setFormConditions((prev) =>
-      prev.map((c, i) => (i === idx ? { ...c, [field]: value } : c))
+      prev.map((c, i) => {
+        if (i !== idx) return c;
+        const next = { ...c, ...patch };
+        if (patch.condition_type && patch.condition_type !== c.condition_type) {
+          const allowed = operatorsFor(next.condition_type);
+          if (!allowed.includes(next.match_operator)) {
+            next.match_operator = defaultOperatorFor(next.condition_type);
+          }
+        }
+        if (patch.match_operator && patch.match_operator !== c.match_operator) {
+          // Switching to/from `in` swaps the value representation. Keep
+          // a best-effort conversion so the user doesn't lose what they
+          // typed: chips -> comma-joined, or comma-joined -> chips.
+          if (patch.match_operator === "in" && c.match_operator !== "in") {
+            const parts = c.match_value.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+            next.chips = parts;
+            next.match_value = parts.join(",");
+          } else if (patch.match_operator !== "in" && c.match_operator === "in") {
+            next.match_value = c.chips.join(",");
+            next.chips = [];
+          }
+        }
+        return next;
+      }),
     );
   };
 
@@ -524,6 +691,16 @@ export default function BidMatchingPage() {
                     <span className="text-xs text-muted">
                       Created {new Date(profile.created_at).toLocaleDateString()}
                     </span>
+                    {profile.conditions.length > 0 && (() => {
+                      const excluded = profile.conditions.filter((c) => c.is_negated).length;
+                      const positive = profile.conditions.length - excluded;
+                      return (
+                        <span className="text-xs text-muted">
+                          {positive} positive
+                          {excluded > 0 && `, ${excluded} excluded`}
+                        </span>
+                      );
+                    })()}
                   </div>
                   {profile.notes && (
                     <p className="text-sm text-muted mt-2">{profile.notes}</p>
@@ -562,17 +739,29 @@ export default function BidMatchingPage() {
                           Type
                         </th>
                         <th className="text-left py-2 px-4 font-medium text-muted">
+                          Operator
+                        </th>
+                        <th className="text-left py-2 px-4 font-medium text-muted">
                           Value
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                       {profile.conditions.map((cond) => (
-                        <tr key={cond.condition_id}>
+                        <tr
+                          key={cond.condition_id}
+                          className={cond.is_negated ? "border-l-4 border-l-red-400" : ""}
+                        >
                           <td className="py-2 px-4 text-card-foreground font-medium">
+                            {cond.is_negated && (
+                              <span className="inline-block mr-1.5 text-[10px] font-bold text-red-600">NOT</span>
+                            )}
                             {CONDITION_TYPE_LABELS[cond.condition_type] || cond.condition_type}
                           </td>
-                          <td className="py-2 px-4 text-card-foreground">
+                          <td className="py-2 px-4 text-muted text-xs">
+                            {OPERATOR_LABELS[cond.match_operator] || cond.match_operator}
+                          </td>
+                          <td className={`py-2 px-4 text-card-foreground ${cond.is_negated ? "line-through opacity-70" : ""}`}>
                             {cond.match_value}
                           </td>
                         </tr>
@@ -689,10 +878,19 @@ export default function BidMatchingPage() {
                   return (
                     <>
                       <div className="flex justify-between items-center mb-2">
-                        <label className="text-sm font-medium text-foreground">
+                        <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
                           Conditions
+                          <button
+                            type="button"
+                            onClick={() => setShowOperatorHelp((v) => !v)}
+                            className="w-4 h-4 rounded-full bg-muted/10 text-muted hover:bg-primary/10 hover:text-primary text-[10px] font-bold flex items-center justify-center"
+                            aria-label="Operator reference"
+                            title="Show operator reference"
+                          >
+                            ?
+                          </button>
                           {maxConditions !== null && (
-                            <span className="ml-2 text-xs text-muted font-normal">
+                            <span className="ml-1 text-xs text-muted font-normal">
                               {formConditions.length} / {maxConditions}
                             </span>
                           )}
@@ -714,6 +912,40 @@ export default function BidMatchingPage() {
                           + Add Condition
                         </button>
                       </div>
+                      {/* Layer 1: short intro for newcomers, always visible.
+                          Links out to the full guide. */}
+                      <p className="text-xs text-muted mb-2 leading-relaxed">
+                        Each row is one rule. Pick a <span className="text-foreground font-medium">type</span>{" "}
+                        (the field to check), an <span className="text-foreground font-medium">operator</span>{" "}
+                        (how to compare), and a <span className="text-foreground font-medium">value</span>. Combine
+                        multiple rows with the AND/OR setting above.{" "}
+                        <a
+                          href="/docs/features/bid_matching_user_guide"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          Full guide →
+                        </a>
+                      </p>
+                      {/* Layer 3: collapsible operator quick-reference. */}
+                      {showOperatorHelp && (
+                        <div className="mb-3 rounded-lg border border-border bg-muted/5 p-3 text-xs">
+                          <div className="font-medium text-foreground mb-1.5">Operators</div>
+                          <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
+                            <dt className="text-foreground">is exactly</dt>
+                            <dd className="text-muted">Matches one literal value. <span className="text-foreground">5945</span></dd>
+                            <dt className="text-foreground">matches pattern</dt>
+                            <dd className="text-muted">Wildcard with <code className="text-foreground">%</code>. Case-sensitive variant of below. <span className="text-foreground">5945%</span></dd>
+                            <dt className="text-foreground">matches pattern (i)</dt>
+                            <dd className="text-muted">Wildcard, case-insensitive. <span className="text-foreground">%pump%</span></dd>
+                            <dt className="text-foreground">is any of</dt>
+                            <dd className="text-muted">List of values; add with Enter or comma. <span className="text-foreground">5945, 5950</span></dd>
+                            <dt className="text-foreground">full-text match</dt>
+                            <dd className="text-muted">Search across long text. Word order doesn&apos;t matter. <span className="text-foreground">pump relay</span></dd>
+                          </dl>
+                        </div>
+                      )}
                       {atCap && (
                         <p className="text-xs text-muted mb-2">
                           You&apos;ve reached your plan&apos;s {maxConditions}-condition limit.{" "}
@@ -731,37 +963,118 @@ export default function BidMatchingPage() {
                     No conditions added yet.
                   </p>
                 )}
-                <div className="space-y-2">
-                  {formConditions.map((cond, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <select
-                        value={cond.condition_type}
-                        onChange={(e) => updateCondition(idx, "condition_type", e.target.value)}
-                        className="text-sm border border-border bg-card-bg text-foreground rounded-lg px-2 py-2 focus:ring-2 focus:ring-primary"
+                <div className="space-y-3">
+                  {formConditions.map((cond, idx) => {
+                    const allowedOps = operatorsFor(cond.condition_type);
+                    const isNiin = cond.condition_type === "NIIN";
+                    const isIn = cond.match_operator === "in";
+                    const niinPreview = isNiin && !isIn ? previewNiin(cond.match_value) : null;
+                    return (
+                      <div
+                        key={idx}
+                        className={`rounded-lg border ${
+                          cond.is_negated ? "border-red-200 border-l-4 border-l-red-400" : "border-border"
+                        } p-2 space-y-2`}
                       >
-                        {(access?.limits.allowed_condition_types ?? ALLOWED_CONDITION_TYPES).map((ct) => (
-                          <option key={ct} value={ct}>
-                            {CONDITION_TYPE_LABELS[ct] || ct}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="text"
-                        value={cond.match_value}
-                        onChange={(e) => updateCondition(idx, "match_value", e.target.value)}
-                        className="flex-1 text-sm border border-border bg-card-bg text-foreground rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary"
-                        placeholder="Match value"
-                      />
-                      <button
-                        onClick={() => removeCondition(idx)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
+                        {/* Row 1: condition type + operator + delete. The
+                            value input is its own row below so all three
+                            controls fit in a max-w-lg modal. */}
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={cond.condition_type}
+                            onChange={(e) => updateCondition(idx, { condition_type: e.target.value })}
+                            className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-lg px-2 py-2 focus:ring-2 focus:ring-primary"
+                          >
+                            {(access?.limits.allowed_condition_types ?? ALLOWED_CONDITION_TYPES).map((ct) => (
+                              <option key={ct} value={ct}>
+                                {CONDITION_TYPE_LABELS[ct] || ct}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={cond.match_operator}
+                            onChange={(e) => updateCondition(idx, { match_operator: e.target.value })}
+                            disabled={allowedOps.length === 1}
+                            className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-lg px-2 py-2 focus:ring-2 focus:ring-primary disabled:opacity-60"
+                            title={allowedOps.length === 1 ? "Only one operator is supported for this type." : undefined}
+                          >
+                            {allowedOps.map((op) => (
+                              <option key={op} value={op}>
+                                {OPERATOR_LABELS[op] || op}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => removeCondition(idx)}
+                            className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                            aria-label="Remove condition"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                        {/* Row 2: value input — full width so chips and
+                            paste-friendly inputs have room to breathe. */}
+                        {isIn ? (
+                          <ChipInput
+                            value={cond.chips}
+                            onChange={(next) => updateCondition(idx, { chips: next, match_value: next.join(",") })}
+                            placeholder={isNiin ? "01-234-5678, 999-888-777, …" : "value1, value2, …"}
+                            normalize={isNiin ? (raw) => { const r = normalizeNiin(raw); return r.ok ? r.niin : null; } : undefined}
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={cond.match_value}
+                            onChange={(e) => updateCondition(idx, { match_value: e.target.value })}
+                            onBlur={() => {
+                              if (isNiin) {
+                                const r = normalizeNiin(cond.match_value);
+                                if (r.ok) updateCondition(idx, { match_value: r.niin });
+                              }
+                            }}
+                            className="w-full text-sm border border-border bg-card-bg text-foreground rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary"
+                            placeholder={
+                              cond.match_operator === "like" || cond.match_operator === "ilike"
+                                ? "%pattern%"
+                                : cond.match_operator === "tsquery"
+                                  ? "search terms"
+                                  : "Match value"
+                            }
+                          />
+                        )}
+                        {/* Layer 2: contextual hint that updates with the
+                            selected type + operator. Concrete example
+                            included so customers don't guess at format. */}
+                        <p className="text-[11px] text-muted leading-snug">
+                          <span className="text-foreground">{CONDITION_TYPE_HINTS[cond.condition_type] ?? ""}</span>{" "}
+                          {operatorHint(cond.match_operator)}{" "}
+                          <span className="text-muted">Example: </span>
+                          <code className="text-foreground bg-muted/10 px-1 rounded">{operatorExample(cond.condition_type, cond.match_operator)}</code>
+                        </p>
+                        <div className="flex items-center justify-between text-xs">
+                          <label className="inline-flex items-center gap-1.5 text-muted cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={cond.is_negated}
+                              onChange={(e) => updateCondition(idx, { is_negated: e.target.checked })}
+                              className="rounded border-border"
+                            />
+                            <span className={cond.is_negated ? "text-red-600 font-medium" : ""}>
+                              {cond.is_negated ? "Excluded — drops matches that fire this" : "Exclude matches"}
+                            </span>
+                          </label>
+                          {niinPreview && (
+                            <span className="text-muted">Saving as NIIN <span className="text-foreground font-medium">{niinPreview}</span></span>
+                          )}
+                          {isNiin && isIn && cond.chips.length > 0 && (
+                            <span className="text-muted">{cond.chips.length} NIIN{cond.chips.length === 1 ? "" : "s"}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

@@ -39,6 +39,8 @@ import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveVendorTier, tierMeets } from "@/lib/library/tier";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
+import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
+import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 
 // Module-scope CSV column specs for the vendor-detail tab exports.
 // Kept outside the component bodies so the parent-level export button
@@ -1223,6 +1225,13 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
   const [pdfModal, setPdfModal] = useState<{ id: number; number: string } | null>(null);
   const pdfUrl = pdfModal ? `/api/library/solicitations/${pdfModal.id}/pdf` : null;
 
+  // Amendment indicator — one batch fetch per visible page; the cell
+  // renders the "Amended" pill only when the sol has at least one row
+  // in solicitation_amendments.
+  const solIds = useMemo(() => solicitations.map((s) => s.solicitation_id), [solicitations]);
+  const amendmentSummaries = useAmendmentSummaries(solIds);
+  const [amendmentModal, setAmendmentModal] = useState<{ id: number; number: string | null } | null>(null);
+
   // Define columns for solicitations table
   const columns = useMemo<ColumnDef<VendorSolicitation>[]>(
     () => [
@@ -1242,6 +1251,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         header: "Solicitation #",
         cell: ({ row }) => {
           const sol = row.original;
+          const summary = amendmentSummaries.get(sol.solicitation_id);
           return (
             <span className="inline-flex items-center gap-1">
               <span className="text-xs font-mono font-semibold">{sol.solicitation_number}</span>
@@ -1258,6 +1268,19 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                   </svg>
+                </button>
+              )}
+              {summary && summary.amendment_count > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAmendmentModal({ id: sol.solicitation_id, number: sol.solicitation_number });
+                  }}
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shrink-0"
+                  title={`${summary.amendment_count} amendment${summary.amendment_count === 1 ? "" : "s"} on this solicitation. Click to view.`}
+                >
+                  Amended{summary.amendment_count > 1 ? ` ×${summary.amendment_count}` : ""}
                 </button>
               )}
             </span>
@@ -1344,7 +1367,9 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         meta: { className: "hidden lg:table-cell" },
       },
     ],
-    []
+    // Rebuild columns when amendment summaries load so the cell sees
+    // the fresh Map.
+    [amendmentSummaries]
   );
 
   // Error state
@@ -1445,6 +1470,13 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           </div>
         </Modal>
       )}
+      {/* Amendment timeline modal — opened from the "Amended" pill on a
+          solicitation row. */}
+      <AmendmentTimelineModal
+        solicitationId={amendmentModal?.id ?? null}
+        solicitationNumber={amendmentModal?.number ?? null}
+        onClose={() => setAmendmentModal(null)}
+      />
       {/* Custom-reports upsell — below the table so the data stays at
           the top of the panel. */}
       {solicitations.length > 0 && (

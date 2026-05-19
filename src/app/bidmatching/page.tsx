@@ -22,6 +22,8 @@ interface MatchedCondition {
   condition_type: string;
   match_value: string;
   condition_id?: number | null;
+  match_operator?: string | null;
+  is_negated?: boolean | null;
 }
 
 interface BidMatchResult {
@@ -32,6 +34,11 @@ interface BidMatchResult {
   profile_name: string;
   matched_conditions: MatchedCondition[];
   created_at: string;
+  match_reason: string | null;
+  match_strength: "HARD" | "SOFT" | null;
+  has_amendment_indicator?: boolean;
+  has_post_match_amendment?: boolean;
+  latest_post_match_amendment_at?: string | null;
   solicitation_number: string | null;
   agency_code: string | null;
   issue_date: string | null;
@@ -64,6 +71,22 @@ export default function BidMatchingPage() {
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasProfiles, setHasProfiles] = useState<boolean | null>(null);
+  const [hardOnly, setHardOnly] = useState(false);
+  // Debounced reason filter — pushes to `appliedReason` after typing pauses
+  // so we don't refetch on every keystroke.
+  const [reasonInput, setReasonInput] = useState("");
+  const [appliedReason, setAppliedReason] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setAppliedReason(reasonInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [reasonInput]);
+
+  useEffect(() => {
+    // Reset to page 1 whenever the filters change so we don't land on
+    // an empty out-of-range page after narrowing results.
+    setPage(1);
+  }, [hardOnly, appliedReason]);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,35 +135,40 @@ export default function BidMatchingPage() {
   }, []);
 
   // Fetch results when selection or page changes
-  const fetchResults = useCallback(async (runDate: string, issueDate: string, pg: number) => {
-    setIsLoadingResults(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({
-        date: issueDate,
-        run_date: runDate,
-        page: pg.toString(),
-        page_size: PAGE_SIZE.toString(),
-      });
-      const res = await fetch(`/api/bid-matching/results?${params}`);
-      if (!res.ok) throw new Error("Failed to load match results");
-      const data: ResultsResponse = await res.json();
-      setResults(data.results);
-      setTotal(data.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load match results");
-      setResults([]);
-      setTotal(0);
-    } finally {
-      setIsLoadingResults(false);
-    }
-  }, []);
+  const fetchResults = useCallback(
+    async (runDate: string, issueDate: string, pg: number, strength: boolean, reason: string) => {
+      setIsLoadingResults(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({
+          date: issueDate,
+          run_date: runDate,
+          page: pg.toString(),
+          page_size: PAGE_SIZE.toString(),
+        });
+        if (strength) params.set("strength", "HARD");
+        if (reason) params.set("reason_search", reason);
+        const res = await fetch(`/api/bid-matching/results?${params}`);
+        if (!res.ok) throw new Error("Failed to load match results");
+        const data: ResultsResponse = await res.json();
+        setResults(data.results);
+        setTotal(data.total);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load match results");
+        setResults([]);
+        setTotal(0);
+      } finally {
+        setIsLoadingResults(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (selectedRunDate && selectedIssueDate) {
-      fetchResults(selectedRunDate, selectedIssueDate, page);
+      fetchResults(selectedRunDate, selectedIssueDate, page, hardOnly, appliedReason);
     }
-  }, [selectedRunDate, selectedIssueDate, page, fetchResults]);
+  }, [selectedRunDate, selectedIssueDate, page, hardOnly, appliedReason, fetchResults]);
 
   const handleDateSelect = (runDate: string, issueDate: string) => {
     setSelectedRunDate(runDate);
@@ -254,14 +282,45 @@ export default function BidMatchingPage() {
           {/* Results */}
           <div className="flex-1 min-w-0 bg-card-bg rounded-lg border border-border p-4">
             {selectedRunDate && selectedIssueDate ? (
-              <BidMatchResultsTable
-                results={results}
-                isLoading={isLoadingResults}
-                total={total}
-                page={page}
-                pageSize={PAGE_SIZE}
-                onPageChange={handlePageChange}
-              />
+              <>
+                <div className="flex flex-wrap items-center gap-3 mb-4 pb-3 border-b border-border">
+                  <label className="inline-flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hardOnly}
+                      onChange={(e) => setHardOnly(e.target.checked)}
+                      className="rounded border-border"
+                    />
+                    Hard hits only
+                  </label>
+                  <div className="flex-1 min-w-[200px] max-w-md">
+                    <input
+                      type="text"
+                      value={reasonInput}
+                      onChange={(e) => setReasonInput(e.target.value)}
+                      placeholder="Search match reason…"
+                      className="w-full text-sm border border-border bg-card-bg text-foreground rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary focus:border-primary"
+                    />
+                  </div>
+                  {(hardOnly || appliedReason) && (
+                    <button
+                      type="button"
+                      onClick={() => { setHardOnly(false); setReasonInput(""); setAppliedReason(""); }}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+                <BidMatchResultsTable
+                  results={results}
+                  isLoading={isLoadingResults}
+                  total={total}
+                  page={page}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={handlePageChange}
+                />
+              </>
             ) : (
               <div className="text-center py-16">
                 <p className="text-muted-foreground">Select a date from the panel to view results.</p>

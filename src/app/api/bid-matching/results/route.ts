@@ -24,6 +24,10 @@ export async function GET(request: NextRequest) {
     if (page) params.set('page', page);
     const pageSize = searchParams.get('page_size');
     if (pageSize) params.set('page_size', pageSize);
+    const strength = searchParams.get('strength');
+    if (strength === 'HARD' || strength === 'SOFT') params.set('strength', strength);
+    const reasonSearch = searchParams.get('reason_search');
+    if (reasonSearch) params.set('reason_search', reasonSearch);
 
     const backendUrl = `${AUTH_CONFIG.API_BASE_URL}/bid-matching/results?${params.toString()}`;
 
