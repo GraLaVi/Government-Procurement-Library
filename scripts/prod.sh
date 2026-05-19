@@ -42,7 +42,10 @@ check_docker() {
 # Load environment
 load_env() {
     if [ -f "$PROJECT_DIR/.env.production" ]; then
-        export $(grep -v '^#' "$PROJECT_DIR/.env.production" | xargs)
+        set -a
+        # shellcheck disable=SC1091
+        source "$PROJECT_DIR/.env.production"
+        set +a
         export LOG_HOST=${LOG_HOST:-$(hostname)}
         print_success "Loaded .env.production"
         print_status "Environment: PRODUCTION"

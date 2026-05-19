@@ -29,6 +29,16 @@ const CURRENT_SUB_STATUSES = new Set([
   "active_check",
 ]);
 
+// Beta gate. When true (dev), Subscribe buttons open Stripe Checkout
+// directly. When false (prod default during beta), they're disabled and
+// visitors are funneled to /signup, which routes them into the beta
+// application queue. Shares the same env flag /signup uses to gate the
+// self-serve path picker — both gestures bypass the beta queue, so they
+// move together. Existing subscribers' "Manage in portal" CTA is NOT
+// gated by this; people already on a plan can always manage it.
+const DIRECT_SUBSCRIBE_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_DEV_SIGNUP === "true";
+
 type PriceTier = {
   up_to_quantity: number | null; // null = infinity
   unit_amount_cents: number;
@@ -87,6 +97,28 @@ function splitFamilyTier(name: string): { family: string; tier: string | null } 
     return { family: match[1].trim(), tier: match[2].trim() };
   }
   return { family: name, tier: null };
+}
+
+// Display-order priority for tier names. Stripe has no reliable
+// display-order field on products, so we sort here. Lower = earlier.
+// Unknown tiers fall to the end in alphabetical order.
+const TIER_DISPLAY_ORDER: Record<string, number> = {
+  basic: 1,
+  advanced: 2,
+};
+
+function tierSortKey(plan: Plan): number {
+  const tier = splitFamilyTier(plan.name).tier?.toLowerCase();
+  if (!tier) return 99;
+  return TIER_DISPLAY_ORDER[tier] ?? 50;
+}
+
+// Which tier wears the "Most Popular" badge. Single source of truth — if
+// you change which plan to highlight, change this string.
+const MOST_POPULAR_TIER = "advanced";
+
+function isMostPopular(plan: Plan): boolean {
+  return splitFamilyTier(plan.name).tier?.toLowerCase() === MOST_POPULAR_TIER;
 }
 
 function intervalLabel(months: number): string {
@@ -327,6 +359,7 @@ function PricingPageContent() {
   };
 
   const handleSubscribe = (plan: Plan) => {
+    if (!DIRECT_SUBSCRIBE_ENABLED) return;
     const priceId = selected[plan.id];
     if (!priceId) return;
     const seatCount = Math.max(1, seats[plan.id] || plan.default_seat_count || 1);
@@ -453,6 +486,17 @@ function PricingPageContent() {
     [isLoading, plans.length],
   );
 
+  // Sort plans in display order (basic → advanced → other). The Free
+  // card is hardcoded above the list, so it always lands first.
+  const sortedPlans = useMemo(
+    () => [...plans].sort((a, b) => {
+      const tierDelta = tierSortKey(a) - tierSortKey(b);
+      if (tierDelta !== 0) return tierDelta;
+      return a.name.localeCompare(b.name);
+    }),
+    [plans],
+  );
+
   return (
     <>
       {/* Authenticated users see the in-app Header; unauthenticated visitors
@@ -475,6 +519,19 @@ function PricingPageContent() {
       {error && (
         <div className="bg-error/5 border border-error/20 rounded-xl p-4 mb-6 text-sm text-error max-w-xl mx-auto">
           {error}
+        </div>
+      )}
+
+      {!DIRECT_SUBSCRIBE_ENABLED && (
+        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 text-sm max-w-2xl mx-auto">
+          <p className="text-foreground font-medium">We&apos;re currently in private beta</p>
+          <p className="text-muted mt-1">
+            Subscriptions are paused while beta testing wraps up. To request access,{" "}
+            <a href="/signup" className="text-primary font-medium hover:underline">
+              apply via signup
+            </a>
+            .
+          </p>
         </div>
       )}
 
@@ -556,7 +613,7 @@ function PricingPageContent() {
           </div>
         </div>
 
-        {plans.map((plan) => {
+        {sortedPlans.map((plan) => {
           const activePriceId = selected[plan.id];
           const activePrice = plan.prices.find((p) => p.id === activePriceId);
           // Org-wide plans always charge for quantity=1 — they grant access
@@ -579,11 +636,21 @@ function PricingPageContent() {
             ? Math.min(tierMax, planSeatCap)
             : tierMax;
           const atSeatCap = planSeatCap != null && seatCount >= planSeatCap;
+          const popular = isMostPopular(plan);
           return (
             <div
               key={`${plan.kind}-${plan.id}`}
-              className="bg-card-bg border border-border rounded-xl p-6 flex flex-col"
+              className={`relative bg-card-bg rounded-xl p-6 flex flex-col ${
+                popular
+                  ? "border-2 border-primary shadow-lg shadow-primary/10"
+                  : "border border-border"
+              }`}
             >
+              {popular && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full bg-primary text-white shadow-sm">
+                  Most Popular
+                </span>
+              )}
               {(() => {
                 const { family, tier } = splitFamilyTier(plan.name);
                 const onThisPlan = isCurrentPlan(plan);
@@ -782,6 +849,7 @@ function PricingPageContent() {
                     className="w-full"
                     onClick={() => handleSubscribe(plan)}
                     disabled={
+                      !DIRECT_SUBSCRIBE_ENABLED ||
                       !activePrice ||
                       isGraduated ||
                       totalCents === null ||
@@ -789,13 +857,15 @@ function PricingPageContent() {
                       (!!user && !user.email_verified)
                     }
                   >
-                    {checkoutPending === plan.id
-                      ? "Starting checkout…"
-                      : !user
-                        ? "Sign up to subscribe"
-                        : !user.email_verified
-                          ? "Verify email to subscribe"
-                          : "Subscribe"}
+                    {!DIRECT_SUBSCRIBE_ENABLED
+                      ? "Beta — apply via signup"
+                      : checkoutPending === plan.id
+                        ? "Starting checkout…"
+                        : !user
+                          ? "Sign up to subscribe"
+                          : !user.email_verified
+                            ? "Verify email to subscribe"
+                            : "Subscribe"}
                   </Button>
                 )}
               </div>

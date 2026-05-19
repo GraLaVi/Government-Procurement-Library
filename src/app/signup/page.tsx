@@ -72,9 +72,17 @@ function SignupPageContent() {
   // carries either ?tier=free or ?plan=<priceId>&seats=<N>. Either form
   // means: skip the path picker, lock to self-serve, and route the
   // post-signup redirect by intent.
-  const tierParam = searchParams.get("tier");
-  const planParam = searchParams.get("plan");
-  const seatsParam = searchParams.get("seats");
+  //
+  // In beta mode (DEV_SIGNUP_ENABLED=false, i.e. prod today) we ignore
+  // these params entirely so that every arrival — including Free clicks
+  // from /pricing — lands on the beta application path. This keeps the
+  // "all signups go through beta" rule honest; otherwise a /pricing →
+  // /signup?tier=free click would silently bypass the beta queue and
+  // show a misleading "You're signing up for … Free" badge for a flow
+  // that doesn't actually exist during beta.
+  const tierParam = DEV_SIGNUP_ENABLED ? searchParams.get("tier") : null;
+  const planParam = DEV_SIGNUP_ENABLED ? searchParams.get("plan") : null;
+  const seatsParam = DEV_SIGNUP_ENABLED ? searchParams.get("seats") : null;
   const intentIsFree = tierParam === "free";
   const intentIsPaid = planParam !== null && planParam !== "";
   const hasUrlIntent = intentIsFree || intentIsPaid;
