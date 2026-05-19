@@ -10,6 +10,7 @@ import { Footer } from "@/components/layout/Footer";
 import { TermsAcceptanceModal } from "@/components/billing/TermsAcceptanceModal";
 import { clearPendingSignup, readPendingSignup } from "@/lib/signup/pendingSignup";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
+import { ChartIcon, CheckIcon } from "@/components/icons";
 
 // Minimal shape of a Subscription row from /api/billing/subscriptions —
 // only the fields the pricing page needs to identify the user's current plan.
@@ -877,42 +878,63 @@ function PricingPageContent() {
 
       {/* Data Reports — bespoke engagements, no Stripe product. Rendered
           outside the tier grid as a full-width horizontal panel (same
-          treatment as the landing page) so it reads as "different kind
-          of product" instead of competing as a 4th tier. */}
-      <div className="mt-6 rounded-xl border border-border bg-muted-light/40 dark:bg-card-bg p-6 lg:p-8">
+          treatment and content as the landing-page Products section) so
+          the two views match. <h2> instead of <h3> because the pricing
+          page's heading hierarchy starts at <h1> (landing nests under an
+          <h2>, hence <h3> there). */}
+      <div className="mt-6 rounded-2xl border border-border bg-muted-light/40 dark:bg-card-bg p-8 lg:p-10">
         <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8 items-start">
           {/* Left: identity + pitch */}
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xl font-semibold text-card-foreground">Data Reports</h2>
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                Quote
-              </span>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center flex-shrink-0">
+                <ChartIcon className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl font-semibold text-secondary dark:text-card-foreground">
+                    Data Reports
+                  </h2>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    Quote
+                  </span>
+                </div>
+                <p className="mt-1 text-sm font-medium text-primary">
+                  Bespoke procurement intelligence, scoped to your need.
+                </p>
+              </div>
             </div>
-            <p className="text-muted text-sm mt-2">
-              Bespoke procurement reports — sourcing, vendor, contract, or
-              data-pull engagements scoped to your needs.
+            <p className="mt-4 text-muted dark:text-card-foreground/80 leading-relaxed">
+              Tell us what you need — sourcing analysis, vendor scorecards,
+              contract intelligence, or a one-off pull from our data. We
+              scope, price, and deliver.
             </p>
-            <div className="mt-5">
-              <div className="text-3xl font-bold text-card-foreground">Custom pricing</div>
-              <div className="text-sm text-muted mt-1">Contact sales for a quote</div>
-            </div>
           </div>
 
           {/* Right: features + CTA */}
           <div className="lg:border-l lg:border-border lg:pl-8">
-            <ul className="space-y-2 text-sm text-card-foreground/90">
-              <li>• One-time deliverables or recurring cadence</li>
-              <li>• Custom data extracts</li>
-              <li>• Engagement-scoped pricing</li>
+            <ul className="space-y-2.5">
+              {[
+                "One-time deliverables or recurring cadence",
+                "Custom data extracts",
+                "Engagement-scoped pricing",
+              ].map((feature) => (
+                <li
+                  key={feature}
+                  className="flex items-start gap-2 text-sm text-foreground dark:text-card-foreground/90"
+                >
+                  <CheckIcon className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                  <span>{feature}</span>
+                </li>
+              ))}
             </ul>
             <div className="mt-6">
-              <Button
-                variant="primary"
+              <a
                 href="mailto:sales@gphusa.com?subject=Custom%20Reports%20Quote%20Request"
+                className="inline-flex items-center text-primary font-medium hover:underline"
               >
-                Contact sales
-              </Button>
+                Contact sales →
+              </a>
             </div>
           </div>
         </div>

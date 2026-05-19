@@ -50,12 +50,12 @@ export function CTA() {
             <div className="grid sm:grid-cols-2 gap-6">
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
                 <ZapIcon className="w-8 h-8 text-white/80 mb-4" />
-                <div className="text-3xl font-bold text-white">15K+</div>
-                <div className="text-white/70 mt-1">Federal Solicitations Indexed Monthly</div>
+                <div className="text-3xl font-bold text-white">45K+</div>
+                <div className="text-white/70 mt-1">Opportunities Added Monthly</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
                 <ShieldIcon className="w-8 h-8 text-white/80 mb-4" />
-                <div className="text-3xl font-bold text-white">$4.2B+</div>
+                <div className="text-3xl font-bold text-white">$1.9T+</div>
                 <div className="text-white/70 mt-1">Federal Contract Value Tracked</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 sm:col-span-2">

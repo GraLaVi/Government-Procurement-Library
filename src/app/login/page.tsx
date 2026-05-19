@@ -33,7 +33,7 @@ function LoginForm() {
   
   // Validate redirect parameter - don't allow redirecting to auth pages to prevent loops
   const rawRedirect = searchParams.get("redirect");
-  const authRoutes = [AUTH_CONFIG.ROUTES.LOGIN, '/forgot-password', '/trial'];
+  const authRoutes = [AUTH_CONFIG.ROUTES.LOGIN, '/forgot-password'];
   // Default landing after sign-in is /dashboard. Honor ?redirect=… if present
   // (e.g., session-expired flow that wants to bounce the user back to where
   // they were); fall back to /dashboard for the plain "go to /login + sign
@@ -154,11 +154,11 @@ function LoginForm() {
           {/* Stats */}
           <div className="mt-12 grid grid-cols-2 gap-6">
             <div>
-              <div className="text-3xl font-bold text-white">50K+</div>
-              <div className="text-white/60 text-sm mt-1">Opportunities Monthly</div>
+              <div className="text-3xl font-bold text-white">45K+</div>
+              <div className="text-white/60 text-sm mt-1">Opportunities Added Monthly</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-white">$4.2B+</div>
+              <div className="text-3xl font-bold text-white">$1.9T+</div>
               <div className="text-white/60 text-sm mt-1">Contracts Tracked</div>
             </div>
           </div>

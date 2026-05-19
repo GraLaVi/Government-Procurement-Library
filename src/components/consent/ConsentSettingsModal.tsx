@@ -29,7 +29,7 @@ const CATEGORIES: CategoryDef[] = [
     label: "Functional",
     description:
       "Remembers preferences and in-progress forms across pages so you don't lose work. On by default — uncheck if you'd rather not store these.",
-    examples: "theme (light/dark), gph_pending_signup, gph_waitlist",
+    examples: "theme (light/dark), gph_pending_signup",
   },
 ];
 

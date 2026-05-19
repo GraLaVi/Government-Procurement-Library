@@ -79,7 +79,7 @@ export function clearStoredConsent(): void {
 
 /**
  * True if the visitor's choice opts in to the named category. Used by
- * storage gates (theme, signup, waitlist) to decide whether to write
+ * storage gates (theme, signup) to decide whether to write
  * to localStorage / sessionStorage.
  *
  * When no choice has been made yet, returns the DEFAULT_ACCEPTED value

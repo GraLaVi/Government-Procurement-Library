@@ -46,6 +46,19 @@ export function Button({
 
   if ("href" in props && props.href) {
     const { href, ...linkProps } = props as ButtonAsLink;
+    // next/link is for in-app route navigation — it intercepts clicks to
+    // run the router. For non-http(s) schemes (mailto:, tel:, sms:) that
+    // interception can swallow the click instead of letting the browser
+    // hand off to the OS protocol handler. Fall back to a plain anchor
+    // for those schemes so the browser handles them natively.
+    const isExternalScheme = /^(mailto:|tel:|sms:)/i.test(href);
+    if (isExternalScheme) {
+      return (
+        <a href={href} className={styles} {...linkProps}>
+          {children}
+        </a>
+      );
+    }
     return (
       <Link href={href} className={styles} {...linkProps}>
         {children}

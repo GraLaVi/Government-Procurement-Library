@@ -110,7 +110,7 @@ function redirectToLogin(): void {
   hasRedirected = true;
   
   // Don't use auth-related routes as redirect targets
-  const authRoutes = [loginPath, '/forgot-password', '/trial'];
+  const authRoutes = [loginPath, '/forgot-password'];
   const redirectPath = authRoutes.includes(currentPath) ? AUTH_CONFIG.ROUTES.ACCOUNT : window.location.pathname;
   const loginUrl = `${AUTH_CONFIG.ROUTES.LOGIN}?redirect=${encodeURIComponent(redirectPath)}`;
   

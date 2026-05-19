@@ -54,13 +54,6 @@ const COOKIES: CookieRow[] = [
     purpose: "Holds in-progress signup form data while you move between the signup and pricing pages. Cleared once you complete checkout.",
     expiry: "Closes with the tab",
   },
-  {
-    name: "gph_waitlist / gph_waitlist_submitted",
-    storage: "localStorage",
-    category: "Functional",
-    purpose: "Tracks that you've joined our trial waitlist so we don't ask again.",
-    expiry: "Until you clear browser storage",
-  },
 ];
 
 export default function CookiePolicyPage() {

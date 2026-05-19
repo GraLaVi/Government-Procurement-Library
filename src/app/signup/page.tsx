@@ -126,12 +126,6 @@ function SignupPageContent() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  // Pre-select when there's only one plan option (which is true today —
-  // see PLAN_OPTIONS above). The auto-select naturally disappears if more
-  // plans are added later, forcing an explicit choice.
-  const [requestedPlans, setRequestedPlans] = useState<string[]>(
-    PLAN_OPTIONS.length === 1 ? [PLAN_OPTIONS[0].key] : [],
-  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Paid-tier signups need ToS acceptance before we can create a Stripe
@@ -139,11 +133,10 @@ function SignupPageContent() {
   // paid; Free / beta paths don't surface it.
   const [tosAccepted, setTosAccepted] = useState(false);
 
-  const togglePlan = (key: string) => {
-    setRequestedPlans((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-    );
-  };
+  // Locked to the beta plan catalog. The picker UI was removed — every
+  // applicant requests whatever PLAN_OPTIONS currently lists (Advanced only
+  // today). To change the requested plans, edit PLAN_OPTIONS above.
+  const requestedPlans = PLAN_OPTIONS.map((opt) => opt.key);
 
   const validateCage = useCallback(async (raw: string) => {
     const code = raw.trim().toUpperCase();
@@ -731,28 +724,33 @@ function SignupPageContent() {
                 </div>
               )}
 
+              {/* Plan included in beta — display-only. The picker UI was
+                  removed (requestedPlans is locked to PLAN_OPTIONS) so the
+                  checkbox is shown checked + disabled purely to communicate
+                  what the applicant will get on approval. */}
               {signupPath === "beta" && (
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Which plans interest you? <span className="text-muted font-normal">(optional)</span>
+                    Your beta access includes
                   </label>
                   <div className="space-y-2">
                     {PLAN_OPTIONS.map((option) => (
-                      <label
+                      <div
                         key={option.key}
-                        className="flex items-start gap-3 p-3 border border-border rounded-lg hover:border-primary/40 cursor-pointer"
+                        className="flex items-start gap-3 p-3 border border-border rounded-lg bg-muted-light/40"
                       >
                         <input
                           type="checkbox"
-                          checked={requestedPlans.includes(option.key)}
-                          onChange={() => togglePlan(option.key)}
+                          checked
+                          disabled
+                          aria-label={`${option.label} (included)`}
                           className="mt-1"
                         />
                         <div>
                           <div className="text-sm font-medium text-foreground">{option.label}</div>
                           <div className="text-xs text-muted mt-0.5">{option.description}</div>
                         </div>
-                      </label>
+                      </div>
                     ))}
                   </div>
                 </div>
