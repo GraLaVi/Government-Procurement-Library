@@ -9,15 +9,15 @@ const steps = [
   },
   {
     number: "02",
-    title: "Pick a Plan & Set Your Profile",
+    title: "Tell Us What You Sell",
     description:
-      "Once approved, choose Free, Basic, or Advanced. Configure your CAGE code, NSN categories, and bid-matching profiles.",
+      "Once approved, set up your match profile — part numbers, part description, or the types of contracts you go after — and GPH starts watching for relevant opportunities.",
   },
   {
     number: "03",
-    title: "Win Federal Contracts",
+    title: "Bid With Better Information",
     description:
-      "Receive matched solicitations daily, analyze competitor activity with CAGE-code intelligence, and submit stronger proposals backed by real procurement data.",
+      "Matched opportunities show up in your dashboard and your inbox. See who has won similar contracts, what the government has paid, and which solicitations are closing soon — so every proposal you submit is backed by real data.",
   },
 ];
 

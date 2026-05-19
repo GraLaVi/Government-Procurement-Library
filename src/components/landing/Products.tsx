@@ -22,7 +22,7 @@ const products: Array<{
       "Look up parts and vendors right after signup — no commitment. See part identifiers, vendor demographics, and whether solicitations and awards exist for a given record.",
     features: [
       "Part identifiers, details, and codes at a glance",
-      "Vendor demographics and registration status",
+      "See which vendors are registered and active on the parts you sell",
       "Bid-matching: 1 profile (match alerts, no solicitation detail)",
       "Weekly match notifications",
       "1 user",
@@ -37,7 +37,7 @@ const products: Array<{
       "Full parts and vendor detail — manufacturers, technical characteristics, packaging, contacts, award history, and more.",
     features: [
       "Manufacturers, technical characteristics, packaging, and end-use data",
-      "Vendor contacts, award history, and booked contracts",
+      "See which vendors are competing and winning on the parts you sell",
       "Recent solicitation detail",
       "Bid-matching: 1 profile with full solicitation view",
       "Daily match notifications",
