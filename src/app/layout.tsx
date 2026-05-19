@@ -27,7 +27,7 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GPH - DoD Solicitation Intelligence Platform",
+  title: "GPH - Federal Procurement Intelligence",
   description:
     "Track and win Department of Defense solicitations. Search DLA, DIBBS, and military branch opportunities with NSN/NIIN lookup, CAGE code intelligence, and real-time bid alerts.",
   keywords: [
