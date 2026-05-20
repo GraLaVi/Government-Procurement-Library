@@ -24,7 +24,7 @@ const COOKIE_CATEGORIES = [
 export default function PreferencesPage() {
   const { theme, setTheme } = useTheme();
   const { consent, hasDecided, openSettings } = useConsent();
-  const [localTheme, setLocalTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [localTheme, setLocalTheme] = useState<'light' | 'dark' | 'system'>('light');
   const [success, setSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 

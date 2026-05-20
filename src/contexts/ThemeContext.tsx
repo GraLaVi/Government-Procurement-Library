@@ -18,7 +18,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { preferences, updatePreferences, isLoading } = usePreferences();
-  const [theme, setThemeState] = useState<Theme>('system');
+  const [theme, setThemeState] = useState<Theme>('light');
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
   const [mounted, setMounted] = useState(false);
 
@@ -66,17 +66,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('theme', savedTheme);
         }
       } else {
-        // Check localStorage first, then default to system
+        // Check localStorage first, then default to light
         if (typeof window !== 'undefined') {
           const localTheme = localStorage.getItem('theme') as Theme | null;
           if (localTheme) {
             setThemeState(localTheme);
             applyTheme(localTheme);
           } else {
-            applyTheme('system');
+            applyTheme('light');
           }
         } else {
-          applyTheme('system');
+          applyTheme('light');
         }
       }
     }
@@ -130,8 +130,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (savedTheme) {
         applyTheme(savedTheme);
       } else {
-        // Fallback to system preference
-        applyTheme('system');
+        applyTheme('light');
       }
     }
   }, []);

@@ -53,6 +53,7 @@ const products: Array<{
       "Everything in Basic plus full procurement history, open solicitation detail, unlimited bid-matching profiles, saved searches, exports, and real-time notifications.",
     features: [
       "Full procurement history and open solicitation intelligence",
+      "Open solicitation intelligence by vendor — active opportunities on parts they've won before",
       "Unlimited bid-matching profiles",
       "Saved searches, pinned items, and CSV exports",
       "Immediate match notifications",
