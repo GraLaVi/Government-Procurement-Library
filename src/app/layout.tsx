@@ -29,7 +29,7 @@ const robotoMono = Roboto_Mono({
 export const metadata: Metadata = {
   title: "GPH - Federal Procurement Intelligence",
   description:
-    "Track and win Department of Defense solicitations. Search DLA, DIBBS, and military branch opportunities with NSN/NIIN lookup, CAGE code intelligence, and real-time bid alerts.",
+    "Research, track and win DLA, DIBBS, and SAM.gov bids. Search by NSN/NIIN, manufacturer part number, solicitation and award numbers, using our extensive intelligent library and real-time bid matching alerts.",
   keywords: [
     "DoD solicitations",
     "DLA contracts",
