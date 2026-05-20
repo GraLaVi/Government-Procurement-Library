@@ -13,6 +13,7 @@
 // - Empty states: "text-xs text-muted"
 // ============================================================================
 import { useState, useCallback, useMemo, useEffect } from "react";
+import Link from "next/link";
 import {
   VendorDetail as VendorDetailType,
   VendorAward,
@@ -830,13 +831,26 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
         id: "nsn",
         accessorFn: (row) => row.fsc && row.niin ? `${row.fsc}-${row.niin}` : row.niin,
         header: "NSN",
-        cell: ({ row }) => (
-          <span className="font-mono text-muted">
-            {row.original.fsc && row.original.niin
+        cell: ({ row }) => {
+          const displayValue =
+            row.original.fsc && row.original.niin
               ? `${row.original.fsc}-${formatNiin(row.original.niin)}`
-              : formatNiin(row.original.niin) || "—"}
-          </span>
-        ),
+              : formatNiin(row.original.niin);
+          if (!displayValue) {
+            return <span className="font-mono text-muted">—</span>;
+          }
+          return (
+            <Link
+              href={`/library/parts?search_type=nsn_niin&q=${encodeURIComponent(displayValue)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-primary hover:underline cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {displayValue}
+            </Link>
+          );
+        },
         meta: { className: "hidden md:table-cell" },
       },
       {
@@ -1291,13 +1305,26 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         id: "nsn",
         accessorFn: (row) => row.fsc && row.niin ? `${row.fsc}-${row.niin}` : row.niin,
         header: "NSN",
-        cell: ({ row }) => (
-          <span className="text-xs font-mono text-muted">
-            {row.original.fsc && row.original.niin
+        cell: ({ row }) => {
+          const displayValue =
+            row.original.fsc && row.original.niin
               ? `${row.original.fsc}-${formatNiin(row.original.niin)}`
-              : formatNiin(row.original.niin) || "—"}
-          </span>
-        ),
+              : formatNiin(row.original.niin);
+          if (!displayValue) {
+            return <span className="text-xs font-mono text-muted">—</span>;
+          }
+          return (
+            <Link
+              href={`/library/parts?search_type=nsn_niin&q=${encodeURIComponent(displayValue)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-mono text-primary hover:underline cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {displayValue}
+            </Link>
+          );
+        },
         meta: { className: "hidden md:table-cell" },
       },
       {
