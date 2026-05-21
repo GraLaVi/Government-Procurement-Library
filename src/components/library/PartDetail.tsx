@@ -377,15 +377,31 @@ export function PartDetail({ part }: PartDetailProps) {
               // code.code_value is already extracted (without type prefix) by backend
               const codeValue = String(code.code_value || '').trim();
               if (!codeValue) return;
-              
+
               const key = `${codeType.code_type}:${codeValue}`;
               definitions[key] = code.description;
-              
+
               // Also add uppercase/lowercase variations for case-insensitive lookup
               definitions[`${codeType.code_type}:${codeValue.toUpperCase()}`] = code.description;
               definitions[`${codeType.code_type}:${codeValue.toLowerCase()}`] = code.description;
-              
-              // For AMC codes, also create AQM and AMS keys (AMC codes are 2 chars: first=AQM, second=AMS)
+
+              // The library_code_definitions table stores AQM/AMS sub-codes
+              // under code_type='AMC' with code_value like "AQM 3" or "AMS H".
+              // Strip the prefix and re-file under the real sub-type so the
+              // renderer's AMC split fallback (looking up AQM:X / AMS:X) works.
+              if (codeType.code_type === 'AMC') {
+                const subMatch = codeValue.match(/^(AQM|AMS)\s+(.+)$/i);
+                if (subMatch) {
+                  const subType = subMatch[1].toUpperCase();
+                  const subValue = subMatch[2];
+                  definitions[`${subType}:${subValue}`] = code.description;
+                  definitions[`${subType}:${subValue.toUpperCase()}`] = code.description;
+                  definitions[`${subType}:${subValue.toLowerCase()}`] = code.description;
+                }
+              }
+
+              // Forward-compat: if the data ever gets cleaned up to store proper
+              // 2-char AMC codes (e.g. "3H"), split first char as AQM, second as AMS.
               if (codeType.code_type === 'AMC' && codeValue.length === 2) {
                 definitions[`AQM:${codeValue[0]}`] = code.description;
                 definitions[`AMS:${codeValue[1]}`] = code.description;
@@ -910,7 +926,14 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
           definition = parts.join(' / ');
         }
       }
-      
+
+      // Legacy 1-char AMC values (e.g. "G", "D") are the AMS portion of an
+      // AMC code stored without the AQM half. Show the AMS definition.
+      if (!definition && codeType === 'AMC' && codeStr.length === 1) {
+        definition = codeDefinitions[`AMS:${codeStr.toUpperCase()}`] ||
+                     codeDefinitions[`AMS:${codeStr.toLowerCase()}`] || '';
+      }
+
       // For DLA/IDS, also try 'DLA' code type as fallback
       if (!definition && codeType === 'IDS') {
         const dlaKey = `DLA:${codeStr}`;
