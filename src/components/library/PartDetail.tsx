@@ -247,7 +247,7 @@ function CodeTooltip({ code, title, content, codeType, children }: CodeTooltipPr
               {title}
             </div>
           )}
-          <div className="p-2">
+          <div className="p-2 whitespace-pre-line">
             {truncatedContent}
             {shouldTruncate && codeType && (
               <div className="mt-2 pt-2 border-t border-border text-muted text-[11px]">
@@ -408,10 +408,7 @@ export function PartDetail({ part }: PartDetailProps) {
               }
             });
           });
-          
-          console.log('Code definitions loaded. Total keys:', Object.keys(definitions).length);
-          console.log('Code type names:', typeNames);
-          
+
           setCodeDefinitions(definitions);
           setCodeTypeNames(typeNames);
         }
@@ -923,7 +920,7 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
           const parts = [];
           if (aqmDef) parts.push(`AQM ${codeStr[0]}: ${aqmDef}`);
           if (amsDef) parts.push(`AMS ${codeStr[1]}: ${amsDef}`);
-          definition = parts.join(' / ');
+          definition = parts.join('\n\n');
         }
       }
 
@@ -942,8 +939,6 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
       
       if (!definition) {
         definition = 'Code definition not available';
-        console.log(`No definition found for ${codeType}:${codeStr}. Available keys:`, 
-          Object.keys(codeDefinitions).filter(k => k.startsWith(codeType)).slice(0, 10));
       }
     }
     
@@ -1876,16 +1871,6 @@ interface PackagingPanelProps {
 }
 
 function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoading, error, onRetry }: PackagingPanelProps) {
-  // Debug: Log received definitions
-  useEffect(() => {
-    if (Object.keys(codeDefinitions).length > 0) {
-      console.log('PackagingPanel received codeDefinitions:', Object.keys(codeDefinitions).slice(0, 20));
-      console.log('Sample definitions:', Object.entries(codeDefinitions).slice(0, 5));
-    }
-    if (Object.keys(markingDefinitions).length > 0) {
-      console.log('PackagingPanel received markingDefinitions:', Object.keys(markingDefinitions));
-    }
-  }, [codeDefinitions, markingDefinitions]);
 
   if (isLoading) {
     return (
@@ -1971,12 +1956,6 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
         if (codeDefinitions[key]) {
           return codeDefinitions[key];
         }
-      }
-      
-      // Debug logging for missing definitions
-      if (Object.keys(codeDefinitions).length > 0) {
-        console.log(`[PackagingTooltip] Looking for code: ${code}, type: ${codeType}, tried keys:`, keys);
-        console.log(`[PackagingTooltip] Available keys (first 20):`, Object.keys(codeDefinitions).slice(0, 20));
       }
     }
     
