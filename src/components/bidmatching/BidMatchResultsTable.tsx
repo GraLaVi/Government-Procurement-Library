@@ -165,7 +165,7 @@ export function BidMatchResultsTable({
                         {result.solicitation_number ? (
                           <SolicitationNumberLink
                             solicitationNumber={result.solicitation_number}
-                            className="text-primary hover:text-primary/80 hover:underline cursor-pointer"
+                            className="text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
                           />
                         ) : (
                           <span className="text-foreground">-</span>

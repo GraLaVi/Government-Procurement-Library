@@ -844,7 +844,7 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
               href={`/library/parts?search_type=nsn_niin&q=${encodeURIComponent(displayValue)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-primary hover:underline cursor-pointer"
+              className="font-mono text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
               onClick={(e) => e.stopPropagation()}
             >
               {displayValue}
@@ -1318,7 +1318,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
               href={`/library/parts?search_type=nsn_niin&q=${encodeURIComponent(displayValue)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs font-mono text-primary hover:underline cursor-pointer"
+              className="text-xs font-mono text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
               onClick={(e) => e.stopPropagation()}
             >
               {displayValue}

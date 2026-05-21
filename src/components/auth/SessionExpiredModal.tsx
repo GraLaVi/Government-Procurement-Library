@@ -99,6 +99,9 @@ export function SessionExpiredModal() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
+            id="session-expired-email"
+            name="session-expired-email"
+            autoComplete="email"
             label="Email Address"
             type="email"
             placeholder="you@company.com"
@@ -110,6 +113,9 @@ export function SessionExpiredModal() {
           />
 
           <Input
+            id="session-expired-password"
+            name="session-expired-password"
+            autoComplete="current-password"
             label="Password"
             type="password"
             placeholder="Enter your password"

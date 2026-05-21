@@ -1083,7 +1083,19 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
           const rec = row.original;
           return (
             <span className="inline-flex items-center gap-1">
-              <span className="text-xs font-mono font-semibold">{rec.contract_number || "—"}</span>
+              {rec.contract_number ? (
+                <Link
+                  href={`/library/parts?search_type=contract_number&q=${encodeURIComponent(rec.contract_number)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {rec.contract_number}
+                </Link>
+              ) : (
+                <span className="text-xs font-mono font-semibold">—</span>
+              )}
               {rec.has_pdf && rec.order_detail_id && (
                 <button
                   type="button"
@@ -1115,11 +1127,21 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
         id: "cage_code",
         accessorKey: "cage_code",
         header: "CAGE",
-        cell: ({ row }) => (
-          <span className="text-xs font-mono font-semibold text-primary">
-            {row.original.cage_code || "—"}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const cage = row.original.cage_code;
+          if (!cage) return <span className="text-xs font-mono font-semibold text-muted">—</span>;
+          return (
+            <Link
+              href={`/library/vendor-search?cage_code=${encodeURIComponent(cage)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {cage}
+            </Link>
+          );
+        },
         meta: { className: "hidden md:table-cell" },
       },
       {
@@ -1292,7 +1314,19 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           const summary = amendmentSummaries.get(sol.solicitation_id);
           return (
             <span className="inline-flex items-center gap-1">
-              <span className="text-xs font-mono font-semibold">{sol.solicitation_number}</span>
+              {sol.solicitation_number ? (
+                <Link
+                  href={`/library/parts?search_type=solicitation&q=${encodeURIComponent(sol.solicitation_number)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {sol.solicitation_number}
+                </Link>
+              ) : (
+                <span className="text-xs font-mono font-semibold">—</span>
+              )}
               {sol.has_pdf && (
                 <button
                   type="button"
@@ -1321,23 +1355,6 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                   Amended{summary.amendment_count > 1 ? ` ×${summary.amendment_count}` : ""}
                 </button>
               )}
-            </span>
-          );
-        },
-      },
-      {
-        id: "quantity",
-        accessorKey: "quantity",
-        header: () => <span className="w-full text-right block">Qty</span>,
-        cell: ({ row }) => {
-          const qty = row.original.quantity;
-          const uom = row.original.quantity_unit;
-          const display = qty != null
-            ? (uom ? `${formatNumber(qty)}/${uom}` : formatNumber(qty))
-            : "—";
-          return (
-            <span className="text-right block text-xs">
-              {display}
             </span>
           );
         },
@@ -1383,6 +1400,23 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           );
         },
         meta: { className: "hidden lg:table-cell" },
+      },
+      {
+        id: "quantity",
+        accessorKey: "quantity",
+        header: () => <span className="w-full text-right block">Qty</span>,
+        cell: ({ row }) => {
+          const qty = row.original.quantity;
+          const uom = row.original.quantity_unit;
+          const display = qty != null
+            ? (uom ? `${formatNumber(qty)}/${uom}` : formatNumber(qty))
+            : "—";
+          return (
+            <span className="text-right block text-xs">
+              {display}
+            </span>
+          );
+        },
       },
       {
         id: "estimated_value",
@@ -1575,7 +1609,7 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
             href={`/library/vendor-search?cage_code=${encodeURIComponent(row.original.cage_code)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs font-mono font-semibold text-primary hover:underline cursor-pointer"
+            className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
             onClick={(e) => e.stopPropagation()}
           >
             {row.original.cage_code}
@@ -1602,7 +1636,7 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
               href={`/library/parts?search_type=mfg_part_number&q=${encodeURIComponent(row.original.part_number)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs font-mono font-semibold text-primary hover:underline cursor-pointer"
+              className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
               onClick={(e) => e.stopPropagation()}
             >
               {row.original.part_number}

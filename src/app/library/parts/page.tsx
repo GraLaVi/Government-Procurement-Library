@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useCallback, useRef, useEffect } from "react";
+import { Suspense, useState, useCallback, useRef, useEffect, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { PartsSearchForm, PartsSearchFormRef } from "@/components/library/PartsSearchForm";
@@ -66,6 +66,10 @@ function PartsSearchPageContent() {
   // Client-side search result cache (5-min TTL, max 50 entries)
   const searchCache = useRef<Map<string, { results: PartSearchResult[]; total: number; timestamp: number }>>(new Map());
 
+  // Defers non-urgent state updates inside handleSearch so React paints
+  // the spinner before working through the rest of the cascade.
+  const [, startTransition] = useTransition();
+
   // Get URL search params
   const searchParams = useSearchParams();
 
@@ -118,7 +122,7 @@ function PartsSearchPageContent() {
 
   // Handle search
   const handleSearch = useCallback(async (type: PartsSearchType, query: string) => {
-    // Check client-side cache first
+    // Check client-side cache first — no spinner on hit (instant).
     const cacheKey = `${type}:${query.trim().toUpperCase()}`;
     const cached = searchCache.current.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
@@ -137,13 +141,22 @@ function PartsSearchPageContent() {
       return;
     }
 
+    // Cache miss. Commit spinner-state urgently, defer the rest into a
+    // transition so React paints the spinner before reconciling the
+    // wider state cascade. Yield a microtask so the spinner paint
+    // commits before fetch() blocks the main thread — without this
+    // yield the full click-to-fetch cost is attributed to the click
+    // interaction by Cloudflare INP.
     setIsSearching(true);
-    setSearchError(null);
-    setHasSearched(true);
-    setSelectedNSN(null);
-    setPartDetail(null);
-    setLastSearchType(type);
-    setLastSearchQuery(query);
+    startTransition(() => {
+      setSearchError(null);
+      setHasSearched(true);
+      setSelectedNSN(null);
+      setPartDetail(null);
+      setLastSearchType(type);
+      setLastSearchQuery(query);
+    });
+    await Promise.resolve();
 
     try {
       const params = buildPartsSearchParams(type, query);
