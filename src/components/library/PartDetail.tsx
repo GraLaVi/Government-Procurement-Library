@@ -74,7 +74,7 @@ const SOLICITATIONS_CSV_COLUMNS: CsvColumn<PartSolicitation>[] = [
   { header: "Estimated Value", value: (r) => r.estimated_value ?? "" },
   { header: "Status", value: (r) => r.status ?? "" },
   { header: "Agency", value: (r) => r.agency_code ?? "" },
-  { header: "Set-Aside", value: (r) => r.set_aside ?? "" },
+  { header: "Set-Aside", value: (r) => r.set_aside_label ?? r.set_aside ?? "" },
   { header: "Buyer Name", value: (r) => r.buyer_name ?? "" },
   { header: "Buyer Email", value: (r) => r.buyer_email ?? "" },
   { header: "Buyer Phone", value: (r) => r.buyer_phone ?? "" },
@@ -1405,10 +1405,10 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
       },
       {
         id: "set_aside",
-        accessorKey: "set_aside",
+        accessorKey: "set_aside_label",
         header: "Set-Aside",
         cell: ({ row }) => {
-          const val = row.original.set_aside;
+          const val = row.original.set_aside_label ?? row.original.set_aside;
           if (!val) return <span className="text-muted">—</span>;
           const truncated = val.length > 10 ? val.substring(0, 10) + "..." : val;
           return (

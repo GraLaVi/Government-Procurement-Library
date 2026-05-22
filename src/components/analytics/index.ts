@@ -1,7 +1,7 @@
 export { KPICard } from './KPICard';
 export { KPICardSkeleton, ChartSkeleton } from './KPICardSkeleton';
 export { OpportunitiesTrendChart } from './OpportunitiesTrendChart';
-export { SetAsideChart } from './SetAsideChart';
+export { SetAsideMarketTable } from './SetAsideMarketTable';
 export { BookingsTrendChart } from './BookingsTrendChart';
 export { AwardsOverTimeChart } from './AwardsOverTimeChart';
 export { TopAwardedPartsChart } from './TopAwardedPartsChart';
@@ -9,4 +9,14 @@ export { UpcomingSolicitationsTable } from './UpcomingSolicitationsTable';
 export { MatchTrendChart } from './MatchTrendChart';
 export { ConditionTypeChart } from './ConditionTypeChart';
 export { RecentMatchesTable } from './RecentMatchesTable';
+// New widgets — A through I
+export { WinningPriceBenchmarkTable } from './WinningPriceBenchmarkTable';
+export { CompetitorLeaderboard } from './CompetitorLeaderboard';
+export { SetAsideWinRateTable } from './SetAsideWinRateTable';
+export { HotPartsTable } from './HotPartsTable';
+export { ResponseWindowChips } from './ResponseWindowChips';
+export { MatchStrengthChart } from './MatchStrengthChart';
+export { AmendmentAlertsTable } from './AmendmentAlertsTable';
+export { ProfileHealthTable } from './ProfileHealthTable';
+export { TimeToCloseChips } from './TimeToCloseChips';
 export { formatCurrency, formatNumber } from './ChartColors';

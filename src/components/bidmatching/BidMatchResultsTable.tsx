@@ -12,6 +12,9 @@ interface MatchedCondition {
   condition_id?: number | null;
   match_operator?: string | null;
   is_negated?: boolean | null;
+  // Server-resolved display label, populated for SET_ASIDE_CODE conditions
+  // where match_value is a canonical short code. NULL for other types.
+  match_label?: string | null;
 }
 
 interface BidMatchResult {
@@ -33,7 +36,10 @@ interface BidMatchResult {
   close_date: string | null;
   status: string | null;
   buyer_name: string | null;
+  // Legacy raw set-aside string. Kept for one release; prefer set_aside_label.
   set_aside: string | null;
+  set_aside_code?: string | null;
+  set_aside_label?: string | null;
 }
 
 interface BidMatchResultsTableProps {
@@ -53,6 +59,12 @@ function formatDate(dateStr: string | null): string {
 
 function ConditionBadge({ condition }: { condition: MatchedCondition }) {
   const negated = !!condition.is_negated;
+  // Prefer the server-resolved label for SET_ASIDE_CODE so users see
+  // "HUBZone Set-Aside" instead of the raw "HZC".
+  const displayValue =
+    condition.condition_type === "SET_ASIDE_CODE" && condition.match_label
+      ? condition.match_label
+      : condition.match_value;
   return (
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${
@@ -63,7 +75,7 @@ function ConditionBadge({ condition }: { condition: MatchedCondition }) {
     >
       {negated && <span className="font-bold text-[10px]">NOT</span>}
       <span className="font-semibold text-muted-foreground">{condition.condition_type}:</span>
-      <span className={negated ? "line-through" : ""}>{condition.match_value}</span>
+      <span className={negated ? "line-through" : ""}>{displayValue}</span>
       {condition.match_operator && condition.match_operator !== "eq" && (
         <span className="text-[10px] uppercase text-muted-foreground/70">({condition.match_operator})</span>
       )}
@@ -249,9 +261,9 @@ export function BidMatchResultsTable({
                             <ConditionBadge key={idx} condition={cond} />
                           ))}
                         </div>
-                        {result.set_aside && (
+                        {result.set_aside_label && (
                           <div className="mt-3 text-xs text-muted-foreground">
-                            Set-aside: <span className="text-foreground">{result.set_aside}</span>
+                            Set-aside: <span className="text-foreground">{result.set_aside_label}</span>
                           </div>
                         )}
                       </td>

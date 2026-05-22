@@ -7,6 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { ChipInput } from "@/components/ui/ChipInput";
 import { normalizeNiin, previewNiin } from "@/lib/niin";
+import { useCodeDefinitions } from "@/lib/hooks/useCodeDefinitions";
+import type { CodeDefinition } from "@/lib/codeDefinitions";
 
 interface BidMatchCondition {
   condition_id: number;
@@ -55,6 +57,11 @@ interface BidMatchingAccess {
   usage: { profile_count: number };
 }
 
+// Condition types that may appear on saved profiles. SET_ASIDE is the
+// legacy DIBBS letter-code condition; new profiles should use
+// SET_ASIDE_CODE (canonical short codes from code_definitions). We keep
+// SET_ASIDE in this list so legacy rows still render — see
+// NEW_CONDITION_TYPE_OPTIONS below for the picker-visible subset.
 const ALLOWED_CONDITION_TYPES = [
   "NIIN",
   "FSC",
@@ -66,13 +73,20 @@ const ALLOWED_CONDITION_TYPES = [
   "STATUS",
 ];
 
+// Types offered to users when adding a new condition row. SET_ASIDE is
+// hidden (retired in favor of SET_ASIDE_CODE) but legacy rows remain
+// editable below.
+const NEW_CONDITION_TYPE_OPTIONS = ALLOWED_CONDITION_TYPES.filter(
+  (t) => t !== "SET_ASIDE",
+);
+
 const CONDITION_TYPE_LABELS: Record<string, string> = {
   NIIN: "NIIN",
   FSC: "FSC Code",
   MFG_PART_NUMBER: "Mfg Part Number",
   PART_DESCRIPTION: "Part Description",
-  SET_ASIDE: "DIBBS Set-Aside",
-  SET_ASIDE_CODE: "SAM Set-Aside Code",
+  SET_ASIDE: "Set-Aside (legacy)",
+  SET_ASIDE_CODE: "Set-Aside",
   CAGE_CODE: "CAGE Code",
   STATUS: "Status",
 };
@@ -126,8 +140,8 @@ const CONDITION_TYPE_HINTS: Record<string, string> = {
   FSC: "4-digit Federal Supply Class — the category a part belongs to.",
   MFG_PART_NUMBER: "Manufacturer part number listed on the solicitation.",
   CAGE_CODE: "5-character CAGE code of a supplier referenced on the solicitation.",
-  SET_ASIDE: "DIBBS / DLA set-aside designation (e.g. SBA, OPEN).",
-  SET_ASIDE_CODE: "SAM.gov set-aside code (e.g. SBA, 8A, WOSB). Use 'DIBBS Set-Aside' for DLA solicitations.",
+  SET_ASIDE: "Legacy DIBBS letter-code set-aside (retired). Delete and recreate using the current Set-Aside condition.",
+  SET_ASIDE_CODE: "Canonical set-aside designation (e.g. SDVOSB, HUBZone, WOSB).",
   STATUS: "Solicitation status (e.g. OPEN, CLOSED).",
   PART_DESCRIPTION: "Free-text terms across the part description. Best for fuzzy keywords.",
 };
@@ -138,7 +152,7 @@ function operatorExample(condition_type: string, operator: string): string {
   if (operator === "in") {
     if (condition_type === "NIIN") return "01-234-5678, 999-888-777";
     if (condition_type === "FSC") return "5945, 5950, 5955";
-    if (condition_type === "SET_ASIDE_CODE") return "SBA, 8A, WOSB";
+    if (condition_type === "SET_ASIDE_CODE") return "HZC, SDVOSBC, WOSB";
     return "value1, value2, value3";
   }
   if (operator === "like" || operator === "ilike") {
@@ -151,8 +165,8 @@ function operatorExample(condition_type: string, operator: string): string {
   if (condition_type === "NIIN") return "01-234-5678";
   if (condition_type === "FSC") return "5945";
   if (condition_type === "CAGE_CODE") return "1ABC2";
-  if (condition_type === "SET_ASIDE") return "SBA";
-  if (condition_type === "SET_ASIDE_CODE") return "SBA";
+  if (condition_type === "SET_ASIDE") return "Y";
+  if (condition_type === "SET_ASIDE_CODE") return "SDVOSBC";
   if (condition_type === "STATUS") return "OPEN";
   return "value";
 }
@@ -169,6 +183,69 @@ function operatorHint(operator: string): string {
   }
 }
 
+// Render selected canonical set-aside codes as chips + a dropdown to add
+// more. Drives the SET_ASIDE_CODE condition when operator === 'in'.
+function SetAsideCodeChipPicker({
+  codes,
+  byCode,
+  selectedCodes,
+  onChange,
+}: {
+  codes: CodeDefinition[];
+  byCode: Map<string, CodeDefinition>;
+  selectedCodes: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const remaining = codes.filter((c) => !selectedCodes.includes(c.code));
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-1 min-h-[28px]">
+        {selectedCodes.length === 0 && (
+          <span className="text-xs text-muted italic">No set-asides selected.</span>
+        )}
+        {selectedCodes.map((code) => {
+          const def = byCode.get(code);
+          return (
+            <span
+              key={code}
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-accent/10 text-accent-foreground border border-accent/20"
+              title={def?.description ?? undefined}
+            >
+              {def?.label ?? code}
+              <button
+                type="button"
+                onClick={() => onChange(selectedCodes.filter((c) => c !== code))}
+                className="text-muted hover:text-foreground"
+                aria-label={`Remove ${def?.label ?? code}`}
+              >
+                ×
+              </button>
+            </span>
+          );
+        })}
+      </div>
+      <select
+        value=""
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v) onChange([...selectedCodes, v]);
+        }}
+        disabled={remaining.length === 0}
+        className="w-full text-sm border border-border bg-card-bg text-foreground rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary disabled:opacity-60"
+      >
+        <option value="">
+          {remaining.length === 0 ? "All set-asides selected" : "Add a set-aside…"}
+        </option>
+        {remaining.map((c) => (
+          <option key={c.code} value={c.code} title={c.description ?? undefined}>
+            {c.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export default function BidMatchingPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -178,6 +255,10 @@ export default function BidMatchingPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [access, setAccess] = useState<BidMatchingAccess | null>(null);
+
+  // Canonical set-aside vocab — one fetch per session via module cache.
+  // Powers the SET_ASIDE_CODE condition dropdown and chip-picker.
+  const { codes: setAsideCodes, byCode: setAsideByCode } = useCodeDefinitions("SET_ASIDE");
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -968,7 +1049,19 @@ export default function BidMatchingPage() {
                     const allowedOps = operatorsFor(cond.condition_type);
                     const isNiin = cond.condition_type === "NIIN";
                     const isIn = cond.match_operator === "in";
+                    const isSetAsideCode = cond.condition_type === "SET_ASIDE_CODE";
+                    const isLegacySetAside = cond.condition_type === "SET_ASIDE";
                     const niinPreview = isNiin && !isIn ? previewNiin(cond.match_value) : null;
+                    // Build the type-picker options. Tier-restricted users
+                    // keep their allowed list; everyone else gets the
+                    // "new condition" subset (SET_ASIDE hidden). A legacy
+                    // SET_ASIDE row keeps its current value in the dropdown
+                    // so the editor doesn't silently rewrite it.
+                    const baseTypeOptions =
+                      access?.limits.allowed_condition_types ?? NEW_CONDITION_TYPE_OPTIONS;
+                    const typeOptions = baseTypeOptions.includes(cond.condition_type)
+                      ? baseTypeOptions
+                      : [cond.condition_type, ...baseTypeOptions];
                     return (
                       <div
                         key={idx}
@@ -985,7 +1078,7 @@ export default function BidMatchingPage() {
                             onChange={(e) => updateCondition(idx, { condition_type: e.target.value })}
                             className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-lg px-2 py-2 focus:ring-2 focus:ring-primary"
                           >
-                            {(access?.limits.allowed_condition_types ?? ALLOWED_CONDITION_TYPES).map((ct) => (
+                            {typeOptions.map((ct) => (
                               <option key={ct} value={ct}>
                                 {CONDITION_TYPE_LABELS[ct] || ct}
                               </option>
@@ -1016,7 +1109,35 @@ export default function BidMatchingPage() {
                         </div>
                         {/* Row 2: value input — full width so chips and
                             paste-friendly inputs have room to breathe. */}
-                        {isIn ? (
+                        {isSetAsideCode && isIn ? (
+                          <SetAsideCodeChipPicker
+                            codes={setAsideCodes}
+                            byCode={setAsideByCode}
+                            selectedCodes={cond.chips}
+                            onChange={(next) =>
+                              updateCondition(idx, { chips: next, match_value: next.join(",") })
+                            }
+                          />
+                        ) : isSetAsideCode ? (
+                          <select
+                            value={cond.match_value}
+                            onChange={(e) => updateCondition(idx, { match_value: e.target.value })}
+                            className="w-full text-sm border border-border bg-card-bg text-foreground rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary"
+                          >
+                            <option value="" disabled>
+                              Select a set-aside…
+                            </option>
+                            {setAsideCodes.map((c) => (
+                              <option
+                                key={c.code}
+                                value={c.code}
+                                title={c.description ?? undefined}
+                              >
+                                {c.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : isIn ? (
                           <ChipInput
                             value={cond.chips}
                             onChange={(next) => updateCondition(idx, { chips: next, match_value: next.join(",") })}
@@ -1043,6 +1164,18 @@ export default function BidMatchingPage() {
                                   : "Match value"
                             }
                           />
+                        )}
+                        {isSetAsideCode && (cond.match_operator === "like" || cond.match_operator === "ilike") && (
+                          <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                            ⚠ Most users want “is exactly” or “is any of” for set-asides. Pattern operators
+                            only match values that look like a canonical code.
+                          </p>
+                        )}
+                        {isLegacySetAside && (
+                          <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                            This condition uses the retired DIBBS set-aside vocabulary. Delete it and add
+                            a new “Set-Aside” condition to switch to the canonical codes.
+                          </p>
                         )}
                         {/* Layer 2: contextual hint that updates with the
                             selected type + operator. Concrete example

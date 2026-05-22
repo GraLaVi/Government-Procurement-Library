@@ -99,7 +99,10 @@ export interface VendorSolicitation {
   agency_code: string | null;
   close_date: string;
   status: string;
+  // Legacy raw set-aside string. Kept for one release; prefer set_aside_label.
   set_aside: string | null;
+  set_aside_code?: string | null;
+  set_aside_label?: string | null;
   quantity: number;
   niin: string | null;
   fsc: string | null;
@@ -337,10 +340,20 @@ export function formatNumber(value: number | null | undefined): string {
   return new Intl.NumberFormat('en-US').format(value);
 }
 
-// Format date as "Nov 15, 2024"
+// Format date as "Nov 15, 2024".
+// Parses "YYYY-MM-DD" (Postgres DATE serialization) as a local-calendar date
+// so US-timezone users don't see the day shifted back by one — `new Date("2026-05-07")`
+// would otherwise be UTC midnight, which toLocaleDateString renders as May 6 locally.
 export function formatAwardDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
-  const date = new Date(dateStr);
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateStr.slice(0, 10)) && !dateStr.includes('T');
+  let date: Date;
+  if (dateOnly) {
+    const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+    date = new Date(y, m - 1, d);
+  } else {
+    date = new Date(dateStr);
+  }
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -498,7 +511,10 @@ export interface PartSolicitation {
   agency_code: string | null;
   close_date: string | null;
   status: string | null;
+  // Legacy raw set-aside string. Kept for one release; prefer set_aside_label.
   set_aside: string | null;
+  set_aside_code?: string | null;
+  set_aside_label?: string | null;
   quantity: number | null;
   quantity_unit: string | null;
   unit_price: number | null;

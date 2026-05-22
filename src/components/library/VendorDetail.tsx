@@ -84,7 +84,7 @@ const VENDOR_SOLICITATIONS_CSV_COLUMNS: CsvColumn<VendorSolicitation>[] = [
   { header: "Qty", value: (r) => r.quantity ?? "" },
   { header: "Unit Price", value: (r) => r.unit_price ?? "" },
   { header: "Estimated Value", value: (r) => r.estimated_value ?? "" },
-  { header: "Set-Aside", value: (r) => r.set_aside ?? "" },
+  { header: "Set-Aside", value: (r) => r.set_aside_label ?? r.set_aside ?? "" },
 ];
 
 interface VendorDetailProps {
@@ -1361,23 +1361,16 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
       },
       {
         id: "set_aside",
-        accessorKey: "set_aside",
+        accessorKey: "set_aside_label",
         header: "Set-Aside",
         cell: ({ row }) => {
-          const code = row.original.set_aside;
+          // Prefer canonical code + label from the API. Fall back to the
+          // legacy raw string only when the row hasn't been re-harvested.
+          const code = row.original.set_aside_code ?? row.original.set_aside;
+          const label = row.original.set_aside_label ?? code;
           if (!code) return <span className="text-muted">—</span>;
-          const SET_ASIDE_LABELS: Record<string, string> = {
-            Y: "Small Business Set-Aside",
-            H: "HUBZone Set-Aside",
-            R: "Service Disabled Veteran-Owned Small Business (SDVOSB) Set-Aside",
-            L: "Woman Owned Small Business (WOSB) Set-Aside",
-            A: "8(a) Set-Aside",
-            E: "Economically Disadvantaged Woman Owned Small Business (EDWOSB) Set-Aside",
-            N: "Unrestricted/Not Set-Aside",
-          };
-          const label = SET_ASIDE_LABELS[code.toUpperCase()] || code;
           return (
-            <Tooltip content={label}>
+            <Tooltip content={label ?? code}>
               <Badge variant="info" size="sm">{code}</Badge>
             </Tooltip>
           );

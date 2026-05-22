@@ -6,7 +6,7 @@ import {
   KPICardSkeleton,
   ChartSkeleton,
   OpportunitiesTrendChart,
-  SetAsideChart,
+  SetAsideMarketTable,
   BookingsTrendChart,
   AwardsOverTimeChart,
   TopAwardedPartsChart,
@@ -14,6 +14,15 @@ import {
   MatchTrendChart,
   ConditionTypeChart,
   RecentMatchesTable,
+  WinningPriceBenchmarkTable,
+  CompetitorLeaderboard,
+  SetAsideWinRateTable,
+  HotPartsTable,
+  ResponseWindowChips,
+  MatchStrengthChart,
+  AmendmentAlertsTable,
+  ProfileHealthTable,
+  TimeToCloseChips,
   formatCurrency,
   formatNumber,
 } from '@/components/analytics';
@@ -29,27 +38,26 @@ export default function AnalyticsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">Procurement Analytics</h1>
         <p className="text-muted mt-1">
-          Market intelligence and your business performance at a glance.
+          Decision-driving intel to help you win your next bid.
         </p>
       </div>
 
       {/* ================================================================ */}
-      {/* Section 1: Market Overview                                       */}
+      {/* Section 1: Market Pulse                                          */}
       {/* ================================================================ */}
       <section className="mb-10">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Market Overview</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">Market Pulse</h2>
 
-        {/* KPI Cards */}
         {market.isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {Array.from({ length: 4 }).map((_, i) => <KPICardSkeleton key={i} />)}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            {Array.from({ length: 3 }).map((_, i) => <KPICardSkeleton key={i} />)}
           </div>
         ) : market.error ? (
           <div className="bg-error/10 border border-error/30 rounded-xl p-4 mb-6 text-error text-sm">
             Failed to load market data: {market.error}
           </div>
         ) : market.data ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <KPICard
               label="DIBBS Open Solicitations"
               value={formatNumber(market.data.dibbs_open_solicitations_count)}
@@ -65,15 +73,10 @@ export default function AnalyticsPage() {
               value={formatCurrency(market.data.dibbs_recent_awards_total)}
               source="Source: DIBBS"
             />
-            <KPICard
-              label="Recent SAM Awards (90d)"
-              value={formatCurrency(market.data.sam_recent_awards_total)}
-              source="Source: SAM.gov"
-            />
           </div>
         ) : null}
 
-        {/* Charts row */}
+        {/* Set-Aside compact table + SAM trend (demoted from hero) */}
         {market.isLoading ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartSkeleton />
@@ -81,18 +84,50 @@ export default function AnalyticsPage() {
           </div>
         ) : market.data ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SetAsideMarketTable data={market.data.set_aside_market} />
             <OpportunitiesTrendChart data={market.data.sam_opportunities_trend} />
-            <SetAsideChart data={market.data.set_aside_distribution} />
           </div>
         ) : null}
       </section>
 
       {/* ================================================================ */}
-      {/* Section 2: Your Business                                         */}
+      {/* Section 2: Act Now (urgency + match-quality alerts)              */}
       {/* ================================================================ */}
-      <section id="your-business" className="scroll-mt-8">
+      {(business.isLoading || business.data || !bidMatch.forbidden) && (
+        <section className="mb-10">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Act Now</h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Response Window (E) — from /my-business */}
+            {business.isLoading ? (
+              <ChartSkeleton height="h-32" />
+            ) : business.data ? (
+              <ResponseWindowChips data={business.data.response_window} />
+            ) : null}
+
+            {/* Match Strength split (F) — bid-matching only */}
+            {bidMatch.isLoading ? (
+              <ChartSkeleton height="h-32" />
+            ) : bidMatch.data ? (
+              <MatchStrengthChart data={bidMatch.data.match_strength_split} />
+            ) : null}
+          </div>
+
+          {/* Amendment Alerts (G) — bid-matching only, full-width */}
+          {bidMatch.data && (
+            <div className="mt-6">
+              <AmendmentAlertsTable data={bidMatch.data.amendment_alerts} />
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ================================================================ */}
+      {/* Section 3: Competitive Intel                                     */}
+      {/* ================================================================ */}
+      <section id="your-business" className="mb-10 scroll-mt-8">
         <h2 className="text-lg font-semibold text-foreground mb-4">
-          Your Business
+          Competitive Intel
           {business.data?.company_name && (
             <span className="text-muted font-normal text-base ml-2">
               ({business.data.company_name})
@@ -100,7 +135,7 @@ export default function AnalyticsPage() {
           )}
         </h2>
 
-        {/* KPI Cards */}
+        {/* KPI strip */}
         {business.isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             {Array.from({ length: 3 }).map((_, i) => <KPICardSkeleton key={i} />)}
@@ -129,7 +164,45 @@ export default function AnalyticsPage() {
           </div>
         ) : null}
 
-        {/* Charts row 1: Bookings + Awards */}
+        {/* Hero: Winning Price Benchmark (A) */}
+        {business.isLoading ? (
+          <div className="mb-6"><ChartSkeleton height="h-64" /></div>
+        ) : business.data ? (
+          <div className="mb-6">
+            <WinningPriceBenchmarkTable data={business.data.winning_price_benchmarks} />
+          </div>
+        ) : null}
+
+        {/* Competitor Leaderboard (B) + Set-Aside Win Rate (C) */}
+        {business.isLoading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartSkeleton />
+            <ChartSkeleton />
+          </div>
+        ) : business.data ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CompetitorLeaderboard data={business.data.competitor_leaderboard} />
+            <SetAsideWinRateTable data={business.data.set_aside_win_rate} />
+          </div>
+        ) : null}
+      </section>
+
+      {/* ================================================================ */}
+      {/* Section 4: Opportunity Targeting                                 */}
+      {/* ================================================================ */}
+      <section className="mb-10">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Opportunity Targeting</h2>
+
+        {/* Hot Parts (D) */}
+        {business.isLoading ? (
+          <div className="mb-6"><ChartSkeleton height="h-64" /></div>
+        ) : business.data ? (
+          <div className="mb-6">
+            <HotPartsTable data={business.data.hot_parts} />
+          </div>
+        ) : null}
+
+        {/* Bookings + Awards Over Time */}
         {business.isLoading ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <ChartSkeleton />
@@ -160,11 +233,11 @@ export default function AnalyticsPage() {
       </section>
 
       {/* ================================================================ */}
-      {/* Section 3: Bid-Matching (only shown if customer has access)      */}
+      {/* Section 5: Bid-Matching Health (only if entitled)                */}
       {/* ================================================================ */}
       {!bidMatch.forbidden && (bidMatch.isLoading || bidMatch.data || bidMatch.error) && (
         <section className="mt-10">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Bid-Matching</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Bid-Matching Health</h2>
 
           {/* KPI Cards */}
           {bidMatch.isLoading ? (
@@ -197,7 +270,13 @@ export default function AnalyticsPage() {
                 />
               </div>
 
-              {/* Charts row */}
+              {/* Profile Health (H) + Time-to-Close (I) */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <ProfileHealthTable data={bidMatch.data.profile_health} />
+                <TimeToCloseChips data={bidMatch.data.time_to_close} />
+              </div>
+
+              {/* Existing charts row */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <MatchTrendChart data={bidMatch.data.match_trend} />
                 <ConditionTypeChart data={bidMatch.data.condition_type_distribution} />

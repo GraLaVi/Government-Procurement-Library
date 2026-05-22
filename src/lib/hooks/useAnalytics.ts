@@ -10,12 +10,6 @@ export interface MonthCount {
   count: number;
 }
 
-export interface CodeCount {
-  code: string | null;
-  description: string | null;
-  count: number;
-}
-
 export interface MonthValue {
   month: string;
   total_value: number;
@@ -48,14 +42,70 @@ export interface BookingMonth {
   month_total: number;
 }
 
+export interface SetAsideMarketRow {
+  code: string | null;
+  description: string | null;
+  open_count: number;
+  trend_12mo: number[];
+  yoy_pct: number | null;
+}
+
 export interface MarketOverview {
   dibbs_open_solicitations_count: number;
   dibbs_recent_awards_total: number | null;
   sam_dod_open_solicitations_count: number;
   sam_recent_awards_total: number | null;
   sam_opportunities_trend: MonthCount[];
-  set_aside_distribution: CodeCount[];
+  set_aside_market: SetAsideMarketRow[];
   generated_at: string;
+}
+
+// New widget types — A, B, C, D, E
+export interface PartPriceBenchmark {
+  part_id: number | null;
+  niin: string | null;
+  fsc: string | null;
+  description: string | null;
+  award_count: number;
+  min_unit_price: number | null;
+  p25_unit_price: number | null;
+  median_unit_price: number | null;
+  p75_unit_price: number | null;
+  max_unit_price: number | null;
+}
+
+export interface CompetitorRow {
+  cage_code: string | null;
+  company_name: string | null;
+  parts_won_count: number;
+  total_value: number;
+  last_award_date: string | null;
+}
+
+export interface SetAsideWinRateRow {
+  // Display string — canonical label from code_definitions, or 'No Set-Aside'
+  // when set_aside_code is NULL. Backend resolves the label server-side.
+  set_aside: string | null;
+  set_aside_code?: string | null;
+  matched_count: number;
+  won_count: number;
+  win_rate_pct: number | null;
+}
+
+export interface HotPartRow {
+  part_id: number | null;
+  niin: string | null;
+  fsc: string | null;
+  description: string | null;
+  last_30d_count: number;
+  baseline_monthly_avg: number;
+  surge: number;
+}
+
+export interface ResponseWindowBucket {
+  bucket: string;
+  label: string;
+  count: number;
 }
 
 export interface CustomerAnalytics {
@@ -68,6 +118,11 @@ export interface CustomerAnalytics {
   awards_over_time: MonthValue[];
   top_awarded_parts: PartValue[];
   upcoming_solicitations: UpcomingSolicitation[];
+  winning_price_benchmarks: PartPriceBenchmark[];
+  competitor_leaderboard: CompetitorRow[];
+  set_aside_win_rate: SetAsideWinRateRow[];
+  hot_parts: HotPartRow[];
+  response_window: ResponseWindowBucket[];
   generated_at: string;
 }
 
@@ -206,6 +261,35 @@ export interface RecentMatch {
   matched_at: string | null;
 }
 
+export interface MatchStrengthDay {
+  day: string;
+  hard: number;
+  soft: number;
+}
+
+export interface AmendmentAlertRow {
+  solicitation_number: string | null;
+  close_date: string | null;
+  profile_name: string | null;
+  matched_at: string | null;
+  latest_amendment_at: string | null;
+  change_reason: string | null;
+}
+
+export interface ProfileHealthRow {
+  profile_id: number;
+  profile_name: string;
+  last_match_date: string | null;
+  matches_30d: number;
+  status: string;
+}
+
+export interface TimeToCloseBucket {
+  bucket: string;
+  label: string;
+  count: number;
+}
+
 export interface BidMatchAnalytics {
   active_profiles_count: number;
   total_matches: number;
@@ -213,6 +297,10 @@ export interface BidMatchAnalytics {
   match_trend: DayCount[];
   condition_type_distribution: ConditionTypeCount[];
   recent_matches: RecentMatch[];
+  match_strength_split: MatchStrengthDay[];
+  amendment_alerts: AmendmentAlertRow[];
+  profile_health: ProfileHealthRow[];
+  time_to_close: TimeToCloseBucket[];
   generated_at: string;
 }
 
