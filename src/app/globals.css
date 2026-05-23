@@ -6,23 +6,23 @@
 
 /* =====================================================================
    GPH brand tokens — see LAYOUT_STANDARDS.md → "Brand Colors"
-   Identity color is teal (#0F778B), consistent across both modes.
+   Identity color is teal (#0E8989), consistent across both modes.
    Token names below are kept stable (e.g., --primary, --card-bg, --muted)
    so existing Tailwind utility classes site-wide keep working; only the
    values change. Renaming tokens is a v2 cleanup.
    ===================================================================== */
 :root {
   /* Brand accent (teal) — primary interactive color */
-  --primary: #2E94AA;
-  --primary-hover: #1F7689;
-  --primary-light: #D9EEF4;
+  --primary: #0E8989;
+  --primary-hover: #0B6B6B;
+  --primary-light: #CDFAFA;
 
   /* Secondary — deep ink, used for body & headings in light mode */
   --secondary: #1E293B;
 
   /* Soft secondary accent (retained for landing-page decorative use) */
-  --accent: #3FAFC5;
-  --accent-light: #EEF8FB;
+  --accent: #14B8B8;
+  --accent-light: #F0FDFD;
 
   /* Surfaces */
   --background: #FFFFFF;
@@ -42,14 +42,14 @@
 }
 
 :root[data-theme="dark"] {
-  --primary: #2E94AA;
-  --primary-hover: #4FB0C5;
-  --primary-light: #1B5D6B;
+  --primary: #0E8989;
+  --primary-hover: #15ADAD;
+  --primary-light: #155E5E;
 
   --secondary: #F3F4F6;
 
-  --accent: #5BC3D6;
-  --accent-light: #1B5D6B;
+  --accent: #2DD4D4;
+  --accent-light: #155E5E;
 
   --background: #0F1D2F;
   --foreground: #E2E8F0;

@@ -29,6 +29,7 @@ function isGroupActive(items: { href: string }[], pathname: string): boolean {
 
 // Links shown to authenticated users (excludes Pricing — they reach it via /account/billing).
 const navLinks = [
+  { href: "/#products", label: "Products" },
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How It Works" },
 ];
@@ -44,6 +45,7 @@ const visitorNavLinks = [
 
 const librarySearchItems = [
   { href: "/library/parts", label: "Parts Search" },
+  { href: "/library/vendor-search", label: "Vendor Search" },
 ];
 
 const helpItems = [
@@ -119,8 +121,21 @@ export function Navbar() {
             <span className="wordmark text-xl text-card-foreground">GPH</span>
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation
+              Order: marketing links first (Products, Features, How It Works,
+              and Pricing for visitors), then the in-app tool dropdowns and
+              Bid Matching for authenticated users. Mirrors Header.tsx so the
+              landing-page nav stays consistent with the in-app nav. */}
           <div className="hidden md:flex items-center gap-8">
+            {(isAuthenticated ? navLinks : visitorNavLinks).map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={topLinkClass(isLinkActive(link.href, pathname))}
+              >
+                {link.label}
+              </Link>
+            ))}
             {/* Library Search Dropdown - Only for authenticated users */}
             {!isLoading && isAuthenticated && (
               <div className="relative" ref={dropdownRef}>
@@ -154,6 +169,16 @@ export function Navbar() {
                   </div>
                 )}
               </div>
+            )}
+            {/* Bid Matching - Only for authenticated users. Plain link
+                (no dropdown); the page itself gates by tier. */}
+            {!isLoading && isAuthenticated && (
+              <Link
+                href="/bidmatching"
+                className={topLinkClass(isLinkActive("/bidmatching", pathname))}
+              >
+                Bid Matching
+              </Link>
             )}
             {/* Help Dropdown - Only for authenticated users */}
             {!isLoading && isAuthenticated && (
@@ -189,15 +214,6 @@ export function Navbar() {
                 )}
               </div>
             )}
-            {(isAuthenticated ? navLinks : visitorNavLinks).map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={topLinkClass(isLinkActive(link.href, pathname))}
-              >
-                {link.label}
-              </Link>
-            ))}
           </div>
 
           {/* Desktop CTA */}
@@ -241,10 +257,21 @@ export function Navbar() {
           </button>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation
+            Same order as desktop: marketing links first, then in-app tools. */}
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col gap-4">
+              {(isAuthenticated ? navLinks : visitorNavLinks).map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={mobileLinkClass(isLinkActive(link.href, pathname))}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
               {/* Mobile Library Search - Only for authenticated users */}
               {!isLoading && isAuthenticated && (
                 <div>
@@ -281,6 +308,16 @@ export function Navbar() {
                     </div>
                   )}
                 </div>
+              )}
+              {/* Mobile Bid Matching - Only for authenticated users */}
+              {!isLoading && isAuthenticated && (
+                <Link
+                  href="/bidmatching"
+                  className={mobileLinkClass(isLinkActive("/bidmatching", pathname))}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Bid Matching
+                </Link>
               )}
               {/* Mobile Help - Only for authenticated users */}
               {!isLoading && isAuthenticated && (
@@ -319,16 +356,6 @@ export function Navbar() {
                   )}
                 </div>
               )}
-              {(isAuthenticated ? navLinks : visitorNavLinks).map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={mobileLinkClass(isLinkActive(link.href, pathname))}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
               <div className="flex flex-col gap-3 pt-4 border-t border-border">
                 {!isLoading && isAuthenticated ? (
                   <>

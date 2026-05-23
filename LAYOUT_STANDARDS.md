@@ -221,17 +221,17 @@ Confirmation dialog for destructive actions.
 
 ### Brand Colors
 
-The GPH identity color is a cool teal at hue ~190°. All brand colors are CSS custom properties defined in `src/app/globals.css` and exposed to Tailwind via `@theme inline`. Use the Tailwind utility names (`bg-primary`, `text-primary`, etc.) — never hardcode hex values in components.
+The GPH identity color is a pure teal at hue ~180° (green = blue channel). All brand colors are CSS custom properties defined in `src/app/globals.css` and exposed to Tailwind via `@theme inline`. Use the Tailwind utility names (`bg-primary`, `text-primary`, etc.) — never hardcode hex values in components.
 
 **Primary teal palette:**
 
 | Variable | Light mode | Dark mode | Usage |
 |----------|------------|-----------|-------|
-| `primary` | `#0F778B` | `#0F778B` | Primary actions, links, focus states |
-| `primary-hover` | `#0E5E6E` | `#1697B1` | Primary button hover |
-| `primary-light` | `#CDEBF7` | `#155A68` | Light primary backgrounds, tints |
-| `accent` | `#149FB8` | `#32B7D2` | Decorative accents (landing page) |
-| `accent-light` | `#F0FAFD` | `#155A68` | Soft accent backgrounds |
+| `primary` | `#0E8989` | `#0E8989` | Primary actions, links, focus states |
+| `primary-hover` | `#0B6B6B` | `#15ADAD` | Primary button hover |
+| `primary-light` | `#CDFAFA` | `#155E5E` | Light primary backgrounds, tints |
+| `accent` | `#14B8B8` | `#2DD4D4` | Decorative accents (landing page) |
+| `accent-light` | `#F0FDFD` | `#155E5E` | Soft accent backgrounds |
 
 **Neutrals & status:**
 
