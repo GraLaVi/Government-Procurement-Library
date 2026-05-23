@@ -39,6 +39,8 @@ import {
   formatContractDate,
 } from "@/lib/library/types";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { Badge } from "@/components/ui/Badge";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1408,13 +1410,16 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorKey: "set_aside_label",
         header: "Set-Aside",
         cell: ({ row }) => {
-          const val = row.original.set_aside_label ?? row.original.set_aside;
-          if (!val) return <span className="text-muted">—</span>;
-          const truncated = val.length > 10 ? val.substring(0, 10) + "..." : val;
+          // Display the canonical short code in a badge with the
+          // human-readable label on hover. Falls back to the legacy raw
+          // set_aside string for rows that pre-date the normalization.
+          const code = row.original.set_aside_code ?? row.original.set_aside;
+          const label = row.original.set_aside_label ?? code;
+          if (!code) return <span className="text-muted">—</span>;
           return (
-            <span className="text-xs font-medium text-foreground" title={val}>
-              {truncated}
-            </span>
+            <Tooltip content={label ?? code}>
+              <Badge variant="info" size="sm">{code}</Badge>
+            </Tooltip>
           );
         },
         meta: { className: "hidden lg:table-cell" },

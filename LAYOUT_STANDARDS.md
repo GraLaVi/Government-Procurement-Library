@@ -219,16 +219,25 @@ Confirmation dialog for destructive actions.
 
 ## Styling Patterns
 
-### Color Variables (Tailwind)
+### Brand Colors
 
-Defined in `tailwind.config.ts`:
+The GPH identity color is a cool teal at hue ~190°. All brand colors are CSS custom properties defined in `src/app/globals.css` and exposed to Tailwind via `@theme inline`. Use the Tailwind utility names (`bg-primary`, `text-primary`, etc.) — never hardcode hex values in components.
+
+**Primary teal palette:**
+
+| Variable | Light mode | Dark mode | Usage |
+|----------|------------|-----------|-------|
+| `primary` | `#0F778B` | `#0F778B` | Primary actions, links, focus states |
+| `primary-hover` | `#0E5E6E` | `#1697B1` | Primary button hover |
+| `primary-light` | `#CDEBF7` | `#155A68` | Light primary backgrounds, tints |
+| `accent` | `#149FB8` | `#32B7D2` | Decorative accents (landing page) |
+| `accent-light` | `#F0FAFD` | `#155A68` | Soft accent backgrounds |
+
+**Neutrals & status:**
 
 | Variable | Usage |
 |----------|-------|
-| `primary` | Primary actions, links, focus states |
-| `primary-hover` | Primary button hover |
-| `primary-light` | Light primary backgrounds |
-| `secondary` | Secondary brand color |
+| `secondary` | Body text & headings (dark ink) |
 | `foreground` | Main text color |
 | `muted` | Secondary/helper text |
 | `muted-light` | Page backgrounds, subtle fills |
@@ -236,6 +245,8 @@ Defined in `tailwind.config.ts`:
 | `success` | Success states, active badges |
 | `warning` | Warning states, inactive badges |
 | `error` | Error states, destructive actions |
+
+> When updating the brand teal, also update `theme_color` in `src/app/manifest.webmanifest` so the PWA browser-chrome color stays in sync.
 
 ### Cards
 

@@ -24,6 +24,7 @@ interface MatchedCondition {
   condition_id?: number | null;
   match_operator?: string | null;
   is_negated?: boolean | null;
+  match_label?: string | null;
 }
 
 interface BidMatchResult {
@@ -46,6 +47,8 @@ interface BidMatchResult {
   status: string | null;
   buyer_name: string | null;
   set_aside: string | null;
+  set_aside_code?: string | null;
+  set_aside_label?: string | null;
 }
 
 interface ResultsResponse {
