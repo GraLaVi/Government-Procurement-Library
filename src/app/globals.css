@@ -32,8 +32,8 @@
 
   /* Borders & muted text */
   --muted: #64748B;
-  --muted-light: #F1F5F9;
-  --border: #CBD5E1;
+  --muted-light: #F8FAFC;
+  --border: #E2E8F0;
 
   /* Status — same hex in both modes for muscle-memory, brightness tuned in dark */
   --success: #10B981;
@@ -58,7 +58,7 @@
 
   --muted: #94A3B8;
   --muted-light: #334155;
-  --border: #334155;
+  --border: #475569;
 
   --success: #34D399;
   --warning: #FBBF24;

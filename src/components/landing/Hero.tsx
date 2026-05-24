@@ -12,8 +12,10 @@ export function Hero() {
   return (
     <section className="relative pt-40 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
       {/* Background gradient — soft teal glow entering from the top-left
-          only, fading to clean white across the rest of the hero. */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-light/35 via-white to-white" />
+          only, fading to clean page-background across the rest of the hero.
+          Hardcoded white was invisible in dark mode (white-on-white text);
+          dark variant fades to the dark navy background token. */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-light/35 via-white to-white dark:from-primary-light/25 dark:via-background dark:to-background" />
 
       {/* Decorative shapes */}
       <div className="absolute top-20 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />

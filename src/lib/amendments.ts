@@ -55,15 +55,64 @@ export const FIELD_LABELS: Record<string, string> = {
   close_date: "Close date",
   issue_date: "Issue date",
   status: "Status",
+  // Both keys render with the same user-facing label. set_aside_code is the
+  // canonical key written by the worker post-refactor; set_aside is the
+  // legacy key on historical rows.
   set_aside: "Set-aside",
+  set_aside_code: "Set-aside",
   set_aside_description: "Set-aside description",
-  set_aside_code: "Set-aside code",
   buyer_name: "Buyer",
   agency_code: "Agency",
   new_item: "Line item",
   part_id: "Part",
   first_pr_number: "PR number",
 };
+
+// Field keys (and their legacy aliases) that store canonical set-aside codes
+// resolvable against code_definitions where code_type='SET_ASIDE'.
+export const SET_ASIDE_FIELD_KEYS: ReadonlySet<string> = new Set([
+  "set_aside",
+  "set_aside_code",
+]);
+
+export function isSetAsideField(key: string): boolean {
+  return SET_ASIDE_FIELD_KEYS.has(key);
+}
+
+// Read an amendment field from a prior_state / new_state JSONB blob, tolerant
+// of the worker's set-aside key rename (set_aside → set_aside_code). Newer
+// rows store the value under `set_aside_code`; older rows store it under
+// `set_aside`. Either key resolves to the same value regardless of which one
+// `changed_fields` reported.
+export function pickAmendmentValue(
+  state: Record<string, unknown> | null | undefined,
+  fieldKey: string,
+): unknown {
+  if (!state) return undefined;
+  if (state[fieldKey] !== undefined) return state[fieldKey];
+  if (fieldKey === "set_aside_code" && state.set_aside !== undefined) return state.set_aside;
+  if (fieldKey === "set_aside" && state.set_aside_code !== undefined) return state.set_aside_code;
+  return undefined;
+}
+
+// Resolve a raw amendment value for a set-aside field to a human label.
+// Canonical worker rows store uppercase codes (e.g. "HZC") which we look up
+// against the code_definitions map. Legacy rows store already-readable
+// label strings (e.g. "hubzone set-aside"); for those we fall back to the
+// raw string and just title-case it so it reads cleanly.
+export function resolveSetAsideLabel(
+  value: unknown,
+  byCode: ReadonlyMap<string, { label: string }>,
+): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value !== "string") return String(value);
+  const trimmed = value.trim();
+  if (!trimmed) return "—";
+  const hit = byCode.get(trimmed) ?? byCode.get(trimmed.toUpperCase());
+  if (hit) return hit.label;
+  // Legacy label like "hubzone set-aside" — title-case for readability.
+  return trimmed.replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export function labelForField(key: string): string {
   return FIELD_LABELS[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());

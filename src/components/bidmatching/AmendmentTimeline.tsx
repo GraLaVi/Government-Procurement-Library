@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AmendmentEntry,
   SolicitationAmendmentsResponse,
+  isSetAsideField,
   labelForChangeReason,
   labelForField,
+  pickAmendmentValue,
   renderStateValue,
+  resolveSetAsideLabel,
   timeAgo,
 } from "@/lib/amendments";
+import { useCodeDefinitions } from "@/lib/hooks/useCodeDefinitions";
+import type { CodeDefinition } from "@/lib/codeDefinitions";
 
 interface Props {
   solicitationId: number;
@@ -47,6 +52,11 @@ export function AmendmentTimeline({ solicitationId, initial }: Props) {
     };
   }, [solicitationId, initial]);
 
+  // Resolve canonical set-aside codes (e.g. "HZC") to their human labels via
+  // code_definitions. Hook fires unconditionally; cost is negligible because
+  // fetchCodeDefinitions is module-cached and shared across timelines.
+  const setAsideByCode = useSetAsideByCode();
+
   if (isLoading) {
     return (
       <div className="py-6 flex items-center justify-center">
@@ -70,13 +80,26 @@ export function AmendmentTimeline({ solicitationId, initial }: Props) {
   return (
     <ol className="space-y-3">
       {data.amendments.map((a) => (
-        <AmendmentCard key={a.id} amendment={a} />
+        <AmendmentCard key={a.id} amendment={a} setAsideByCode={setAsideByCode} />
       ))}
     </ol>
   );
 }
 
-function AmendmentCard({ amendment: a }: { amendment: AmendmentEntry }) {
+// Wraps useCodeDefinitions for the SET_ASIDE vocabulary; returned map is
+// keyed by canonical uppercase code, so callers can do `byCode.get("HZC")`.
+function useSetAsideByCode(): ReadonlyMap<string, CodeDefinition> {
+  const { byCode } = useCodeDefinitions("SET_ASIDE");
+  return byCode;
+}
+
+function AmendmentCard({
+  amendment: a,
+  setAsideByCode,
+}: {
+  amendment: AmendmentEntry;
+  setAsideByCode: ReadonlyMap<string, CodeDefinition>;
+}) {
   return (
     <li className="rounded-lg border border-border bg-card-bg p-3">
       <div className="flex items-baseline justify-between gap-3 mb-2">
@@ -93,12 +116,18 @@ function AmendmentCard({ amendment: a }: { amendment: AmendmentEntry }) {
           </span>
         </div>
       </div>
-      <AmendmentBody amendment={a} />
+      <AmendmentBody amendment={a} setAsideByCode={setAsideByCode} />
     </li>
   );
 }
 
-function AmendmentBody({ amendment: a }: { amendment: AmendmentEntry }) {
+function AmendmentBody({
+  amendment: a,
+  setAsideByCode,
+}: {
+  amendment: AmendmentEntry;
+  setAsideByCode: ReadonlyMap<string, CodeDefinition>;
+}) {
   if (a.change_reason === "new_item") {
     const part = renderStateValue(a.new_state?.part_id ?? "—");
     const pr = renderStateValue(a.new_state?.first_pr_number ?? "—");
@@ -111,7 +140,9 @@ function AmendmentBody({ amendment: a }: { amendment: AmendmentEntry }) {
   }
 
   // Render per-field diffs. Keys come from changed_fields; values from
-  // the prior_state / new_state JSONB snapshots.
+  // the prior_state / new_state JSONB snapshots. pickAmendmentValue tolerates
+  // the worker's set_aside → set_aside_code rename across the historical
+  // rows still in the DB.
   const fields = a.changed_fields.length > 0
     ? a.changed_fields
     : Array.from(new Set([
@@ -129,8 +160,9 @@ function AmendmentBody({ amendment: a }: { amendment: AmendmentEntry }) {
         <FieldDiff
           key={key}
           fieldKey={key}
-          prior={a.prior_state?.[key]}
-          next={a.new_state?.[key]}
+          prior={pickAmendmentValue(a.prior_state, key)}
+          next={pickAmendmentValue(a.new_state, key)}
+          setAsideByCode={setAsideByCode}
         />
       ))}
     </dl>
@@ -141,17 +173,21 @@ function FieldDiff({
   fieldKey,
   prior,
   next,
+  setAsideByCode,
 }: {
   fieldKey: string;
   prior: unknown;
   next: unknown;
+  setAsideByCode: ReadonlyMap<string, CodeDefinition>;
 }) {
+  const renderValue = (v: unknown) =>
+    isSetAsideField(fieldKey) ? resolveSetAsideLabel(v, setAsideByCode) : renderStateValue(v);
   return (
     <>
       <dt className="text-muted">{labelForField(fieldKey)}</dt>
       <dd className="text-foreground">
-        <span className="text-muted line-through mr-2">{renderStateValue(prior)}</span>
-        <span className="text-foreground font-medium">{renderStateValue(next)}</span>
+        <span className="text-muted line-through mr-2">{renderValue(prior)}</span>
+        <span className="text-foreground font-medium">{renderValue(next)}</span>
       </dd>
     </>
   );
