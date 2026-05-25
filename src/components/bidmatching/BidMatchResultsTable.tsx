@@ -57,6 +57,23 @@ function formatDate(dateStr: string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+function getStatusBadgeClass(status: string | null): string {
+  switch ((status || "").toLowerCase()) {
+    case "open":
+      return "bg-green-100 text-green-800";
+    case "awarded":
+      return "bg-blue-100 text-blue-800";
+    case "closed":
+      return "bg-red-100 text-red-800";
+    case "unavailable":
+    case "removed":
+    case "canceled":
+    case "cancelled":
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+}
+
 function ConditionBadge({ condition }: { condition: MatchedCondition }) {
   const negated = !!condition.is_negated;
   // Prefer the server-resolved label for SET_ASIDE_CODE so users see
@@ -219,11 +236,7 @@ export function BidMatchResultsTable({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                        result.status === "OPEN" ? "bg-green-100 text-green-800" :
-                        result.status === "CLOSED" ? "bg-red-100 text-red-800" :
-                        "bg-gray-100 text-gray-800"
-                      }`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(result.status)}`}>
                         {result.status || "-"}
                       </span>
                     </td>
