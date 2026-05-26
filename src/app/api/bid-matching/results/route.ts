@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
     if (strength === 'HARD' || strength === 'SOFT') params.set('strength', strength);
     const reasonSearch = searchParams.get('reason_search');
     if (reasonSearch) params.set('reason_search', reasonSearch);
+    const source = searchParams.get('source');
+    if (source === 'dibbs' || source === 'sam') params.set('source', source);
 
     const backendUrl = `${AUTH_CONFIG.API_BASE_URL}/bid-matching/results?${params.toString()}`;
 

@@ -20,7 +20,9 @@ interface MatchedCondition {
 interface BidMatchResult {
   result_id: number;
   run_id: string;
-  solicitation_id: number;
+  source: "dibbs" | "sam";
+  solicitation_id: number | null;
+  sam_opportunity_id?: number | null;
   profile_id: number;
   profile_name: string;
   matched_conditions: MatchedCondition[];
@@ -33,6 +35,7 @@ interface BidMatchResult {
   solicitation_number: string | null;
   agency_code: string | null;
   issue_date: string | null;
+  posted_date?: string | null;
   close_date: string | null;
   status: string | null;
   buyer_name: string | null;
@@ -40,6 +43,7 @@ interface BidMatchResult {
   set_aside: string | null;
   set_aside_code?: string | null;
   set_aside_label?: string | null;
+  sam_url?: string | null;
 }
 
 interface BidMatchResultsTableProps {
@@ -192,12 +196,46 @@ export function BidMatchResultsTable({
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-1.5 font-medium">
                         {result.solicitation_number ? (
-                          <SolicitationNumberLink
-                            solicitationNumber={result.solicitation_number}
-                            className="text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
-                          />
+                          result.source === "sam" ? (
+                            result.sam_url ? (
+                              <a
+                                href={result.sam_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary inline-flex items-center gap-1"
+                                title="Open on SAM.gov"
+                              >
+                                {result.solicitation_number}
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2}
+                                  aria-hidden="true"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 3h7v7m0-7L10 14m-7 7h7" />
+                                </svg>
+                              </a>
+                            ) : (
+                              <span className="text-foreground">{result.solicitation_number}</span>
+                            )
+                          ) : (
+                            <SolicitationNumberLink
+                              solicitationNumber={result.solicitation_number}
+                              className="text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
+                            />
+                          )
                         ) : (
                           <span className="text-foreground">-</span>
+                        )}
+                        {result.source === "sam" && (
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200"
+                            title="Pure-SAM opportunity — no linked DIBBS solicitation"
+                          >
+                            SAM
+                          </span>
                         )}
                         {/* Pre-match amendment: this match was triggered by
                             an existing amendment on the sol. */}

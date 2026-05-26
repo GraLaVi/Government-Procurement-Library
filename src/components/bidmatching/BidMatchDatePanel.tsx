@@ -7,17 +7,27 @@ interface IssueDateEntry {
   match_count: number;
 }
 
+interface SamBucket {
+  match_count: number;
+}
+
 interface RunDateGroup {
   run_date: string;
   total_count: number;
   issue_dates: IssueDateEntry[];
+  sam_bucket?: SamBucket | null;
 }
+
+export type DateSelection =
+  | { source: "dibbs"; runDate: string; issueDate: string }
+  | { source: "sam"; runDate: string };
 
 interface BidMatchDatePanelProps {
   dateTree: RunDateGroup[];
   selectedRunDate: string | null;
   selectedIssueDate: string | null;
-  onSelect: (runDate: string, issueDate: string) => void;
+  selectedSource: "dibbs" | "sam";
+  onSelect: (selection: DateSelection) => void;
 }
 
 function formatDate(dateStr: string): string {
@@ -39,6 +49,7 @@ export function BidMatchDatePanel({
   dateTree,
   selectedRunDate,
   selectedIssueDate,
+  selectedSource,
   onSelect,
 }: BidMatchDatePanelProps) {
   const [expandedRunDate, setExpandedRunDate] = useState<string | null>(null);
@@ -99,13 +110,20 @@ export function BidMatchDatePanel({
                 <div className="bg-muted-light/30">
                   {group.issue_dates.map((entry) => {
                     const isActive =
+                      selectedSource === "dibbs" &&
                       selectedRunDate === group.run_date &&
                       selectedIssueDate === entry.issue_date;
 
                     return (
                       <button
                         key={entry.issue_date}
-                        onClick={() => onSelect(group.run_date, entry.issue_date)}
+                        onClick={() =>
+                          onSelect({
+                            source: "dibbs",
+                            runDate: group.run_date,
+                            issueDate: entry.issue_date,
+                          })
+                        }
                         className={`
                           w-full flex items-center gap-2 pl-10 pr-4 py-2 text-left transition-colors
                           ${isActive
@@ -131,6 +149,42 @@ export function BidMatchDatePanel({
                       </button>
                     );
                   })}
+
+                  {/* SAM-only bucket (pure SAM opportunities with no linked DIBBS sol) */}
+                  {group.sam_bucket && group.sam_bucket.match_count > 0 && (() => {
+                    const isActive =
+                      selectedSource === "sam" &&
+                      selectedRunDate === group.run_date;
+                    return (
+                      <button
+                        onClick={() =>
+                          onSelect({ source: "sam", runDate: group.run_date })
+                        }
+                        className={`
+                          w-full flex items-center gap-2 pl-10 pr-4 py-2 text-left transition-colors
+                          ${isActive
+                            ? "bg-primary text-white"
+                            : "hover:bg-muted-light text-foreground"
+                          }
+                        `}
+                      >
+                        <span className={`text-sm ${isActive ? "font-medium" : ""}`}>
+                          SAM Opportunities
+                        </span>
+                        <span
+                          className={`
+                            ml-auto text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0
+                            ${isActive
+                              ? "bg-white/20 text-white"
+                              : "bg-muted-light text-muted-foreground"
+                            }
+                          `}
+                        >
+                          {formatCount(group.sam_bucket.match_count)}
+                        </span>
+                      </button>
+                    );
+                  })()}
                 </div>
               )}
             </div>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
-import { BidMatchDatePanel } from "@/components/bidmatching/BidMatchDatePanel";
+import { BidMatchDatePanel, type DateSelection } from "@/components/bidmatching/BidMatchDatePanel";
 import { BidMatchResultsTable } from "@/components/bidmatching/BidMatchResultsTable";
 
 interface IssueDateEntry {
@@ -12,10 +12,15 @@ interface IssueDateEntry {
   match_count: number;
 }
 
+interface SamBucket {
+  match_count: number;
+}
+
 interface RunDateGroup {
   run_date: string;
   total_count: number;
   issue_dates: IssueDateEntry[];
+  sam_bucket?: SamBucket | null;
 }
 
 interface MatchedCondition {
@@ -30,7 +35,9 @@ interface MatchedCondition {
 interface BidMatchResult {
   result_id: number;
   run_id: string;
-  solicitation_id: number;
+  source: "dibbs" | "sam";
+  solicitation_id: number | null;
+  sam_opportunity_id?: number | null;
   profile_id: number;
   profile_name: string;
   matched_conditions: MatchedCondition[];
@@ -43,12 +50,14 @@ interface BidMatchResult {
   solicitation_number: string | null;
   agency_code: string | null;
   issue_date: string | null;
+  posted_date?: string | null;
   close_date: string | null;
   status: string | null;
   buyer_name: string | null;
   set_aside: string | null;
   set_aside_code?: string | null;
   set_aside_label?: string | null;
+  sam_url?: string | null;
 }
 
 interface ResultsResponse {
@@ -67,6 +76,7 @@ export default function BidMatchingPage() {
   const [dateTree, setDateTree] = useState<RunDateGroup[]>([]);
   const [selectedRunDate, setSelectedRunDate] = useState<string | null>(null);
   const [selectedIssueDate, setSelectedIssueDate] = useState<string | null>(null);
+  const [selectedSource, setSelectedSource] = useState<"dibbs" | "sam">("dibbs");
   const [results, setResults] = useState<BidMatchResult[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -123,10 +133,19 @@ export default function BidMatchingPage() {
         if (!res.ok) throw new Error("Failed to load match dates");
         const data: RunDateGroup[] = await res.json();
         setDateTree(data);
-        // Auto-select first run date + first issue date
-        if (data.length > 0 && data[0].issue_dates.length > 0) {
-          setSelectedRunDate(data[0].run_date);
-          setSelectedIssueDate(data[0].issue_dates[0].issue_date);
+        // Auto-select first run date — prefer first DIBBS issue date, fall back
+        // to the SAM bucket for run dates that have no DIBBS matches.
+        if (data.length > 0) {
+          const first = data[0];
+          if (first.issue_dates.length > 0) {
+            setSelectedRunDate(first.run_date);
+            setSelectedIssueDate(first.issue_dates[0].issue_date);
+            setSelectedSource("dibbs");
+          } else if (first.sam_bucket && first.sam_bucket.match_count > 0) {
+            setSelectedRunDate(first.run_date);
+            setSelectedIssueDate(null);
+            setSelectedSource("sam");
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load match dates");
@@ -139,16 +158,24 @@ export default function BidMatchingPage() {
 
   // Fetch results when selection or page changes
   const fetchResults = useCallback(
-    async (runDate: string, issueDate: string, pg: number, strength: boolean, reason: string) => {
+    async (
+      source: "dibbs" | "sam",
+      runDate: string,
+      issueDate: string | null,
+      pg: number,
+      strength: boolean,
+      reason: string,
+    ) => {
       setIsLoadingResults(true);
       setError(null);
       try {
         const params = new URLSearchParams({
-          date: issueDate,
           run_date: runDate,
           page: pg.toString(),
           page_size: PAGE_SIZE.toString(),
+          source,
         });
+        if (source === "dibbs" && issueDate) params.set("date", issueDate);
         if (strength) params.set("strength", "HARD");
         if (reason) params.set("reason_search", reason);
         const res = await fetch(`/api/bid-matching/results?${params}`);
@@ -168,14 +195,15 @@ export default function BidMatchingPage() {
   );
 
   useEffect(() => {
-    if (selectedRunDate && selectedIssueDate) {
-      fetchResults(selectedRunDate, selectedIssueDate, page, hardOnly, appliedReason);
-    }
-  }, [selectedRunDate, selectedIssueDate, page, hardOnly, appliedReason, fetchResults]);
+    if (!selectedRunDate) return;
+    if (selectedSource === "dibbs" && !selectedIssueDate) return;
+    fetchResults(selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly, appliedReason);
+  }, [selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly, appliedReason, fetchResults]);
 
-  const handleDateSelect = (runDate: string, issueDate: string) => {
-    setSelectedRunDate(runDate);
-    setSelectedIssueDate(issueDate);
+  const handleDateSelect = (selection: DateSelection) => {
+    setSelectedRunDate(selection.runDate);
+    setSelectedSource(selection.source);
+    setSelectedIssueDate(selection.source === "dibbs" ? selection.issueDate : null);
     setPage(1);
   };
 
@@ -278,13 +306,14 @@ export default function BidMatchingPage() {
               dateTree={dateTree}
               selectedRunDate={selectedRunDate}
               selectedIssueDate={selectedIssueDate}
+              selectedSource={selectedSource}
               onSelect={handleDateSelect}
             />
           </div>
 
           {/* Results */}
           <div className="flex-1 min-w-0 bg-card-bg rounded-lg border border-border p-4">
-            {selectedRunDate && selectedIssueDate ? (
+            {selectedRunDate && (selectedSource === "sam" || selectedIssueDate) ? (
               <>
                 <div className="flex flex-wrap items-center gap-3 mb-4 pb-3 border-b border-border">
                   <label className="inline-flex items-center gap-2 text-sm text-foreground cursor-pointer">
