@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { PasswordRulesChecklist } from "@/components/auth/PasswordRulesChecklist";
-import { firstPasswordViolation, isPasswordStrong } from "@/lib/auth/passwordRules";
+import { firstPasswordViolation } from "@/lib/auth/passwordRules";
 import { useAuth } from "@/contexts/AuthContext";
 import { BETA_TERMS_VERSION, TOS_VERSION } from "@/components/billing/TermsAcceptanceModal";
 
@@ -48,6 +48,17 @@ const PLAN_OPTIONS: Array<{ key: string; label: string; description: string }> =
     description: "Combined parts + vendor library with all advanced tabs.",
   },
 ];
+
+// Red asterisk shown next to each required-field label. The full
+// "required fields…" explanation is surfaced in the top error banner
+// on a submit attempt that leaves any required input empty.
+function RequiredMark() {
+  return (
+    <span aria-label="Required" className="text-error font-semibold">
+      *
+    </span>
+  );
+}
 
 export default function SignupPage() {
   return (
@@ -128,6 +139,13 @@ function SignupPageContent() {
   const [lastName, setLastName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Show/hide for password fields — both fields toggle together so the
+  // visitor doesn't have to flip each one independently.
+  const [showPassword, setShowPassword] = useState(false);
+  // Pre-submit email collision check (POST /signup/check-email on blur).
+  // null = not checked yet; true = available; false = already taken.
+  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
+  const [emailChecking, setEmailChecking] = useState(false);
   // Paid-tier signups need ToS acceptance before we can create a Stripe
   // subscription. The checkbox is only rendered when the URL intent is
   // paid; Free / beta paths don't surface it.
@@ -176,6 +194,36 @@ function SignupPageContent() {
     }
   }, []);
 
+  const checkEmailAvailable = useCallback(async (raw: string) => {
+    const value = raw.trim().toLowerCase();
+    // Skip non-emails — the visitor is mid-typing or left it blank.
+    // A trivial regex is enough here; the real validation is browser+server.
+    if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      setEmailAvailable(null);
+      return;
+    }
+    setEmailChecking(true);
+    try {
+      const resp = await fetch("/api/billing/signup/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: value }),
+      });
+      if (!resp.ok) {
+        setEmailAvailable(null);
+        return;
+      }
+      const data = await resp.json();
+      setEmailAvailable(Boolean(data.available));
+    } catch {
+      // Network failures shouldn't block the form — fall back to the
+      // submit-time server check.
+      setEmailAvailable(null);
+    } finally {
+      setEmailChecking(false);
+    }
+  }, []);
+
   const advanceFromCage = () => {
     if (!cageResult?.eligible) return;
     // Pricing-first visitors already picked their tier on /pricing —
@@ -197,6 +245,21 @@ function SignupPageContent() {
   const submitApplication = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    // Missing required fields: surface a single banner message that
+    // points the visitor at the asterisked labels, and focus the first
+    // empty input so they land on the right place to start typing.
+    const missing: string[] = [];
+    if (!firstName.trim()) missing.push("firstName");
+    if (!lastName.trim()) missing.push("lastName");
+    if (!email.trim()) missing.push("email");
+    if (!password) missing.push("password");
+    if (!confirmPassword) missing.push("confirmPassword");
+    if (missing.length > 0) {
+      setError("All required fields (marked with *) must be filled in.");
+      const first = document.getElementById(missing[0]);
+      if (first instanceof HTMLInputElement) first.focus();
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -204,6 +267,20 @@ function SignupPageContent() {
     const violation = firstPasswordViolation(password);
     if (violation) {
       setError(`Password requirement: ${violation}.`);
+      return;
+    }
+    if (emailAvailable === false) {
+      setError(
+        "An account with this email already exists. Please sign in instead.",
+      );
+      return;
+    }
+    if (((intentIsPaid) || signupPath === "beta") && !tosAccepted) {
+      setError(
+        signupPath === "beta"
+          ? "Please accept the Terms of Service, Privacy Policy, and Beta Program Terms to continue."
+          : "Please accept the Terms of Service and Privacy Policy to continue.",
+      );
       return;
     }
 
@@ -215,10 +292,6 @@ function SignupPageContent() {
     // visitor sees a "Start trial" confirmation page and lands back on
     // /finalize-checkout signed in with the tier granted by the webhook.
     if (signupPath === "self_serve" && intentIsPaid) {
-      if (!tosAccepted) {
-        setError("Please accept the Terms of Service and Privacy Policy to continue.");
-        return;
-      }
       const priceIdNum = planParam ? parseInt(planParam, 10) : NaN;
       const seatQuantity = seatsParam ? Math.max(1, parseInt(seatsParam, 10) || 1) : 1;
       if (!Number.isFinite(priceIdNum)) {
@@ -298,15 +371,8 @@ function SignupPageContent() {
       return;
     }
 
-    // Beta-application path (production default). setSubmitting(true) was
-    // called above; release it if we bail out on the consent check.
-    if (!tosAccepted) {
-      setError(
-        "Please accept the Terms of Service, Privacy Policy, and Beta Program Terms to continue.",
-      );
-      setSubmitting(false);
-      return;
-    }
+    // Beta-application path (production default). ToS / Beta Terms
+    // consent is enforced up-front in the unified validation block.
     const acceptedAtIso = new Date().toISOString();
     try {
       const resp = await fetch("/api/auth/beta-application", {
@@ -562,7 +628,7 @@ function SignupPageContent() {
 
           {/* ---------- Step 3 (or 2 in prod): account ---------- */}
           {step === "account" && (
-            <form onSubmit={submitApplication} className="space-y-4">
+            <form onSubmit={submitApplication} className="space-y-4" noValidate>
               {error && (
                 <div className="p-3 bg-error/5 border border-error/20 text-error rounded text-sm">
                   {error}
@@ -614,30 +680,50 @@ function SignupPageContent() {
                 <input
                   type="text"
                   value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-primary"
+                  readOnly
+                  aria-readonly="true"
+                  tabIndex={-1}
+                  className="w-full px-3 py-2 text-sm border border-border bg-muted-light/40 text-muted rounded cursor-not-allowed"
                 />
                 <p className="text-[11px] text-muted mt-1">
-                  Pre-filled from CAGE {cageInput.toUpperCase()}. Edit if needed.
+                  Sourced from{" "}
+                  <a
+                    href="https://sam.gov"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    SAM.gov
+                  </a>{" "}
+                  for CAGE {cageInput.toUpperCase()}. You can update this from
+                  your account settings once signed in.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">First name</label>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-foreground mb-1">
+                    First name <RequiredMark />
+                  </label>
                   <input
+                    id="firstName"
                     type="text"
                     required
+                    aria-required="true"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Last name</label>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-foreground mb-1">
+                    Last name <RequiredMark />
+                  </label>
                   <input
+                    id="lastName"
                     type="text"
                     required
+                    aria-required="true"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-primary"
@@ -646,25 +732,62 @@ function SignupPageContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
+                  Email <RequiredMark />
+                </label>
                 <input
+                  id="email"
                   type="email"
                   required
+                  aria-required="true"
+                  aria-invalid={emailAvailable === false}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-primary"
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailAvailable(null);
+                  }}
+                  onBlur={(e) => checkEmailAvailable(e.target.value)}
+                  className={`w-full px-3 py-2 text-sm border bg-card-bg rounded focus:ring-2 focus:ring-primary ${
+                    emailAvailable === false ? "border-error" : "border-border"
+                  }`}
                 />
-                <p className="text-[11px] text-muted mt-1">
-                  We&apos;ll send a verification link to confirm this address.
-                </p>
+                {emailChecking ? (
+                  <p className="text-[11px] text-muted mt-1">Checking email…</p>
+                ) : emailAvailable === false ? (
+                  <p className="text-[11px] text-error mt-1">
+                    An account with this email already exists.{" "}
+                    <Link href="/login" className="underline hover:no-underline">
+                      Sign in instead
+                    </Link>
+                    .
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted mt-1">
+                    We&apos;ll send a verification link to confirm this address.
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Password</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label htmlFor="password" className="block text-sm font-medium text-foreground">
+                      Password <RequiredMark />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="text-[11px] text-primary hover:underline"
+                      aria-pressed={showPassword}
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
                   <input
-                    type="password"
+                    id="password"
+                    type={showPassword ? "text" : "password"}
                     required
+                    aria-required="true"
                     minLength={8}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -672,15 +795,29 @@ function SignupPageContent() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Confirm password</label>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground mb-1">
+                    Confirm password <RequiredMark />
+                  </label>
                   <input
-                    type="password"
+                    id="confirmPassword"
+                    type={showPassword ? "text" : "password"}
                     required
+                    aria-required="true"
+                    aria-invalid={!!confirmPassword && confirmPassword !== password}
                     minLength={8}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-primary"
+                    className={`w-full px-3 py-2 text-sm border bg-card-bg rounded focus:ring-2 focus:ring-primary ${
+                      confirmPassword && confirmPassword !== password
+                        ? "border-error"
+                        : "border-border"
+                    }`}
                   />
+                  {confirmPassword && confirmPassword !== password && (
+                    <p className="text-[11px] text-error mt-1">
+                      Passwords don&apos;t match.
+                    </p>
+                  )}
                 </div>
               </div>
               <PasswordRulesChecklist password={password} className="-mt-2" />
@@ -818,12 +955,7 @@ function SignupPageContent() {
                 <Button
                   variant="primary"
                   type="submit"
-                  disabled={
-                    submitting ||
-                    !isPasswordStrong(password) ||
-                    password !== confirmPassword ||
-                    ((intentIsPaid || signupPath === "beta") && !tosAccepted)
-                  }
+                  disabled={submitting}
                 >
                   {submitting
                     ? signupPath === "self_serve"

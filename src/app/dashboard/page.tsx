@@ -95,8 +95,8 @@ function BasicDashboard() {
   return (
     <div className="space-y-6">
       <PaymentMethodAlert />
-      <QuickSearchLauncher />
       <OnboardingChecklist />
+      <QuickSearchLauncher />
       <RecentSearches />
     </div>
   );
@@ -110,8 +110,8 @@ function FullDashboard({ business }: FullDashboardProps) {
   return (
     <div className="space-y-6">
       <PaymentMethodAlert />
-      <QuickSearchLauncher />
       <OnboardingChecklist />
+      <QuickSearchLauncher />
 
       {business.isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
