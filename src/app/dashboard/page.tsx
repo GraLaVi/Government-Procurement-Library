@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
-import { useMyBusinessAnalytics } from "@/lib/hooks/useAnalytics";
+import { useMyBusinessSummary } from "@/lib/hooks/useAnalytics";
 import {
   KPICard,
   KPICardSkeleton,
@@ -18,7 +18,7 @@ import { RecentSearches } from "@/components/dashboard/RecentSearches";
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const business = useMyBusinessAnalytics();
+  const business = useMyBusinessSummary();
 
   const userName = user?.first_name || user?.email?.split("@")[0] || "User";
 
@@ -103,7 +103,7 @@ function BasicDashboard() {
 }
 
 interface FullDashboardProps {
-  business: ReturnType<typeof useMyBusinessAnalytics>;
+  business: ReturnType<typeof useMyBusinessSummary>;
 }
 
 function FullDashboard({ business }: FullDashboardProps) {

@@ -19,6 +19,10 @@ export interface User {
   phone: string | null;
   job_title: string | null;
   customer_id: number;
+  // Display name for the user's customer org. Resolved server-side via
+  // customer_overrides.override_legal_business_name → cage_entity
+  // .legal_business_name. Nullable when the CAGE isn't in the SAM extract.
+  company_name?: string | null;
   roles: string[];  // Array of roles from customer_user_roles table
   is_active: boolean;
   email_verified: boolean;

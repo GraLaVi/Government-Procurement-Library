@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/contexts/AuthContext";
 import { AUTH_CONFIG } from "@/lib/auth/config";
+import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
+import {
+  DEFAULT_PAGE_FALLBACK,
+  resolveDefaultPagePath,
+} from "@/lib/preferences/defaultPage";
 
 // Surface the right copy for the three "inactive" 403 variants the backend
 // returns. The substrings come from src/api/v1/auth/service.py.
@@ -34,13 +39,30 @@ function LoginForm() {
   // Validate redirect parameter - don't allow redirecting to auth pages to prevent loops
   const rawRedirect = searchParams.get("redirect");
   const authRoutes = [AUTH_CONFIG.ROUTES.LOGIN, '/forgot-password'];
-  // Default landing after sign-in is /dashboard. Honor ?redirect=… if present
-  // (e.g., session-expired flow that wants to bounce the user back to where
-  // they were); fall back to /dashboard for the plain "go to /login + sign
-  // in" path.
-  const redirect = rawRedirect && !authRoutes.includes(rawRedirect)
-    ? rawRedirect
-    : '/dashboard';
+  // ?redirect=… wins (session-expired flow that wants to bounce the user
+  // back to where they were). Without it, fall back to /dashboard here —
+  // the post-login handler below upgrades that to the user's
+  // default_page preference once preferences are loadable.
+  const explicitRedirect =
+    rawRedirect && !authRoutes.includes(rawRedirect) ? rawRedirect : null;
+  const redirect = explicitRedirect ?? DEFAULT_PAGE_FALLBACK;
+
+  // Fetch the user's preferred default page after a successful login.
+  // Best-effort: any failure (network, 401, malformed response) falls
+  // back to /dashboard so the login flow never blocks on a preferences
+  // hiccup.
+  const fetchDefaultPagePath = async (): Promise<string> => {
+    try {
+      const resp = await fetchWithAuth('/api/auth/me/preferences', {
+        credentials: 'include',
+      });
+      if (!resp.ok) return DEFAULT_PAGE_FALLBACK;
+      const data = await resp.json();
+      return resolveDefaultPagePath(data?.preferences?.default_page);
+    } catch {
+      return DEFAULT_PAGE_FALLBACK;
+    }
+  };
 
   // Redirect if already authenticated (with timeout fallback)
   useEffect(() => {
@@ -85,8 +107,13 @@ function LoginForm() {
     if (result.success) {
       if (result.mustChangePassword) {
         router.push("/account/change-password");
+      } else if (explicitRedirect) {
+        // Honor session-expired bounce or any other ?redirect= over the
+        // user's default_page preference.
+        router.push(explicitRedirect);
       } else {
-        router.push(redirect);
+        const target = await fetchDefaultPagePath();
+        router.push(target);
       }
     } else {
       if (result.retryAfter) {

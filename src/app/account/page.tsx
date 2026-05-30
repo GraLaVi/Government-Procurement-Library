@@ -166,6 +166,25 @@ export default function AccountPage() {
               {userName}
             </h2>
             <p className="text-muted">{user?.email}</p>
+            {user?.company_name && (
+              <p className="text-sm text-card-foreground mt-1 flex items-center gap-1.5">
+                <svg
+                  className="w-4 h-4 text-muted"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-2 0v-4m-12 4h12m-12 0H3m4 0V9m4 4h.01M11 17h.01M15 13h.01M15 17h.01"
+                  />
+                </svg>
+                <span className="font-medium">{user.company_name}</span>
+              </p>
+            )}
             {user?.roles && user.roles.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {user.roles.map((role) => (

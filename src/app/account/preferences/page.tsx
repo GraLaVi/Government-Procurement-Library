@@ -5,6 +5,11 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useConsent } from "@/contexts/ConsentContext";
+import { usePreferences } from "@/lib/hooks/usePreferences";
+import {
+  DEFAULT_PAGE_OPTIONS,
+  type DefaultPageSlug,
+} from "@/lib/preferences/defaultPage";
 
 const COOKIE_CATEGORIES = [
   {
@@ -24,7 +29,13 @@ const COOKIE_CATEGORIES = [
 export default function PreferencesPage() {
   const { theme, setTheme } = useTheme();
   const { consent, hasDecided, openSettings } = useConsent();
+  const { preferences, updatePreferences } = usePreferences();
   const [localTheme, setLocalTheme] = useState<'light' | 'dark' | 'system'>('light');
+  // The default-page picker reads/writes user_preferences.default_page
+  // through usePreferences (not through ThemeContext) — theme has its
+  // own context because it needs to apply DOM-side; default_page is
+  // pure server state plus a read on login.
+  const [localDefaultPage, setLocalDefaultPage] = useState<DefaultPageSlug>('dashboard');
   const [success, setSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -33,15 +44,46 @@ export default function PreferencesPage() {
     setLocalTheme(theme);
   }, [theme]);
 
+  // Seed the default-page picker from preferences once they're loaded.
+  // `preferences` is null while loading; the option list always falls back
+  // to "dashboard" so the UI shows a sensible selection during the fetch.
+  useEffect(() => {
+    const saved = preferences?.default_page;
+    const isKnown = DEFAULT_PAGE_OPTIONS.some((o) => o.slug === saved);
+    if (isKnown) {
+      setLocalDefaultPage(saved as DefaultPageSlug);
+    }
+  }, [preferences]);
+
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
     setLocalTheme(newTheme);
     setSuccess(false);
   };
 
+  const handleDefaultPageChange = (slug: DefaultPageSlug) => {
+    setLocalDefaultPage(slug);
+    setSuccess(false);
+  };
+
+  const savedDefaultPage =
+    (preferences?.default_page as DefaultPageSlug | undefined) ?? 'dashboard';
+
+  const themeChanged = localTheme !== theme;
+  const defaultPageChanged = localDefaultPage !== savedDefaultPage;
+  const hasChanges = themeChanged || defaultPageChanged;
+
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      await setTheme(localTheme);
+      // Save theme + default_page in whichever order has pending changes.
+      // setTheme writes through ThemeContext (and persists to the server);
+      // updatePreferences writes everything else directly.
+      if (themeChanged) {
+        await setTheme(localTheme);
+      }
+      if (defaultPageChanged) {
+        await updatePreferences({ default_page: localDefaultPage });
+      }
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
@@ -50,8 +92,6 @@ export default function PreferencesPage() {
       setIsSaving(false);
     }
   };
-
-  const hasChanges = localTheme !== theme;
 
   const themeOptions = [
     {
@@ -165,7 +205,64 @@ export default function PreferencesPage() {
           ))}
         </div>
 
-        {/* Save Button */}
+      </div>
+
+      {/* Default Page Section */}
+      <div className="bg-card-bg rounded-xl border border-border p-6 mb-6">
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-secondary mb-1">Default page</h2>
+          <p className="text-sm text-muted">
+            Pick where you&apos;d like to land after signing in. The dashboard
+            is used if no preference is set.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {DEFAULT_PAGE_OPTIONS.map((option) => (
+            <button
+              key={option.slug}
+              type="button"
+              onClick={() => handleDefaultPageChange(option.slug)}
+              className={`w-full flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border-2 transition-all text-left touch-manipulation ${
+                localDefaultPage === option.slug
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/50 hover:bg-muted-light/50 active:bg-primary/10'
+              }`}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-sm sm:text-base font-medium ${
+                      localDefaultPage === option.slug
+                        ? 'text-primary'
+                        : 'text-foreground'
+                    }`}
+                  >
+                    {option.label}
+                  </span>
+                  {localDefaultPage === option.slug && (
+                    <svg
+                      className="w-4 h-4 text-primary"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <p className="text-xs text-muted mt-0.5">{option.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Save Button — covers both Appearance and Default Page edits.
+            handleSave is a no-op for sections without pending changes. */}
         <div className="mt-6 pt-6 border-t border-border">
           <Button
             onClick={handleSave}

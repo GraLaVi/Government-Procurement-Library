@@ -240,6 +240,75 @@ export function useMyBusinessAnalytics() {
 }
 
 // ============================================================================
+// Dashboard summary — cheap subset of useMyBusinessAnalytics
+// ============================================================================
+
+export interface CustomerAnalyticsSummary {
+  cage_code: string;
+  company_name: string | null;
+  procurement_history_total: number | null;
+  open_solicitations_count: number;
+  competitor_count: number;
+  upcoming_solicitations: UpcomingSolicitation[];
+  generated_at: string;
+}
+
+export function useMyBusinessSummary() {
+  const [data, setData] = useState<CustomerAnalyticsSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+  const [tier, setTier] = useState<LibraryTier>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await fetchWithAuth('/api/library/analytics/my-business-summary', {
+        credentials: 'include',
+      });
+
+      if (response.status === 401) {
+        setData(null);
+        return;
+      }
+
+      if (response.status === 403) {
+        const errData = await response.json().catch(() => ({}));
+        setForbidden(true);
+        const t = errData.tier;
+        setTier(t === "basic" || t === "free" ? t : null);
+        setData(null);
+        return;
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to fetch business summary');
+      }
+
+      const result: CustomerAnalyticsSummary = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      console.error('Failed to fetch business summary:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    intervalRef.current = setInterval(fetchData, 60 * 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [fetchData]);
+
+  return { data, isLoading, error, forbidden, tier, refetch: fetchData };
+}
+
+// ============================================================================
 // Bid-Matching Analytics
 // ============================================================================
 
