@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { Button } from "@/components/ui/Button";
@@ -107,6 +107,28 @@ export default function AccountPage() {
   const { user } = useAuth();
   const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+
+  // Company name lives behind its own endpoint (3-table join) so the hot-path
+  // /auth/me stays fast; only /account pays the cost, and only on mount.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetchWithAuth('/api/auth/me/company-name');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!cancelled && typeof data.company_name === 'string') {
+          setCompanyName(data.company_name);
+        }
+      } catch {
+        // Display-only field — silently skip if it fails.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleResendVerification = async () => {
     if (!user?.email) return;
@@ -166,7 +188,7 @@ export default function AccountPage() {
               {userName}
             </h2>
             <p className="text-muted">{user?.email}</p>
-            {user?.company_name && (
+            {companyName && (
               <p className="text-sm text-card-foreground mt-1 flex items-center gap-1.5">
                 <svg
                   className="w-4 h-4 text-muted"
@@ -182,7 +204,7 @@ export default function AccountPage() {
                     d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-2 0v-4m-12 4h12m-12 0H3m4 0V9m4 4h.01M11 17h.01M15 13h.01M15 17h.01"
                   />
                 </svg>
-                <span className="font-medium">{user.company_name}</span>
+                <span className="font-medium">{companyName}</span>
               </p>
             )}
             {user?.roles && user.roles.length > 0 && (
