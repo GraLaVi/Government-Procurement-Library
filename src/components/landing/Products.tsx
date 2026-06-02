@@ -39,7 +39,7 @@ const products: Array<{
       "Manufacturers, technical characteristics, packaging, and end-use data",
       "See which vendors are competing and winning on the parts you sell",
       "Recent solicitation detail",
-      "Bid-matching: 1 profile with full solicitation view",
+      "Bid-matching: 5 profiles with full solicitation view",
       "Daily match notifications",
       "$59/month",
     ],
@@ -50,11 +50,11 @@ const products: Array<{
     tier: "Advanced",
     tagline: "The complete procurement picture.",
     description:
-      "Everything in Basic plus full procurement history, open solicitation detail, unlimited bid-matching profiles, saved searches, exports, and real-time notifications.",
+      "Everything in Basic plus full procurement history, open solicitation detail, 20 bid-matching profiles, saved searches, exports, and real-time notifications.",
     features: [
       "Full procurement history and open solicitation intelligence",
       "Open solicitation intelligence by vendor — active opportunities on parts they've won before",
-      "Unlimited bid-matching profiles",
+      "20 bid-matching profiles with full solicitation view",
       "Saved searches, pinned items, and CSV exports",
       "Immediate match notifications",
       "$99/month",
@@ -101,7 +101,7 @@ export function Products() {
           </h2>
           <p className="mt-4 text-lg text-muted dark:text-foreground/70">
             Start free, then upgrade as your pipeline grows. Every paid plan
-            includes bid-matching — Advanced unlocks unlimited profiles and
+            includes bid-matching — Advanced unlocks 20 profiles and
             immediate notifications.
           </p>
         </div>

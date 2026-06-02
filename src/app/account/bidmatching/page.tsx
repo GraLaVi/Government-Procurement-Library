@@ -609,7 +609,7 @@ export default function BidMatchingPage() {
             disabled={!!access && access.has_access && access.limits.max_profiles !== null && access.usage.profile_count >= access.limits.max_profiles}
             title={
               !!access && access.has_access && access.limits.max_profiles !== null && access.usage.profile_count >= access.limits.max_profiles
-                ? "You're at the profile cap — upgrade to Advanced for unlimited profiles, or delete an existing profile."
+                ? "You're at the profile cap — upgrade to Advanced for more profiles, or delete an existing profile."
                 : undefined
             }
           >
@@ -701,7 +701,7 @@ export default function BidMatchingPage() {
             access.usage.profile_count >= access.limits.max_profiles && (
               <p className="mt-3 text-xs text-warning">
                 You&apos;ve reached your profile cap. Delete an existing
-                profile or upgrade to Advanced for unlimited profiles.
+                profile or upgrade to Advanced for more profiles.
               </p>
             )}
         </div>

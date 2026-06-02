@@ -9,12 +9,29 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { ManagedUser, CreateUserRequest, UpdateUserRequest, AssignedProduct, AssignableItem, UserProductsResponse } from "@/lib/users/types";
+import { ManagedUser, CreateUserRequest, UpdateUserRequest, AssignableItem } from "@/lib/users/types";
 
-// Stable composite key so we can distinguish products vs groups in
-// state collections (a group with id=4 is NOT the same as a product
-// with id=4).
-const itemKey = (kind: "product" | "product_group", id: number): string => `${kind}:${id}`;
+// The locked pricing model is one tier per organization (Free / Basic /
+// Advanced) covering all features. The tier isn't stored per-user; it's
+// the highest library_search_* grant the customer holds, derived here
+// from the org products the page already fetches.
+const LIBRARY_TIERS: Record<string, { label: string; rank: number; variant: "info" | "default" }> = {
+  library_search_advanced: { label: "Advanced", rank: 3, variant: "info" },
+  library_search_basic: { label: "Basic", rank: 2, variant: "default" },
+  library_search_free: { label: "Free", rank: 1, variant: "default" },
+};
+const resolveOrgTier = (items: AssignableItem[]): { label: string; variant: "info" | "default" } => {
+  let best: { label: string; variant: "info" | "default" } | null = null;
+  let bestRank = 0;
+  for (const it of items) {
+    const t = LIBRARY_TIERS[it.product_key ?? it.group_key ?? ""];
+    if (t && t.rank > bestRank) {
+      best = { label: t.label, variant: t.variant };
+      bestRank = t.rank;
+    }
+  }
+  return best ?? { label: "Free", variant: "default" }; // every org holds at least the free tier
+};
 
 // Available permission roles that can be assigned. The "read_only"
 // permission isn't actually wired anywhere on the backend, so it's not
@@ -35,24 +52,6 @@ const formatRoleName = (role: string): string => {
 
 type ConfirmAction = "delete" | "deactivate" | "activate" | "reset-password" | null;
 
-// Format product name for display
-const formatProductName = (product: AssignedProduct): string => {
-  return product.name || (product.product_key || "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-};
-
-// Format source for display
-const formatProductSource = (source: string): string => {
-  const sourceLabels: Record<string, string> = {
-    direct: "Direct",
-    group: "Product Group",
-    customer_direct: "Organization",
-    customer_group: "Organization Group",
-    user_direct: "User Direct",
-    user_group: "User Group",
-  };
-  return sourceLabels[source] || source;
-};
-
 export default function UsersPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -64,42 +63,16 @@ export default function UsersPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
 
-  // Organization products state
+  // Organization products state. Fetched so we can derive the org's single
+  // subscription tier (Free / Basic / Advanced) for the users table.
   const [orgProducts, setOrgProducts] = useState<AssignableItem[]>([]);
-  const [isOrgProductsExpanded, setIsOrgProductsExpanded] = useState(false);
-
-  // Seat usage state (Phase 7c) — drives the seat counter + cap enforcement
-  // when assigning seat-allocated products to team members.
-  type SeatUsageRow = {
-    kind: 'product' | 'product_group';
-    id: number;
-    name: string;
-    product_key: string | null;
-    requires_seat_assignment: boolean;
-    used: number;
-    cap: number | null;
-    remaining: number | null;
-  };
-  const [seatUsage, setSeatUsage] = useState<SeatUsageRow[]>([]);
+  const orgTier = resolveOrgTier(orgProducts);
 
   // Org-level user-cap from feature_limits.max_customer_users (or
   // seat_quantity on an active library subscription). Drives the
   // "X / Y users" pill and disables the Add User button at cap.
   // `cap: null` = uncapped (Advanced or no library tier at all).
   const [userCap, setUserCap] = useState<{ used: number; cap: number | null } | null>(null);
-
-  // User products modal state
-  const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
-  const [selectedUserProducts, setSelectedUserProducts] = useState<UserProductsResponse | null>(null);
-  const [selectedUserForProducts, setSelectedUserForProducts] = useState<ManagedUser | null>(null);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-
-  // Manage products modal state
-  const [isManageProductsModalOpen, setIsManageProductsModalOpen] = useState(false);
-  const [manageProductsUser, setManageProductsUser] = useState<ManagedUser | null>(null);
-  // Composite-keyed set: `${kind}:${id}` so products and groups don't collide.
-  const [userDirectProducts, setUserDirectProducts] = useState<string[]>([]);
-  const [isSavingProducts, setIsSavingProducts] = useState(false);
 
   // Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -160,19 +133,6 @@ export default function UsersPage() {
     }
   }, []);
 
-  // Fetch seat usage (Phase 7c) — used by the manage-products modal to
-  // disable Assign when at capacity, and by the summary panel.
-  const fetchSeatUsage = useCallback(async () => {
-    try {
-      const response = await fetch("/api/billing/seat-usage", { credentials: 'include' });
-      if (response.ok) {
-        setSeatUsage(await response.json());
-      }
-    } catch {
-      // Soft-fail — seat info is informational; the rest of the page still works.
-    }
-  }, []);
-
   // Fetch the org-level user cap (active customer_users count vs.
   // feature_limits.max_customer_users). Re-fetched after create / delete
   // so the pill and the Add User button reflect the new state.
@@ -187,116 +147,6 @@ export default function UsersPage() {
     }
   }, []);
 
-  // Fetch user products
-  const fetchUserProducts = async (targetUser: ManagedUser) => {
-    setSelectedUserForProducts(targetUser);
-    setIsProductsModalOpen(true);
-    setIsLoadingProducts(true);
-    setSelectedUserProducts(null);
-
-    try {
-      const response = await fetch(`/api/users/${targetUser.id}/products`, {
-        credentials: 'include',
-      });
-      const data = await response.json();
-
-      if (response.ok) {
-        setSelectedUserProducts(data);
-      } else {
-        setError(data.error || "Failed to fetch user products");
-      }
-    } catch {
-      setError("Failed to fetch user products");
-    } finally {
-      setIsLoadingProducts(false);
-    }
-  };
-
-  // Open manage products modal
-  const openManageProductsModal = async (targetUser: ManagedUser) => {
-    setManageProductsUser(targetUser);
-    setIsManageProductsModalOpen(true);
-    setIsProductsModalOpen(false);
-
-    // Fetch direct items (products + groups) for this user
-    try {
-      const response = await fetch(`/api/users/${targetUser.id}/products/direct`, {
-        credentials: 'include',
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setUserDirectProducts(
-          (data as AssignableItem[]).map((it) => itemKey(it.kind ?? "product", it.id)),
-        );
-      }
-    } catch {
-      setUserDirectProducts([]);
-    }
-  };
-
-  // Dispatch on kind so we hit the right endpoint. Products go to
-  // /products/{id}, groups go to /product-groups/{id}. Trying to assign
-  // an individual product when the customer's subscription is for a
-  // GROUP fails the seat-cap check (no subscription FK match), which
-  // surfaces as the "no active subscription with available seats" error.
-  const itemPath = (
-    item: { kind: "product" | "product_group"; id: number },
-    userId: number,
-  ): string =>
-    item.kind === "product_group"
-      ? `/api/users/${userId}/product-groups/${item.id}`
-      : `/api/users/${userId}/products/${item.id}`;
-
-  const handleAssignItem = async (item: AssignableItem) => {
-    if (!manageProductsUser) return;
-
-    setIsSavingProducts(true);
-    try {
-      const response = await fetch(itemPath(item, manageProductsUser.id), {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        setUserDirectProducts((prev) => [...prev, itemKey(item.kind, item.id)]);
-        setSuccess(item.kind === "product_group" ? "Group assigned successfully" : "Product assigned successfully");
-        fetchSeatUsage();
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to assign");
-      }
-    } catch {
-      setError("Failed to assign");
-    } finally {
-      setIsSavingProducts(false);
-    }
-  };
-
-  const handleRemoveItem = async (item: AssignableItem) => {
-    if (!manageProductsUser) return;
-
-    setIsSavingProducts(true);
-    try {
-      const response = await fetch(itemPath(item, manageProductsUser.id), {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (response.ok || response.status === 204) {
-        setUserDirectProducts((prev) => prev.filter((k) => k !== itemKey(item.kind, item.id)));
-        setSuccess(item.kind === "product_group" ? "Group removed successfully" : "Product removed successfully");
-        fetchSeatUsage();
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to remove");
-      }
-    } catch {
-      setError("Failed to remove");
-    } finally {
-      setIsSavingProducts(false);
-    }
-  };
-
   // Initial fetch
   useEffect(() => {
     if (!authLoading && user) {
@@ -306,10 +156,9 @@ export default function UsersPage() {
       }
       fetchUsers();
       fetchOrgProducts();
-      fetchSeatUsage();
       fetchUserCap();
     }
-  }, [authLoading, user, router, fetchUsers, fetchOrgProducts, fetchSeatUsage, fetchUserCap]);
+  }, [authLoading, user, router, fetchUsers, fetchOrgProducts, fetchUserCap]);
 
   // Close menus when clicking outside, scrolling, or resizing
   useEffect(() => {
@@ -516,114 +365,6 @@ export default function UsersPage() {
         );
       })()}
 
-      {/* Seats — compact chip strip. Each chip shows the product name
-          plus its allocation state ("org-wide" or "X/Y"). Seat-allocated
-          chips include a thin progress bar; warning tone when at cap or
-          when a seat-required product has no active subscription. */}
-      {seatUsage.length > 0 && (
-        <div className="mb-6 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-muted font-medium uppercase tracking-wide text-[11px]">
-            Seats
-          </span>
-          {seatUsage.map((row) => {
-            const atCap = row.cap !== null && row.cap > 0 && row.used >= row.cap;
-            const noSub = row.requires_seat_assignment && (row.cap === null || row.cap === 0);
-            const pct = row.cap && row.cap > 0 ? Math.min(100, (row.used / row.cap) * 100) : 0;
-            const tone = atCap || noSub
-              ? "bg-warning/10 border-warning/30 text-warning"
-              : "bg-muted-light/60 border-border text-foreground";
-            const allocationLabel = !row.requires_seat_assignment
-              ? "org-wide"
-              : noSub
-                ? "no subscription"
-                : `${row.used}/${row.cap}`;
-            return (
-              <span
-                key={`${row.kind}-${row.id}`}
-                className={`inline-flex flex-col gap-1 px-2.5 py-1 rounded-full border ${tone}`}
-                title={
-                  noSub
-                    ? `${row.name}: no active subscription — assignments blocked`
-                    : row.requires_seat_assignment
-                      ? `${row.name}: ${row.used} of ${row.cap} seats used${row.remaining !== null && row.remaining > 0 ? ` (${row.remaining} available)` : ""}`
-                      : `${row.name}: every team member gets access automatically`
-                }
-              >
-                <span className="inline-flex items-center gap-2 leading-tight">
-                  <span className="font-medium">{row.name}</span>
-                  <span className={atCap || noSub ? "" : "text-muted"}>
-                    {allocationLabel}
-                  </span>
-                </span>
-                {row.requires_seat_assignment && row.cap !== null && row.cap > 0 && (
-                  <span className="h-0.5 w-full bg-muted-light rounded-full overflow-hidden">
-                    <span
-                      className={`block h-full ${atCap ? "bg-warning" : "bg-primary"}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </span>
-                )}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Organization Products Section */}
-      {orgProducts.length > 0 && (
-        <div className="mb-6 bg-card-bg rounded-xl border border-border">
-          <button
-            onClick={() => setIsOrgProductsExpanded(!isOrgProductsExpanded)}
-            className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-muted-light/50 transition-colors rounded-xl"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Organization Products</h3>
-                <p className="text-xs text-muted">{orgProducts.length} product{orgProducts.length !== 1 ? 's' : ''} assigned to your organization</p>
-              </div>
-            </div>
-            <svg
-              className={`w-5 h-5 text-muted transition-transform ${isOrgProductsExpanded ? 'rotate-180' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {isOrgProductsExpanded && (
-            <div className="px-6 pb-4 border-t border-border">
-              <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {orgProducts.map((item) => (
-                  <div
-                    key={itemKey(item.kind, item.id)}
-                    className="flex items-start gap-3 p-3 bg-muted-light/50 rounded-lg"
-                  >
-                    <div className="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <svg className="w-3 h-3 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                      <p className="text-xs text-muted">
-                        {item.kind === "product_group" ? "Bundle" : "Product"}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Success message */}
       {success && (
         <div className="mb-6 p-4 bg-success/10 border border-success/20 rounded-lg">
@@ -703,6 +444,9 @@ export default function UsersPage() {
                   Role
                 </th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
+                  Plan
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
                   Status
                 </th>
                 <th className="text-right px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
@@ -713,7 +457,7 @@ export default function UsersPage() {
             <tbody className="divide-y divide-border">
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-muted">
+                  <td colSpan={6} className="px-6 py-8 text-center text-muted">
                     No users found
                   </td>
                 </tr>
@@ -757,6 +501,15 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
+                      {/* Single org-wide tier per the locked pricing model.
+                          Inactive users hold no seat, so they show no plan. */}
+                      {u.is_active ? (
+                        <Badge variant={orgTier.variant}>{orgTier.label}</Badge>
+                      ) : (
+                        <span className="text-sm text-muted">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
                       <Badge variant={u.is_active ? "success" : "warning"}>
                         {u.is_active ? "Active" : "Inactive"}
                       </Badge>
@@ -764,11 +517,7 @@ export default function UsersPage() {
                     <td className="px-6 py-4 text-right">
                       {/* Menu always opens — even on the current user's own row.
                           Self-targeted destructive actions (Deactivate, Delete)
-                          are filtered out inside the menu rendering. The
-                          previous `disabled={u.id === user.id}` blocked safe
-                          self-actions like Manage Products, leaving customer
-                          admins unable to assign themselves to their own paid
-                          plan. */}
+                          are filtered out inside the menu rendering. */}
                       <button
                         onClick={(e) => toggleMenu(u.id, e)}
                         className="p-2 text-muted hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
@@ -796,9 +545,9 @@ export default function UsersPage() {
           {(() => {
             const targetUser = users.find((u) => u.id === openMenuId);
             if (!targetUser) return null;
-            // Customer admins can manage their own products, edit their
-            // profile, reset their password — but cannot deactivate or
-            // delete themselves (would lock them out of the org).
+            // Customer admins can edit their own profile and reset their
+            // password — but cannot deactivate or delete themselves
+            // (would lock them out of the org).
             const isSelf = targetUser.id === user.id;
             return (
               <>
@@ -807,24 +556,6 @@ export default function UsersPage() {
                   className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted-light transition-colors"
                 >
                   Edit User
-                </button>
-                <button
-                  onClick={() => {
-                    setOpenMenuId(null);
-                    fetchUserProducts(targetUser);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted-light transition-colors"
-                >
-                  View Products
-                </button>
-                <button
-                  onClick={() => {
-                    setOpenMenuId(null);
-                    openManageProductsModal(targetUser);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted-light transition-colors"
-                >
-                  Manage Products
                 </button>
                 <button
                   onClick={() => openConfirmDialog("reset-password", targetUser)}
@@ -951,247 +682,6 @@ export default function UsersPage() {
         isLoading={isActionLoading}
       />
 
-      {/* User Products Modal */}
-      <Modal
-        isOpen={isProductsModalOpen}
-        onClose={() => {
-          setIsProductsModalOpen(false);
-          setSelectedUserForProducts(null);
-          setSelectedUserProducts(null);
-        }}
-        title={`Products for ${selectedUserForProducts?.first_name} ${selectedUserForProducts?.last_name}`}
-        size="lg"
-      >
-        {isLoadingProducts ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-          </div>
-        ) : selectedUserProducts ? (
-          <div className="space-y-4">
-            {selectedUserProducts.products.length === 0 ? (
-              <div className="text-center py-8 text-muted">
-                <svg className="w-12 h-12 mx-auto mb-3 text-muted/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-                <p>No products assigned to this user</p>
-              </div>
-            ) : (
-              <>
-                <p className="text-sm text-muted">
-                  {selectedUserProducts.products.length} product{selectedUserProducts.products.length !== 1 ? 's' : ''} available
-                </p>
-                <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
-                  {selectedUserProducts.products.map((product) => {
-                    const source = selectedUserProducts.source[product.id.toString()] || 'unknown';
-                    return (
-                      <div
-                        key={product.id}
-                        className="flex items-start gap-3 p-4 bg-muted-light/50 rounded-lg border border-border"
-                      >
-                        <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-foreground">{formatProductName(product)}</p>
-                          {product.description && (
-                            <p className="text-xs text-muted mt-0.5">{product.description}</p>
-                          )}
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge variant={product.is_active ? "success" : "warning"} className="text-xs">
-                              {product.is_active ? "Active" : "Inactive"}
-                            </Badge>
-                            <Badge variant="default" className="text-xs">
-                              {formatProductSource(source)}
-                            </Badge>
-                            {product.category && (
-                              <Badge variant="info" className="text-xs">
-                                {product.category}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-            <div className="flex justify-between pt-4 border-t border-border">
-              <Button
-                variant="primary"
-                onClick={() => {
-                  if (selectedUserForProducts) {
-                    openManageProductsModal(selectedUserForProducts);
-                  }
-                }}
-              >
-                Manage Products
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsProductsModalOpen(false);
-                  setSelectedUserForProducts(null);
-                  setSelectedUserProducts(null);
-                }}
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
-
-      {/* Manage Products Modal */}
-      <Modal
-        isOpen={isManageProductsModalOpen}
-        onClose={() => {
-          setIsManageProductsModalOpen(false);
-          setManageProductsUser(null);
-          setUserDirectProducts([]);
-        }}
-        title={`Manage Products for ${manageProductsUser?.first_name} ${manageProductsUser?.last_name}`}
-        size="lg"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-muted">
-            Assign or remove products for this user. Products inherited from the organization are always available to all users.
-          </p>
-
-          {orgProducts.length === 0 ? (
-            <div className="text-center py-8 text-muted">
-              <svg className="w-12 h-12 mx-auto mb-3 text-muted/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-              <p>No products available in your organization</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
-              {orgProducts.map((item) => {
-                const composite = itemKey(item.kind, item.id);
-                const isDirectlyAssigned = userDirectProducts.includes(composite);
-                // Seat-usage lookup keyed by (kind, id) so a group with id=4
-                // and a product with id=4 can't shadow each other.
-                const seatRow = seatUsage.find((r) => r.kind === item.kind && r.id === item.id);
-                const isSeatAllocated = !!seatRow?.requires_seat_assignment;
-                const noSubscription = isSeatAllocated && (seatRow?.cap === null || seatRow?.cap === 0);
-                const atCapacity = isSeatAllocated
-                  && seatRow?.cap !== null
-                  && seatRow!.cap !== undefined
-                  && seatRow!.cap > 0
-                  && (seatRow!.remaining ?? 0) <= 0;
-                const assignBlocked = !isDirectlyAssigned && (atCapacity || noSubscription);
-                const itemLabel = item.kind === "product_group" ? "Bundle" : "Product";
-
-                return (
-                  <div
-                    key={composite}
-                    className={`flex items-center justify-between p-4 rounded-lg border ${
-                      isDirectlyAssigned
-                        ? 'bg-primary/5 border-primary/30'
-                        : 'bg-muted-light/50 border-border'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        isDirectlyAssigned ? 'bg-primary/20' : 'bg-muted-light'
-                      }`}>
-                        <svg className={`w-4 h-4 ${isDirectlyAssigned ? 'text-primary' : 'text-muted'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-foreground">{item.name}</p>
-                          <Badge variant={item.kind === "product_group" ? "info" : "default"} className="text-[10px]">
-                            {itemLabel}
-                          </Badge>
-                        </div>
-                        {item.description && (
-                          <p className="text-xs text-muted mt-0.5">{item.description}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-2 flex-wrap">
-                          {isDirectlyAssigned && (
-                            <Badge variant="info" className="text-xs">
-                              User Direct
-                            </Badge>
-                          )}
-                          {isSeatAllocated && seatRow && seatRow.cap !== null && seatRow.cap > 0 && (
-                            <span className={`text-[11px] px-1.5 py-0.5 rounded ${
-                              atCapacity
-                                ? 'bg-warning/10 text-warning border border-warning/20'
-                                : 'bg-primary/10 text-primary border border-primary/20'
-                            }`}>
-                              {seatRow.used} / {seatRow.cap} seats used
-                            </span>
-                          )}
-                          {isSeatAllocated && noSubscription && (
-                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-error/10 text-error border border-error/20">
-                              No active subscription
-                            </span>
-                          )}
-                          {seatRow && !seatRow.requires_seat_assignment && (
-                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted-light text-muted border border-border">
-                              Org-wide — auto-granted
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      {seatRow && !seatRow.requires_seat_assignment ? (
-                        // Org-wide items: every user gets access automatically;
-                        // per-user assignment isn't meaningful so hide the action.
-                        <span className="text-xs text-muted">—</span>
-                      ) : isDirectlyAssigned ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRemoveItem(item)}
-                          disabled={isSavingProducts}
-                        >
-                          {isSavingProducts ? 'Removing...' : 'Remove'}
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => handleAssignItem(item)}
-                          disabled={isSavingProducts || assignBlocked}
-                          title={
-                            atCapacity
-                              ? `All ${seatRow?.cap} seats are assigned. Increase seats or remove a user first.`
-                              : noSubscription
-                                ? 'No active subscription with available seats. Subscribe to start assigning.'
-                                : ''
-                          }
-                        >
-                          {isSavingProducts ? 'Assigning...' : (atCapacity ? 'No seats' : 'Assign')}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="flex justify-end pt-4 border-t border-border">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsManageProductsModalOpen(false);
-                setManageProductsUser(null);
-                setUserDirectProducts([]);
-              }}
-            >
-              Done
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </>
   );
 }
