@@ -169,7 +169,7 @@ export function SolicitationNumberLink({
                   <tbody className="divide-y divide-border">
                     {results.map((p) => (
                       <tr key={p.id} className="hover:bg-muted-light/30">
-                        <td className="px-4 py-2 font-mono font-semibold text-primary whitespace-nowrap">
+                        <td className="px-4 py-2 font-mono font-semibold text-foreground whitespace-nowrap">
                           {formatNSN(p.nsn) || p.nsn}
                         </td>
                         <td

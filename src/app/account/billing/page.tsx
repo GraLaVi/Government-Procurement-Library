@@ -7,7 +7,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { AssignedProduct } from "@/lib/users/types";
+import { resolveOrgTier, tierBadgeForKey } from "@/lib/library/tier";
 import { clearPendingSignup } from "@/lib/signup/pendingSignup";
 
 type Price = {
@@ -123,46 +125,6 @@ function statusBadge(status: string): { label: string; className: string } {
   }
 }
 
-function formatProductName(product: AssignedProduct): string {
-  const key = product.product_key || product.group_key || "";
-  return product.name || key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatProductSource(product: AssignedProduct): string {
-  // Prefer the DB-truth `assigned_by_type` (admin | stripe | xero_manual | comp)
-  // when present. Fall back to the legacy `source` field for older payloads.
-  const assignedBy = product.assigned_by_type;
-  const assignedByLabels: Record<string, string> = {
-    admin: "Direct Assignment",
-    stripe: "Subscription",
-    xero_manual: "Manual (Xero)",
-    comp: "Complimentary",
-  };
-  if (assignedBy && assignedByLabels[assignedBy]) return assignedByLabels[assignedBy];
-
-  const sourceLabels: Record<string, string> = {
-    direct: "Direct Assignment",
-    group: "Product Group",
-    customer_direct: "Direct Assignment",
-    customer_group: "Product Group",
-  };
-  return sourceLabels[product.source] || product.source;
-}
-
-function formatCategory(category: string | null): string {
-  if (!category) return "General";
-  return category.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function groupByCategory(products: AssignedProduct[]): Record<string, AssignedProduct[]> {
-  return products.reduce((acc, product) => {
-    const category = product.category || "general";
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(product);
-    return acc;
-  }, {} as Record<string, AssignedProduct[]>);
-}
-
 type ActiveModal =
   | { kind: "seats"; sub: Subscription }
   | { kind: "interval"; sub: Subscription }
@@ -194,6 +156,7 @@ function BillingPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [portalPending, setPortalPending] = useState(false);
   const [modal, setModal] = useState<ActiveModal>(null);
+  const [activeTab, setActiveTab] = useState("plan");
   // Tracks the post-Checkout finalization step (Option 2 self-serve flow):
   // when /pricing's signup-and-checkout sent the visitor to Stripe, the
   // visitor lands here ?checkout=success&session_id=cs_… still logged out.
@@ -293,6 +256,13 @@ function BillingPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkoutFlag, checkoutSessionId, user, authLoading]);
 
+  // Billing is closed during beta (beta is 100% comp grants — no self-serve
+  // Stripe Checkout), so block all direct visits to this page and bounce
+  // users back to /account. Remove this guard to reopen billing after beta.
+  useEffect(() => {
+    router.replace("/account");
+  }, [router]);
+
   useEffect(() => {
     if (!authLoading && user) loadData();
   }, [authLoading, user, loadData]);
@@ -348,6 +318,10 @@ function BillingPageContent() {
   // we have stripe_customer_id on the customer row, since service.create_portal
   // needs it.) We just enable Portal whenever there's at least one sub.
   const hasStripeCustomer = subscriptions.length > 0;
+
+  // Org-wide library tier (Free / Basic / Advanced), derived from the org's
+  // product grants — mirrors the manage-users page badge.
+  const orgTier = resolveOrgTier(products);
 
   // Trial-state banner drivers.
   const isTrialing = pmStatus?.subscription_status === "trialing";
@@ -461,142 +435,115 @@ function BillingPageContent() {
         </div>
       )}
 
-      <h2 className="text-lg font-semibold text-foreground mb-4">
-        Current plan{subscriptions.length > 1 ? "s" : ""}
-      </h2>
+      <Tabs
+        tabs={[
+          { id: "plan", label: "Plan" },
+          { id: "invoices", label: "Invoices", badge: invoices.length || undefined },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        className="mb-6"
+      />
 
-      {isLoading ? (
-        <div className="bg-card-bg border border-border rounded-xl p-6 mb-8 text-muted text-sm">
-          Loading subscription details…
-        </div>
-      ) : subscriptions.length === 0 ? (
-        <div className="bg-card-bg border border-border rounded-xl p-6 mb-8">
-          <p className="text-muted text-sm">You don&apos;t have an active plan yet.</p>
-          <div className="mt-4">
-            <Button href="/pricing" variant="primary" size="sm">
-              Browse plans
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-          {subscriptions.map((sub) => (
-            <SubscriptionCard
-              key={sub.id}
-              sub={sub}
-              plans={plans}
-              onAddSeats={() => setModal({ kind: "seats", sub })}
-              onChangeInterval={() => setModal({ kind: "interval", sub })}
-              onSwitchPlan={() => setModal({ kind: "switchPlan", sub })}
-              onCancel={() => setModal({ kind: "cancel", sub })}
-              onReactivate={() => reactivate(sub)}
-            />
-          ))}
-        </div>
-      )}
+      <TabPanel tabId="plan" activeTab={activeTab}>
+        <h2 className="text-lg font-semibold text-foreground mb-4">
+          Current plan{subscriptions.length > 1 ? "s" : ""}
+        </h2>
 
-      <h2 className="text-lg font-semibold text-foreground mb-4">
-        Features included ({products.length})
-      </h2>
-      {isLoading ? (
-        <div className="bg-card-bg border border-border rounded-xl p-6 mb-8 text-muted text-sm">
-          Loading features…
-        </div>
-      ) : products.length === 0 ? (
-        <div className="bg-card-bg border border-border rounded-xl p-6 mb-8 text-muted text-sm">
-          No products are currently assigned to your organization.
-        </div>
-      ) : (
-        <div className="space-y-4 mb-8">
-          {Object.keys(groupByCategory(products)).sort().map((category) => {
-            const grouped = groupByCategory(products);
-            return (
-              <div key={category} className="bg-card-bg border border-border rounded-xl overflow-hidden">
-                <div className="px-4 py-3 bg-muted-light/40 border-b border-border">
-                  <h3 className="text-sm font-semibold text-foreground">
-                    {formatCategory(category)}
-                  </h3>
-                  <p className="text-xs text-muted">
-                    {grouped[category].length} product{grouped[category].length !== 1 ? "s" : ""}
-                  </p>
-                </div>
-                <div className="divide-y divide-border">
-                  {grouped[category].map((product) => (
-                    <div key={product.id} className="px-4 py-3 hover:bg-muted-light/30 transition-colors">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-foreground">
-                            {formatProductName(product)}
-                          </h4>
-                          {product.description && (
-                            <p className="text-xs text-muted mt-1">{product.description}</p>
-                          )}
-                          <div className="flex flex-wrap items-center gap-3 mt-2">
-                            <span className="text-xs text-muted">
-                              <span className="font-medium">Source:</span> {formatProductSource(product)}
-                            </span>
-                            <span className="text-xs text-muted">
-                              <span className="font-medium">Key:</span>{" "}
-                              <code className="bg-muted-light px-1.5 py-0.5 rounded text-xs">{product.product_key || product.group_key}</code>
-                            </span>
-                          </div>
-                        </div>
-                        <Badge variant={product.is_active ? "success" : "warning"}>
-                          {product.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <h2 className="text-lg font-semibold text-foreground mb-4">Invoice history</h2>
-      <div className="bg-card-bg border border-border rounded-xl overflow-hidden">
         {isLoading ? (
-          <div className="p-6 text-muted text-sm">Loading invoices…</div>
-        ) : invoices.length === 0 ? (
-          <div className="p-6 text-muted text-sm">No invoices yet.</div>
+          <div className="bg-card-bg border border-border rounded-xl p-6 mb-8 text-muted text-sm">
+            Loading subscription details…
+          </div>
+        ) : subscriptions.length === 0 ? (
+          <div className="bg-card-bg border border-border rounded-xl p-6 mb-8">
+            <p className="text-muted text-sm">You don&apos;t have an active plan yet.</p>
+            <div className="mt-4">
+              <Button href="/pricing" variant="primary" size="sm">
+                Browse plans
+              </Button>
+            </div>
+          </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-muted-light/40 text-muted border-b border-border">
-              <tr>
-                <th className="text-left px-4 py-2 font-medium">Number</th>
-                <th className="text-left px-4 py-2 font-medium">Issued</th>
-                <th className="text-left px-4 py-2 font-medium">Status</th>
-                <th className="text-right px-4 py-2 font-medium">Amount</th>
-                <th className="text-right px-4 py-2 font-medium">Paid</th>
-                <th className="px-4 py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((inv) => (
-                <tr key={inv.id} className="border-b border-border last:border-b-0">
-                  <td className="px-4 py-2 text-card-foreground">{inv.number || `#${inv.id}`}</td>
-                  <td className="px-4 py-2 text-muted">{formatDate(inv.issued_at)}</td>
-                  <td className="px-4 py-2 text-muted capitalize">{inv.status.replace(/_/g, " ")}</td>
-                  <td className="px-4 py-2 text-right text-card-foreground">
-                    {formatMoney(inv.amount_due_cents, inv.currency)}
-                  </td>
-                  <td className="px-4 py-2 text-right text-muted">
-                    {inv.paid_at ? formatDate(inv.paid_at) : "—"}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    {inv.invoice_pdf_url ? (
-                      <a href={inv.invoice_pdf_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">PDF</a>
-                    ) : inv.hosted_invoice_url ? (
-                      <a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">View</a>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+            {subscriptions.map((sub) => (
+              <SubscriptionCard
+                key={sub.id}
+                sub={sub}
+                plans={plans}
+                onAddSeats={() => setModal({ kind: "seats", sub })}
+                onChangeInterval={() => setModal({ kind: "interval", sub })}
+                onSwitchPlan={() => setModal({ kind: "switchPlan", sub })}
+                onCancel={() => setModal({ kind: "cancel", sub })}
+                onReactivate={() => reactivate(sub)}
+              />
+            ))}
+          </div>
         )}
-      </div>
+
+        <h2 className="text-lg font-semibold text-foreground mb-4">Your plan tier</h2>
+        {isLoading ? (
+          <div className="bg-card-bg border border-border rounded-xl p-6 mb-8 text-muted text-sm">
+            Loading plan tier…
+          </div>
+        ) : (
+          <div className="bg-card-bg border border-border rounded-xl p-6 mb-8">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-muted">Your organization is on the</span>
+              <Badge variant={orgTier.variant}>{orgTier.label}</Badge>
+              <span className="text-sm text-muted">library.</span>
+            </div>
+            <p className="text-xs text-muted mt-2">
+              This tier covers all features for everyone in your organization.
+            </p>
+          </div>
+        )}
+      </TabPanel>
+
+      <TabPanel tabId="invoices" activeTab={activeTab}>
+        <h2 className="text-lg font-semibold text-foreground mb-4">Invoice history</h2>
+        <div className="bg-card-bg border border-border rounded-xl overflow-hidden">
+          {isLoading ? (
+            <div className="p-6 text-muted text-sm">Loading invoices…</div>
+          ) : invoices.length === 0 ? (
+            <div className="p-6 text-muted text-sm">No invoices yet.</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-muted-light/40 text-muted border-b border-border">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">Number</th>
+                  <th className="text-left px-4 py-2 font-medium">Issued</th>
+                  <th className="text-left px-4 py-2 font-medium">Status</th>
+                  <th className="text-right px-4 py-2 font-medium">Amount</th>
+                  <th className="text-right px-4 py-2 font-medium">Paid</th>
+                  <th className="px-4 py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="border-b border-border last:border-b-0">
+                    <td className="px-4 py-2 text-card-foreground">{inv.number || `#${inv.id}`}</td>
+                    <td className="px-4 py-2 text-muted">{formatDate(inv.issued_at)}</td>
+                    <td className="px-4 py-2 text-muted capitalize">{inv.status.replace(/_/g, " ")}</td>
+                    <td className="px-4 py-2 text-right text-card-foreground">
+                      {formatMoney(inv.amount_due_cents, inv.currency)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-muted">
+                      {inv.paid_at ? formatDate(inv.paid_at) : "—"}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {inv.invoice_pdf_url ? (
+                        <a href={inv.invoice_pdf_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">PDF</a>
+                      ) : inv.hosted_invoice_url ? (
+                        <a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">View</a>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </TabPanel>
 
       <div className="mt-6 text-xs text-muted">
         Back to <Link href="/account" className="text-primary hover:underline">Account</Link>.
@@ -658,14 +605,21 @@ function SubscriptionCard({
   onReactivate: () => void;
 }) {
   const badge = statusBadge(sub.status);
-  const product = sub.product_name || sub.product_group_name || "Plan";
+  const rawName = sub.product_name || sub.product_group_name || "Plan";
   const trialActive = sub.status === "trialing" && sub.trial_end && new Date(sub.trial_end) > new Date();
   const isTerminal = sub.status === "canceled" || sub.status === "incomplete_expired";
+  // Match by the robust plan_kind+plan_id identity when available, else by
+  // name (older payloads may lack plan_kind/plan_id).
   const matchingPlan = plans.find((p) => {
+    if (sub.plan_kind && sub.plan_id !== null) return p.kind === sub.plan_kind && p.id === sub.plan_id;
     if (sub.product_name && p.kind === "product") return p.name === sub.product_name;
     if (sub.product_group_name && p.kind === "product_group") return p.name === sub.product_group_name;
     return false;
   });
+  // Prefer a clean Free/Basic/Advanced tier label from the matching plan's
+  // key; fall back to the raw plan name so a real paid plan is never hidden
+  // behind a guessed tier.
+  const planLabel = tierBadgeForKey(matchingPlan?.key)?.label ?? rawName;
   const hasOtherIntervals = (matchingPlan?.prices.length ?? 0) > 1;
   // "Other plans available" = at least one plan that isn't the current sub's plan.
   // The Plan type lacks an id-key per kind, so identify the current one by name.
@@ -679,7 +633,7 @@ function SubscriptionCard({
     <div className="bg-card-bg border border-border rounded-xl p-6">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="text-lg font-semibold text-card-foreground">{product}</h3>
+          <h3 className="text-lg font-semibold text-card-foreground">{planLabel}</h3>
           <p className="text-muted text-sm">
             {intervalLabel(sub.interval_count)}
             {" · "}

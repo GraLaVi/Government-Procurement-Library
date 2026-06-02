@@ -51,3 +51,41 @@ export function tierMeets(actual: LibraryTier, required: Exclude<LibraryTier, nu
   if (actual === null) return false;
   return TIER_RANK[actual] >= TIER_RANK[required];
 }
+
+// --- Org-wide tier badge resolution -------------------------------------
+// Locked pricing: one tier per org (Free / Basic / Advanced), being the
+// highest library_search_* grant the org holds. Both /account/users and
+// /account/billing derive the badge from the org product list they fetch.
+export type TierBadgeVariant = "info" | "default" | "success" | "warning";
+export type OrgTierBadge = { label: string; variant: TierBadgeVariant };
+
+// Minimal shape shared by AssignableItem and AssignedProduct.
+type TierKeyed = { product_key?: string; group_key?: string };
+
+const ORG_TIER_BADGES: Record<string, { label: string; rank: number; variant: TierBadgeVariant }> = {
+  library_search_advanced: { label: "Advanced", rank: 3, variant: "info" },
+  library_search_basic: { label: "Basic", rank: 2, variant: "default" },
+  library_search_free: { label: "Free", rank: 1, variant: "default" },
+};
+
+// Highest tier across a list of org products. Every org holds Free at least.
+export function resolveOrgTier(items: TierKeyed[]): OrgTierBadge {
+  let best: OrgTierBadge | null = null;
+  let bestRank = 0;
+  for (const it of items) {
+    const t = ORG_TIER_BADGES[it.product_key ?? it.group_key ?? ""];
+    if (t && t.rank > bestRank) {
+      best = { label: t.label, variant: t.variant };
+      bestRank = t.rank;
+    }
+  }
+  return best ?? { label: "Free", variant: "default" };
+}
+
+// Single plan/product key -> tier badge. Returns null for unknown keys so the
+// caller can fall back to the raw plan name rather than mislabel a paid plan.
+export function tierBadgeForKey(key: string | null | undefined): OrgTierBadge | null {
+  if (!key) return null;
+  const t = ORG_TIER_BADGES[key];
+  return t ? { label: t.label, variant: t.variant } : null;
+}

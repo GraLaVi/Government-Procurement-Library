@@ -10,28 +10,7 @@ import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { ManagedUser, CreateUserRequest, UpdateUserRequest, AssignableItem } from "@/lib/users/types";
-
-// The locked pricing model is one tier per organization (Free / Basic /
-// Advanced) covering all features. The tier isn't stored per-user; it's
-// the highest library_search_* grant the customer holds, derived here
-// from the org products the page already fetches.
-const LIBRARY_TIERS: Record<string, { label: string; rank: number; variant: "info" | "default" }> = {
-  library_search_advanced: { label: "Advanced", rank: 3, variant: "info" },
-  library_search_basic: { label: "Basic", rank: 2, variant: "default" },
-  library_search_free: { label: "Free", rank: 1, variant: "default" },
-};
-const resolveOrgTier = (items: AssignableItem[]): { label: string; variant: "info" | "default" } => {
-  let best: { label: string; variant: "info" | "default" } | null = null;
-  let bestRank = 0;
-  for (const it of items) {
-    const t = LIBRARY_TIERS[it.product_key ?? it.group_key ?? ""];
-    if (t && t.rank > bestRank) {
-      best = { label: t.label, variant: t.variant };
-      bestRank = t.rank;
-    }
-  }
-  return best ?? { label: "Free", variant: "default" }; // every org holds at least the free tier
-};
+import { resolveOrgTier } from "@/lib/library/tier";
 
 // Available permission roles that can be assigned. The "read_only"
 // permission isn't actually wired anywhere on the backend, so it's not

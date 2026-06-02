@@ -15,6 +15,7 @@ import { QuickSearchLauncher } from "@/components/dashboard/QuickSearchLauncher"
 import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
 import { PaymentMethodAlert } from "@/components/dashboard/PaymentMethodAlert";
 import { RecentSearches } from "@/components/dashboard/RecentSearches";
+import { BidMatchingResultsCard } from "@/components/dashboard/BidMatchingResultsCard";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -97,6 +98,9 @@ function BasicDashboard() {
       <PaymentMethodAlert />
       <OnboardingChecklist />
       <QuickSearchLauncher />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <BidMatchingResultsCard />
+      </div>
       <RecentSearches />
     </div>
   );
@@ -113,13 +117,39 @@ function FullDashboard({ business }: FullDashboardProps) {
       <OnboardingChecklist />
       <QuickSearchLauncher />
 
-      {business.isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <KPICardSkeleton key={i} />
-          ))}
-        </div>
-      ) : business.error ? (
+      {/* Bid-matching card is always the leftmost cell and owns its own data,
+          so it renders independently of the business-summary state. The three
+          business KPICards (or their skeletons) fill the remaining cells. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <BidMatchingResultsCard />
+        {business.isLoading ? (
+          Array.from({ length: 3 }).map((_, i) => <KPICardSkeleton key={i} />)
+        ) : business.data ? (
+          <>
+            <KPICard
+              label="Open Solicitations"
+              value={formatNumber(business.data.open_solicitations_count)}
+              subtitle="Matching your manufactured parts"
+              href="/analytics#your-business"
+              tooltip="Based on your Procurement History, items sold by your CAGE, this is the number of open solicitations."
+            />
+            <KPICard
+              label="Historical Contract Value"
+              value={formatCurrency(business.data.procurement_history_total)}
+              subtitle="Lifetime procurement total"
+              href="/analytics#your-business"
+            />
+            <KPICard
+              label="Competitors on Your Parts"
+              value={formatNumber(business.data.competitor_count)}
+              subtitle="Distinct vendors on the same parts"
+              href="/analytics#your-business"
+            />
+          </>
+        ) : null}
+      </div>
+
+      {business.error ? (
         <div className="bg-error/10 border border-error/30 rounded-xl p-4 text-error text-sm flex items-center justify-between gap-4">
           <span>Failed to load your business data: {business.error}</span>
           <button
@@ -129,28 +159,6 @@ function FullDashboard({ business }: FullDashboardProps) {
           >
             Retry
           </button>
-        </div>
-      ) : business.data ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <KPICard
-            label="Open Solicitations"
-            value={formatNumber(business.data.open_solicitations_count)}
-            subtitle="Matching your manufactured parts"
-            href="/analytics#your-business"
-            tooltip="Based on your Procurement History, items sold by your CAGE, this is the number of open solicitations."
-          />
-          <KPICard
-            label="Historical Contract Value"
-            value={formatCurrency(business.data.procurement_history_total)}
-            subtitle="Lifetime procurement total"
-            href="/analytics#your-business"
-          />
-          <KPICard
-            label="Competitors on Your Parts"
-            value={formatNumber(business.data.competitor_count)}
-            subtitle="Distinct vendors on the same parts"
-            href="/analytics#your-business"
-          />
         </div>
       ) : null}
 

@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react";
 import { SolicitationNumberLink } from "@/components/library/SolicitationNumberLink";
 import { MatchStrengthBadge } from "@/components/ui/MatchStrengthBadge";
+import { Modal } from "@/components/ui/Modal";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { timeAgo } from "@/lib/amendments";
 
@@ -32,6 +33,8 @@ interface BidMatchResult {
   has_amendment_indicator?: boolean;
   has_post_match_amendment?: boolean;
   latest_post_match_amendment_at?: string | null;
+  // True when this DIBBS solicitation has a PDF on disk (always false for SAM).
+  has_pdf?: boolean;
   solicitation_number: string | null;
   agency_code: string | null;
   issue_date: string | null;
@@ -116,6 +119,8 @@ export function BidMatchResultsTable({
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [amendmentSolId, setAmendmentSolId] = useState<number | null>(null);
   const [amendmentSolNumber, setAmendmentSolNumber] = useState<string | null>(null);
+  const [pdfModal, setPdfModal] = useState<{ id: number; number: string } | null>(null);
+  const pdfUrl = pdfModal ? `/api/library/solicitations/${pdfModal.id}/pdf` : null;
 
   const toggleExpanded = (id: number) => {
     setExpanded((prev) => {
@@ -229,6 +234,26 @@ export function BidMatchResultsTable({
                         ) : (
                           <span className="text-foreground">-</span>
                         )}
+                        {/* View the solicitation PDF in a modal, mirroring the
+                            parts/vendor search lists. Only DIBBS sols with a
+                            PDF on disk set has_pdf. */}
+                        {result.has_pdf && result.solicitation_id && (
+                          <button
+                            type="button"
+                            title="View solicitation PDF"
+                            onClick={() =>
+                              setPdfModal({
+                                id: result.solicitation_id as number,
+                                number: result.solicitation_number || "",
+                              })
+                            }
+                            className="text-primary hover:text-primary/80 cursor-pointer shrink-0"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                            </svg>
+                          </button>
+                        )}
                         {result.source === "sam" && (
                           <span
                             className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200"
@@ -333,6 +358,33 @@ export function BidMatchResultsTable({
         solicitationNumber={amendmentSolNumber}
         onClose={() => setAmendmentSolId(null)}
       />
+
+      {/* Solicitation PDF modal — opened from the PDF icon next to the
+          solicitation number. Mirrors the parts/vendor search lists. */}
+      {pdfModal && pdfUrl && (
+        <Modal
+          isOpen={true}
+          onClose={() => setPdfModal(null)}
+          title={`Solicitation ${pdfModal.number}`}
+          size="full"
+        >
+          <div className="flex flex-col gap-2">
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline"
+            >
+              Open in new tab
+            </a>
+            <iframe
+              src={pdfUrl}
+              title={`Solicitation ${pdfModal.number}`}
+              className="w-full border border-border rounded min-h-[70vh]"
+            />
+          </div>
+        </Modal>
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (

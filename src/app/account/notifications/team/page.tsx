@@ -123,6 +123,10 @@ export default function TeamNotificationsPage() {
     const key = `user-${userId}-${typeKey}`;
     setSavingKey(key);
     setError(null);
+    // Empty string from the dropdown's "Default (…)" option means reset.
+    // The backend treats frequency=null as "delete this row so reads fall
+    // back to notification_types.default_frequency."
+    const payload = frequency === "" ? null : frequency;
     try {
       const response = await fetch("/api/notifications/team/bulk", {
         method: "POST",
@@ -130,7 +134,7 @@ export default function TeamNotificationsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type_key: typeKey,
-          users: [{ user_id: userId, frequency }],
+          users: [{ user_id: userId, frequency: payload }],
         }),
       });
       const json = await response.json();
@@ -155,6 +159,7 @@ export default function TeamNotificationsPage() {
     const key = `contact-${contactId}-${typeKey}`;
     setSavingKey(key);
     setError(null);
+    const payload = frequency === "" ? null : frequency;
     try {
       const response = await fetch(
         `/api/notifications/contacts/${contactId}/subscriptions/${encodeURIComponent(typeKey)}`,
@@ -162,7 +167,7 @@ export default function TeamNotificationsPage() {
           method: "PUT",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ frequency, channel: "email" }),
+          body: JSON.stringify({ frequency: payload, channel: "email" }),
         },
       );
       const json = await response.json();

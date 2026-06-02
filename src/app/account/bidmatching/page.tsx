@@ -54,7 +54,12 @@ interface BidMatchingAccess {
     // null = no restriction; otherwise the dropdown is filtered to this list.
     allowed_condition_types?: string[] | null;
   };
-  usage: { profile_count: number };
+  usage: {
+    // Total profiles (active + inactive). Kept for display/debug.
+    profile_count: number;
+    // The count that gates max_profiles. Inactive profiles don't count.
+    active_profile_count: number;
+  };
 }
 
 // Condition types that may appear on saved profiles. SET_ASIDE is the
@@ -454,12 +459,43 @@ export default function BidMatchingPage() {
 
   const handleToggleActive = async (profile: BidMatchProfile) => {
     const next = !profile.is_active;
-    // Optimistic update so the badge flips immediately; rollback on failure.
+    const delta = next ? 1 : -1;
+    // Optimistic update so both the badge and the "Active profiles: X / N"
+    // header counter flip immediately; rollback on failure.
     setProfiles((prev) =>
       prev.map((p) =>
         p.profile_id === profile.profile_id ? { ...p, is_active: next } : p,
       ),
     );
+    setAccess((prev) =>
+      prev
+        ? {
+            ...prev,
+            usage: {
+              ...prev.usage,
+              active_profile_count: prev.usage.active_profile_count + delta,
+            },
+          }
+        : prev,
+    );
+    const rollback = () => {
+      setProfiles((prev) =>
+        prev.map((p) =>
+          p.profile_id === profile.profile_id ? { ...p, is_active: !next } : p,
+        ),
+      );
+      setAccess((prev) =>
+        prev
+          ? {
+              ...prev,
+              usage: {
+                ...prev.usage,
+                active_profile_count: prev.usage.active_profile_count - delta,
+              },
+            }
+          : prev,
+      );
+    };
     try {
       const res = await fetch(`/api/bid-matching/profiles/${profile.profile_id}`, {
         method: "PUT",
@@ -470,21 +506,13 @@ export default function BidMatchingPage() {
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         setError(d.error || "Failed to update profile status");
-        setProfiles((prev) =>
-          prev.map((p) =>
-            p.profile_id === profile.profile_id ? { ...p, is_active: !next } : p,
-          ),
-        );
+        rollback();
         return;
       }
       setToast(next ? "Profile activated" : "Profile deactivated");
     } catch {
       setError("An unexpected error occurred");
-      setProfiles((prev) =>
-        prev.map((p) =>
-          p.profile_id === profile.profile_id ? { ...p, is_active: !next } : p,
-        ),
-      );
+      rollback();
     }
   };
 
@@ -606,10 +634,10 @@ export default function BidMatchingPage() {
             variant="primary"
             size="sm"
             onClick={openCreateModal}
-            disabled={!!access && access.has_access && access.limits.max_profiles !== null && access.usage.profile_count >= access.limits.max_profiles}
+            disabled={!!access && access.has_access && access.limits.max_profiles !== null && access.usage.active_profile_count >= access.limits.max_profiles}
             title={
-              !!access && access.has_access && access.limits.max_profiles !== null && access.usage.profile_count >= access.limits.max_profiles
-                ? "You're at the profile cap — upgrade to Advanced for more profiles, or delete an existing profile."
+              !!access && access.has_access && access.limits.max_profiles !== null && access.usage.active_profile_count >= access.limits.max_profiles
+                ? "You're at the active-profile cap — upgrade to Advanced for more profiles, or deactivate or delete an existing profile."
                 : undefined
             }
           >
@@ -647,13 +675,20 @@ export default function BidMatchingPage() {
               </div>
               {access.has_access ? (
                 <p className="text-xs text-muted mt-1">
-                  Profiles:{" "}
+                  Active profiles:{" "}
                   <span className="font-medium text-foreground">
-                    {access.usage.profile_count}
+                    {access.usage.active_profile_count}
                     {access.limits.max_profiles !== null
                       ? ` / ${access.limits.max_profiles}`
                       : " (unlimited)"}
                   </span>
+                  {access.usage.profile_count > access.usage.active_profile_count && (
+                    <span className="text-muted">
+                      {" · "}
+                      {access.usage.profile_count - access.usage.active_profile_count}
+                      {" inactive (doesn't count toward cap)"}
+                    </span>
+                  )}
                   {access.limits.max_conditions_per_profile !== null && (
                     <>
                       {" · Up to "}
@@ -684,7 +719,7 @@ export default function BidMatchingPage() {
                 }
                 const atCap =
                   access.limits.max_profiles !== null &&
-                  access.usage.profile_count >= access.limits.max_profiles;
+                  access.usage.active_profile_count >= access.limits.max_profiles;
                 if (!atCap) return null;
                 return (
                   <Link
@@ -698,10 +733,11 @@ export default function BidMatchingPage() {
           </div>
           {access.has_access &&
             access.limits.max_profiles !== null &&
-            access.usage.profile_count >= access.limits.max_profiles && (
+            access.usage.active_profile_count >= access.limits.max_profiles && (
               <p className="mt-3 text-xs text-warning">
-                You&apos;ve reached your profile cap. Delete an existing
-                profile or upgrade to Advanced for more profiles.
+                You&apos;ve reached your active-profile cap. Deactivate or
+                delete an existing profile, or upgrade to Advanced for more
+                profiles.
               </p>
             )}
         </div>
