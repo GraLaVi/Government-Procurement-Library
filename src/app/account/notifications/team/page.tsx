@@ -382,9 +382,10 @@ function RowEditor({
   disabled,
   onChange,
 }: RowEditorProps) {
-  const frequencies = Array.from(
-    new Set([...(availableFrequencies || []), "none"]),
-  );
+  // "none" (Off) is only offered when the type explicitly allows opting out —
+  // i.e. it's present in available_frequencies/entitlements. It is NOT force-
+  // added here, so mandatory types (e.g. Security) can't be muted.
+  const frequencies = Array.from(new Set(availableFrequencies || []));
   return (
     <div className="px-6 py-3 flex items-start gap-4">
       <div className="flex-1 min-w-0">
@@ -421,7 +422,7 @@ function RowEditor({
             {defaultFrequency ? formatFrequencyLabel(defaultFrequency) : "off"})
           </option>
           {frequencies.map((freq) => {
-            const allowed = freq === "none" || entitled.includes(freq);
+            const allowed = entitled.includes(freq);
             return (
               <option
                 key={freq}

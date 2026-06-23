@@ -294,14 +294,18 @@ export default function NotificationsPage() {
                   // can actually select — anything outside that set
                   // renders disabled so the user sees the upgrade path
                   // without us hiding the option entirely.
-                  // "none" (Off) is ALWAYS selectable — opt-out must work
-                  // regardless of tier.
+                  // "none" (Off) is only offered when the type explicitly
+                  // allows opting out — i.e. it's present in
+                  // `available_frequencies`. It is NOT force-added here, so
+                  // mandatory types (e.g. Security) can't be muted.
                   const frequencies = [
-                    ...new Set([...(t.available_frequencies ?? ["immediate", "weekly_digest"]), "none"]),
+                    ...new Set(t.available_frequencies ?? ["immediate", "weekly_digest"]),
                   ];
                   const allowedSet = t.allowed_frequencies
                     ? new Set(t.allowed_frequencies)
                     : null;
+                  // When "none" is in the menu (type allows opt-out), it's
+                  // always selectable — opting out is never tier-gated.
                   const isFrequencyAllowed = (freq: string) =>
                     freq === "none" || allowedSet === null || allowedSet.has(freq);
                   const isDefault = !t.current_subscription;
