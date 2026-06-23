@@ -1,10 +1,7 @@
-import { ContentPlaceholder } from "@/components/layout/ContentPlaceholder";
+import { redirect } from "next/navigation";
 
+// The old Documentation placeholder has been replaced by the Help Center at
+// /help. Redirect so any existing inbound links keep working.
 export default function DocumentationPage() {
-  return (
-    <ContentPlaceholder
-      title="Documentation"
-      blurb="This page will host product documentation — how-to guides, search syntax, API references, and walkthroughs for the library and bid-matching features."
-    />
-  );
+  redirect("/help");
 }

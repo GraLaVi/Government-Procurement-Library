@@ -886,9 +886,9 @@ interface OverviewPanelProps {
 
 function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelProps) {
   const identifiers = [
-    { label: "NSN", value: formatNSN(part.nsn), mono: true },
-    { label: "NIIN", value: formatNiin(part.niin), mono: true },
-    { label: "FSC", value: part.fsc, mono: true },
+    { label: "NSN", value: formatNSN(part.nsn), mono: true, tooltip: null as string | null },
+    { label: "NIIN", value: formatNiin(part.niin), mono: true, tooltip: null as string | null },
+    { label: "FSC", value: part.fsc, mono: true, tooltip: part.fsc_description },
   ].filter(item => item.value);
 
 
@@ -1029,7 +1029,18 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
               <div key={item.label} className="flex items-center justify-between">
                 <span className="text-xs text-muted font-medium">{item.label}</span>
                 <span className="text-xs font-mono font-semibold text-primary bg-primary/5 px-2 py-1 rounded">
-                  {item.value}
+                  {item.tooltip ? (
+                    <CodeTooltip
+                      code={String(item.value)}
+                      title="FSC - Federal Supply Classification"
+                      content={item.tooltip}
+                      codeType={null}
+                    >
+                      {item.value}
+                    </CodeTooltip>
+                  ) : (
+                    item.value
+                  )}
                 </span>
               </div>
             ))}

@@ -241,11 +241,19 @@ export default function BidMatchingPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Bid-Matching</h1>
-        <p className="mt-1 text-muted-foreground">
-          Solicitations matched to your bid-matching profiles.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Bid-Matching</h1>
+          <p className="mt-1 text-muted-foreground">
+            Solicitations matched to your bid-matching profiles.
+          </p>
+        </div>
+        <Link
+          href="/account/bidmatching"
+          className="flex-shrink-0 inline-flex items-center text-sm font-medium text-primary hover:underline"
+        >
+          Manage profiles →
+        </Link>
       </div>
 
       {/* Error */}

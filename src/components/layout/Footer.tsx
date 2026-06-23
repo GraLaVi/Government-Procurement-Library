@@ -13,7 +13,7 @@ const footerLinks = {
     { href: "/contact", label: "Contact" },
   ],
   Resources: [
-    { href: "/documentation", label: "Documentation" },
+    { href: "/help", label: "Documentation" },
     { href: "/support", label: "Support" },
   ],
   Legal: [

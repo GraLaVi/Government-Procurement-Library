@@ -1,10 +1,12 @@
-import { ContentPlaceholder } from "@/components/layout/ContentPlaceholder";
+import type { Metadata } from "next";
+import { SupportLanding } from "./SupportLanding";
+
+export const metadata: Metadata = {
+  title: "Support | Government Procurement Hub",
+  description:
+    "Get help with Government Procurement Hub — browse the Help Center and FAQ, or contact our support team directly.",
+};
 
 export default function SupportPage() {
-  return (
-    <ContentPlaceholder
-      title="Support"
-      blurb="This page will list how to reach us — support hours, response-time targets, knowledge-base articles, and the form to file a ticket."
-    />
-  );
+  return <SupportLanding />;
 }

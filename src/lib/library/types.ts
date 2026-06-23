@@ -396,6 +396,7 @@ export interface PartDetail {
   nsn: string;
   niin: string | null;
   fsc: string | null;
+  fsc_description: string | null;  // FSC description for the Overview-tab hover tooltip
   description: string | null;
   unit_of_issue: string | null;
   unit_price: number | null;

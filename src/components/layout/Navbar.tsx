@@ -49,6 +49,7 @@ const librarySearchItems = [
 ];
 
 const helpItems = [
+  { href: "/help", label: "Help Center" },
   { href: "/library/code-definitions", label: "Code Definitions" },
   { href: "/contact", label: "Contact Us" },
 ];
