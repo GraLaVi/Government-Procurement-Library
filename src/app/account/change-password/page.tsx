@@ -7,6 +7,7 @@ import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { PASSWORD_RULES, isPasswordStrong } from "@/lib/auth/passwordRules";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -17,6 +18,7 @@ export default function ChangePasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const router = useRouter();
+  const { refreshUser } = useAuth();
 
   const passwordsMatch = newPassword === confirmPassword;
   const allRequirementsMet = isPasswordStrong(newPassword);
@@ -54,6 +56,11 @@ export default function ChangePasswordPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+
+      // Refresh auth state so must_change_password flips to false before we
+      // navigate; otherwise the first-login gate would bounce us right back
+      // to this page.
+      await refreshUser();
 
       // Redirect to account page after 2 seconds
       setTimeout(() => {

@@ -21,7 +21,7 @@ const CATEGORIES: CategoryDef[] = [
     description:
       "Required for the site to work — signing in, staying signed in, and remembering your consent choice itself.",
     examples:
-      "govt_proc_hub_access_token, govt_proc_hub_refresh_token, gph_cookie_consent",
+      "govt_proc_hub_access_token_v2, govt_proc_hub_refresh_token_v2, gph_cookie_consent",
     alwaysOn: true,
   },
   {

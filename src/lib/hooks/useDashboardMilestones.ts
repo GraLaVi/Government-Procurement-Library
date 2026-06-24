@@ -12,6 +12,9 @@ export interface DashboardMilestone {
   label: string;
   href: string;
   completed: boolean;
+  // Slug of the Help Center article (/help/<slug>) that explains this step.
+  // Rendered as a contextual "Learn more" deep-link next to the action CTA.
+  learnMoreSlug?: string;
 }
 
 interface BidProfileSummary {
@@ -90,12 +93,14 @@ export function useDashboardMilestones(): {
         label: 'Search a part',
         href: '/library/parts',
         completed: parts.actions.length > 0,
+        learnMoreSlug: 'parts-search',
       },
       {
         id: 'search_vendor',
         label: 'Look up a vendor',
         href: '/library/vendor-search',
         completed: vendors.actions.length > 0,
+        learnMoreSlug: 'vendor-research',
       },
     ];
 
@@ -105,6 +110,7 @@ export function useDashboardMilestones(): {
         label: `Add a payment method${trialDeadlineSuffix(pmStatus.days_remaining)}`,
         href: '/account/billing',
         completed: false,
+        learnMoreSlug: 'plans-and-pricing',
       });
     }
 
@@ -114,6 +120,7 @@ export function useDashboardMilestones(): {
         label: 'Set up a bid-matching profile',
         href: '/account/bidmatching',
         completed: false,
+        learnMoreSlug: 'bid-matching-profiles',
       });
     }
     return base;

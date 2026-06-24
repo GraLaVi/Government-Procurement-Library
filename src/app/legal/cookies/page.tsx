@@ -20,14 +20,14 @@ interface CookieRow {
 
 const COOKIES: CookieRow[] = [
   {
-    name: "govt_proc_hub_access_token",
+    name: "govt_proc_hub_access_token_v2",
     storage: "Cookie (httpOnly)",
     category: "Strictly necessary",
     purpose: "Signed-in session token (JWT). Without it you can't stay logged in.",
     expiry: "8 hours",
   },
   {
-    name: "govt_proc_hub_refresh_token",
+    name: "govt_proc_hub_refresh_token_v2",
     storage: "Cookie (httpOnly)",
     category: "Strictly necessary",
     purpose: "Refreshes your access token in the background so you don't get logged out mid-task.",

@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from './config';
+import { setAccessCookie, clearAuthCookies } from './cookies';
 
 /**
  * Gets a valid access token, refreshing it if necessary.
@@ -36,13 +37,7 @@ export async function getAccessToken(): Promise<string | null> {
     const data = await response.json();
 
     // Update the access token cookie
-    cookieStore.set(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN, data.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: data.expires_in || AUTH_CONFIG.TOKEN_EXPIRY.ACCESS,
-      path: '/',
-    });
+    setAccessCookie(cookieStore, data.access_token, data.expires_in || AUTH_CONFIG.TOKEN_EXPIRY.ACCESS);
 
     return data.access_token;
   } catch (error) {
@@ -74,21 +69,14 @@ export async function refreshAccessToken(): Promise<string | null> {
 
     if (!response.ok) {
       // Clear cookies on refresh failure
-      cookieStore.delete(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN);
-      cookieStore.delete(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN);
+      await clearAuthCookies(cookieStore);
       return null;
     }
 
     const data = await response.json();
 
     // Update the access token cookie
-    cookieStore.set(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN, data.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: data.expires_in || AUTH_CONFIG.TOKEN_EXPIRY.ACCESS,
-      path: '/',
-    });
+    setAccessCookie(cookieStore, data.access_token, data.expires_in || AUTH_CONFIG.TOKEN_EXPIRY.ACCESS);
 
     return data.access_token;
   } catch (error) {

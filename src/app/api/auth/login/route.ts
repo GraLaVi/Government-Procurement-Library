@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { LoginRequest, LoginResponse } from '@/lib/auth/types';
 import { buildForwardHeaders } from '@/lib/api/forwardHeaders';
+import { setAccessCookie, setRefreshCookie, clearLegacyAuthCookies } from '@/lib/auth/cookies';
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,24 +77,13 @@ export async function POST(request: NextRequest) {
 
     const data: LoginResponse = await response.json();
 
-    // Set httpOnly cookies
+    // Set httpOnly cookies. First clear any stale legacy / cross-scope cookies
+    // so a leftover duplicate can't shadow the fresh ones we set below.
     const cookieStore = await cookies();
 
-    cookieStore.set(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN, data.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: data.expires_in,
-      path: '/',
-    });
-
-    cookieStore.set(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN, data.refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: AUTH_CONFIG.TOKEN_EXPIRY.REFRESH,
-      path: '/',
-    });
+    await clearLegacyAuthCookies(cookieStore);
+    setAccessCookie(cookieStore, data.access_token, data.expires_in);
+    setRefreshCookie(cookieStore, data.refresh_token);
 
     // Return success without exposing tokens
     return NextResponse.json({

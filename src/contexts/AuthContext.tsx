@@ -121,6 +121,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [hasInitialized, state.isAuthenticated, state.isLoading, pathname, router]);
 
+  // Hard gate for users issued a temporary/admin-set password: they must
+  // change it before they can use the app. This runs on every navigation, so
+  // it can't be bypassed by manually typing a URL — any route other than the
+  // change-password page bounces straight back to it. The gate releases once
+  // the password is changed, because the change-password page calls
+  // refreshUser(), which flips must_change_password to false in state.
+  useEffect(() => {
+    if (
+      hasInitialized &&
+      state.isAuthenticated &&
+      state.user?.must_change_password &&
+      pathname &&
+      pathname !== AUTH_CONFIG.ROUTES.CHANGE_PASSWORD
+    ) {
+      router.replace(AUTH_CONFIG.ROUTES.CHANGE_PASSWORD);
+    }
+  }, [hasInitialized, state.isAuthenticated, state.user?.must_change_password, pathname, router]);
+
   const login = async (email: string, password: string): Promise<LoginResult> => {
     try {
       const response = await fetch('/api/auth/login', {

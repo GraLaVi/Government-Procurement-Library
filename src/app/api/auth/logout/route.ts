@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { buildForwardHeaders } from '@/lib/api/forwardHeaders';
+import { clearAuthCookies } from '@/lib/auth/cookies';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,16 +22,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Clear cookies
-    cookieStore.delete(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN);
-    cookieStore.delete(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN);
+    // Clear cookies across every name/scope they may exist on.
+    await clearAuthCookies(cookieStore);
 
     return NextResponse.json({ success: true });
   } catch (error) {
     // Still try to clear cookies on error
     const cookieStore = await cookies();
-    cookieStore.delete(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN);
-    cookieStore.delete(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN);
+    await clearAuthCookies(cookieStore);
 
     return NextResponse.json({ success: true });
   }

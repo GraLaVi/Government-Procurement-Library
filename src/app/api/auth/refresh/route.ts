@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from '@/lib/auth/config';
+import { setAccessCookie, clearAuthCookies } from '@/lib/auth/cookies';
 
 export async function POST() {
   try {
@@ -25,8 +26,7 @@ export async function POST() {
 
     if (!response.ok) {
       // Refresh failed - clear cookies and return error
-      cookieStore.delete(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN);
-      cookieStore.delete(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN);
+      await clearAuthCookies(cookieStore);
 
       return NextResponse.json(
         { error: 'Session expired. Please log in again.' },
@@ -37,13 +37,7 @@ export async function POST() {
     const data = await response.json();
 
     // Update access token cookie with new token
-    cookieStore.set(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN, data.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: data.expires_in || AUTH_CONFIG.TOKEN_EXPIRY.ACCESS,
-      path: '/',
-    });
+    setAccessCookie(cookieStore, data.access_token, data.expires_in || AUTH_CONFIG.TOKEN_EXPIRY.ACCESS);
 
     return NextResponse.json({ success: true });
   } catch (error) {

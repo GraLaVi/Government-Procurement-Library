@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -33,6 +33,11 @@ function LoginForm() {
   const { login, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [redirectAttempted, setRedirectAttempted] = useState(false);
+  // True while a form-driven login is in flight. login() flips
+  // isAuthenticated, which would otherwise wake the "already authenticated"
+  // effect below and race it against handleSubmit's redirect. This ref lets
+  // handleSubmit own the post-login navigation so the two can't disagree.
+  const manualLoginRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -64,8 +69,12 @@ function LoginForm() {
     }
   };
 
-  // Redirect if already authenticated (with timeout fallback)
+  // Redirect if already authenticated (with timeout fallback). Skipped during
+  // a form-driven login — handleSubmit owns that redirect (and is
+  // must_change_password-aware); this effect only covers the case where a
+  // user with a live session lands on /login directly.
   useEffect(() => {
+    if (manualLoginRef.current) return;
     if (!authLoading && isAuthenticated && !redirectAttempted) {
       setRedirectAttempted(true);
       router.replace(redirect);
@@ -97,6 +106,9 @@ function LoginForm() {
 
     if (rateLimitSeconds) return;
 
+    // Claim the redirect before login() flips isAuthenticated, so the
+    // "already authenticated" effect stays out of the way for this flow.
+    manualLoginRef.current = true;
     setIsSubmitting(true);
     setError(null);
 
@@ -116,6 +128,9 @@ function LoginForm() {
         router.push(target);
       }
     } else {
+      // Login failed — release the claim so the fallback effect isn't
+      // permanently suppressed.
+      manualLoginRef.current = false;
       if (result.retryAfter) {
         setRateLimitSeconds(result.retryAfter);
       }

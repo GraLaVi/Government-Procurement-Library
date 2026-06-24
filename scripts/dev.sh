@@ -92,6 +92,17 @@ start_server() {
 
     echo "Starting $APP_NAME dev server on port $PORT..."
     cd "$PROJECT_DIR"
+
+    # Don't let a backend env leaked into the shell (e.g. an un-prefixed
+    # INTERNAL_API_URL / NEXT_PUBLIC_API_URL exported by the API repo's dev.sh)
+    # shadow this project's own config. Next.js will NOT override variables that
+    # are already present in the environment, so we clear them and then load
+    # this project's .env.development explicitly.
+    unset INTERNAL_API_URL NEXT_PUBLIC_API_URL
+    if [ -f "$PROJECT_DIR/.env.development" ]; then
+        set -a; source "$PROJECT_DIR/.env.development"; set +a
+    fi
+
     npm run dev -- -p $PORT &
 
     # Wait a moment and check if it started

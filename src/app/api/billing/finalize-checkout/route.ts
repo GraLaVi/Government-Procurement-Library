@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from '@/lib/auth/config';
+import { setAccessCookie, setRefreshCookie, clearLegacyAuthCookies } from '@/lib/auth/cookies';
 
 // POST /api/billing/finalize-checkout — public.
 // Body: { session_id }
@@ -27,20 +28,9 @@ export async function POST(request: NextRequest) {
     }
 
     const cookieStore = await cookies();
-    cookieStore.set(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN, data.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: data.expires_in,
-      path: '/',
-    });
-    cookieStore.set(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN, data.refresh_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: AUTH_CONFIG.TOKEN_EXPIRY.REFRESH,
-      path: '/',
-    });
+    await clearLegacyAuthCookies(cookieStore);
+    setAccessCookie(cookieStore, data.access_token, data.expires_in);
+    setRefreshCookie(cookieStore, data.refresh_token);
 
     return NextResponse.json({
       success: true,

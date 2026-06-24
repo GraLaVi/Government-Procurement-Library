@@ -160,6 +160,20 @@ export function OnboardingChecklist() {
                   {subtitle && !m.completed && (
                     <div className="text-xs text-muted mt-0.5">{subtitle}</div>
                   )}
+                  {/* Contextual help: deep-link to the article for this step.
+                      Opens in a new tab so the user keeps their place in
+                      setup. Hidden once the step is done to keep the card
+                      uncluttered for returning users. */}
+                  {!m.completed && m.learnMoreSlug && (
+                    <Link
+                      href={`/help/${m.learnMoreSlug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block text-xs text-muted hover:text-primary hover:underline mt-1"
+                    >
+                      Learn more
+                    </Link>
+                  )}
                 </div>
                 <div className="shrink-0 text-xs">
                   {m.completed ? (
@@ -185,6 +199,17 @@ export function OnboardingChecklist() {
           );
         })}
       </ol>
+
+      {/* Catch-all docs link — not a step, just a low-key way out to the
+          full Help Center for anything the checklist doesn't cover. */}
+      <div className="mt-5 pt-4 border-t border-border/60">
+        <Link
+          href="/help"
+          className="text-xs text-muted hover:text-primary hover:underline"
+        >
+          Need a hand? Browse the Help Center →
+        </Link>
+      </div>
     </div>
   );
 }

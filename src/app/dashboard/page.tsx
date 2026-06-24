@@ -130,20 +130,17 @@ function FullDashboard({ business }: FullDashboardProps) {
               label="Open Solicitations"
               value={formatNumber(business.data.open_solicitations_count)}
               subtitle="Matching your manufactured parts"
-              href="/analytics#your-business"
               tooltip="Based on your Procurement History, items sold by your CAGE, this is the number of open solicitations."
             />
             <KPICard
               label="Historical Contract Value"
               value={formatCurrency(business.data.procurement_history_total)}
               subtitle="Lifetime procurement total"
-              href="/analytics#your-business"
             />
             <KPICard
               label="Competitors on Your Parts"
               value={formatNumber(business.data.competitor_count)}
               subtitle="Distinct vendors on the same parts"
-              href="/analytics#your-business"
             />
           </>
         ) : null}
