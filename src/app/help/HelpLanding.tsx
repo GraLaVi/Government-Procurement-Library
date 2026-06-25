@@ -111,12 +111,14 @@ export function HelpLanding() {
             </Link>
             , or contact our support team and we&rsquo;ll help.
           </p>
-          <Link
-            href="/contact"
+          <a
+            href="https://gphusa.atlassian.net/servicedesk/customer/portals"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-block mt-4 text-sm font-medium text-primary hover:underline"
           >
             Contact support →
-          </Link>
+          </a>
         </section>
       </main>
       <Footer />

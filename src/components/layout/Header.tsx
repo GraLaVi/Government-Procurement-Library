@@ -15,7 +15,11 @@ const librarySearchItems = [
 const helpItems = [
   { href: "/help", label: "Help Center" },
   { href: "/library/code-definitions", label: "Code Definitions" },
-  { href: "/contact", label: "Contact Us" },
+  {
+    href: "https://gphusa.atlassian.net/servicedesk/customer/portals",
+    label: "Contact support →",
+    external: true,
+  },
 ];
 
 const mainNavItems = [
@@ -203,16 +207,29 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 </button>
                 {isHelpDropdownOpen && (
                   <div className="absolute top-full left-0 mt-2 w-48 bg-card-bg rounded-lg shadow-xl border border-border py-2 z-[9999]">
-                    {helpItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={dropdownItemClass(isLinkActive(item.href, pathname))}
-                        onClick={() => setIsHelpDropdownOpen(false)}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
+                    {helpItems.map((item) =>
+                      "external" in item && item.external ? (
+                        <a
+                          key={item.href}
+                          href={item.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={dropdownItemClass(false)}
+                          onClick={() => setIsHelpDropdownOpen(false)}
+                        >
+                          {item.label}
+                        </a>
+                      ) : (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={dropdownItemClass(isLinkActive(item.href, pathname))}
+                          onClick={() => setIsHelpDropdownOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      )
+                    )}
                   </div>
                 )}
               </div>
@@ -305,16 +322,29 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               </button>
               {isMobileHelpOpen && (
                 <div className="pl-4">
-                  {helpItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={mobileDropdownItemClass(isLinkActive(item.href, pathname))}
-                      onClick={closeMobileMenu}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
+                  {helpItems.map((item) =>
+                    "external" in item && item.external ? (
+                      <a
+                        key={item.href}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={mobileDropdownItemClass(false)}
+                        onClick={closeMobileMenu}
+                      >
+                        {item.label}
+                      </a>
+                    ) : (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={mobileDropdownItemClass(isLinkActive(item.href, pathname))}
+                        onClick={closeMobileMenu}
+                      >
+                        {item.label}
+                      </Link>
+                    )
+                  )}
                 </div>
               )}
 

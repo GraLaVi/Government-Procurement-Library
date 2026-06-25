@@ -14,7 +14,11 @@ const footerLinks = {
   ],
   Resources: [
     { href: "/help", label: "Documentation" },
-    { href: "/support", label: "Support" },
+    {
+      href: "https://gphusa.atlassian.net/servicedesk/customer/portals",
+      label: "Support",
+      external: true,
+    },
   ],
   Legal: [
     { href: "/legal/privacy", label: "Privacy Policy" },
@@ -60,12 +64,23 @@ export function Footer() {
               <ul className="space-y-3">
                 {links.map((link) => (
                   <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="text-white/70 hover:text-white transition-colors duration-200 text-sm"
-                    >
-                      {link.label}
-                    </Link>
+                    {"external" in link && link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white/70 hover:text-white transition-colors duration-200 text-sm"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="text-white/70 hover:text-white transition-colors duration-200 text-sm"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
                 {category === "Legal" && (

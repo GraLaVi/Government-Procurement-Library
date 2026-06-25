@@ -55,10 +55,18 @@ function Heading({ as: Tag, children }: { as: "h2" | "h3" | "h4"; children?: Rea
 }
 
 // Route internal links (anything starting with "/") through next/link so
-// cross-article navigation stays client-side; leave external links alone.
+// cross-article navigation stays client-side; in-page anchors (starting with
+// "#") stay as plain same-page links so they scroll within the article rather
+// than opening a new tab; leave external links alone.
 function MarkdownLink({ href = "", children, ...rest }: ComponentPropsWithoutRef<"a">) {
-  const isInternal = href.startsWith("/");
-  if (isInternal) {
+  if (href.startsWith("#")) {
+    return (
+      <a href={href} className="text-primary hover:underline" {...rest}>
+        {children}
+      </a>
+    );
+  }
+  if (href.startsWith("/")) {
     return (
       <Link href={href} className="text-primary hover:underline">
         {children}
@@ -106,6 +114,28 @@ export function HelpArticle({ title, lastUpdated, content }: HelpArticleProps) {
             {content}
           </ReactMarkdown>
         </article>
+
+        {/* Consistent support footer, mirroring the /help landing page. */}
+        <section className="mt-12 rounded-lg border border-border bg-card-bg px-6 py-5">
+          <h2 className="text-lg font-semibold text-foreground">
+            Can&rsquo;t find what you&rsquo;re looking for?
+          </h2>
+          <p className="text-sm text-muted mt-2">
+            Browse our{" "}
+            <Link href="/help/faq" className="text-primary hover:underline">
+              Frequently Asked Questions
+            </Link>
+            , or contact our support team and we&rsquo;ll help.
+          </p>
+          <a
+            href="https://gphusa.atlassian.net/servicedesk/customer/portals"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block mt-4 text-sm font-medium text-primary hover:underline"
+          >
+            Contact support →
+          </a>
+        </section>
       </main>
       <Footer />
     </div>
