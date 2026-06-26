@@ -2,15 +2,21 @@
 
 import Link from "next/link";
 import { CookiePreferencesLink } from "@/components/layout/CookiePreferencesLink";
+import { SupportWidget } from "@/components/support/SupportWidget";
 
 /**
  * Slim footer for authenticated app shells (account, library, dashboard,
  * etc.). The full marketing Footer lives on public pages — this is the
  * compact equivalent: copyright + the legal links a signed-in user
  * might still need.
+ *
+ * Also the single mount point for <SupportWidget>: AppFooter is rendered by
+ * exactly the authenticated app layouts, so mounting here scopes the JSM help
+ * widget to signed-in pages without touching each layout individually.
  */
 export function AppFooter() {
   return (
+    <>
     <footer className="border-t border-border bg-card-bg/60 mt-auto">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-muted">
@@ -51,5 +57,7 @@ export function AppFooter() {
         </div>
       </div>
     </footer>
+    <SupportWidget />
+    </>
   );
 }

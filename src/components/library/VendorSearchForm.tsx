@@ -29,20 +29,30 @@ export const VendorSearchForm = forwardRef<VendorSearchFormRef, VendorSearchForm
   const [validationError, setValidationError] = useState<string | undefined>();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Update form when initial values change
-  useEffect(() => {
+  // Sync local form state when the parent changes the defaults (selecting a
+  // recent search, restoring the last search, URL params). Adjusted during
+  // render per React's "you might not need an effect" guidance — this avoids
+  // the extra cascading render that setting state in an effect would cause.
+  const [prevInitialType, setPrevInitialType] = useState(initialSearchType);
+  const [prevInitialQuery, setPrevInitialQuery] = useState(initialSearchQuery);
+  if (initialSearchType !== prevInitialType || initialSearchQuery !== prevInitialQuery) {
+    setPrevInitialType(initialSearchType);
+    setPrevInitialQuery(initialSearchQuery);
     if (initialSearchType) {
       setSearchType(initialSearchType);
     }
     if (initialSearchQuery) {
       setSearchQuery(initialSearchQuery);
     }
-  }, [initialSearchType, initialSearchQuery]);
+  }
 
   // Expose focusInput method to parent
   useImperativeHandle(ref, () => ({
     focusInput: () => {
       inputRef.current?.focus();
+      // Select any prefilled value so the user can immediately type over
+      // the defaulted last search.
+      inputRef.current?.select();
     },
   }));
 
@@ -63,7 +73,10 @@ export const VendorSearchForm = forwardRef<VendorSearchFormRef, VendorSearchForm
   };
 
   const handleQueryChange = (value: string) => {
-    setSearchQuery(value);
+    // CAGE codes are uppercase alphanumeric — uppercase as the user types so
+    // they don't have to hold shift / can paste lowercase.
+    const nextValue = searchType === "cage" ? value.toUpperCase() : value;
+    setSearchQuery(nextValue);
     if (validationError) {
       setValidationError(undefined);
     }

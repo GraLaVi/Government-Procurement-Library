@@ -27,6 +27,9 @@ export interface StoredConsent {
    *
    * v2 (2026-05-11): dropped `analytics` and `marketing` categories.
    * v1 stored choices are invalidated by the version check.
+   * v3 (2026-06-26): added the Atlassian Jira Service Management help
+   * widget (functional). Re-prompts so visitors can decline the new
+   * third-party cookie/iframe before it loads.
    */
   version: number;
   choices: ConsentChoice;
@@ -34,7 +37,7 @@ export interface StoredConsent {
   timestamp: string;
 }
 
-export const CONSENT_VERSION = 2;
+export const CONSENT_VERSION = 3;
 export const CONSENT_COOKIE_NAME = "gph_cookie_consent";
 /** 12 months in seconds. */
 export const CONSENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;

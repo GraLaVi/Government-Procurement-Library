@@ -131,6 +131,10 @@ function PartsSearchPageContent() {
       setHasSearched(true);
       setLastSearchType(type);
       setLastSearchQuery(query);
+      // Keep the form default in sync so re-expanding ("New Search") shows
+      // the last search.
+      setInitialSearchType(type);
+      setInitialSearchQuery(query);
       setSearchError(null);
       setSelectedNSN(null);
       setPartDetail(null);
@@ -155,6 +159,10 @@ function PartsSearchPageContent() {
       setPartDetail(null);
       setLastSearchType(type);
       setLastSearchQuery(query);
+      // Keep the form default in sync so re-expanding ("New Search") shows
+      // the last search.
+      setInitialSearchType(type);
+      setInitialSearchQuery(query);
     });
     await Promise.resolve();
 

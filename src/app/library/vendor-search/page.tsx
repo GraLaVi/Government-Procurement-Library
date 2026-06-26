@@ -93,14 +93,24 @@ function VendorSearchPageContent() {
       setInitialSearchType('entity_name');
       setInitialSearchQuery(query);
       handleSearch('entity_name', query);
-    } else if (lastAction && lastAction.action_data) {
-      // Fall back to last action if no URL params
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  // Default the form to the last search once it loads (no URL params, no
+  // search performed yet). lastAction resolves asynchronously, so this can't
+  // live in the mount-only effect above — at mount it is still null.
+  useEffect(() => {
+    if (hasSearched) return;
+    const hasUrlParams =
+      searchParams.get('cage_code') || searchParams.get('uei') || searchParams.get('q');
+    if (hasUrlParams) return;
+    if (lastAction && lastAction.action_data) {
       const actionData = lastAction.action_data as VendorSearchActionData;
       setInitialSearchType(actionData.query_type as VendorSearchType);
       setInitialSearchQuery(actionData.query);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, [lastAction, hasSearched, searchParams]);
 
   // Focus search input on mount
   useEffect(() => {
@@ -146,6 +156,10 @@ function VendorSearchPageContent() {
       setHasSearched(true);
       setLastSearchType(type);
       setLastSearchQuery(query);
+      // Keep the form default in sync so re-expanding ("New Search") shows
+      // the last search.
+      setInitialSearchType(type);
+      setInitialSearchQuery(query);
       setSearchError(null);
       setSelectedCageCode(null);
       setVendorDetail(null);
@@ -165,6 +179,10 @@ function VendorSearchPageContent() {
     setPrefetchedTabCounts(null);
     setLastSearchType(type);
     setLastSearchQuery(query);
+    // Keep the form default in sync so re-expanding ("New Search") shows
+    // the last search.
+    setInitialSearchType(type);
+    setInitialSearchQuery(query);
 
     try {
       const params = buildSearchParams(type, query);

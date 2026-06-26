@@ -8,7 +8,7 @@ import { Footer } from "@/components/layout/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsent } from "@/contexts/ConsentContext";
 
-const LAST_UPDATED = "May 11, 2026";
+const LAST_UPDATED = "June 26, 2026";
 
 interface CookieRow {
   name: string;
@@ -53,6 +53,14 @@ const COOKIES: CookieRow[] = [
     category: "Functional",
     purpose: "Holds in-progress signup form data while you move between the signup and pricing pages. Cleared once you complete checkout.",
     expiry: "Closes with the tab",
+  },
+  {
+    name: "Atlassian Jira Service Management widget",
+    storage: "Third-party script & cookies (jsd-widget.atlassian.com)",
+    category: "Functional",
+    purpose:
+      "Powers the “Help” button in the bottom-right of signed-in pages so you can raise a support request without leaving the app. Loaded only after you accept functional cookies; never shown on public pages.",
+    expiry: "Managed by Atlassian",
   },
 ];
 
@@ -155,6 +163,21 @@ export default function CookiePolicyPage() {
           to handle payment. Stripe may set its own cookies on
           stripe.com (e.g. for fraud prevention). Those are governed by
           Stripe&rsquo;s privacy policy, not ours.
+        </p>
+        <p className="text-sm text-muted mt-4 leading-relaxed">
+          On signed-in pages we also load the{" "}
+          <a
+            href="https://www.atlassian.com/legal/privacy-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Atlassian Jira Service Management
+          </a>{" "}
+          help widget so you can raise a support request from the
+          bottom-right “Help” button. It only loads after you accept
+          functional cookies, and any cookies it sets are governed by
+          Atlassian&rsquo;s privacy policy, not ours.
         </p>
 
         <h2 className="text-xl font-semibold text-foreground mt-10">
