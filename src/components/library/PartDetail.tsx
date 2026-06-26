@@ -1661,6 +1661,17 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
         ),
       },
       {
+        id: "approved_source",
+        accessorKey: "is_approved_source",
+        header: "Source",
+        cell: ({ row }) =>
+          row.original.is_approved_source ? (
+            <Badge variant="success" size="sm">Approved</Badge>
+          ) : (
+            <span className="text-xs text-muted">—</span>
+          ),
+      },
+      {
         id: "part_number",
         accessorKey: "part_number",
         header: "Part Number",

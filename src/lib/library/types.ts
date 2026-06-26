@@ -540,7 +540,7 @@ export interface PartManufacturer {
   part_number: string | null;
   rncc: string | null;
   rnvc: string | null;
-  source_code: string | null;
+  is_approved_source: boolean;
 }
 
 export interface PartManufacturersResponse {
