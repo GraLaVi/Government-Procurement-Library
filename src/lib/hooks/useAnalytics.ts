@@ -309,6 +309,59 @@ export function useMyBusinessSummary() {
 }
 
 // ============================================================================
+// Upcoming solicitations (parts-based) — available to any library tier
+// ============================================================================
+
+// Standalone fetch of just the parts-based "closing soonest" list. Unlike
+// useMyBusinessSummary (Advanced-only, 403s basic/free), this endpoint is open
+// to any library tier, so basic/free dashboards can render the table too.
+export function useUpcomingSolicitations() {
+  const [data, setData] = useState<UpcomingSolicitation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await fetchWithAuth('/api/library/analytics/my-business/upcoming-solicitations', {
+        credentials: 'include',
+      });
+
+      // 401 (unauthenticated) / 403 (no library access) / 404 (no CAGE) → no
+      // table, not an error worth surfacing on the dashboard.
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
+        setData([]);
+        return;
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to fetch upcoming solicitations');
+      }
+
+      const result: UpcomingSolicitation[] = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      console.error('Failed to fetch upcoming solicitations:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    intervalRef.current = setInterval(fetchData, 60 * 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [fetchData]);
+
+  return { data, isLoading, error, refetch: fetchData };
+}
+
+// ============================================================================
 // Bid-Matching Analytics
 // ============================================================================
 
@@ -366,6 +419,7 @@ export interface BidMatchAnalytics {
   match_trend: DayCount[];
   condition_type_distribution: ConditionTypeCount[];
   recent_matches: RecentMatch[];
+  upcoming_matches: RecentMatch[];
   match_strength_split: MatchStrengthDay[];
   amendment_alerts: AmendmentAlertRow[];
   profile_health: ProfileHealthRow[];

@@ -2,12 +2,13 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
-import { useMyBusinessSummary } from "@/lib/hooks/useAnalytics";
+import { useMyBusinessSummary, useBidMatchAnalytics, useUpcomingSolicitations } from "@/lib/hooks/useAnalytics";
 import {
   KPICard,
   KPICardSkeleton,
   ChartSkeleton,
   UpcomingSolicitationsTable,
+  BidMatchesClosingSoonTable,
   formatCurrency,
   formatNumber,
 } from "@/components/analytics";
@@ -20,6 +21,9 @@ import { BidMatchingResultsCard } from "@/components/dashboard/BidMatchingResult
 export default function DashboardPage() {
   const { user } = useAuth();
   const business = useMyBusinessSummary();
+  // Bid-matching matches closing soon. The endpoint 403s (forbidden) when the
+  // customer has no bid_matching product, so the table self-hides for them.
+  const bidMatch = useBidMatchAnalytics();
 
   const userName = user?.first_name || user?.email?.split("@")[0] || "User";
 
@@ -49,7 +53,7 @@ export default function DashboardPage() {
 
       {showResubscribe && <ResubscribePrompt />}
       {showLauncher && <BasicDashboard />}
-      {showAdvanced && <FullDashboard business={business} />}
+      {showAdvanced && <FullDashboard business={business} bidMatch={bidMatch} />}
     </>
   );
 }
@@ -93,6 +97,11 @@ function ResubscribePrompt() {
 }
 
 function BasicDashboard() {
+  // Parts-based "closing soonest" table — shown to basic + free via the
+  // tier-open endpoint (useMyBusinessSummary 403s these tiers). The bid-
+  // matching table is intentionally NOT here; it's Advanced-only.
+  const upcoming = useUpcomingSolicitations();
+
   return (
     <div className="space-y-6">
       <PaymentMethodAlert />
@@ -101,6 +110,11 @@ function BasicDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <BidMatchingResultsCard />
       </div>
+      {upcoming.isLoading ? (
+        <ChartSkeleton height="h-48" />
+      ) : upcoming.data.length > 0 ? (
+        <UpcomingSolicitationsTable data={upcoming.data} />
+      ) : null}
       <RecentSearches />
     </div>
   );
@@ -108,9 +122,10 @@ function BasicDashboard() {
 
 interface FullDashboardProps {
   business: ReturnType<typeof useMyBusinessSummary>;
+  bidMatch: ReturnType<typeof useBidMatchAnalytics>;
 }
 
-function FullDashboard({ business }: FullDashboardProps) {
+function FullDashboard({ business, bidMatch }: FullDashboardProps) {
   return (
     <div className="space-y-6">
       <PaymentMethodAlert />
@@ -159,6 +174,17 @@ function FullDashboard({ business }: FullDashboardProps) {
         </div>
       ) : null}
 
+      {/* Bid-matching matches closing soon — sits above the parts-based table.
+          Advanced tier always qualifies; bid_matching access is gated server-
+          side (403 → no data → hidden). */}
+      {bidMatch.isLoading ? (
+        <ChartSkeleton height="h-48" />
+      ) : bidMatch.data && bidMatch.data.upcoming_matches.length > 0 ? (
+        <BidMatchesClosingSoonTable data={bidMatch.data.upcoming_matches} />
+      ) : null}
+
+      {/* Upcoming solicitations matched to your manufactured parts — below the
+          bid-matching table. */}
       {business.isLoading ? (
         <ChartSkeleton height="h-48" />
       ) : business.data && business.data.upcoming_solicitations.length > 0 ? (

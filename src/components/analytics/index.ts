@@ -9,6 +9,7 @@ export { UpcomingSolicitationsTable } from './UpcomingSolicitationsTable';
 export { MatchTrendChart } from './MatchTrendChart';
 export { ConditionTypeChart } from './ConditionTypeChart';
 export { RecentMatchesTable } from './RecentMatchesTable';
+export { BidMatchesClosingSoonTable } from './BidMatchesClosingSoonTable';
 // New widgets — A through I
 export { WinningPriceBenchmarkTable } from './WinningPriceBenchmarkTable';
 export { CompetitorLeaderboard } from './CompetitorLeaderboard';
