@@ -77,6 +77,7 @@ const SOLICITATIONS_CSV_COLUMNS: CsvColumn<PartSolicitation>[] = [
   { header: "Unit Price", value: (r) => r.unit_price ?? "" },
   { header: "Estimated Value", value: (r) => r.estimated_value ?? "" },
   { header: "Status", value: (r) => r.status ?? "" },
+  { header: "Rating", value: (r) => r.rating ?? "" },
   { header: "Agency", value: (r) => r.agency_code ?? "" },
   { header: "Set-Aside", value: (r) => r.set_aside_label ?? r.set_aside ?? "" },
   { header: "Buyer Name", value: (r) => r.buyer_name ?? "" },
@@ -1408,6 +1409,14 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         header: "Status",
         cell: ({ row }) => (
           <span className="text-xs font-medium text-foreground">{row.original.status || "—"}</span>
+        ),
+      },
+      {
+        id: "rating",
+        accessorKey: "rating",
+        header: "Rating",
+        cell: ({ row }) => (
+          <span className="text-xs font-medium text-foreground">{row.original.rating || "—"}</span>
         ),
       },
       {

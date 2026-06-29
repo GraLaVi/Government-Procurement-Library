@@ -527,6 +527,7 @@ export interface PartSolicitation {
   set_aside: string | null;
   set_aside_code?: string | null;
   set_aside_label?: string | null;
+  rating?: string | null;
   quantity: number | null;
   quantity_unit: string | null;
   unit_price: number | null;
