@@ -440,21 +440,19 @@ function DemographicsPanel({
   physicalAddress,
   mailingAddress,
 }: DemographicsPanelProps) {
-  // Build data rows, filtering out empty values
-  const identifiers = [
-    { label: "CAGE", value: vendor.cage_code, mono: true },
-    { label: "UEI", value: vendor.uei, mono: true },
-    { label: "DUNS", value: vendor.duns, mono: true },
-    { label: "DoDAAC", value: vendor.dodaac, mono: true },
-  ].filter(item => item.value);
-
+  // Build data rows, filtering out empty values. CAGE + UEI live in the hero
+  // card; the legacy DUNS/DoDAAC identifiers fold into Business Details.
   const businessInfo = [
     { label: "Entity Structure", value: vendor.entity_structure },
     { label: "Website", value: vendor.entity_url, isLink: true },
     { label: "State of Inc.", value: vendor.state_of_incorporation },
     { label: "Country of Inc.", value: vendor.country_of_incorporation },
     { label: "Business Type", value: vendor.entity_description },
+    { label: "DUNS", value: vendor.duns },
+    { label: "DoDAAC", value: vendor.dodaac },
   ].filter(item => item.value);
+
+  const hasCertifications = !!(vendor.certifications && vendor.certifications.length > 0);
 
   const registration = [
     { label: "SAM Status", value: formatSamStatus(vendor.sam_status) },
@@ -495,9 +493,15 @@ function DemographicsPanel({
             )}
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                <span className="text-muted">CAGE</span>
                 <span className="font-mono font-medium text-primary">{vendor.cage_code}</span>
               </div>
+              {vendor.uei && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted">UEI</span>
+                  <span className="font-mono font-medium text-primary">{vendor.uei}</span>
+                </div>
+              )}
               {vendor.small_business === true && (
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-success rounded-full"></div>
@@ -515,30 +519,9 @@ function DemographicsPanel({
         </div>
       </div>
 
-      {/* Information Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {/* Identifiers Card */}
-        <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
-          <div className="px-3 py-2 bg-muted-light border-b border-border">
-            <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
-              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0z" />
-              </svg>
-              Identifiers
-            </h3>
-          </div>
-          <div className="p-3 space-y-2">
-            {identifiers.map((item) => (
-              <div key={item.label} className="flex items-center justify-between">
-                <span className="text-xs text-muted font-medium">{item.label}</span>
-                <span className="text-xs font-mono font-semibold text-primary bg-primary/5 px-2 py-1 rounded">
-                  {item.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
+      {/* Information Cards Grid — 2 cards fill the row at half-width each;
+          when certifications exist, expand to 3 columns to make room. */}
+      <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${hasCertifications ? "xl:grid-cols-3" : ""}`}>
         {/* Business Information Card */}
         <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
           <div className="px-3 py-2 bg-muted-light border-b border-border">
@@ -597,6 +580,34 @@ function DemographicsPanel({
             ))}
           </div>
         </div>
+
+        {/* Certifications & Set-Asides Card (customer-published, not from SAM) */}
+        {hasCertifications && (
+          <div className="bg-card-bg border border-border rounded-lg overflow-hidden">
+            <div className="px-3 py-2 bg-muted-light border-b border-border">
+              <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
+                <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Certifications &amp; Set-Asides
+              </h3>
+            </div>
+            <div className="p-3 flex flex-wrap gap-2">
+              {vendor.certifications!.map((cert, i) => (
+                <span
+                  key={`${cert.kind}-${cert.label}-${i}`}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium"
+                  title={[cert.value, cert.expires_date ? `Expires ${cert.expires_date}` : null].filter(Boolean).join(" • ") || undefined}
+                >
+                  {cert.label}
+                  {cert.kind === "set_aside" && (
+                    <span className="text-[10px] uppercase tracking-wide text-primary/70">set-aside</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Address Section */}

@@ -154,6 +154,17 @@ export interface VendorDetail {
   last_sam_sync: string | null;
   addresses: VendorAddress[];
   contacts: VendorContact[];
+  certifications?: VendorCertification[];
+}
+
+// Customer-published certification or set-aside (not from SAM)
+export interface VendorCertification {
+  kind: string;
+  label: string;
+  code: string | null;
+  value: string | null;
+  issued_date: string | null;
+  expires_date: string | null;
 }
 
 // Search type configuration

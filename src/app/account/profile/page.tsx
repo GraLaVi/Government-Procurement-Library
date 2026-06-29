@@ -86,7 +86,7 @@ export default function ProfilePage() {
   const userInitial = user?.first_name?.[0] || user?.email?.[0] || "U";
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="w-full">
       {/* Breadcrumb */}
       <nav className="mb-6">
         <ol className="flex items-center gap-2 text-sm">
