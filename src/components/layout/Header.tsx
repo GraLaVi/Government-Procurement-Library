@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 
 const librarySearchItems = [
   { href: "/library/parts", label: "Parts Search" },
@@ -27,6 +28,14 @@ const mainNavItems = [
   { href: "/bidmatching", label: "Bid-Matching" },
 ];
 
+const rfqItems = [
+  { href: "/dashboard/rfq", label: "My RFQs" },
+  { href: "/dashboard/rfq/batch", label: "Batch" },
+  { href: "/dashboard/rfq/contacts", label: "Vendor Contacts" },
+  { href: "/dashboard/rfq/settings", label: "Settings" },
+  { href: "/rfq/received", label: "Received RFQs" },
+];
+
 // Match the current path against a nav target. Exact match or sub-path
 // (so /library/parts/123 still highlights the /library/parts entry).
 function isLinkActive(href: string, pathname: string): boolean {
@@ -45,19 +54,23 @@ interface HeaderProps {
 }
 
 export function Header({ showAccountLink = true }: HeaderProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, isRfqResponderOnly } = useAuth();
   const [isLibraryDropdownOpen, setIsLibraryDropdownOpen] = useState(false);
   const [isHelpDropdownOpen, setIsHelpDropdownOpen] = useState(false);
+  const [isRfqDropdownOpen, setIsRfqDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileLibraryOpen, setIsMobileLibraryOpen] = useState(false);
   const [isMobileHelpOpen, setIsMobileHelpOpen] = useState(false);
+  const [isMobileRfqOpen, setIsMobileRfqOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const helpDropdownRef = useRef<HTMLDivElement>(null);
+  const rfqDropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname() || "/";
 
   const libraryGroupActive = isGroupActive(librarySearchItems, pathname);
   const helpGroupActive = isGroupActive(helpItems, pathname);
+  const rfqGroupActive = isGroupActive(rfqItems, pathname);
 
   // Class builders. Idle styling matches the existing nav; active state
   // applies the primary color (and a soft tinted background on dropdown
@@ -96,6 +109,9 @@ export function Header({ showAccountLink = true }: HeaderProps) {
       if (helpDropdownRef.current && !helpDropdownRef.current.contains(event.target as Node)) {
         setIsHelpDropdownOpen(false);
       }
+      if (rfqDropdownRef.current && !rfqDropdownRef.current.contains(event.target as Node)) {
+        setIsRfqDropdownOpen(false);
+      }
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
         setIsMobileMenuOpen(false);
       }
@@ -109,6 +125,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
     setIsMobileMenuOpen(false);
     setIsMobileLibraryOpen(false);
     setIsMobileHelpOpen(false);
+    setIsMobileRfqOpen(false);
   };
 
   const userInitial = user?.first_name?.[0] || user?.email?.[0] || "U";
@@ -144,13 +161,16 @@ export function Header({ showAccountLink = true }: HeaderProps) {
           {/* Desktop Nav Links + User menu (right-justified) */}
           <div className="hidden md:flex items-center gap-6">
             <nav className="flex items-center gap-6">
+              {!isRfqResponderOnly && (
               <Link
                 href="/dashboard"
                 className={topLinkClass(isLinkActive("/dashboard", pathname))}
               >
                 Dashboard
               </Link>
+              )}
               {/* Library Search Dropdown */}
+              {!isRfqResponderOnly && (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsLibraryDropdownOpen(!isLibraryDropdownOpen)}
@@ -182,12 +202,56 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   </div>
                 )}
               </div>
+              )}
+              {!isRfqResponderOnly && (
               <Link
                 href="/bidmatching"
                 className={topLinkClass(isLinkActive("/bidmatching", pathname))}
               >
                 Bid-Matching
               </Link>
+              )}
+              {/* RFQ: responders get a single "Received" link; senders get the full dropdown */}
+              {isRfqResponderOnly ? (
+                <Link
+                  href="/rfq/received"
+                  className={topLinkClass(isLinkActive("/rfq/received", pathname))}
+                >
+                  RFQs Received
+                </Link>
+              ) : (
+              <div className="relative" ref={rfqDropdownRef}>
+                <button
+                  onClick={() => setIsRfqDropdownOpen(!isRfqDropdownOpen)}
+                  className={`flex items-center gap-1 ${topLinkClass(rfqGroupActive)}`}
+                >
+                  Vendor RFQs
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${isRfqDropdownOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isRfqDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-card-bg rounded-lg shadow-xl border border-border py-2 z-[100]">
+                    {rfqItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={dropdownItemClass(isLinkActive(item.href, pathname))}
+                        onClick={() => setIsRfqDropdownOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+              )}
               {/* Help Dropdown */}
               <div className="relative" ref={helpDropdownRef}>
                 <button
@@ -236,7 +300,8 @@ export function Header({ showAccountLink = true }: HeaderProps) {
             </nav>
 
             {/* User menu */}
-            <div className="flex items-center gap-4 pl-6 border-l border-border">
+            <div className="flex items-center gap-2 pl-6 border-l border-border">
+              <NotificationBell />
               {showAccountLink ? (
                 <Link
                   href="/account"
@@ -262,7 +327,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
         {isMobileMenuOpen && (
           <div ref={mobileMenuRef} className="md:hidden border-t border-border py-4">
             <nav className="flex flex-col gap-1">
-              {mainNavItems.map((item) => (
+              {!isRfqResponderOnly && mainNavItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -274,6 +339,8 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               ))}
 
               {/* Library Search expandable section */}
+              {!isRfqResponderOnly && (
+              <>
               <button
                 onClick={() => setIsMobileLibraryOpen(!isMobileLibraryOpen)}
                 className={`flex items-center justify-between w-full text-left ${mobileRowClass(libraryGroupActive)}`}
@@ -302,6 +369,51 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                     </Link>
                   ))}
                 </div>
+              )}
+              </>
+              )}
+
+              {/* RFQ: responders get a single "Received" link; senders get the expandable section */}
+              {isRfqResponderOnly ? (
+                <Link
+                  href="/rfq/received"
+                  className={mobileRowClass(isLinkActive("/rfq/received", pathname))}
+                  onClick={closeMobileMenu}
+                >
+                  RFQs Received
+                </Link>
+              ) : (
+              <>
+              <button
+                onClick={() => setIsMobileRfqOpen(!isMobileRfqOpen)}
+                className={`flex items-center justify-between w-full text-left ${mobileRowClass(rfqGroupActive)}`}
+              >
+                <span>Vendor RFQs</span>
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 ${isMobileRfqOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {isMobileRfqOpen && (
+                <div className="pl-4">
+                  {rfqItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={mobileDropdownItemClass(isLinkActive(item.href, pathname))}
+                      onClick={closeMobileMenu}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+              </>
               )}
 
               {/* Help expandable section */}

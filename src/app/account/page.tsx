@@ -45,6 +45,8 @@ const accountSections = [
     title: "Bid-Matching Profile",
     description: "View and manage your bid-matching profiles",
     href: "/account/bidmatching",
+    // Free RFQ responder accounts don't have bid-matching access.
+    responderHidden: true,
     icon: (
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -107,7 +109,7 @@ const accountSections = [
 ];
 
 export default function AccountPage() {
-  const { user } = useAuth();
+  const { user, isRfqResponderOnly } = useAuth();
   const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [companyName, setCompanyName] = useState<string | null>(null);
@@ -313,6 +315,7 @@ export default function AccountPage() {
         {accountSections
           .filter((section) => !section.betaDisabled)
           .filter((section) => !section.adminOnly || user?.roles?.includes('admin'))
+          .filter((section) => !(section.responderHidden && isRfqResponderOnly))
           .map((section) => (
             <Link
               key={section.href}

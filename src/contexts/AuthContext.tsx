@@ -12,6 +12,10 @@ interface AuthContextValue extends AuthState {
   hasProductAccess: (productKey: string) => boolean;
   hasAnyProductAccess: (productKeys: string[]) => boolean;
   hasProductAccessByPrefix: (prefix: string) => boolean;
+  // True for a free RFQ responder account: holds the rfq_responder role and
+  // has no product entitlements. Such accounts only get the "RFQs received"
+  // area — no dashboard, library, or bid-matching.
+  isRfqResponderOnly: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -209,8 +213,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return state.products.some(p => p.product_key.startsWith(prefix) && p.is_active);
   }, [state.products]);
 
+  // A free RFQ responder = rfq_responder role with zero product entitlements.
+  // If they're ever upgraded (granted products) this flips false and they
+  // regain the normal customer experience.
+  const isRfqResponderOnly =
+    state.isAuthenticated &&
+    (state.user?.roles?.includes('rfq_responder') ?? false) &&
+    (state.products?.length ?? 0) === 0;
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, refreshUser, hasProductAccess, hasAnyProductAccess, hasProductAccessByPrefix }}>
+    <AuthContext.Provider value={{ ...state, login, logout, refreshUser, hasProductAccess, hasAnyProductAccess, hasProductAccessByPrefix, isRfqResponderOnly }}>
       {hasInitialized ? children : (
         <div className="min-h-screen flex items-center justify-center bg-muted-light">
           <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />

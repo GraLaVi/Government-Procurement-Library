@@ -127,7 +127,7 @@ export default function PreferencesPage() {
   ];
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="w-full">
       {/* Breadcrumb */}
       <nav className="mb-6">
         <ol className="flex items-center gap-2 text-sm">
@@ -163,8 +163,9 @@ export default function PreferencesPage() {
         </div>
       )}
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       {/* Theme Preference Section */}
-      <div className="bg-card-bg rounded-xl border border-border p-6 mb-6">
+      <div className="bg-card-bg rounded-xl border border-border p-6">
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-secondary mb-1">Appearance</h2>
           <p className="text-sm text-muted">
@@ -208,7 +209,7 @@ export default function PreferencesPage() {
       </div>
 
       {/* Default Page Section */}
-      <div className="bg-card-bg rounded-xl border border-border p-6 mb-6">
+      <div className="bg-card-bg rounded-xl border border-border p-6">
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-secondary mb-1">Default page</h2>
           <p className="text-sm text-muted">
@@ -261,33 +262,35 @@ export default function PreferencesPage() {
           ))}
         </div>
 
-        {/* Save Button — covers both Appearance and Default Page edits.
-            handleSave is a no-op for sections without pending changes. */}
-        <div className="mt-6 pt-6 border-t border-border">
-          <Button
-            onClick={handleSave}
-            disabled={!hasChanges || isSaving}
-            variant="primary"
-            size="md"
-            className="w-full sm:w-auto touch-manipulation"
-          >
-            {isSaving ? (
-              <>
-                <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Saving...
-              </>
-            ) : (
-              'Save Preferences'
-            )}
-          </Button>
-        </div>
+      </div>
+
+      {/* Shared save row — applies Appearance + Default page edits. Spans both
+          columns so it reads as the save for the two cards above; handleSave is a
+          no-op for sections without pending changes. */}
+      <div className="lg:col-span-2 flex justify-end">
+        <Button
+          onClick={handleSave}
+          disabled={!hasChanges || isSaving}
+          variant="primary"
+          size="md"
+          className="w-full sm:w-auto touch-manipulation"
+        >
+          {isSaving ? (
+            <>
+              <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Saving...
+            </>
+          ) : (
+            'Save Preferences'
+          )}
+        </Button>
       </div>
 
       {/* Cookie Preferences Section */}
-      <div className="bg-card-bg rounded-xl border border-border p-6 mb-6">
+      <div className="bg-card-bg rounded-xl border border-border p-6 lg:col-span-2">
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-secondary mb-1">Cookie Preferences</h2>
           <p className="text-sm text-muted">
@@ -350,6 +353,7 @@ export default function PreferencesPage() {
             Manage cookie preferences
           </Button>
         </div>
+      </div>
       </div>
     </div>
   );

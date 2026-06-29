@@ -44,6 +44,8 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
+import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
+import type { RfqManufacturerSelection } from "@/lib/rfq/types";
 import { resolvePartsTier, tierMeets, type LibraryTier } from "@/lib/library/tier";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
@@ -825,6 +827,7 @@ export function PartDetail({ part }: PartDetailProps) {
 
         <TabPanel tabId="manufacturers" activeTab={activeTab}>
           <ManufacturersPanel
+            nsn={part.nsn}
             manufacturers={manufacturers}
             totalCount={manufacturersTotal}
             isLoading={isLoadingManufacturers}
@@ -1624,6 +1627,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
 
 // Manufacturers Panel
 interface ManufacturersPanelProps {
+  nsn: string | null;
   manufacturers: PartManufacturer[];
   totalCount: number;
   isLoading: boolean;
@@ -1631,8 +1635,86 @@ interface ManufacturersPanelProps {
   onRetry: () => void;
 }
 
-function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRetry }: ManufacturersPanelProps) {
-  const columns = useMemo<ColumnDef<PartManufacturer>[]>(
+// Stable per-row key (matches DataTable getRowId below) used for RFQ selection.
+function manufacturerRowKey(m: PartManufacturer): string {
+  return `${m.cage_code}-${m.part_number || ""}`;
+}
+
+function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, onRetry }: ManufacturersPanelProps) {
+  // RFQ is a separate paid product; only surface the entry when the user holds it.
+  const { hasProductAccess } = useAuth();
+  const canSendRfq = hasProductAccess("vendor_rfq");
+
+  // Local selection state (the shared DataTable keeps its own selection
+  // internal and doesn't surface it, so we track our own via a checkbox column).
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const allKeys = useMemo(() => manufacturers.map(manufacturerRowKey), [manufacturers]);
+  const allSelected = allKeys.length > 0 && allKeys.every((k) => selectedKeys.has(k));
+
+  const toggleRow = useCallback((key: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    setSelectedKeys((prev) => (prev.size >= allKeys.length ? new Set() : new Set(allKeys)));
+  }, [allKeys]);
+
+  const selections: RfqManufacturerSelection[] = useMemo(
+    () =>
+      manufacturers
+        .filter((m) => selectedKeys.has(manufacturerRowKey(m)))
+        .map((m) => ({
+          cage_code: m.cage_code,
+          vendor_name: m.vendor_name,
+          part_number: m.part_number,
+          nsn,
+        })),
+    [manufacturers, selectedKeys, nsn]
+  );
+
+  const selectColumn = useMemo<ColumnDef<PartManufacturer>>(
+    () => ({
+      id: "rfq_select",
+      header: () => (
+        <input
+          type="checkbox"
+          aria-label="Select all manufacturers"
+          checked={allSelected}
+          onChange={toggleAll}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      cell: ({ row }) => {
+        const key = manufacturerRowKey(row.original);
+        return (
+          <input
+            type="checkbox"
+            aria-label={`Select ${row.original.cage_code}`}
+            checked={selectedKeys.has(key)}
+            onChange={() => toggleRow(key)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        );
+      },
+    }),
+    [allSelected, toggleAll, selectedKeys, toggleRow]
+  );
+
+  const dataColumns = useMemo<ColumnDef<PartManufacturer>[]>(
     () => [
       {
         id: "cage_code",
@@ -1717,6 +1799,11 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
     []
   );
 
+  const columns = useMemo<ColumnDef<PartManufacturer>[]>(
+    () => (canSendRfq ? [selectColumn, ...dataColumns] : dataColumns),
+    [canSendRfq, selectColumn, dataColumns]
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -1752,9 +1839,26 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
 
   return (
     <div className="space-y-3">
-      <div className="text-xs text-muted">
-        {totalCount} manufacturer{totalCount !== 1 ? "s" : ""} found
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="text-xs text-muted">
+          {totalCount} manufacturer{totalCount !== 1 ? "s" : ""} found
+        </div>
+        {canSendRfq && (
+          <button
+            type="button"
+            disabled={selectedKeys.size === 0}
+            onClick={() => setComposeOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Create RFQ{selectedKeys.size > 0 ? ` (${selectedKeys.size})` : ""}
+          </button>
+        )}
       </div>
+      {toast && (
+        <div className="rounded-lg border border-success/30 bg-success/10 px-4 py-2.5 text-xs text-success">
+          {toast}
+        </div>
+      )}
       <DataTable
         data={manufacturers}
         columns={columns}
@@ -1773,6 +1877,24 @@ function ManufacturersPanel({ manufacturers, totalCount, isLoading, error, onRet
           },
         }}
       />
+      {canSendRfq && (
+        <RfqComposeModal
+          isOpen={composeOpen}
+          onClose={() => setComposeOpen(false)}
+          nsn={nsn}
+          selections={selections}
+          onSent={(result) => {
+            setSelectedKeys(new Set());
+            setToast(
+              `Sent ${result.rfq_count} RFQ${result.rfq_count !== 1 ? "s" : ""} to ${result.vendor_count} vendor${result.vendor_count !== 1 ? "s" : ""}.`
+            );
+          }}
+          onStaged={(count) => {
+            setSelectedKeys(new Set());
+            setToast(`Added ${count} item${count !== 1 ? "s" : ""} to the batch.`);
+          }}
+        />
+      )}
     </div>
   );
 }
