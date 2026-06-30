@@ -76,17 +76,9 @@ interface CompanyProfile {
   certifications: CompanyCertification[];
 }
 
-// Set-asides come from the canonical `code_definitions` (SET_ASIDE) via
-// useCodeDefinitions — see AddCertificationForm. Certifications have no
-// canonical source yet, so this curated list is a placeholder to be replaced.
-const CERTIFICATIONS: { value: string; label: string }[] = [
-  { value: "ISO9001", label: "ISO 9001:2015" },
-  { value: "AS9100", label: "AS9100" },
-  { value: "ISO13485", label: "ISO 13485" },
-  { value: "ISO14001", label: "ISO 14001" },
-  { value: "CMMC", label: "CMMC / NIST 800-171" },
-  { value: "ITAR", label: "ITAR Registered" },
-];
+// Both set-asides and certifications come from the canonical `code_definitions`
+// table (code_type SET_ASIDE / CERTIFICATION) via useCodeDefinitions — see
+// AddCertificationForm.
 
 // ---------------------------------------------------------------------------
 
@@ -628,11 +620,11 @@ function AddCertificationForm({ onAdded, onError }: { onAdded: () => void; onErr
   const [expires, setExpires] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Canonical set-aside vocabulary (shared, cached) — same source as bid-matching.
+  // Canonical vocabularies (shared, cached) from code_definitions.
   const { codes: setAsideCodes } = useCodeDefinitions("SET_ASIDE");
-  const setAsides = setAsideCodes.map((c) => ({ value: c.code, label: c.label }));
-
-  const picklist = kind === "set_aside" ? setAsides : CERTIFICATIONS;
+  const { codes: certCodes } = useCodeDefinitions("CERTIFICATION");
+  const picklist = (kind === "set_aside" ? setAsideCodes : certCodes)
+    .map((c) => ({ value: c.code, label: c.label }));
   const isOther = picklistValue === "";
   const resolvedLabel = isOther ? customLabel.trim() : (picklist.find((p) => p.value === picklistValue)?.label || "");
 

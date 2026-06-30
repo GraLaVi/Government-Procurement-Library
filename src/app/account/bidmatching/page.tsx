@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
@@ -274,8 +274,21 @@ export default function BidMatchingPage() {
   const [formConditions, setFormConditions] = useState<ConditionForm[]>([]);
   const [saving, setSaving] = useState(false);
   const [showOperatorHelp, setShowOperatorHelp] = useState(false);
+  // Anchor at the end of the conditions list + a one-shot flag so that
+  // adding a condition (from either the top or bottom button) scrolls the
+  // newly appended row into view — otherwise on a long list the new row
+  // lands off-screen and the user has to hunt for it.
+  const conditionsEndRef = useRef<HTMLDivElement | null>(null);
+  const scrollToNewCondition = useRef(false);
 
   const isAdmin = user?.roles?.includes("admin");
+
+  useEffect(() => {
+    if (scrollToNewCondition.current) {
+      scrollToNewCondition.current = false;
+      conditionsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [formConditions.length]);
 
   const fetchAccess = useCallback(async () => {
     try {
@@ -538,6 +551,7 @@ export default function BidMatchingPage() {
 
   const addCondition = () => {
     const defaultType = access?.limits.allowed_condition_types?.[0] ?? "NIIN";
+    scrollToNewCondition.current = true;
     setFormConditions((prev) => [
       ...prev,
       {
@@ -1245,6 +1259,35 @@ export default function BidMatchingPage() {
                     );
                   })}
                 </div>
+                {/* Bottom add button — mirrors the one in the header so the
+                    user doesn't have to scroll back up after building a long
+                    list. Only shown once there's at least one row (the header
+                    button + empty state cover the zero-condition case). */}
+                {formConditions.length > 0 && (() => {
+                  const maxConditions = access?.limits.max_conditions_per_profile ?? null;
+                  const atCap = maxConditions !== null && formConditions.length >= maxConditions;
+                  return (
+                    <button
+                      type="button"
+                      onClick={addCondition}
+                      disabled={atCap}
+                      title={
+                        atCap
+                          ? `Up to ${maxConditions} conditions per profile on this tier. Upgrade for more.`
+                          : undefined
+                      }
+                      className={`mt-3 w-full rounded-lg border border-dashed py-2 text-sm font-medium transition-colors ${
+                        atCap
+                          ? "border-border text-muted cursor-not-allowed"
+                          : "border-primary/40 text-primary hover:bg-primary/5 cursor-pointer"
+                      }`}
+                    >
+                      + Add Condition
+                    </button>
+                  );
+                })()}
+                {/* Scroll target so a freshly added row lands in view. */}
+                <div ref={conditionsEndRef} />
               </div>
             </div>
             <div className="p-6 border-t border-border flex justify-end gap-3">
