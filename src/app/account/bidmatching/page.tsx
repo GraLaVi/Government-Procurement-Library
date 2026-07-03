@@ -62,53 +62,85 @@ interface BidMatchingAccess {
   };
 }
 
-// Condition types that may appear on saved profiles. SET_ASIDE is the
-// legacy DIBBS letter-code condition; new profiles should use
-// SET_ASIDE_CODE (canonical short codes from code_definitions). We keep
-// SET_ASIDE in this list so legacy rows still render — see
-// NEW_CONDITION_TYPE_OPTIONS below for the picker-visible subset.
-const ALLOWED_CONDITION_TYPES = [
+// The condition vocabulary the worker actually matches on, split into the
+// two families it evaluates. Full-text (tsquery) keyword types always use
+// the 'tsquery' operator; identifier/code types use eq|like|ilike|in. A
+// type or operator outside this contract is stored happily by the DB and
+// then SILENTLY never matches, so the API enforces the same matrix.
+// Source of truth: ALAN-FastAPI-Web/src/bid_matching/models.py.
+const TSQUERY_CONDITION_TYPES = [
+  "PART_DESCRIPTION",
+  "PID",
+  "TECHNICAL_CHARACTERISTICS",
+  "SAM_KEYWORD",
+];
+
+const IDENTIFIER_CONDITION_TYPES = [
   "NIIN",
   "FSC",
   "MFG_PART_NUMBER",
-  "PART_DESCRIPTION",
-  "SET_ASIDE",
-  "SET_ASIDE_CODE",
   "CAGE_CODE",
-  "STATUS",
+  "NAICS_CODE",
+  "SET_ASIDE_CODE",
+  "PSC_CODE",
 ];
 
-// Types offered to users when adding a new condition row. SET_ASIDE is
-// hidden (retired in favor of SET_ASIDE_CODE) but legacy rows remain
-// editable below.
-const NEW_CONDITION_TYPE_OPTIONS = ALLOWED_CONDITION_TYPES.filter(
-  (t) => t !== "SET_ASIDE",
-);
+const ALLOWED_CONDITION_TYPES = [
+  ...TSQUERY_CONDITION_TYPES,
+  ...IDENTIFIER_CONDITION_TYPES,
+];
+
+function isKeywordType(condition_type: string): boolean {
+  return TSQUERY_CONDITION_TYPES.includes(condition_type);
+}
+
+// Types offered when adding a new condition row. The retired types
+// (STATUS / SET_ASIDE / DEPARTMENT / NOTICE_TYPE) are gone; any legacy row
+// still carrying one keeps its value in the dropdown via the typeOptions
+// fallback in the render below.
+const NEW_CONDITION_TYPE_OPTIONS = ALLOWED_CONDITION_TYPES;
 
 const CONDITION_TYPE_LABELS: Record<string, string> = {
+  // Keyword match (tsquery)
+  PART_DESCRIPTION: "Part description keyword",
+  PID: "Procurement Item Description",
+  TECHNICAL_CHARACTERISTICS: "Technical characteristics",
+  SAM_KEYWORD: "SAM keyword (Navy/Army/AF)",
+  // Identifier / code match
   NIIN: "NIIN",
-  FSC: "FSC Code",
-  MFG_PART_NUMBER: "Mfg Part Number",
-  PART_DESCRIPTION: "Part Description",
-  SET_ASIDE: "Set-Aside (legacy)",
+  FSC: "FSC",
+  MFG_PART_NUMBER: "Mfr part #",
+  CAGE_CODE: "CAGE code",
+  NAICS_CODE: "NAICS code",
   SET_ASIDE_CODE: "Set-Aside",
-  CAGE_CODE: "CAGE Code",
-  STATUS: "Status",
+  PSC_CODE: "PSC",
+  // Retired — kept only so a not-yet-migrated legacy row renders a name.
+  SET_ASIDE: "Set-Aside (legacy — remove)",
+  STATUS: "Status (retired — remove)",
 };
+
+// Human-readable group labels for the picker optgroups.
+const CONDITION_GROUP_LABELS = {
+  keyword: "Keyword match",
+  identifier: "Identifier / code match",
+} as const;
 
 // Operators the worker SQL actually evaluates per condition_type.
 // Anything outside the per-type set silently never matches — the API
 // enforces this server-side too. Source of truth:
-// ALAN-Worker/src/services/bid_matching/README.md.
+// ALAN-FastAPI-Web/src/bid_matching/models.py.
 const CONDITION_TYPE_OPERATOR_MATRIX: Record<string, string[]> = {
   NIIN: ["eq", "like", "ilike", "in"],
   FSC: ["eq", "like", "ilike", "in"],
   MFG_PART_NUMBER: ["eq", "like", "ilike", "in"],
   CAGE_CODE: ["eq", "like", "ilike", "in"],
-  SET_ASIDE: ["eq", "like", "ilike", "in"],
+  NAICS_CODE: ["eq", "like", "ilike", "in"],
   SET_ASIDE_CODE: ["eq", "like", "ilike", "in"],
-  STATUS: ["eq", "like", "ilike", "in"],
+  PSC_CODE: ["eq", "like", "ilike", "in"],
   PART_DESCRIPTION: ["tsquery"],
+  PID: ["tsquery"],
+  TECHNICAL_CHARACTERISTICS: ["tsquery"],
+  SAM_KEYWORD: ["tsquery"],
 };
 
 const CONDITION_TYPE_DEFAULT_OPERATOR: Record<string, string> = {
@@ -116,10 +148,13 @@ const CONDITION_TYPE_DEFAULT_OPERATOR: Record<string, string> = {
   FSC: "eq",
   MFG_PART_NUMBER: "eq",
   CAGE_CODE: "eq",
-  SET_ASIDE: "eq",
+  NAICS_CODE: "eq",
   SET_ASIDE_CODE: "eq",
-  STATUS: "eq",
+  PSC_CODE: "eq",
   PART_DESCRIPTION: "tsquery",
+  PID: "tsquery",
+  TECHNICAL_CHARACTERISTICS: "tsquery",
+  SAM_KEYWORD: "tsquery",
 };
 
 const OPERATOR_LABELS: Record<string, string> = {
@@ -141,14 +176,22 @@ function defaultOperatorFor(condition_type: string): string {
 // Short description of each condition type — used in the per-row hint
 // so customers know what the field actually represents.
 const CONDITION_TYPE_HINTS: Record<string, string> = {
-  NIIN: "Identifies one part by its 9-digit NIIN. Paste a full 13-digit NSN and we'll strip the FSC for you.",
-  FSC: "4-digit Federal Supply Class — the category a part belongs to.",
-  MFG_PART_NUMBER: "Manufacturer part number listed on the solicitation.",
-  CAGE_CODE: "5-character CAGE code of a supplier referenced on the solicitation.",
-  SET_ASIDE: "Legacy DIBBS letter-code set-aside (retired). Delete and recreate using the current Set-Aside condition.",
-  SET_ASIDE_CODE: "Canonical set-aside designation (e.g. SDVOSB, HUBZone, WOSB).",
-  STATUS: "Solicitation status (e.g. OPEN, CLOSED).",
-  PART_DESCRIPTION: "Free-text terms across the part description. Best for fuzzy keywords.",
+  // Keyword match (tsquery) — DIBBS + SAM unless noted.
+  PART_DESCRIPTION: "Keyword(s) in the part's description. DIBBS + SAM.",
+  PID: "Keyword(s) in the part's CTDF procurement item description. DIBBS + SAM.",
+  TECHNICAL_CHARACTERISTICS: "Keyword(s) in the part's technical characteristics (material, color, finish, …). DIBBS + SAM.",
+  SAM_KEYWORD: "Keyword(s) in the SAM notice title/description — Navy/Army/Air-Force notices only.",
+  // Identifier / code match.
+  NIIN: "The part's 9-digit NIIN. Paste a full 13-digit NSN and we'll strip the FSC for you. DIBBS + SAM.",
+  FSC: "The part's Federal Supply Class. DIBBS + SAM.",
+  MFG_PART_NUMBER: "The part's manufacturer part number. DIBBS + SAM.",
+  CAGE_CODE: "The part's mfg CAGE, or any CAGE linked to the part (approved manufacturer / prior supplier). DIBBS + SAM.",
+  NAICS_CODE: "NAICS classification of a vendor tied to the part (via the part's CAGEs) — not the solicitation's own NAICS. DIBBS + SAM.",
+  SET_ASIDE_CODE: "The solicitation/opportunity set-aside code (e.g. SDVOSB, HUBZone, WOSB). DIBBS + SAM.",
+  PSC_CODE: "The SAM opportunity's Product Service Code. SAM only.",
+  // Retired — displayed only for not-yet-migrated legacy rows.
+  SET_ASIDE: "Retired condition — the worker no longer matches it. Delete it and add a current Set-Aside condition.",
+  STATUS: "Retired condition — the worker no longer matches it. Delete it.",
 };
 
 // Per-operator example value, parameterized by condition type. Keeps the
@@ -157,11 +200,12 @@ function operatorExample(condition_type: string, operator: string): string {
   if (operator === "in") {
     if (condition_type === "NIIN") return "01-234-5678, 999-888-777";
     if (condition_type === "FSC") return "5945, 5950, 5955";
+    if (condition_type === "NAICS_CODE") return "332710, 336413";
+    if (condition_type === "PSC_CODE") return "5945, 5950";
     if (condition_type === "SET_ASIDE_CODE") return "HZC, SDVOSBC, WOSB";
     return "value1, value2, value3";
   }
   if (operator === "like" || operator === "ilike") {
-    if (condition_type === "PART_DESCRIPTION") return "%pump%";
     if (condition_type === "MFG_PART_NUMBER") return "MS27%";
     return "%pattern%";
   }
@@ -170,9 +214,9 @@ function operatorExample(condition_type: string, operator: string): string {
   if (condition_type === "NIIN") return "01-234-5678";
   if (condition_type === "FSC") return "5945";
   if (condition_type === "CAGE_CODE") return "1ABC2";
-  if (condition_type === "SET_ASIDE") return "Y";
+  if (condition_type === "NAICS_CODE") return "332710";
+  if (condition_type === "PSC_CODE") return "5945";
   if (condition_type === "SET_ASIDE_CODE") return "SDVOSBC";
-  if (condition_type === "STATUS") return "OPEN";
   return "value";
 }
 
@@ -183,7 +227,7 @@ function operatorHint(operator: string): string {
     case "like": return "Wildcard pattern, case-sensitive. You supply '%'.";
     case "ilike": return "Wildcard pattern, case-insensitive. You supply '%'.";
     case "in": return "Matches any value in your list.";
-    case "tsquery": return "Full-text search. Multiple words match in any order.";
+    case "tsquery": return "Full-text search. Enter one or more words; all must appear.";
     default: return "";
   }
 }
@@ -1097,21 +1141,35 @@ export default function BidMatchingPage() {
                 <div className="space-y-3">
                   {formConditions.map((cond, idx) => {
                     const allowedOps = operatorsFor(cond.condition_type);
+                    const isKeyword = isKeywordType(cond.condition_type);
                     const isNiin = cond.condition_type === "NIIN";
                     const isIn = cond.match_operator === "in";
                     const isSetAsideCode = cond.condition_type === "SET_ASIDE_CODE";
                     const isLegacySetAside = cond.condition_type === "SET_ASIDE";
                     const niinPreview = isNiin && !isIn ? previewNiin(cond.match_value) : null;
                     // Build the type-picker options. Tier-restricted users
-                    // keep their allowed list; everyone else gets the
-                    // "new condition" subset (SET_ASIDE hidden). A legacy
-                    // SET_ASIDE row keeps its current value in the dropdown
-                    // so the editor doesn't silently rewrite it.
+                    // keep their allowed list; everyone else gets the full
+                    // allowed set. A row still carrying a retired type keeps
+                    // its current value in the dropdown so the editor doesn't
+                    // silently rewrite it. Split into keyword vs identifier
+                    // groups for the optgroups below; any leftover (legacy)
+                    // value renders as a standalone option.
                     const baseTypeOptions =
                       access?.limits.allowed_condition_types ?? NEW_CONDITION_TYPE_OPTIONS;
                     const typeOptions = baseTypeOptions.includes(cond.condition_type)
                       ? baseTypeOptions
                       : [cond.condition_type, ...baseTypeOptions];
+                    const keywordOptions = typeOptions.filter((t) =>
+                      TSQUERY_CONDITION_TYPES.includes(t),
+                    );
+                    const identifierOptions = typeOptions.filter((t) =>
+                      IDENTIFIER_CONDITION_TYPES.includes(t),
+                    );
+                    const legacyOptions = typeOptions.filter(
+                      (t) =>
+                        !TSQUERY_CONDITION_TYPES.includes(t) &&
+                        !IDENTIFIER_CONDITION_TYPES.includes(t),
+                    );
                     return (
                       <div
                         key={idx}
@@ -1128,25 +1186,47 @@ export default function BidMatchingPage() {
                             onChange={(e) => updateCondition(idx, { condition_type: e.target.value })}
                             className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-lg px-2 py-2 focus:ring-2 focus:ring-primary"
                           >
-                            {typeOptions.map((ct) => (
+                            {legacyOptions.map((ct) => (
                               <option key={ct} value={ct}>
                                 {CONDITION_TYPE_LABELS[ct] || ct}
                               </option>
                             ))}
+                            {keywordOptions.length > 0 && (
+                              <optgroup label={CONDITION_GROUP_LABELS.keyword}>
+                                {keywordOptions.map((ct) => (
+                                  <option key={ct} value={ct}>
+                                    {CONDITION_TYPE_LABELS[ct] || ct}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                            {identifierOptions.length > 0 && (
+                              <optgroup label={CONDITION_GROUP_LABELS.identifier}>
+                                {identifierOptions.map((ct) => (
+                                  <option key={ct} value={ct}>
+                                    {CONDITION_TYPE_LABELS[ct] || ct}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
                           </select>
-                          <select
-                            value={cond.match_operator}
-                            onChange={(e) => updateCondition(idx, { match_operator: e.target.value })}
-                            disabled={allowedOps.length === 1}
-                            className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-lg px-2 py-2 focus:ring-2 focus:ring-primary disabled:opacity-60"
-                            title={allowedOps.length === 1 ? "Only one operator is supported for this type." : undefined}
-                          >
-                            {allowedOps.map((op) => (
-                              <option key={op} value={op}>
-                                {OPERATOR_LABELS[op] || op}
-                              </option>
-                            ))}
-                          </select>
+                          {/* Keyword types are always tsquery — hide the
+                              operator selector entirely for them. */}
+                          {!isKeyword && (
+                            <select
+                              value={cond.match_operator}
+                              onChange={(e) => updateCondition(idx, { match_operator: e.target.value })}
+                              disabled={allowedOps.length === 1}
+                              className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-lg px-2 py-2 focus:ring-2 focus:ring-primary disabled:opacity-60"
+                              title={allowedOps.length === 1 ? "Only one operator is supported for this type." : undefined}
+                            >
+                              {allowedOps.map((op) => (
+                                <option key={op} value={op}>
+                                  {OPERATOR_LABELS[op] || op}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                           <button
                             onClick={() => removeCondition(idx)}
                             className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"

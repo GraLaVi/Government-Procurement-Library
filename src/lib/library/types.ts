@@ -605,6 +605,10 @@ export interface PartPackagingResponse {
   packaging: PartPackaging | null;
   code_definitions: Record<string, string>;
   marking_code_definitions: Record<string, string>;
+  // Section 2: supplemental free-text packaging block (e.g. from a solicitation)
+  supplemental_text: string | null;
+  supplemental_source: string | null;
+  supplemental_title: string | null;
 }
 
 export interface PartTabCounts {

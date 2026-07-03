@@ -323,6 +323,7 @@ export function PartDetail({ part }: PartDetailProps) {
   const [packaging, setPackaging] = useState<PartPackaging | null>(null);
   const [packagingCodeDefinitions, setPackagingCodeDefinitions] = useState<Record<string, string>>({});
   const [packagingMarkingDefinitions, setPackagingMarkingDefinitions] = useState<Record<string, string>>({});
+  const [packagingSupplemental, setPackagingSupplemental] = useState<{ text: string; title: string; source: string } | null>(null);
   const [isLoadingPackaging, setIsLoadingPackaging] = useState(false);
   const [packagingError, setPackagingError] = useState<string | null>(null);
   const [packagingFetched, setPackagingFetched] = useState(false);
@@ -579,6 +580,15 @@ export function PartDetail({ part }: PartDetailProps) {
       setPackaging(packagingResponse.packaging);
       setPackagingCodeDefinitions(packagingResponse.code_definitions || {});
       setPackagingMarkingDefinitions(packagingResponse.marking_code_definitions || {});
+      setPackagingSupplemental(
+        packagingResponse.supplemental_text
+          ? {
+              text: packagingResponse.supplemental_text,
+              title: packagingResponse.supplemental_title || 'Packaging Requirements',
+              source: packagingResponse.supplemental_source || 'solicitation',
+            }
+          : null
+      );
       setPackagingFetched(true);
     } catch (error) {
       console.error('Packaging fetch error:', error);
@@ -862,6 +872,7 @@ export function PartDetail({ part }: PartDetailProps) {
             packaging={packaging}
             codeDefinitions={packagingCodeDefinitions}
             markingDefinitions={packagingMarkingDefinitions}
+            supplemental={packagingSupplemental}
             isLoading={isLoadingPackaging}
             error={packagingError}
             onRetry={fetchPackaging}
@@ -2023,12 +2034,13 @@ interface PackagingPanelProps {
   packaging: PartPackaging | null;
   codeDefinitions: Record<string, string>;
   markingDefinitions: Record<string, string>;
+  supplemental: { text: string; title: string; source: string } | null;
   isLoading: boolean;
   error: string | null;
   onRetry: () => void;
 }
 
-function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoading, error, onRetry }: PackagingPanelProps) {
+function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, supplemental, isLoading, error, onRetry }: PackagingPanelProps) {
 
   if (isLoading) {
     return (
@@ -2055,7 +2067,7 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
     );
   }
 
-  if (!packaging) {
+  if (!packaging && !supplemental) {
     return (
       <div className="text-center py-6">
         <p className="text-xs text-muted">No packaging information found</p>
@@ -2189,6 +2201,8 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
     const parts: React.ReactElement[] = [];
     let lineIndex = 0;
     let codeIndex = 0;
+
+    if (!packaging) return parts;
 
     // Line 1: QUP, PRES MTHD, CLNG/DRY, PRESV MAT
     const line1Parts: (string | React.ReactElement)[] = [];
@@ -2342,8 +2356,30 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, isLoad
   };
 
     return (
-      <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card">
-        {buildPackagingText()}
+      <div className="space-y-3">
+        {/* Section 1: structured part_packaging record (only when a row exists) */}
+        {packaging && (
+          <div>
+            <h4 className="text-[11px] font-semibold text-muted uppercase tracking-wide mb-1">
+              Packaging Data
+            </h4>
+            <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card">
+              {buildPackagingText()}
+            </div>
+          </div>
+        )}
+
+        {/* Section 2: supplemental free-text block (e.g. solicitation packaging_data) */}
+        {supplemental && (
+          <div>
+            <h4 className="text-[11px] font-semibold text-muted uppercase tracking-wide mb-1">
+              {supplemental.title}
+            </h4>
+            <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card whitespace-pre-wrap">
+              {supplemental.text}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

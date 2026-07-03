@@ -54,7 +54,7 @@ interface HeaderProps {
 }
 
 export function Header({ showAccountLink = true }: HeaderProps) {
-  const { user, logout, isRfqResponderOnly } = useAuth();
+  const { user, logout, isRfqResponderOnly, hasProductAccess } = useAuth();
   const [isLibraryDropdownOpen, setIsLibraryDropdownOpen] = useState(false);
   const [isHelpDropdownOpen, setIsHelpDropdownOpen] = useState(false);
   const [isRfqDropdownOpen, setIsRfqDropdownOpen] = useState(false);
@@ -219,7 +219,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 >
                   RFQs Received
                 </Link>
-              ) : (
+              ) : hasProductAccess("vendor_rfq") ? (
               <div className="relative" ref={rfqDropdownRef}>
                 <button
                   onClick={() => setIsRfqDropdownOpen(!isRfqDropdownOpen)}
@@ -251,7 +251,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   </div>
                 )}
               </div>
-              )}
+              ) : null}
               {/* Help Dropdown */}
               <div className="relative" ref={helpDropdownRef}>
                 <button
@@ -382,7 +382,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 >
                   RFQs Received
                 </Link>
-              ) : (
+              ) : hasProductAccess("vendor_rfq") ? (
               <>
               <button
                 onClick={() => setIsMobileRfqOpen(!isMobileRfqOpen)}
@@ -414,7 +414,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 </div>
               )}
               </>
-              )}
+              ) : null}
 
               {/* Help expandable section */}
               <button
