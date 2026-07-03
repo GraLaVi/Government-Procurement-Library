@@ -119,11 +119,18 @@ const CONDITION_TYPE_LABELS: Record<string, string> = {
   STATUS: "Status (retired — remove)",
 };
 
-// Human-readable group labels for the picker optgroups.
+// Human-readable group labels for the picker section headers.
 const CONDITION_GROUP_LABELS = {
   keyword: "Keyword match",
   identifier: "Identifier / code match",
 } as const;
+
+// Sentinel value for the non-selectable section-header rows in the type
+// picker. We render headers as ordinary (enabled) <option>s — disabled
+// options and <optgroup> labels are force-greyed by browsers regardless of
+// CSS, so they're unreadable on the dropdown background — and simply no-op
+// this value in onChange so the header can't actually be chosen.
+const GROUP_HEADER_VALUE = "__group_header__";
 
 // Operators the worker SQL actually evaluates per condition_type.
 // Anything outside the per-type set silently never matches — the API
@@ -848,8 +855,8 @@ export default function BidMatchingPage() {
                     <span
                       className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                         profile.match_logic === "AND"
-                          ? "bg-purple-100 text-purple-700"
-                          : "bg-blue-100 text-blue-700"
+                          ? "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300"
+                          : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
                       }`}
                     >
                       {profile.match_logic}
@@ -857,8 +864,8 @@ export default function BidMatchingPage() {
                     <span
                       className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                         profile.is_active
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-600"
+                          ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300"
+                          : "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-300"
                       }`}
                     >
                       {profile.is_active ? "Active" : "Inactive"}
@@ -908,7 +915,7 @@ export default function BidMatchingPage() {
               {profile.conditions.length > 0 ? (
                 <div className="border border-border rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-muted-light">
                       <tr className="border-b border-border">
                         <th className="text-left py-2 px-4 font-medium text-muted">
                           Type
@@ -1017,7 +1024,7 @@ export default function BidMatchingPage() {
                       className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
                         formLogic === logic
                           ? "bg-primary text-white"
-                          : "bg-gray-100 text-foreground hover:bg-gray-200"
+                          : "bg-gray-100 text-foreground hover:bg-gray-200 dark:bg-muted-light dark:hover:bg-border"
                       }`}
                     >
                       {logic}
@@ -1183,7 +1190,10 @@ export default function BidMatchingPage() {
                         <div className="flex items-center gap-2">
                           <select
                             value={cond.condition_type}
-                            onChange={(e) => updateCondition(idx, { condition_type: e.target.value })}
+                            onChange={(e) => {
+                              if (e.target.value === GROUP_HEADER_VALUE) return;
+                              updateCondition(idx, { condition_type: e.target.value });
+                            }}
                             className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-lg px-2 py-2 focus:ring-2 focus:ring-primary"
                           >
                             {legacyOptions.map((ct) => (
@@ -1191,23 +1201,34 @@ export default function BidMatchingPage() {
                                 {CONDITION_TYPE_LABELS[ct] || ct}
                               </option>
                             ))}
+                            {/* Section headers are ordinary (enabled) options
+                                so they render in the readable dark option
+                                color — disabled options and <optgroup> labels
+                                are force-greyed by browsers. onChange no-ops
+                                the sentinel value so they can't be selected. */}
                             {keywordOptions.length > 0 && (
-                              <optgroup label={CONDITION_GROUP_LABELS.keyword}>
+                              <>
+                                <option value={GROUP_HEADER_VALUE} className="font-semibold">
+                                  ──  {CONDITION_GROUP_LABELS.keyword}  ──
+                                </option>
                                 {keywordOptions.map((ct) => (
                                   <option key={ct} value={ct}>
-                                    {CONDITION_TYPE_LABELS[ct] || ct}
+                                    {"  "}{CONDITION_TYPE_LABELS[ct] || ct}
                                   </option>
                                 ))}
-                              </optgroup>
+                              </>
                             )}
                             {identifierOptions.length > 0 && (
-                              <optgroup label={CONDITION_GROUP_LABELS.identifier}>
+                              <>
+                                <option value={GROUP_HEADER_VALUE} className="font-semibold">
+                                  ──  {CONDITION_GROUP_LABELS.identifier}  ──
+                                </option>
                                 {identifierOptions.map((ct) => (
                                   <option key={ct} value={ct}>
-                                    {CONDITION_TYPE_LABELS[ct] || ct}
+                                    {"  "}{CONDITION_TYPE_LABELS[ct] || ct}
                                   </option>
                                 ))}
-                              </optgroup>
+                              </>
                             )}
                           </select>
                           {/* Keyword types are always tsquery — hide the
