@@ -9,6 +9,7 @@ import { rfqStatusLabel, type RfqListItem, type RfqContributor } from "@/lib/rfq
 import { formatDateMmDdYyyy } from "@/lib/dates";
 
 const ALL = "all";
+const FILTER_KEY = "rfq_filter_user";
 
 function statusVariant(status: string): "default" | "success" | "warning" | "error" {
   switch (status) {
@@ -30,13 +31,21 @@ export default function RfqListPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Default the filter to the current user's own RFQs.
+  // Restore the last-used filter (defaulting to Everyone) before the first
+  // fetch. Waiting for auth + doing this once means only one fetch fires, with
+  // the resolved filter — no flicker where records flash then get replaced.
   useEffect(() => {
-    if (!filterInitialized && user?.id) {
-      setFilterUser(String(user.id));
-      setFilterInitialized(true);
-    }
-  }, [user, filterInitialized]);
+    if (filterInitialized || authLoading) return;
+    const saved = typeof window !== "undefined" ? window.localStorage.getItem(FILTER_KEY) : null;
+    setFilterUser(saved || ALL);
+    setFilterInitialized(true);
+  }, [authLoading, filterInitialized]);
+
+  // Persist the filter so the choice sticks across reloads/navigation.
+  useEffect(() => {
+    if (!filterInitialized || typeof window === "undefined") return;
+    window.localStorage.setItem(FILTER_KEY, filterUser);
+  }, [filterUser, filterInitialized]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,10 +73,10 @@ export default function RfqListPage() {
   }, [filterUser]);
 
   useEffect(() => {
-    if (!authLoading && hasProductAccess("vendor_rfq")) {
+    if (filterInitialized && hasProductAccess("vendor_rfq")) {
       load();
     }
-  }, [authLoading, hasProductAccess, load]);
+  }, [filterInitialized, hasProductAccess, load]);
 
   if (authLoading) {
     return <div className="p-6 text-sm text-muted">Loading…</div>;

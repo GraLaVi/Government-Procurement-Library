@@ -53,7 +53,7 @@ The data shown in each tab is described below.
 The Overview tab is the part's at-a-glance summary, organized into three cards:
 
 - **Identifiers.** The part's NSN, NIIN, and FSC (Federal Supply Class).  
-- **Part Details.** The part description and its standard cost (if known).  
+- **Part Details.** The part description and its standard price (if known).  
 - **Part Codes.** Management codes describing how the government acquires the part — Acquisition Method Code (AMC), Acquisition Method Suffix Code (AMS), Procurement Item Code (PIC), and Source Of Supply Code (SLC). Codes link to the **Code Definitions** reference, accessible from the Help menu.
 
 ## Procurement History tab

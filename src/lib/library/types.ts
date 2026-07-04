@@ -538,11 +538,36 @@ export interface PartSolicitation {
   buyer_contact: string | null;
   purchase_req: string | null;
   has_pdf?: boolean;
+  // Origin of the row: "DLA" for DIBBS solicitations, "SAM" for SAM.gov
+  // opportunities linked via sam_opportunity_parts.
+  source?: "DLA" | "SAM";
+  // SAM.gov notice type (e.g. "Sources Sought", "Solicitation"). Null/absent for DLA.
+  notice_type?: string | null;
+  // Public SAM.gov deep link for SAM rows. Null/absent for DLA.
+  sam_url?: string | null;
+  // Number of viewable documents attached to a SAM opportunity. 0 for DLA rows.
+  document_count?: number;
 }
 
 export interface PartSolicitationsResponse {
   nsn: string;
   solicitations: PartSolicitation[];
+  total_count: number;
+}
+
+export interface SamOpportunityDocument {
+  item_id: number;
+  name: string;
+  kind: "file" | "link";
+  is_pdf: boolean;
+  mime_type: string | null;
+  size: number | null;
+  link_url: string | null;
+}
+
+export interface SamOpportunityDocumentsResponse {
+  sam_opportunity_id: number;
+  documents: SamOpportunityDocument[];
   total_count: number;
 }
 

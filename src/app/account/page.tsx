@@ -43,9 +43,6 @@ const accountSections = [
     title: "Billing & Subscriptions",
     description: "Manage your plan, seats, invoices, and feature access",
     href: "/account/billing",
-    // Hidden during beta — billing is not open to customers until beta
-    // testing wraps up. Remove this flag to re-enable the card.
-    betaDisabled: true,
     icon: (
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -324,7 +321,6 @@ export default function AccountPage() {
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {accountSections
-          .filter((section) => !section.betaDisabled)
           .filter((section) => !section.adminOnly || user?.roles?.includes('admin'))
           .filter((section) => !(section.responderHidden && isRfqResponderOnly))
           .map((section) => (

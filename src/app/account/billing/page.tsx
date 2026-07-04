@@ -256,13 +256,6 @@ function BillingPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkoutFlag, checkoutSessionId, user, authLoading]);
 
-  // Billing is closed during beta (beta is 100% comp grants — no self-serve
-  // Stripe Checkout), so block all direct visits to this page and bounce
-  // users back to /account. Remove this guard to reopen billing after beta.
-  useEffect(() => {
-    router.replace("/account");
-  }, [router]);
-
   useEffect(() => {
     if (!authLoading && user) loadData();
   }, [authLoading, user, loadData]);
