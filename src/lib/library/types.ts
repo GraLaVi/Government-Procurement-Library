@@ -838,7 +838,14 @@ export function formatNSN(nsn: string | null | undefined): string | null {
 // Format contract date
 export function formatContractDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
-  const date = new Date(dateStr);
+  // A date-only string ("YYYY-MM-DD") is parsed by `new Date()` as UTC midnight,
+  // which then renders as the previous day in any timezone behind UTC. Parse those
+  // as local time so the calendar date is preserved. Full datetime strings (with a
+  // time component) keep their normal instant-based parsing.
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(dateStr);
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
