@@ -97,19 +97,34 @@ export interface VendorSolicitation {
   solicitation_id: number;
   solicitation_number: string;
   agency_code: string | null;
-  close_date: string;
+  // Nullable because SAM.gov rows may lack a response deadline.
+  close_date: string | null;
   status: string;
   // Legacy raw set-aside string. Kept for one release; prefer set_aside_label.
   set_aside: string | null;
   set_aside_code?: string | null;
   set_aside_label?: string | null;
-  quantity: number;
+  // Part-level fields are null on SAM rows (an opportunity can span many parts).
+  quantity: number | null;
   niin: string | null;
   fsc: string | null;
   description: string | null;
   unit_price: number | null;
   estimated_value: number | null;
   has_pdf?: boolean;
+  // Origin of the row: "DLA" for DIBBS solicitations, "SAM" for SAM.gov
+  // opportunities linked via sam_opportunity_parts.
+  source?: string;
+  // SAM.gov notice type (e.g. "Sources Sought"); null for DLA rows.
+  notice_type?: string | null;
+  // Public SAM.gov deep link for SAM rows (sam_opportunities.ui_link); null for DLA.
+  sam_url?: string | null;
+  // Count of viewable documents on a SAM opportunity; 0 for DLA rows.
+  document_count?: number;
+  // The vendor's matched parts on this opportunity. Populated on SAM rows
+  // (an opportunity can span several of the vendor's NSNs); empty on DLA rows,
+  // which carry their single NSN in the niin/fsc fields above.
+  nsns?: { fsc: string | null; niin: string | null }[];
 }
 
 export interface VendorSolicitationsResponse {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 
 // ============================================================================
@@ -22,8 +21,6 @@ import {
   PartProcurementHistoryResponse,
   PartSolicitation,
   PartSolicitationsResponse,
-  SamOpportunityDocument,
-  SamOpportunityDocumentsResponse,
   PartManufacturer,
   PartManufacturersResponse,
   PartTechnicalCharacteristic,
@@ -53,6 +50,7 @@ import { resolvePartsTier, tierMeets, type LibraryTier } from "@/lib/library/tie
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
+import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
 
 // Module-scope CSV column specs for the part-detail tab exports. Kept
 // outside the component bodies so the parent-level export button
@@ -1360,169 +1358,6 @@ interface SolicitationsPanelProps {
   onRetry: () => void;
 }
 
-// Human-readable byte size for document rows.
-function formatBytes(bytes: number | null | undefined): string {
-  if (!bytes || bytes <= 0) return "";
-  const units = ["B", "KB", "MB", "GB"];
-  let n = bytes;
-  let i = 0;
-  while (n >= 1024 && i < units.length - 1) {
-    n /= 1024;
-    i++;
-  }
-  return `${n >= 10 || i === 0 ? Math.round(n) : n.toFixed(1)} ${units[i]}`;
-}
-
-// Documents affordance for a SAM.gov opportunity row. A SAM opportunity can carry
-// many attachments, so instead of the single-PDF modal used for DLA solicitations
-// this opens a dropdown listing every viewable document. PDFs open in an inline
-// viewer, other stored files download, and external links open in a new tab. The
-// dropdown is portaled to <body> so the surrounding table's overflow can't clip it.
-function DocumentsButton({ oppId, count, label }: { oppId: number; count: number; label: string }) {
-  const [open, setOpen] = useState(false);
-  const [docs, setDocs] = useState<SamOpportunityDocument[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pdfDoc, setPdfDoc] = useState<{ url: string; name: string } | null>(null);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  const fetchDocs = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/library/sam-opportunities/${oppId}/documents`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load documents");
-      setDocs((data as SamOpportunityDocumentsResponse).documents);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load documents");
-    } finally {
-      setLoading(false);
-    }
-  }, [oppId]);
-
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const next = !open;
-    setOpen(next);
-    if (next) {
-      const rect = btnRef.current?.getBoundingClientRect();
-      if (rect) setCoords({ top: rect.bottom + 4, left: rect.left });
-      if (docs === null && !loading) fetchDocs();
-    }
-  };
-
-  // Close on outside click or Escape while the dropdown is open.
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (
-        panelRef.current && !panelRef.current.contains(e.target as Node) &&
-        btnRef.current && !btnRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  const openDoc = (doc: SamOpportunityDocument, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const fileUrl = `/api/library/sam-opportunities/${oppId}/documents/${doc.item_id}`;
-    if (doc.kind === "link" && doc.link_url) {
-      window.open(doc.link_url, "_blank", "noopener,noreferrer");
-      setOpen(false);
-    } else if (doc.is_pdf) {
-      setPdfDoc({ url: fileUrl, name: doc.name });
-      setOpen(false);
-    } else {
-      // Non-PDF stored file: let the browser download it (server sends attachment).
-      window.open(fileUrl, "_blank", "noopener,noreferrer");
-      setOpen(false);
-    }
-  };
-
-  return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={toggle}
-        title={`${count} document${count === 1 ? "" : "s"}`}
-        className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-semibold text-primary hover:bg-primary/10 cursor-pointer shrink-0"
-      >
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-        </svg>
-        {count}
-      </button>
-      {open && coords && createPortal(
-        <div
-          ref={panelRef}
-          style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 60 }}
-          className="w-80 max-h-80 overflow-y-auto rounded-md border border-border bg-background shadow-lg py-1"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted border-b border-border/60">
-            Documents · {label}
-          </div>
-          {loading && <div className="px-3 py-3 text-xs text-muted">Loading documents…</div>}
-          {error && <div className="px-3 py-3 text-xs text-error">{error}</div>}
-          {!loading && !error && docs && docs.length === 0 && (
-            <div className="px-3 py-3 text-xs text-muted">No viewable documents.</div>
-          )}
-          {!loading && !error && docs && docs.map((doc) => (
-            <button
-              key={doc.item_id}
-              type="button"
-              onClick={(e) => openDoc(doc, e)}
-              className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/10 cursor-pointer"
-            >
-              <span className="shrink-0 text-muted">
-                {doc.kind === "link" ? (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </svg>
-                )}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-xs font-medium text-foreground truncate">{doc.name}</span>
-                <span className="block text-[10px] text-muted">
-                  {doc.kind === "link" ? "External link" : (doc.is_pdf ? "PDF" : "Download")}
-                  {formatBytes(doc.size) ? ` · ${formatBytes(doc.size)}` : ""}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>,
-        document.body
-      )}
-      {pdfDoc && (
-        <Modal isOpen={true} onClose={() => setPdfDoc(null)} title={pdfDoc.name} size="full">
-          <div className="flex flex-col gap-2">
-            <a href={pdfDoc.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
-              Open in new tab
-            </a>
-            <iframe src={pdfDoc.url} title={pdfDoc.name} className="w-full border border-border rounded min-h-[70vh]" />
-          </div>
-        </Modal>
-      )}
-    </>
-  );
-}
-
 function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRetry }: SolicitationsPanelProps) {
   const [pdfModal, setPdfModal] = useState<{ id: number; number: string } | null>(null);
   const pdfUrl = pdfModal ? `/api/library/solicitations/${pdfModal.id}/pdf` : null;
@@ -1596,7 +1431,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                 </Tooltip>
               )}
               {isSam && (sol.document_count ?? 0) > 0 && (
-                <DocumentsButton
+                <SamDocumentsButton
                   oppId={sol.solicitation_id}
                   count={sol.document_count ?? 0}
                   label={displayNumber}

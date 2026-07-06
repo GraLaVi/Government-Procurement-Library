@@ -12,7 +12,8 @@
 // - Loading/error messages: "text-xs text-muted" or "text-xs text-error"
 // - Empty states: "text-xs text-muted"
 // ============================================================================
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   VendorDetail as VendorDetailType,
@@ -42,6 +43,20 @@ import { resolveVendorTier, tierMeets } from "@/lib/library/tier";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
+import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
+
+// DoD PIID formatter: many SAM.gov solicitation numbers arrive without the
+// canonical dashes (e.g. "FA821326R3048"). When a value has no dashes AND matches
+// the PIID shape — 6-char office code, 2-digit fiscal year, 1-letter instrument
+// type, then a serial — insert dashes ("FA8213-26-R-3048"). Anything already
+// dashed, or that doesn't match the shape, is returned unchanged.
+const PIID_PATTERN = /^([A-Z][A-Z0-9]{5})(\d{2})([A-Z])([A-Z0-9]{3,})$/;
+function formatSolicitationNumber(value: string | null | undefined): string {
+  if (!value) return "—";
+  if (value.includes("-")) return value;
+  const m = PIID_PATTERN.exec(value);
+  return m ? `${m[1]}-${m[2]}-${m[3]}-${m[4]}` : value;
+}
 
 // Module-scope CSV column specs for the vendor-detail tab exports.
 // Kept outside the component bodies so the parent-level export button
@@ -74,12 +89,29 @@ const BOOKINGS_CSV_COLUMNS: CsvColumn<VendorBookingMonth>[] = [
 ];
 
 const VENDOR_SOLICITATIONS_CSV_COLUMNS: CsvColumn<VendorSolicitation>[] = [
-  { header: "Close Date", value: (r) => r.close_date },
-  { header: "Solicitation #", value: (r) => r.solicitation_number },
+  { header: "Source", value: (r) => r.source ?? "DLA" },
+  { header: "Close Date", value: (r) => r.close_date ?? "" },
+  { header: "Solicitation #", value: (r) => formatSolicitationNumber(r.solicitation_number) },
+  { header: "Notice Type", value: (r) => r.notice_type ?? "" },
   { header: "Status", value: (r) => r.status },
   { header: "Agency", value: (r) => r.agency_code ?? "" },
   { header: "NIIN", value: (r) => r.niin ?? "" },
   { header: "FSC", value: (r) => r.fsc ?? "" },
+  // SAM rows carry their matched NSNs in `nsns`; DLA rows have a single NSN in
+  // the niin/fsc fields. Emit a combined, semicolon-separated NSN list so the
+  // CSV is complete for both.
+  {
+    header: "NSNs",
+    value: (r) =>
+      r.nsns && r.nsns.length
+        ? r.nsns
+            .map((n) => (n.fsc && n.niin ? `${n.fsc}-${n.niin}` : n.niin ?? ""))
+            .filter(Boolean)
+            .join("; ")
+        : r.fsc && r.niin
+          ? `${r.fsc}-${r.niin}`
+          : r.niin ?? "",
+  },
   { header: "Description", value: (r) => r.description ?? "" },
   { header: "Qty", value: (r) => r.quantity ?? "" },
   { header: "Unit Price", value: (r) => r.unit_price ?? "" },
@@ -1246,14 +1278,108 @@ interface SolicitationsPanelProps {
   onRetry: () => void;
 }
 
+// NSN affordance for a SAM.gov opportunity row. A SAM opportunity can match
+// several of the vendor's parts, so instead of a single inline NSN the cell
+// shows a "N NSNs" count chip that opens a popover listing each matched NSN
+// (each linking to part search). Portaled to <body> so the table's overflow
+// can't clip it. Mirrors the SamDocumentsButton interaction pattern.
+function MatchedNsnsChip({ nsns }: { nsns: NonNullable<VendorSolicitation["nsns"]> }) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = !open;
+    setOpen(next);
+    if (next) {
+      const rect = btnRef.current?.getBoundingClientRect();
+      if (rect) setCoords({ top: rect.bottom + 4, left: rect.left });
+    }
+  };
+
+  // Close on outside click or Escape while the popover is open.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const count = nsns.length;
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        title={`${count} matched NSN${count === 1 ? "" : "s"}`}
+        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold text-primary hover:bg-primary/10 cursor-pointer shrink-0"
+      >
+        {count} NSN{count === 1 ? "" : "s"}
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+      {open && coords && createPortal(
+        <div
+          ref={panelRef}
+          style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 60 }}
+          className="w-56 max-h-80 overflow-y-auto rounded-md border border-border bg-background shadow-lg py-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted border-b border-border/60">
+            Matched NSNs · {count}
+          </div>
+          {nsns.map((n, i) => {
+            const display = n.fsc && n.niin ? `${n.fsc}-${formatNiin(n.niin)}` : formatNiin(n.niin);
+            if (!display) return null;
+            return (
+              <Link
+                key={`${n.fsc ?? ""}-${n.niin ?? ""}-${i}`}
+                href={`/library/parts?search_type=nsn_niin&q=${encodeURIComponent(display)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="block px-3 py-1.5 text-xs font-mono text-primary hover:bg-muted/10 cursor-pointer"
+              >
+                {display}
+              </Link>
+            );
+          })}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
 function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRetry }: SolicitationsPanelProps) {
   const [pdfModal, setPdfModal] = useState<{ id: number; number: string } | null>(null);
   const pdfUrl = pdfModal ? `/api/library/solicitations/${pdfModal.id}/pdf` : null;
 
   // Amendment indicator — one batch fetch per visible page; the cell
   // renders the "Amended" pill only when the sol has at least one row
-  // in solicitation_amendments.
-  const solIds = useMemo(() => solicitations.map((s) => s.solicitation_id), [solicitations]);
+  // in solicitation_amendments. Only DLA rows have amendments; SAM
+  // opportunity IDs live in a different namespace and must not be sent to
+  // the DLA amendment endpoint.
+  const solIds = useMemo(
+    () => solicitations.filter((s) => (s.source ?? "DLA") === "DLA").map((s) => s.solicitation_id),
+    [solicitations]
+  );
   const amendmentSummaries = useAmendmentSummaries(solIds);
   const [amendmentModal, setAmendmentModal] = useState<{ id: number; number: string | null } | null>(null);
 
@@ -1276,11 +1402,42 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         header: "Solicitation #",
         cell: ({ row }) => {
           const sol = row.original;
+          const isSam = (sol.source ?? "DLA") === "SAM";
           const summary = amendmentSummaries.get(sol.solicitation_id);
+          const displayNumber = formatSolicitationNumber(sol.solicitation_number);
           return (
             <span className="inline-flex items-center gap-1">
-              <span className="text-xs font-mono font-semibold">{sol.solicitation_number}</span>
-              {sol.has_pdf && (
+              {isSam ? (
+                // SAM rows link out to the public SAM.gov opportunity page.
+                <a
+                  href={sol.sam_url ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary ${sol.sam_url ? "cursor-pointer" : "cursor-default no-underline"}`}
+                  onClick={(e) => e.stopPropagation()}
+                  title={sol.sam_url ? "View on SAM.gov" : undefined}
+                >
+                  {displayNumber}
+                </a>
+              ) : (
+                <span className="text-xs font-mono font-semibold">{sol.solicitation_number}</span>
+              )}
+              {isSam && (
+                // Subtle marker that this row is a SAM.gov opportunity (in lieu of a Source column).
+                <Tooltip content={sol.notice_type ? `SAM.gov · ${sol.notice_type}` : "SAM.gov opportunity"}>
+                  <span className="inline-flex items-center rounded px-1 py-px text-[10px] font-medium uppercase tracking-wide text-muted bg-muted/10 border border-border/60 shrink-0">
+                    SAM.gov
+                  </span>
+                </Tooltip>
+              )}
+              {isSam && (sol.document_count ?? 0) > 0 && (
+                <SamDocumentsButton
+                  oppId={sol.solicitation_id}
+                  count={sol.document_count ?? 0}
+                  label={displayNumber}
+                />
+              )}
+              {!isSam && sol.has_pdf && (
                 <button
                   type="button"
                   title="View solicitation PDF"
@@ -1295,7 +1452,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                   </svg>
                 </button>
               )}
-              {summary && summary.amendment_count > 0 && (
+              {!isSam && summary && summary.amendment_count > 0 && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -1317,10 +1474,20 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         accessorFn: (row) => row.fsc && row.niin ? `${row.fsc}-${row.niin}` : row.niin,
         header: "NSN",
         cell: ({ row }) => {
+          const sol = row.original;
+          // SAM opportunities can span several of the vendor's parts — show a
+          // count chip that opens a popover of all matched NSNs.
+          if ((sol.source ?? "DLA") === "SAM") {
+            const nsns = sol.nsns ?? [];
+            if (nsns.length === 0) {
+              return <span className="text-xs font-mono text-muted">—</span>;
+            }
+            return <MatchedNsnsChip nsns={nsns} />;
+          }
           const displayValue =
-            row.original.fsc && row.original.niin
-              ? `${row.original.fsc}-${formatNiin(row.original.niin)}`
-              : formatNiin(row.original.niin);
+            sol.fsc && sol.niin
+              ? `${sol.fsc}-${formatNiin(sol.niin)}`
+              : formatNiin(sol.niin);
           if (!displayValue) {
             return <span className="text-xs font-mono text-muted">—</span>;
           }
@@ -1461,7 +1628,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         isLoading={isLoading}
         emptyComponent={emptyComponent}
         exportFilename="vendor-solicitations"
-        getRowId={(row) => String(row.solicitation_id)}
+        getRowId={(row) => `${row.source ?? "DLA"}-${row.solicitation_id}`}
         config={{
           features: {
             sorting: true,
