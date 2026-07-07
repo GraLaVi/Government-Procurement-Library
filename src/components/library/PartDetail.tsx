@@ -1397,38 +1397,63 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
             <span className="inline-flex items-center gap-1">
               {hasNumber ? (
                 isSam ? (
-                  // SAM rows link out to the public SAM.gov opportunity page.
-                  <a
-                    href={sol.sam_url ?? undefined}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary ${sol.sam_url ? "cursor-pointer" : "cursor-default no-underline"}`}
-                    onClick={(e) => e.stopPropagation()}
-                    title={sol.sam_url ? "View on SAM.gov" : undefined}
+                  // SAM rows link out to the public SAM.gov opportunity page. The
+                  // trailing external-link glyph both marks the row as a SAM.gov
+                  // opportunity (in lieu of a Source column / bulky badge) and
+                  // signals the link opens off-site.
+                  sol.sam_url ? (
+                    <a
+                      href={sol.sam_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                      title={sol.notice_type ? `View on SAM.gov · ${sol.notice_type}` : "View on SAM.gov"}
+                    >
+                      {displayNumber}
+                      <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                      </svg>
+                    </a>
+                  ) : (
+                    // No public URL — keep a compact muted marker so the SAM.gov
+                    // source is still visible.
+                    <Tooltip content={sol.notice_type ? `SAM.gov · ${sol.notice_type}` : "SAM.gov opportunity"}>
+                      <span className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-foreground">
+                        {displayNumber}
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-muted">SAM.gov</span>
+                      </span>
+                    </Tooltip>
+                  )
+                ) : sol.has_pdf ? (
+                  // DLA rows with a PDF: the solicitation number itself opens the
+                  // viewer. Opens a modal (not navigation), so this is a button
+                  // styled as a link, not an <a>. The trailing glyph signals that
+                  // the target is a document.
+                  <button
+                    type="button"
+                    title={`Open solicitation ${displayNumber} (PDF)`}
+                    aria-label={`Open solicitation ${displayNumber} (PDF)`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPdfModal({ id: sol.solicitation_id, number: sol.solicitation_number });
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
                   >
                     {displayNumber}
-                  </a>
+                    <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                    </svg>
+                  </button>
                 ) : (
-                  <Link
-                    href={`/library/parts?search_type=solicitation&q=${encodeURIComponent(sol.solicitation_number)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  // No PDF — plain text (a solicitation-search link here would just
+                  // reload the same view, so it's redundant).
+                  <span className="text-xs font-mono font-semibold text-foreground">
                     {displayNumber}
-                  </Link>
+                  </span>
                 )
               ) : (
                 <span className="text-xs font-mono font-semibold">—</span>
-              )}
-              {isSam && (
-                // Subtle marker that this row is a SAM.gov opportunity (in lieu of a Source column).
-                <Tooltip content={sol.notice_type ? `SAM.gov · ${sol.notice_type}` : "SAM.gov opportunity"}>
-                  <span className="inline-flex items-center rounded px-1 py-px text-[10px] font-medium uppercase tracking-wide text-muted bg-muted/10 border border-border/60 shrink-0">
-                    SAM.gov
-                  </span>
-                </Tooltip>
               )}
               {isSam && (sol.document_count ?? 0) > 0 && (
                 <SamDocumentsButton
@@ -1436,21 +1461,6 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                   count={sol.document_count ?? 0}
                   label={displayNumber}
                 />
-              )}
-              {sol.has_pdf && (
-                <button
-                  type="button"
-                  title="View solicitation PDF"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPdfModal({ id: sol.solicitation_id, number: sol.solicitation_number });
-                  }}
-                  className="text-primary hover:text-primary/80 cursor-pointer shrink-0"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                  </svg>
-                </button>
               )}
               {summary && summary.amendment_count > 0 && (
                 <button
