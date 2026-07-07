@@ -86,11 +86,17 @@ export function NotificationBell() {
     setOpen(false);
     if (!item.read) {
       setUnread((u) => Math.max(0, u - item.count));
-      fetch("/api/notifications/inbox/read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: item.ids }),
-      }).catch(() => null);
+      // Bid-match items are derived (no stored rows) — clearing them advances a
+      // per-user watermark rather than marking row ids read.
+      if (item.event_type === "bid_match") {
+        fetch("/api/notifications/inbox/bid-matches/seen", { method: "POST" }).catch(() => null);
+      } else {
+        fetch("/api/notifications/inbox/read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: item.ids }),
+        }).catch(() => null);
+      }
     }
     if (item.href) router.push(item.href);
   };
@@ -98,6 +104,8 @@ export function NotificationBell() {
   const markAllRead = async () => {
     setUnread(0);
     setItems((prev) => prev.map((i) => ({ ...i, read: true })));
+    // read-all also advances the bid-match watermark on the backend, but items
+    // may already be loaded; nothing else to do client-side.
     await fetch("/api/notifications/inbox/read-all", { method: "POST" }).catch(() => null);
   };
 

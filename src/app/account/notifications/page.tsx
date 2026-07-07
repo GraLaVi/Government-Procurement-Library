@@ -40,6 +40,11 @@ interface NotificationType {
   effective_frequency?: string;
 }
 
+interface BellSettings {
+  bell_bid_matches: boolean;
+  bid_match_bell_granularity: "rolling" | "per_day";
+}
+
 // Group types by category
 const groupByCategory = (
   types: NotificationType[]
@@ -78,6 +83,8 @@ export default function NotificationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [bell, setBell] = useState<BellSettings | null>(null);
+  const [savingBell, setSavingBell] = useState(false);
 
   const fetchTypes = useCallback(async () => {
     try {
@@ -100,11 +107,50 @@ export default function NotificationsPage() {
     }
   }, []);
 
+  const fetchBell = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications/inbox/settings", {
+        credentials: "include",
+      });
+      if (res.ok) setBell(await res.json());
+    } catch {
+      /* non-critical — the in-app card just won't render */
+    }
+  }, []);
+
   useEffect(() => {
     if (!authLoading && user) {
       fetchTypes();
+      fetchBell();
     }
-  }, [authLoading, user, fetchTypes]);
+  }, [authLoading, user, fetchTypes, fetchBell]);
+
+  const updateBell = async (patch: Partial<BellSettings>) => {
+    if (!bell) return;
+    const prev = bell;
+    setBell({ ...bell, ...patch }); // optimistic
+    setSavingBell(true);
+    try {
+      const res = await fetch("/api/notifications/inbox/settings", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) {
+        setBell(prev); // revert
+        setError("Failed to update in-app notification settings");
+        return;
+      }
+      setBell(await res.json());
+      setToast("Preference saved");
+    } catch {
+      setBell(prev);
+      setError("Failed to update in-app notification settings");
+    } finally {
+      setSavingBell(false);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -238,6 +284,71 @@ export default function NotificationsPage() {
           >
             Dismiss
           </button>
+        </div>
+      )}
+
+      {/* In-app (bell) notifications — separate from the email preferences
+          below. Currently governs bid-match alerts, which are derived at read
+          time rather than stored per-event. */}
+      {bell && (
+        <div className="mb-6 bg-card-bg rounded-xl border border-border overflow-hidden">
+          <div className="px-6 py-4 bg-muted-light/50 border-b border-border">
+            <h3 className="text-base font-semibold text-secondary">In-App Notifications</h3>
+            <p className="text-sm text-muted">
+              Alerts shown in the bell (🔔) at the top of the page
+            </p>
+          </div>
+          <div className="px-6 py-5">
+            <div className="flex items-start gap-4">
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-semibold text-foreground">Bid-match alerts</h4>
+                <p className="text-sm text-muted mt-1">
+                  Show a bell alert when new solicitations match your saved
+                  bid-matching profiles. Email alerts for bid matches are
+                  configured separately under <strong>Alerts</strong> below.
+                </p>
+                {bell.bell_bid_matches && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-xs text-muted">Show as:</span>
+                    {(["rolling", "per_day"] as const).map((g) => {
+                      const selected = bell.bid_match_bell_granularity === g;
+                      return (
+                        <button
+                          key={g}
+                          disabled={savingBell}
+                          onClick={() => updateBell({ bid_match_bell_granularity: g })}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
+                            selected
+                              ? "bg-primary/10 border-primary/30 text-primary"
+                              : "bg-card-bg border-border text-muted hover:border-primary/30 hover:text-foreground"
+                          } ${savingBell ? "cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          {g === "rolling" ? "Summary" : "Per day"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              {/* On/off toggle */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={bell.bell_bid_matches}
+                disabled={savingBell}
+                onClick={() => updateBell({ bell_bid_matches: !bell.bell_bid_matches })}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+                  bell.bell_bid_matches ? "bg-primary" : "bg-muted-light border border-border"
+                } ${savingBell ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    bell.bell_bid_matches ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
