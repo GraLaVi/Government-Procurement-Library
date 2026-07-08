@@ -37,6 +37,7 @@ import {
   formatCurrency,
   formatNumber,
   formatContractDate,
+  formatSamStatus,
 } from "@/lib/library/types";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { Badge } from "@/components/ui/Badge";
@@ -1751,21 +1752,30 @@ function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, 
     return () => clearTimeout(t);
   }, [toast]);
 
-  const allKeys = useMemo(() => manufacturers.map(manufacturerRowKey), [manufacturers]);
-  const allSelected = allKeys.length > 0 && allKeys.every((k) => selectedKeys.has(k));
+  // Only vendors with an Active, non-expired SAM registration may receive an
+  // RFQ, so selection (including "select all") is scoped to eligible rows.
+  const eligibleKeys = useMemo(
+    () => new Set(manufacturers.filter((m) => m.is_active).map(manufacturerRowKey)),
+    [manufacturers]
+  );
+  const allSelected = eligibleKeys.size > 0 && [...eligibleKeys].every((k) => selectedKeys.has(k));
 
-  const toggleRow = useCallback((key: string) => {
-    setSelectedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }, []);
+  const toggleRow = useCallback(
+    (key: string) => {
+      if (!eligibleKeys.has(key)) return; // ineligible (inactive/expired) vendor
+      setSelectedKeys((prev) => {
+        const next = new Set(prev);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        return next;
+      });
+    },
+    [eligibleKeys]
+  );
 
   const toggleAll = useCallback(() => {
-    setSelectedKeys((prev) => (prev.size >= allKeys.length ? new Set() : new Set(allKeys)));
-  }, [allKeys]);
+    setSelectedKeys((prev) => (prev.size >= eligibleKeys.size ? new Set() : new Set(eligibleKeys)));
+  }, [eligibleKeys]);
 
   const selections: RfqManufacturerSelection[] = useMemo(
     () =>
@@ -1794,13 +1804,25 @@ function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, 
       ),
       cell: ({ row }) => {
         const key = manufacturerRowKey(row.original);
+        const eligible = row.original.is_active;
         return (
           <input
             type="checkbox"
-            aria-label={`Select ${row.original.cage_code}`}
-            checked={selectedKeys.has(key)}
+            aria-label={
+              eligible
+                ? `Select ${row.original.cage_code}`
+                : `${row.original.cage_code} is inactive and cannot be sent an RFQ`
+            }
+            checked={eligible && selectedKeys.has(key)}
+            disabled={!eligible}
             onChange={() => toggleRow(key)}
             onClick={(e) => e.stopPropagation()}
+            title={
+              eligible
+                ? undefined
+                : "Vendor registration is inactive or expired — cannot send RFQ"
+            }
+            className={!eligible ? "opacity-40 cursor-not-allowed" : undefined}
           />
         );
       },
@@ -1835,6 +1857,19 @@ function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, 
             {row.original.vendor_name || "—"}
           </span>
         ),
+      },
+      {
+        id: "sam_status",
+        accessorKey: "is_active",
+        header: "Status",
+        cell: ({ row }) => {
+          const label = formatSamStatus(row.original.sam_status) || "Unknown";
+          return row.original.is_active ? (
+            <Badge variant="success" size="sm">{label}</Badge>
+          ) : (
+            <Badge variant="warning" size="sm">{label}</Badge>
+          );
+        },
       },
       {
         id: "approved_source",

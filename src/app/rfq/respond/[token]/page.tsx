@@ -1,7 +1,9 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { DateField } from "@/components/ui/DateField";
 import { formatDateMmDdYyyy } from "@/lib/dates";
@@ -31,6 +33,10 @@ const inputClass =
 export default function RfqRespondPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
   const router = useRouter();
+
+  // A logged-in viewer already has an account, so the "create a free account"
+  // CTA is stale for them. Swap it for a shortcut into their RFQ inbox instead.
+  const { isAuthenticated } = useAuth();
 
   // Optional free-account creation (shown after responding).
   const [acct, setAcct] = useState({ first_name: "", last_name: "", email: "", password: "" });
@@ -210,6 +216,13 @@ export default function RfqRespondPage({ params }: { params: Promise<{ token: st
     </div>
   );
 
+  // Shown to logged-in viewers in place of the create-account CTA.
+  const dashboardShortcut = (
+    <Link href="/rfq/received" className="text-sm text-primary hover:underline">
+      View your RFQs in your dashboard →
+    </Link>
+  );
+
   if (loading) return <div className="max-w-3xl mx-auto p-8 text-sm text-muted">Loading RFQ…</div>;
 
   if (loadError || !view) {
@@ -237,7 +250,11 @@ export default function RfqRespondPage({ params }: { params: Promise<{ token: st
           </p>
         </div>
 
-        {accountCard}
+        {isAuthenticated ? (
+          <div className="text-center">{dashboardShortcut}</div>
+        ) : (
+          accountCard
+        )}
       </div>
     );
   }
@@ -346,8 +363,11 @@ export default function RfqRespondPage({ params }: { params: Promise<{ token: st
         </Button>
       </div>
 
-      {/* Optional: create a free account (also offered after responding) */}
-      {showSignup ? (
+      {/* Logged-in viewers already have an account — offer a dashboard shortcut
+          instead of the create-account CTA (also offered after responding). */}
+      {isAuthenticated ? (
+        dashboardShortcut
+      ) : showSignup ? (
         accountCard
       ) : (
         <button

@@ -593,6 +593,9 @@ export interface PartManufacturer {
   rncc: string | null;
   rnvc: string | null;
   is_approved_source: boolean;
+  sam_status: string | null;
+  registration_expiration_date: string | null;
+  is_active: boolean;
 }
 
 export interface PartManufacturersResponse {

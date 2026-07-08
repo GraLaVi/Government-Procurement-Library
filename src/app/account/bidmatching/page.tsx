@@ -73,6 +73,7 @@ const TSQUERY_CONDITION_TYPES = [
   "PID",
   "TECHNICAL_CHARACTERISTICS",
   "SAM_KEYWORD",
+  "END_USE",
 ];
 
 const IDENTIFIER_CONDITION_TYPES = [
@@ -106,6 +107,7 @@ const CONDITION_TYPE_LABELS: Record<string, string> = {
   PID: "Procurement Item Description",
   TECHNICAL_CHARACTERISTICS: "Technical characteristics",
   SAM_KEYWORD: "SAM keyword (Navy/Army/AF)",
+  END_USE: "End use (weapon system)",
   // Identifier / code match
   NIIN: "NIIN",
   FSC: "FSC",
@@ -148,6 +150,7 @@ const CONDITION_TYPE_OPERATOR_MATRIX: Record<string, string[]> = {
   PID: ["tsquery"],
   TECHNICAL_CHARACTERISTICS: ["tsquery"],
   SAM_KEYWORD: ["tsquery"],
+  END_USE: ["tsquery"],
 };
 
 const CONDITION_TYPE_DEFAULT_OPERATOR: Record<string, string> = {
@@ -162,6 +165,7 @@ const CONDITION_TYPE_DEFAULT_OPERATOR: Record<string, string> = {
   PID: "tsquery",
   TECHNICAL_CHARACTERISTICS: "tsquery",
   SAM_KEYWORD: "tsquery",
+  END_USE: "tsquery",
 };
 
 const OPERATOR_LABELS: Record<string, string> = {
@@ -188,6 +192,7 @@ const CONDITION_TYPE_HINTS: Record<string, string> = {
   PID: "Keyword(s) in the part's CTDF procurement item description. DIBBS + SAM.",
   TECHNICAL_CHARACTERISTICS: "Keyword(s) in the part's technical characteristics (material, color, finish, …). DIBBS + SAM.",
   SAM_KEYWORD: "Keyword(s) in the SAM notice title/description — Navy/Army/Air-Force notices only.",
+  END_USE: "Keyword(s) in the name of a weapon system the part is used on (e.g. 'arleigh burke', 'nimitz', 'abrams'). All words must appear in the weapon system's name.",
   // Identifier / code match.
   NIIN: "The part's 9-digit NIIN. Paste a full 13-digit NSN and we'll strip the FSC for you. DIBBS + SAM.",
   FSC: "The part's Federal Supply Class. DIBBS + SAM.",
@@ -216,7 +221,7 @@ function operatorExample(condition_type: string, operator: string): string {
     if (condition_type === "MFG_PART_NUMBER") return "MS27%";
     return "%pattern%";
   }
-  if (operator === "tsquery") return "pump relay";
+  if (operator === "tsquery") return condition_type === "END_USE" ? "arleigh burke" : "pump relay";
   // eq examples
   if (condition_type === "NIIN") return "01-234-5678";
   if (condition_type === "FSC") return "5945";
