@@ -36,7 +36,10 @@ export default function RfqRespondPage({ params }: { params: Promise<{ token: st
 
   // A logged-in viewer already has an account, so the "create a free account"
   // CTA is stale for them. Swap it for a shortcut into their RFQ inbox instead.
-  const { isAuthenticated } = useAuth();
+  // refreshUser hydrates the client auth context after the create-account call
+  // sets its cookies — without it, the soft navigation to /rfq/received would
+  // land on stale unauthenticated state and show "Sign in required".
+  const { isAuthenticated, refreshUser } = useAuth();
 
   // Optional free-account creation (shown after responding).
   const [acct, setAcct] = useState({ first_name: "", last_name: "", email: "", password: "" });
@@ -63,7 +66,12 @@ export default function RfqRespondPage({ params }: { params: Promise<{ token: st
         setAcctBusy(false);
         return;
       }
-      router.push("/rfq/received");
+      // The create-account response set our auth cookies; refresh the client
+      // auth context so /rfq/received sees us as signed in (a soft navigation
+      // alone won't re-run the provider's initial fetch). Keep the button in
+      // its busy state through the redirect so the card doesn't flash back.
+      await refreshUser();
+      router.push("/rfq/received?welcome=1");
     } catch {
       setAcctError("Network error creating account.");
       setAcctBusy(false);

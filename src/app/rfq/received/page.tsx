@@ -22,6 +22,15 @@ export default function RfqReceivedPage() {
   const [items, setItems] = useState<ReceivedRfqItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Shown once right after free-account creation (?welcome=1). Read from the
+  // URL client-side to avoid pulling the whole page into a Suspense boundary.
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("welcome") === "1") {
+      setShowWelcome(true);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,6 +70,25 @@ export default function RfqReceivedPage() {
 
   return (
     <div className="space-y-6">
+      {showWelcome && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm">
+          <div className="text-foreground">
+            <span className="font-semibold">Account created — you&apos;re signed in.</span>{" "}
+            <span className="text-muted">
+              Your free account is linked to your company&apos;s CAGE. Manage every RFQ sent to you right here.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowWelcome(false)}
+            className="text-muted hover:text-foreground text-lg leading-none"
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-bold text-foreground">RFQs received</h1>
         <p className="text-muted mt-1 text-sm">Requests for quote sent to your company.</p>

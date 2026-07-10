@@ -54,7 +54,7 @@ interface HeaderProps {
 }
 
 export function Header({ showAccountLink = true }: HeaderProps) {
-  const { user, logout, isRfqResponderOnly, hasProductAccess } = useAuth();
+  const { user, logout, isRfqResponderOnly } = useAuth();
   const [isLibraryDropdownOpen, setIsLibraryDropdownOpen] = useState(false);
   const [isHelpDropdownOpen, setIsHelpDropdownOpen] = useState(false);
   const [isRfqDropdownOpen, setIsRfqDropdownOpen] = useState(false);
@@ -211,15 +211,9 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 Bid-Matching
               </Link>
               )}
-              {/* RFQ: responders get a single "Received" link; senders get the full dropdown */}
-              {isRfqResponderOnly ? (
-                <Link
-                  href="/rfq/received"
-                  className={topLinkClass(isLinkActive("/rfq/received", pathname))}
-                >
-                  RFQs Received
-                </Link>
-              ) : hasProductAccess("vendor_rfq") ? (
+              {/* RFQ: the full menu shows for everyone as an upsell surface. Received
+                  works for all tiers; sender pages self-gate to the upgrade CTA for
+                  customers without vendor_rfq. */}
               <div className="relative" ref={rfqDropdownRef}>
                 <button
                   onClick={() => setIsRfqDropdownOpen(!isRfqDropdownOpen)}
@@ -251,7 +245,6 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   </div>
                 )}
               </div>
-              ) : null}
               {/* Help Dropdown */}
               <div className="relative" ref={helpDropdownRef}>
                 <button
@@ -373,17 +366,8 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               </>
               )}
 
-              {/* RFQ: responders get a single "Received" link; senders get the expandable section */}
-              {isRfqResponderOnly ? (
-                <Link
-                  href="/rfq/received"
-                  className={mobileRowClass(isLinkActive("/rfq/received", pathname))}
-                  onClick={closeMobileMenu}
-                >
-                  RFQs Received
-                </Link>
-              ) : hasProductAccess("vendor_rfq") ? (
-              <>
+              {/* RFQ: the full menu shows for everyone as an upsell surface. Received
+                  works for all tiers; sender pages self-gate to the upgrade CTA. */}
               <button
                 onClick={() => setIsMobileRfqOpen(!isMobileRfqOpen)}
                 className={`flex items-center justify-between w-full text-left ${mobileRowClass(rfqGroupActive)}`}
@@ -413,8 +397,6 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   ))}
                 </div>
               )}
-              </>
-              ) : null}
 
               {/* Help expandable section */}
               <button
