@@ -1805,25 +1805,28 @@ function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, 
       cell: ({ row }) => {
         const key = manufacturerRowKey(row.original);
         const eligible = row.original.is_active;
+        const statusLabel = formatSamStatus(row.original.sam_status);
+        const disabledReason = eligible
+          ? ""
+          : statusLabel
+            ? `Vendor's SAM.gov registration is ${statusLabel.toLowerCase()} — RFQs can only be sent to actively registered vendors.`
+            : "No SAM.gov registration found for this CAGE code — RFQs can only be sent to actively registered vendors.";
         return (
-          <input
-            type="checkbox"
-            aria-label={
-              eligible
-                ? `Select ${row.original.cage_code}`
-                : `${row.original.cage_code} is inactive and cannot be sent an RFQ`
-            }
-            checked={eligible && selectedKeys.has(key)}
-            disabled={!eligible}
-            onChange={() => toggleRow(key)}
-            onClick={(e) => e.stopPropagation()}
-            title={
-              eligible
-                ? undefined
-                : "Vendor registration is inactive or expired — cannot send RFQ"
-            }
-            className={!eligible ? "opacity-40 cursor-not-allowed" : undefined}
-          />
+          <Tooltip content={disabledReason}>
+            <input
+              type="checkbox"
+              aria-label={
+                eligible
+                  ? `Select ${row.original.cage_code}`
+                  : `${row.original.cage_code} is inactive and cannot be sent an RFQ`
+              }
+              checked={eligible && selectedKeys.has(key)}
+              disabled={!eligible}
+              onChange={() => toggleRow(key)}
+              onClick={(e) => e.stopPropagation()}
+              className={!eligible ? "opacity-40 cursor-not-allowed" : undefined}
+            />
+          </Tooltip>
         );
       },
     }),
@@ -1857,19 +1860,6 @@ function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, 
             {row.original.vendor_name || "—"}
           </span>
         ),
-      },
-      {
-        id: "sam_status",
-        accessorKey: "is_active",
-        header: "Status",
-        cell: ({ row }) => {
-          const label = formatSamStatus(row.original.sam_status) || "Unknown";
-          return row.original.is_active ? (
-            <Badge variant="success" size="sm">{label}</Badge>
-          ) : (
-            <Badge variant="warning" size="sm">{label}</Badge>
-          );
-        },
       },
       {
         id: "approved_source",
