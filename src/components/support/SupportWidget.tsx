@@ -35,6 +35,16 @@ const WIDGET_IFRAME_ID = "jsd-widget";
  * or afterInteractive) loads the file but the widget never initialises. We
  * append the script ourselves and re-dispatch DOMContentLoaded once it has
  * executed, which is what actually triggers the render.
+ *
+ * Why the script is injected at most once and never removed: `enabled` can
+ * toggle true → false → true within a single page (an auth-refresh blip or a
+ * consent change during sign-in). If teardown removed the <script>, the next
+ * enable would inject a *second* embed.js — and because each embed.js registers
+ * its own DOMContentLoaded initialiser, our re-dispatch would fire both and
+ * embed.js aborts with "could not render more than one widget on a single
+ * page". So we load embed.js once, leave it in place, and only add/remove the
+ * visible iframe launcher. A full reload is still needed for a completely clean
+ * slate on sign-out (the embed has no public unload API).
  */
 export function SupportWidget() {
   const { isAuthenticated } = useAuth();
@@ -43,37 +53,47 @@ export function SupportWidget() {
   const enabled = isAuthenticated && consent.functional;
 
   useEffect(() => {
-    if (enabled) {
-      // Idempotent: the script (and its widget) persist across in-app
-      // navigation, so don't re-inject if it's already there.
-      if (document.getElementById(SCRIPT_ID)) return;
-
-      const script = document.createElement("script");
-      script.id = SCRIPT_ID;
-      script.src = `${JSD_BASE_URL}/assets/embed.js`;
-      script.async = true;
-      script.setAttribute("data-jsd-embedded", "");
-      script.setAttribute("data-key", JSD_KEY);
-      script.setAttribute("data-base-url", JSD_BASE_URL);
-
-      // embed.js only initialises on DOMContentLoaded; re-fire it after the
-      // script executes so the listener it just registered actually runs.
-      script.addEventListener("load", () => {
-        document.dispatchEvent(new Event("DOMContentLoaded"));
-      });
-
-      document.body.appendChild(script);
+    if (!enabled) {
+      // Signed out / consent withdrawn: remove only the visible launcher and
+      // its iframe (where the third-party cookies/storage live). The embed
+      // script stays put — see the component doc comment for why.
+      document
+        .querySelectorAll(`#${WIDGET_IFRAME_ID}, iframe#${WIDGET_IFRAME_ID}`)
+        .forEach((el) => el.remove());
       return;
     }
 
-    // Disabled (signed out, or functional consent withdrawn): tear down the
-    // script and the launcher/iframe it injected. A fresh page load is still
-    // needed for a fully clean slate — the embed has no public unload API —
-    // but this removes the visible widget immediately.
-    document.getElementById(SCRIPT_ID)?.remove();
-    document
-      .querySelectorAll(`#${WIDGET_IFRAME_ID}, iframe#${WIDGET_IFRAME_ID}`)
-      .forEach((el) => el.remove());
+    // embed.js only initialises on DOMContentLoaded, which fired long before
+    // this hydrated SPA mounted, so we re-dispatch it to trigger a render.
+    // Never dispatch while a launcher already exists, or embed.js re-runs its
+    // initialiser on the live widget and aborts with the duplicate-widget error.
+    const renderWidget = () => {
+      if (!document.getElementById(WIDGET_IFRAME_ID)) {
+        document.dispatchEvent(new Event("DOMContentLoaded"));
+      }
+    };
+
+    // Already loaded earlier this page (e.g. the user navigated, or signed out
+    // and back in). Don't inject a second embed.js — just re-render the
+    // launcher if it was torn down.
+    if (document.getElementById(SCRIPT_ID)) {
+      renderWidget();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = SCRIPT_ID;
+    script.src = `${JSD_BASE_URL}/assets/embed.js`;
+    script.async = true;
+    script.setAttribute("data-jsd-embedded", "");
+    script.setAttribute("data-key", JSD_KEY);
+    script.setAttribute("data-base-url", JSD_BASE_URL);
+
+    // Re-fire DOMContentLoaded once the script has executed so the initialiser
+    // it just registered actually runs.
+    script.addEventListener("load", renderWidget);
+
+    document.body.appendChild(script);
   }, [enabled]);
 
   return null;
