@@ -58,6 +58,31 @@ function formatSolicitationNumber(value: string | null | undefined): string {
   return m ? `${m[1]}-${m[2]}-${m[3]}-${m[4]}` : value;
 }
 
+// Maps a SAM.gov notice_type to the compact label + tint used in the
+// segmented source/type pill on the Open Solicitations tab. "Biddable"
+// notices (an actual solicitation is on the street) read green; earlier-stage
+// notices (pre-solicitation / market research) read amber. Unknown/missing
+// types fall back to a neutral chip carrying the raw value.
+function samNoticeMeta(noticeType: string | null | undefined): {
+  label: string;
+  className: string;
+} {
+  const biddable = "bg-emerald-100 text-emerald-800";
+  const early = "bg-amber-100 text-amber-800";
+  switch (noticeType) {
+    case "Solicitation":
+      return { label: "Solicitation", className: biddable };
+    case "Combined Synopsis/Solicitation":
+      return { label: "Combined", className: biddable };
+    case "Presolicitation":
+      return { label: "Presolicitation", className: early };
+    case "Sources Sought":
+      return { label: "Sources Sought", className: early };
+    default:
+      return { label: noticeType || "Opportunity", className: "bg-muted/20 text-muted" };
+  }
+}
+
 // Module-scope CSV column specs for the vendor-detail tab exports.
 // Kept outside the component bodies so the parent-level export button
 // (rendered next to the tab strip) can reach them without prop-drilling
@@ -1382,6 +1407,10 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
   );
   const amendmentSummaries = useAmendmentSummaries(solIds);
   const [amendmentModal, setAmendmentModal] = useState<{ id: number; number: string | null } | null>(null);
+  // SAM opportunity description modal — opened from the solicitation number when
+  // sam_opportunities.description is present (otherwise the number links out to
+  // SAM.gov directly).
+  const [samDescModal, setSamDescModal] = useState<{ number: string; description: string; url: string | null } | null>(null);
 
   // Define columns for solicitations table
   const columns = useMemo<ColumnDef<VendorSolicitation>[]>(
@@ -1408,28 +1437,53 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           return (
             <span className="inline-flex items-center gap-1">
               {isSam ? (
-                // SAM rows link out to the public SAM.gov opportunity page.
-                <a
-                  href={sol.sam_url ?? undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary ${sol.sam_url ? "cursor-pointer" : "cursor-default no-underline"}`}
-                  onClick={(e) => e.stopPropagation()}
-                  title={sol.sam_url ? "View on SAM.gov" : undefined}
-                >
-                  {displayNumber}
-                </a>
+                sol.sam_description ? (
+                  // When the opportunity has a description, the number opens a
+                  // modal with that text (plus a link out to SAM.gov).
+                  <button
+                    type="button"
+                    className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer text-left"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSamDescModal({
+                        number: displayNumber,
+                        description: sol.sam_description ?? "",
+                        url: sol.sam_url ?? null,
+                      });
+                    }}
+                    title="View opportunity description"
+                  >
+                    {displayNumber}
+                  </button>
+                ) : (
+                  // No description — link straight out to the SAM.gov page.
+                  <a
+                    href={sol.sam_url ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary ${sol.sam_url ? "cursor-pointer" : "cursor-default no-underline"}`}
+                    onClick={(e) => e.stopPropagation()}
+                    title={sol.sam_url ? "View on SAM.gov" : undefined}
+                  >
+                    {displayNumber}
+                  </a>
+                )
               ) : (
                 <span className="text-xs font-mono font-semibold">{sol.solicitation_number}</span>
               )}
-              {isSam && (
-                // Subtle marker that this row is a SAM.gov opportunity (in lieu of a Source column).
-                <Tooltip content={sol.notice_type ? `SAM.gov · ${sol.notice_type}` : "SAM.gov opportunity"}>
-                  <span className="inline-flex items-center rounded px-1 py-px text-[10px] font-medium uppercase tracking-wide text-muted bg-muted/10 border border-border/60 shrink-0">
-                    SAM.gov
-                  </span>
-                </Tooltip>
-              )}
+              {isSam && (() => {
+                // Color-coded notice-type chip (green = biddable, amber = early
+                // stage). The tooltip carries the full, unabbreviated notice_type
+                // (and the SAM.gov source) for the long ones.
+                const notice = samNoticeMeta(sol.notice_type);
+                return (
+                  <Tooltip content={sol.notice_type ? `SAM.gov · ${sol.notice_type}` : "SAM.gov opportunity"}>
+                    <span className={`inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium leading-none shrink-0 ${notice.className}`}>
+                      {notice.label}
+                    </span>
+                  </Tooltip>
+                );
+              })()}
               {isSam && (sol.document_count ?? 0) > 0 && (
                 <SamDocumentsButton
                   oppId={sol.solicitation_id}
@@ -1686,6 +1740,33 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
               title={`Solicitation ${pdfModal.number}`}
               className="w-full border border-border rounded min-h-[70vh]"
             />
+          </div>
+        </Modal>
+      )}
+      {/* SAM.gov opportunity description — opened from the solicitation number
+          when sam_opportunities.description is present. Rendered as plain,
+          whitespace-preserving text (SAM narratives are long and unformatted). */}
+      {samDescModal && (
+        <Modal
+          isOpen={true}
+          onClose={() => setSamDescModal(null)}
+          title={`Solicitation ${samDescModal.number}`}
+          size="xl"
+        >
+          <div className="flex flex-col gap-3">
+            {samDescModal.url && (
+              <a
+                href={samDescModal.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="self-start text-xs text-primary hover:underline"
+              >
+                View on SAM.gov ↗
+              </a>
+            )}
+            <p className="max-h-[65vh] overflow-y-auto whitespace-pre-wrap break-words text-sm text-foreground">
+              {samDescModal.description}
+            </p>
           </div>
         </Modal>
       )}

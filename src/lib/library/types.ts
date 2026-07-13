@@ -119,6 +119,9 @@ export interface VendorSolicitation {
   notice_type?: string | null;
   // Public SAM.gov deep link for SAM rows (sam_opportunities.ui_link); null for DLA.
   sam_url?: string | null;
+  // Full SAM.gov opportunity narrative (sam_opportunities.description); shown in a
+  // modal off the solicitation number. Null/absent when there's no description.
+  sam_description?: string | null;
   // Count of viewable documents on a SAM opportunity; 0 for DLA rows.
   document_count?: number;
   // The vendor's matched parts on this opportunity. Populated on SAM rows
