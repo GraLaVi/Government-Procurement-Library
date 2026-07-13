@@ -1482,6 +1482,27 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
             if (nsns.length === 0) {
               return <span className="text-xs font-mono text-muted">—</span>;
             }
+            // A single matched NSN doesn't need a dropdown — show it inline
+            // (same presentation as the DLA single-NSN branch below). Only use
+            // the count chip + popover when there's more than one.
+            if (nsns.length === 1) {
+              const n = nsns[0];
+              const single = n.fsc && n.niin ? `${n.fsc}-${formatNiin(n.niin)}` : formatNiin(n.niin);
+              if (!single) {
+                return <span className="text-xs font-mono text-muted">—</span>;
+              }
+              return (
+                <Link
+                  href={`/library/parts?search_type=nsn_niin&q=${encodeURIComponent(single)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-mono text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {single}
+                </Link>
+              );
+            }
             return <MatchedNsnsChip nsns={nsns} />;
           }
           const displayValue =
