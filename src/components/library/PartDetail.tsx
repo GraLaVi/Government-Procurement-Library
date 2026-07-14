@@ -1565,9 +1565,21 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         id: "buyer_name",
         accessorKey: "buyer_name",
         header: "Buyer",
-        cell: ({ row }) => (
-          <span className="text-xs font-medium text-foreground">{row.original.buyer_name || "—"}</span>
-        ),
+        cell: ({ row }) => {
+          const buyer = row.original.buyer_name;
+          if (!buyer) return <span className="text-xs text-muted">—</span>;
+          // Some SAM buyers aren't a name but a long "how to contact the right
+          // person" blurb (up to a few hundred chars). Trim to 25 chars and
+          // reveal the full text on hover.
+          if (buyer.length <= 25) {
+            return <span className="text-xs font-medium text-foreground">{buyer}</span>;
+          }
+          return (
+            <Tooltip content={buyer}>
+              <span className="text-xs font-medium text-foreground">{`${buyer.slice(0, 25)}…`}</span>
+            </Tooltip>
+          );
+        },
         meta: { className: "hidden lg:table-cell" },
       },
       {
