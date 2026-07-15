@@ -17,6 +17,7 @@ import {
   PartDetail as PartDetailType,
   buildPartsSearchParams,
   getPartsSearchTypeConfig,
+  partKey,
 } from "@/lib/library/types";
 import { PartsSearchActionData, RecentActionEntry } from "@/lib/preferences/types";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
@@ -93,17 +94,26 @@ function PartsSearchPageContent() {
     searchFormRef.current?.focusInput();
   }, []);
 
-  // Handle part selection
-  const handleSelectPart = useCallback(async (nsn: string) => {
-    if (nsn === selectedNSN) return;
+  // Handle part selection.
+  // `key` is a part key from partKey(): an NSN, or "ID-<part_id>" for NSN-less
+  // (DIBBS part-number-only) parts. Never navigate on an empty key — that would
+  // hit /api/library/parts/ (no such route) and get an HTML 404 back.
+  const handleSelectPart = useCallback(async (key: string) => {
+    if (!key || key === selectedNSN) return;
 
-    setSelectedNSN(nsn);
+    setSelectedNSN(key);
     setIsLoadingDetail(true);
     setDetailError(null);
     setPartDetail(null);
 
     try {
-      const response = await fetchWithAuth(`/api/library/parts/${encodeURIComponent(nsn)}`);
+      const response = await fetchWithAuth(`/api/library/parts/${encodeURIComponent(key)}`);
+      // Guard against a non-JSON body (e.g. an HTML error page) so we surface a
+      // clean message instead of a "Unexpected token '<'" JSON parse crash.
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        throw new Error(`Failed to load part details (HTTP ${response.status})`);
+      }
       const data = await response.json();
 
       if (!response.ok) {
@@ -140,7 +150,7 @@ function PartsSearchPageContent() {
       setPartDetail(null);
       if (cached.results.length > 0) setIsSearchExpanded(false);
       if (cached.results.length === 1 && (type === "nsn_niin" || type === "solicitation" || type === "mfg_part_number" || type === "contract_number")) {
-        handleSelectPart(cached.results[0].nsn);
+        handleSelectPart(partKey(cached.results[0]));
       }
       return;
     }
@@ -205,7 +215,7 @@ function PartsSearchPageContent() {
 
       // If only one result and it's an exact match search (NSN/NIIN, solicitation, etc.), auto-select it
       if (searchResponse.results.length === 1 && (type === "nsn_niin" || type === "solicitation" || type === "mfg_part_number" || type === "contract_number")) {
-        await handleSelectPart(searchResponse.results[0].nsn);
+        await handleSelectPart(partKey(searchResponse.results[0]));
       }
     } catch (error) {
       console.error("Search error:", error);

@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import {
   PartSearchResult,
   PartSearchResponse,
-  formatNSN,
+  formatPartIdentity,
   formatCurrency,
 } from "@/lib/library/types";
 
@@ -170,7 +170,7 @@ export function SolicitationNumberLink({
                     {results.map((p) => (
                       <tr key={p.id} className="hover:bg-muted-light/30">
                         <td className="px-4 py-2 font-mono font-semibold text-foreground whitespace-nowrap">
-                          {formatNSN(p.nsn) || p.nsn}
+                          {formatPartIdentity(p)}
                         </td>
                         <td
                           className="px-4 py-2 text-foreground truncate max-w-[280px] md:max-w-[480px]"

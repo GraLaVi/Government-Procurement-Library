@@ -398,9 +398,11 @@ export type PartsSearchType = 'nsn_niin' | 'solicitation' | 'mfg_part_number' | 
 
 export interface PartSearchResult {
   id: number;
-  nsn: string;
+  nsn: string;  // "" for NSN-less (DIBBS part-number-only) parts — address these via partKey()/id
   niin: string | null;
   fsc: string | null;
+  mfg_cage: string | null;         // manufacturer CAGE — part identity when there is no NSN
+  mfg_part_number: string | null;  // manufacturer part number — part identity when there is no NSN
   description: string | null;
   unit_of_issue: string | null;
   unit_price: number | null;
@@ -854,6 +856,41 @@ export function formatNSN(nsn: string | null | undefined): string | null {
   
   // Otherwise return cleaned version
   return clean;
+}
+
+/**
+ * Stable URL key for addressing a part in the read API.
+ *
+ * Normal parts are keyed by their NSN. DIBBS part-number-only parts have no NSN
+ * (niin/fsc null → nsn comes back as ""), so they are keyed by internal id as
+ * "ID-<part_id>"; the backend resolver accepts either form. Never returns "",
+ * so it is always safe to interpolate into a /api/library/parts/<key> URL.
+ */
+export function partKey(p: { nsn?: string | null; id: number }): string {
+  const nsn = p.nsn?.trim();
+  return nsn ? nsn : `ID-${p.id}`;
+}
+
+/**
+ * Human-readable identity of a part: its formatted NSN, or "CAGE / part number"
+ * when the part has no NSN (DIBBS part-number-only parts). Falls back to "—".
+ */
+export function formatPartIdentity(p: {
+  nsn?: string | null;
+  mfg_cage?: string | null;
+  mfg_part_number?: string | null;
+}): string {
+  const nsn = formatNSN(p.nsn ?? null);
+  if (nsn) return nsn;
+  const cage = p.mfg_cage?.trim();
+  const pn = p.mfg_part_number?.trim();
+  if (cage && pn) return `${cage} / ${pn}`;
+  return pn || cage || '—';
+}
+
+/** True when a part has no NSN and is identified only by CAGE + part number. */
+export function isPartNumberOnly(p: { nsn?: string | null; niin?: string | null }): boolean {
+  return !p.nsn?.trim() && !p.niin?.trim();
 }
 
 // Format contract date

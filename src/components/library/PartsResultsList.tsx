@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { PartSearchResult, formatNSN, formatCurrency } from "@/lib/library/types";
+import { PartSearchResult, formatCurrency, partKey, formatPartIdentity, isPartNumberOnly } from "@/lib/library/types";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
 import type { LibraryTier } from "@/lib/library/tier";
@@ -34,8 +34,18 @@ export function PartsResultsList({
         accessorKey: "nsn",
         header: "NSN",
         cell: ({ row }) => (
-          <span className="font-mono font-semibold text-primary">
-            {formatNSN(row.original.nsn) || row.original.nsn}
+          <span className="inline-flex items-center gap-1.5">
+            <span className="font-mono font-semibold text-primary">
+              {formatPartIdentity(row.original)}
+            </span>
+            {isPartNumberOnly(row.original) && (
+              <span
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted-light text-muted whitespace-nowrap"
+                title="This DIBBS solicitation has no NSN — the part is identified by manufacturer CAGE and part number."
+              >
+                P/N only
+              </span>
+            )}
           </span>
         ),
       },
@@ -101,7 +111,7 @@ export function PartsResultsList({
   // and icons, which doesn't translate cleanly to CSV).
   const csvColumns = useMemo<CsvColumn<PartSearchResult>[]>(
     () => [
-      { header: "NSN", value: (r) => formatNSN(r.nsn) || r.nsn },
+      { header: "NSN", value: (r) => formatPartIdentity(r) },
       { header: "Description", value: (r) => r.description ?? "" },
       { header: "Unit", value: (r) => r.unit_of_issue ?? "" },
       // Unit price as a plain number so spreadsheets can sum it.
@@ -176,8 +186,8 @@ export function PartsResultsList({
       <DataTable
         data={results}
         columns={columns}
-        onRowClick={(row) => onSelect(row.nsn)}
-        getRowId={(row) => row.nsn}
+        onRowClick={(row) => onSelect(partKey(row))}
+        getRowId={(row) => partKey(row)}
         exportFilename="parts-search-results"
         config={{
           features: {

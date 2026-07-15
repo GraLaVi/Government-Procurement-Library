@@ -38,6 +38,9 @@ import {
   formatNumber,
   formatContractDate,
   formatSamStatus,
+  partKey,
+  formatPartIdentity,
+  isPartNumberOnly,
 } from "@/lib/library/types";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { Badge } from "@/components/ui/Badge";
@@ -295,6 +298,11 @@ export function PartDetail({ part }: PartDetailProps) {
   const tier = resolvePartsTier(hasAnyProductAccess);
   const isFreeOnly = tier === "free";
 
+  // URL key for addressing this part in the read API: its NSN, or "ID-<part_id>"
+  // for NSN-less (DIBBS part-number-only) parts whose nsn comes back as "".
+  const partReqKey = partKey(part);
+  const partNumberOnly = isPartNumberOnly(part);
+
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   
   // Code definitions for tooltips
@@ -452,7 +460,7 @@ export function PartDetail({ part }: PartDetailProps) {
     setProcurementError(null);
 
     try {
-      const response = await fetch(`/api/library/parts/${encodeURIComponent(part.nsn)}/procurement-history?limit=50`);
+      const response = await fetch(`/api/library/parts/${encodeURIComponent(partReqKey)}/procurement-history?limit=50`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -469,7 +477,7 @@ export function PartDetail({ part }: PartDetailProps) {
     } finally {
       setIsLoadingProcurement(false);
     }
-  }, [part.nsn, procurementFetched, isLoadingProcurement]);
+  }, [partReqKey, procurementFetched, isLoadingProcurement]);
 
   // Fetch solicitations when tab is clicked (lazy loading)
   const fetchSolicitations = useCallback(async () => {
@@ -479,7 +487,7 @@ export function PartDetail({ part }: PartDetailProps) {
     setSolicitationsError(null);
 
     try {
-      const response = await fetch(`/api/library/parts/${encodeURIComponent(part.nsn)}/solicitations`);
+      const response = await fetch(`/api/library/parts/${encodeURIComponent(partReqKey)}/solicitations`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -496,7 +504,7 @@ export function PartDetail({ part }: PartDetailProps) {
     } finally {
       setIsLoadingSolicitations(false);
     }
-  }, [part.nsn, solicitationsFetched, isLoadingSolicitations]);
+  }, [partReqKey, solicitationsFetched, isLoadingSolicitations]);
 
   // Fetch manufacturers when tab is clicked (lazy loading)
   const fetchManufacturers = useCallback(async () => {
@@ -506,7 +514,7 @@ export function PartDetail({ part }: PartDetailProps) {
     setManufacturersError(null);
 
     try {
-      const response = await fetch(`/api/library/parts/${encodeURIComponent(part.nsn)}/manufacturers`);
+      const response = await fetch(`/api/library/parts/${encodeURIComponent(partReqKey)}/manufacturers`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -523,7 +531,7 @@ export function PartDetail({ part }: PartDetailProps) {
     } finally {
       setIsLoadingManufacturers(false);
     }
-  }, [part.nsn, manufacturersFetched, isLoadingManufacturers]);
+  }, [partReqKey, manufacturersFetched, isLoadingManufacturers]);
 
   // Fetch technical characteristics when tab is clicked (lazy loading)
   const fetchTechnicalCharacteristics = useCallback(async () => {
@@ -533,7 +541,7 @@ export function PartDetail({ part }: PartDetailProps) {
     setTechnicalError(null);
 
     try {
-      const response = await fetch(`/api/library/parts/${encodeURIComponent(part.nsn)}/technical-characteristics`);
+      const response = await fetch(`/api/library/parts/${encodeURIComponent(partReqKey)}/technical-characteristics`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -550,7 +558,7 @@ export function PartDetail({ part }: PartDetailProps) {
     } finally {
       setIsLoadingTechnical(false);
     }
-  }, [part.nsn, technicalFetched, isLoadingTechnical]);
+  }, [partReqKey, technicalFetched, isLoadingTechnical]);
 
   // Fetch end use descriptions when tab is clicked (lazy loading)
   const fetchEndUseDescriptions = useCallback(async () => {
@@ -560,7 +568,7 @@ export function PartDetail({ part }: PartDetailProps) {
     setEndUseError(null);
 
     try {
-      const response = await fetch(`/api/library/parts/${encodeURIComponent(part.nsn)}/end-use-description`);
+      const response = await fetch(`/api/library/parts/${encodeURIComponent(partReqKey)}/end-use-description`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -577,7 +585,7 @@ export function PartDetail({ part }: PartDetailProps) {
     } finally {
       setIsLoadingEndUse(false);
     }
-  }, [part.nsn, endUseFetched, isLoadingEndUse]);
+  }, [partReqKey, endUseFetched, isLoadingEndUse]);
 
   // Fetch packaging information when tab is clicked (lazy loading)
   const fetchPackaging = useCallback(async () => {
@@ -587,7 +595,7 @@ export function PartDetail({ part }: PartDetailProps) {
     setPackagingError(null);
 
     try {
-      const response = await fetch(`/api/library/parts/${encodeURIComponent(part.nsn)}/packaging`);
+      const response = await fetch(`/api/library/parts/${encodeURIComponent(partReqKey)}/packaging`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -614,7 +622,7 @@ export function PartDetail({ part }: PartDetailProps) {
     } finally {
       setIsLoadingPackaging(false);
     }
-  }, [part.nsn, packagingFetched, isLoadingPackaging]);
+  }, [partReqKey, packagingFetched, isLoadingPackaging]);
 
   // Fetch procurement item description when tab is clicked (lazy loading)
   const fetchProcurementItemDescription = useCallback(async () => {
@@ -624,7 +632,7 @@ export function PartDetail({ part }: PartDetailProps) {
     setProcurementItemDescError(null);
 
     try {
-      const response = await fetch(`/api/library/parts/${encodeURIComponent(part.nsn)}/procurement-item-description`);
+      const response = await fetch(`/api/library/parts/${encodeURIComponent(partReqKey)}/procurement-item-description`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -640,17 +648,17 @@ export function PartDetail({ part }: PartDetailProps) {
     } finally {
       setIsLoadingProcurementItemDesc(false);
     }
-  }, [part.nsn, procurementItemDescFetched, isLoadingProcurementItemDesc]);
+  }, [partReqKey, procurementItemDescFetched, isLoadingProcurementItemDesc]);
 
   // Fetch lightweight tab counts so labels show record counts before clicking
   useEffect(() => {
-    if (!part?.nsn) return;
+    if (!partReqKey) return;
     let cancelled = false;
 
     (async () => {
       try {
         const response = await fetch(
-          `/api/library/parts/${encodeURIComponent(part.nsn)}/tab-counts`
+          `/api/library/parts/${encodeURIComponent(partReqKey)}/tab-counts`
         );
         if (!cancelled && response.ok) {
           const data = (await response.json()) as PartTabCounts;
@@ -662,7 +670,7 @@ export function PartDetail({ part }: PartDetailProps) {
     })();
 
     return () => { cancelled = true; };
-  }, [part?.nsn]);
+  }, [partReqKey]);
 
   // Map UI tabId -> audit `view` name (matches FastAPI _VALID_TAB_VIEWS)
   const TAB_VIEW_MAP: Record<string, string> = {
@@ -682,8 +690,8 @@ export function PartDetail({ part }: PartDetailProps) {
 
     // Record user intent (fire-and-forget; don't block UI on audit).
     const view = TAB_VIEW_MAP[tabId];
-    if (view && part?.nsn) {
-      fetch(`/api/library/parts/${encodeURIComponent(part.nsn)}/track-view?view=${view}`, {
+    if (view && partReqKey) {
+      fetch(`/api/library/parts/${encodeURIComponent(partReqKey)}/track-view?view=${view}`, {
         method: 'POST',
       }).catch(() => { /* audit must never break UX */ });
     }
@@ -703,7 +711,7 @@ export function PartDetail({ part }: PartDetailProps) {
     } else if (tabId === 'procurementitemdesc' && !procurementItemDescFetched) {
       fetchProcurementItemDescription();
     }
-  }, [part?.nsn, procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
+  }, [partReqKey, procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
 
   // Build tabs dynamically with counts.
   // Prefer data-fetched totals once loaded; fall back to lightweight tabCounts.
@@ -794,8 +802,16 @@ export function PartDetail({ part }: PartDetailProps) {
       <div className="px-3 py-2 border-b border-border bg-muted-light">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-xs font-semibold text-foreground truncate">
-              {formatNSN(part.nsn) || part.nsn}
+            <h2 className="text-xs font-semibold text-foreground truncate flex items-center gap-1.5">
+              <span className="truncate">{formatPartIdentity(part)}</span>
+              {partNumberOnly && (
+                <span
+                  className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-card-bg border border-border text-muted whitespace-nowrap shrink-0"
+                  title="This DIBBS solicitation has no NSN — the part is identified by manufacturer CAGE and part number."
+                >
+                  P/N only — no NSN
+                </span>
+              )}
             </h2>
             {part.description && (
               <p className="text-xs text-muted truncate">{part.description}</p>
@@ -819,7 +835,7 @@ export function PartDetail({ part }: PartDetailProps) {
             tier={tier}
             rows={procurementRecords}
             columns={PROCUREMENT_CSV_COLUMNS}
-            filename={`procurement-history-${part.nsn}`}
+            filename={`procurement-history-${partReqKey}`}
             compact
           />
         )}
@@ -828,7 +844,7 @@ export function PartDetail({ part }: PartDetailProps) {
             tier={tier}
             rows={solicitations}
             columns={SOLICITATIONS_CSV_COLUMNS}
-            filename={`solicitations-${part.nsn}`}
+            filename={`solicitations-${partReqKey}`}
             compact
           />
         )}
@@ -928,10 +944,18 @@ interface OverviewPanelProps {
 }
 
 function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelProps) {
+  // NSN-less (DIBBS part-number-only) parts have no NSN/NIIN/FSC; identify them
+  // by manufacturer CAGE + part number instead (mirrors the legacy 'M'-class view).
   const identifiers = [
     { label: "NSN", value: formatNSN(part.nsn), mono: true, tooltip: null as string | null },
     { label: "NIIN", value: formatNiin(part.niin), mono: true, tooltip: null as string | null },
     { label: "FSC", value: part.fsc, mono: true, tooltip: part.fsc_description },
+    ...(isPartNumberOnly(part)
+      ? [
+          { label: "CAGE", value: part.mfg_cage, mono: true, tooltip: null as string | null },
+          { label: "Part Number", value: part.mfg_part_number, mono: true, tooltip: null as string | null },
+        ]
+      : []),
   ].filter(item => item.value);
 
 
@@ -1048,7 +1072,7 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                <span className="font-mono font-medium text-primary">{formatNSN(part.nsn)}</span>
+                <span className="font-mono font-medium text-primary">{formatPartIdentity(part)}</span>
               </div>
             </div>
           </div>
