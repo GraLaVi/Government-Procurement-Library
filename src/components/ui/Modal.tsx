@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useRef } from "react";
 
-type ModalSize = "sm" | "md" | "lg" | "xl" | "full";
+type ModalSize = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "full";
 
 interface ModalProps {
   isOpen: boolean;
@@ -18,6 +18,9 @@ const sizeStyles: Record<ModalSize, string> = {
   md: "max-w-md",
   lg: "max-w-lg",
   xl: "max-w-xl",
+  "2xl": "max-w-2xl",
+  "3xl": "max-w-3xl",
+  "4xl": "max-w-4xl",
   full: "max-w-[90vw] w-full max-h-[90vh]",
 };
 

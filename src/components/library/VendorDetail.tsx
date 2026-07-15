@@ -1751,7 +1751,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           isOpen={true}
           onClose={() => setSamDescModal(null)}
           title={`Solicitation ${samDescModal.number}`}
-          size="xl"
+          size="4xl"
         >
           <div className="flex flex-col gap-3">
             {samDescModal.url && (
@@ -1764,7 +1764,10 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                 View on SAM.gov ↗
               </a>
             )}
-            <p className="max-h-[65vh] overflow-y-auto whitespace-pre-wrap break-words text-sm text-foreground">
+            {/* Whitespace-preserving so paragraph breaks in the cleaned SAM
+                narrative survive; the backend already collapses the ragged
+                &nbsp; padding, so a normal proportional font reads best. */}
+            <p className="max-h-[65vh] overflow-y-auto whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
               {samDescModal.description}
             </p>
           </div>
