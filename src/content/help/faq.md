@@ -24,6 +24,10 @@ No. Once you've been matched on a solicitation, GPH won't surface it for you aga
 
 Each user sets their own alert frequency on the [Notifications](/help/notifications) page — an admin doesn't manage individual inboxes. The frequencies available to you depend on your plan: Free offers off or weekly, Basic adds daily, and Advanced adds immediate.
 
+### What's the difference between the bell and email alerts?
+
+They're independent. The in-app **notification bell** (🔔) shows new bid matches (and RFQ responses) without email; email **Bid Matching Alerts** land in your inbox on the schedule you choose. You can turn on either, both, or neither. See [The notification bell](/help/notifications#the-notification-bell-in-app-alerts) to configure the bell.
+
 ### Does bid matching cover SAM.gov as well as DIBBS?
 
 Yes. GPH ingests solicitations from DLA, DIBBS, and SAM.gov. A single [Set-Aside condition](/help/bid-matching-profiles#condition-types) covers set-aside designations drawn from both DLA/DIBBS and SAM.gov sources, so you don't need a separate condition per source.

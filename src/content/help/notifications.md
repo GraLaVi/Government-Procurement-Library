@@ -4,15 +4,40 @@ meta_title: "Notifications | GPH Help"
 description: "Configure email notification preferences for yourself and your team, including bid matching alerts and system announcements."
 ---
 
-GPH sends emails to keep you informed about new matches, system updates, and other events related to your account. This article explains how to configure your own notification preferences, how account admins manage notifications for the whole team, and what other emails you might receive from GPH.
+GPH keeps you informed about new matches, system updates, and other events related to your account in two ways: **in-app alerts** in the notification bell (🔔) at the top of every page, and **email**. The two are configured separately — you can use one, both, or neither. This article explains the notification bell, how to configure your own email preferences, how account admins manage notifications for the whole team, and what other emails you might receive from GPH.
 
 ## In this article
 
+- [The notification bell (in-app alerts)](#the-notification-bell-in-app-alerts)  
 - [Your notification preferences](#your-notification-preferences)  
 - [About notification frequencies](#about-notification-frequencies)  
 - [Team Notifications (admin only)](#team-notifications-admin-only)  
 - [How individual and team preferences interact](#how-individual-and-team-preferences-interact)  
 - [Other emails you might receive](#other-emails-you-might-receive)
+
+## The notification bell (in-app alerts)
+
+The bell (🔔) at the top of the page shows in-app alerts without sending you email. Click it to see your recent items and open the one you want; **Mark all read** clears the badge. Today the bell carries two kinds of alert, each with its own on/off switch in a different place.
+
+### Bid-match alerts
+
+These appear when new solicitations match your saved bid-matching profiles. Turn them on or off under **Account \> Notifications**, in the **In-App Notifications** card, using the **Bid-match alerts** switch. When they're on, choose how they're grouped:
+
+- **Summary** — a single running item that totals your new matches ("3 new bid matches").  
+- **Per day** — one item for each day's matching run.
+
+Clicking a bid-match alert opens your [Bid-Matching results page](/help/solicitation-matching). Email alerts for bid matches are separate — see [Bid Matching Alerts](#bid-matching-alerts) below.
+
+### RFQ response alerts
+
+If you use [RFQs](/help/requests-for-quote) — the tool for sending requests for quote to vendors from a part's **Manufacturers** tab — the bell alerts you when **a vendor responds to an RFQ you sent**. (That's the only RFQ bell event; there are no alerts for creating an RFQ or other status changes.) An alert reads like *Acme Corp responded to "Hydraulic Valve Assembly"* and opens that RFQ when clicked.
+
+Manage these under **RFQ \> Settings**, in **My notifications**:
+
+- **Show a bell alert when a vendor responds** — the on/off switch (a lightweight in-app alert, no email needed).  
+- **How the bell groups response alerts** — **One alert per response**, **One alert per RFQ** (responses to the same RFQ collapse into one item with a count), or **A single rolling summary** (one item totaling all new responses).
+
+Account admins can also set **who** gets response alerts on the same Settings page — **Only the RFQ creator** or **Everyone on the team** — and that choice applies to both the bell and email.
 
 ## Your notification preferences
 
@@ -20,7 +45,7 @@ To configure your own notifications, go to **Account \> Notifications**. The pag
 
 ### Bid Matching Alerts
 
-Bid Matching Alerts notify you when new solicitations match your bid-matching profiles. Click an option to set your frequency:
+Bid Matching Alerts send you **email** when new solicitations match your bid-matching profiles. (This is separate from the in-app [bid-match bell alerts](#bid-match-alerts) above — you can use either, both, or neither.) Click an option to set your frequency:
 
 - **Immediate** — Each match is sent as soon as it's posted. *Available on Advanced.*  
 - **Daily** — One digest per day. *Available on Basic and Advanced.*  
@@ -76,4 +101,5 @@ The Notifications page controls in-app notifications only. You may also receive:
 
 - [How Solicitation Matching Works](/help/solicitation-matching) — How bid-matching alerts are generated  
 - [Setting Up Bid-Matching Profiles](/help/bid-matching-profiles) — Define the profiles that drive your matches  
+- [Sending RFQs to Vendors](/help/requests-for-quote) — Configure and act on RFQ response alerts  
 - [Managing Your Account](/help/account-settings) — Add and edit non-login contacts

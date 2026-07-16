@@ -20,6 +20,8 @@ Click **Bid-Matching** in the main navigation to open your match history. The pa
 
 The left sidebar lists each run date with the total number of matches generated that day. Selecting a date reveals the match list for that run.
 
+New matches also appear in the in-app notification bell (🔔) at the top of the page, so you're alerted without opening the Bid-Matching tab. See [Notifications](/help/notifications#the-notification-bell-in-app-alerts) to turn the bell on or off and choose how matches are grouped.
+
 ## Reading a match
 
 Each match row shows:
@@ -43,7 +45,7 @@ Click either badge to open a timeline showing every recorded change on the solic
 
 Two filters appear above the match list:
 
-- **Hard hits only.** Limits the results to your highest-confidence matches. A match is **Hard** when it fired on a strong identifier — **NIIN, Mfg Part Number, or CAGE Code**. It's **Soft** when it came from a broader filter — **FSC, Set-Aside, Status, or Part Description**. Soft hits are useful for discovery; Hard hits are usually parts you already bid on. For how condition choice drives this, see [Bid-Matching Recipes and Tuning](/help/bid-matching-recipes#strong-vs-weak-conditions).  
+- **Hard hits only.** Limits the results to your highest-confidence matches. A match is **Hard** when it fired on a strong identifier that pinpoints a specific part — **NIIN, Mfr part #, or CAGE code**. It's **Soft** when it came from a broader filter — **FSC, NAICS code, PSC, Set-Aside, or any keyword condition**. Soft hits are useful for discovery; Hard hits are usually parts you already bid on. For how condition choice drives this, see [Bid-Matching Recipes and Tuning](/help/bid-matching-recipes#strong-vs-weak-conditions).  
 - **Search match reason.** Find matches that triggered on a specific term or condition by typing into this field.
 
 You can also filter the list by run date and issue date.

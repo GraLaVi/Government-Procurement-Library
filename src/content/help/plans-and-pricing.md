@@ -34,7 +34,7 @@ The number of bid-matching profiles you can have active depends on your plan:
 - **Basic** — 5 profiles  
 - **Advanced** — 20 profiles
 
-All plans support up to 5 conditions per profile. Deactivated profiles don't count against your active limit.
+Each plan also caps the number of conditions per profile — the profile editor shows your limit as you build one. Every condition type is available on every plan. Deactivated profiles don't count against your active limit.
 
 ## Notification frequency by plan
 

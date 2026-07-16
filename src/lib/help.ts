@@ -72,6 +72,13 @@ export const HELP_ARTICLES: HelpArticleMeta[] = [
     group: "platform",
   },
   {
+    slug: "requests-for-quote",
+    title: "Sending RFQs to Vendors",
+    blurb:
+      "Send requests for quote to vendors from a part's Manufacturers tab and collect structured quotes.",
+    group: "platform",
+  },
+  {
     slug: "solicitations-and-contracts",
     title: "Viewing Solicitations and Contracts",
     blurb: "Open solicitation and contract PDFs and review amendment history.",

@@ -1,10 +1,10 @@
 ---
 title: "Searching for parts"
 meta_title: "Searching for Parts | GPH Help"
-description: "Learn how to search for parts in Government Procurement Hub, read part records, and use the eight data tabs that provide complete part intelligence."
+description: "Learn how to search for parts in Government Procurement Hub, read part records, and use the data tabs that provide complete part intelligence."
 ---
 
-The Library Search lets you look up any part in the federal procurement catalog by its NSN, NIIN, solicitation number, manufacturer part number, contract number, or description. Once you've found a part, GPH shows everything it knows about that item across eight detailed tabs — from procurement history and recent solicitations to manufacturers, technical specs, and packaging requirements.
+The Library Search lets you look up any part in the federal procurement catalog by its NSN, NIIN, solicitation number, manufacturer part number, contract number, or description. Once you've found a part, GPH shows everything it knows about that item across a set of detailed tabs — from procurement history and recent solicitations to manufacturers, technical specs, and packaging requirements. How many tabs you see depends on your plan; the tabs below are listed in the order they appear.
 
 ## In this article
 
@@ -42,7 +42,7 @@ On the Library Search page, choose a search type using the radio buttons above t
 
 ## Reading a part record
 
-When you select a part from the search results, GPH opens its full record. At the top, you'll see the NSN, the part description (e.g., *TUBE ASSEMBLY, METAL*), and a series of tabs covering different aspects of the part.
+When you select a part from the search results, GPH opens its full record. At the top, you'll see the NSN, the part description (e.g., *TUBE ASSEMBLY, METAL*), and a series of tabs covering different aspects of the part. Parts that exist only as a manufacturer part number with no assigned NSN (common for DIBBS records) carry a **P/N only — no NSN** badge in the header.
 
 Each tab name includes a count in parentheses showing how many records are available — for example, "Procurement History (9)" or "Manufacturers (8)." Tabs with zero records are still selectable but contain no data for that part.
 
@@ -50,17 +50,17 @@ The data shown in each tab is described below.
 
 ## Overview tab
 
-The Overview tab is the part's at-a-glance summary, organized into three cards:
+The Overview tab is the part's at-a-glance summary. A **hero card** at the top restates the part description and its identity, followed by three cards:
 
-- **Identifiers.** The part's NSN, NIIN, and FSC (Federal Supply Class).  
-- **Part Details.** The part description and its standard price (if known).  
-- **Part Codes.** Management codes describing how the government acquires the part — Acquisition Method Code (AMC), Acquisition Method Suffix Code (AMS), Procurement Item Code (PIC), and Source Of Supply Code (SLC). Codes link to the **Code Definitions** reference, accessible from the Help menu.
+- **Identifiers.** The part's NSN, NIIN, and FSC (Federal Supply Class). Hover the FSC to see its **Federal Supply Classification** description. For part-number-only records with no NSN, this card shows the CAGE and manufacturer part number instead.  
+- **Part Details.** The part description, its **Unit of Issue**, and its standard price (if known).  
+- **Part Codes.** Management codes describing how the government catalogs and acquires the part — **DLA** (Item Description Segment), **AMC** (Acquisition Method Code), **PIC** (Procurement Info Code), and **SLC** (Shelf Life Code). Each code links to the **Code Definitions** reference.
 
 ## Procurement History tab
 
-The Procurement History tab shows past contract awards for the part, including the contract number, award date, awarded vendor (with CAGE code), quantity, unit price, and total contract value.
+The Procurement History tab shows past contract awards for the part. Columns are **Contract #**, **Date**, **CAGE**, **Vendor**, **Qty**, **Unit Price**, and **Total** (the total contract value).
 
-CAGE codes link to the awarded vendor's profile — useful for researching competitive history on the part. To view a contract document, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
+The **CAGE** column links to the awarded vendor's profile — useful for researching competitive history on the part — and the **Contract #** cell has an icon button that opens the award document as a PDF. To learn more about viewing contract documents, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
 
 *Note: this tab is available on the Advanced plan.*
 
@@ -69,17 +69,20 @@ CAGE codes link to the awarded vendor's profile — useful for researching compe
 The Recent Solicitations tab shows active and recently closed solicitations for the part. Each row includes:
 
 - **Close Date** — When the bid window closes  
-- **Solicitation \#** — The solicitation identifier  
-- **Purchase Req** — The internal purchase requisition number  
-- **Status** — Solicitation status (open, closed, amended)  
+- **Solicitation \#** — The solicitation identifier. DLA solicitations with a PDF open it in a viewer; SAM.gov opportunities open on SAM.gov.  
+- **Purchase req** — The internal purchase requisition number  
+- **Status** — Solicitation status (open, closed, and so on)  
+- **Rating** — GPH's fit indicator for the opportunity  
 - **Agency** — Source agency (DLA, DIBBS, or other)  
-- **Set-Aside** — Whether the solicitation is reserved for a specific business category (SBA, SDVOSBC, HUBZone, and others)  
-- **QTY** — Required quantity  
+- **Set-Aside** — The set-aside category, shown as a code badge; hover it for the full label  
+- **Qty** — Required quantity (with unit of measure)  
 - **Est. Value** — Estimated contract value  
 - **Buyer** — The contracting officer or buyer name  
-- **Buyer Contact** — Email or phone for the buyer, where available
+- **Buyer contact** — Email (with a copy button) or phone for the buyer, where available
 
-Use this tab to surface live opportunities tied to a specific part. To view a solicitation PDF or amendment history, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
+Solicitations that have been changed show an amber **Amended** badge (with a **×N** count for multiple amendments); click it for a change timeline. SAM.gov rows that carry attachments show a documents button with the attachment count. To learn more about viewing a solicitation PDF or amendment history, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
+
+*Note: on the Free plan this tab shows a count of recent solicitations and an upgrade prompt rather than the full table.*
 
 ## Manufacturers tab
 
@@ -87,10 +90,13 @@ The Manufacturers tab lists every known manufacturer or supplier of the part, in
 
 - **CAGE** — The manufacturer's CAGE code (clickable to their vendor profile)  
 - **Vendor Name** — The company name  
+- **Source** — An **Approved** badge marks government-approved sources for the part  
 - **Part Number** — The manufacturer's internal part number  
 - **RNCC** and **RNVC** — Government cataloging codes describing the relationship between the manufacturer's part number and the NSN
 
 This is the part's competitive intelligence at a glance — you can see exactly who else makes or supplies the part.
+
+If you have the RFQ add-on, this tab is also where you start a Request for Quote: select one or more vendors and click **Create RFQ** to send them a quote request. See [Sending RFQs to vendors](/help/requests-for-quote) for the full workflow.
 
 ## Technical Characteristics tab
 
@@ -106,15 +112,15 @@ For suppliers, this is useful context: it tells you which programs your parts fe
 
 ## Packaging Information tab
 
-The Packaging Information tab contains packaging codes, preservation methods, and any hazardous material handling requirements for the part. Codes follow government cataloging conventions (QUP, PRES MTHD, CLNG/DRY, WRAP MAT), and code values link to full definitions in the **Code Definitions** reference.
+The Packaging Information tab has two parts. A **Packaging Data** section lists the part's packaging and preservation codes following government cataloging conventions — for example QUP, PRES MTHD, CLNG/DRY, PRESV MAT, WRAP MAT, CUSH/DUNN MAT, CUSH/DUNN THKNESS, UNIT CONT, OPI, INTRMDTE CONT, and special marking codes. Each code links to its full definition in the **Code Definitions** reference.
 
-The tab may also include narrative requirements — military specification references (MIL-DTL-75, FED-STD-313), hazardous material disclosure obligations, and source control directives.
+Below it, a supplemental narrative section (usually titled **Packaging Requirements**) may include military specification references (MIL-DTL-75, FED-STD-313), hazardous material disclosure obligations, and source control directives.
 
 ## Procurement Item Description tab
 
-The Procurement Item Description tab contains the full procurement description for the part — quality requirements, military specifications, compliance standards (including CMMC where applicable), drawing references, and inspection criteria.
+The Procurement Item Description tab contains the full procurement description for the part — quality requirements, military specifications, compliance standards (including CMMC where applicable), drawing references, and inspection criteria. It's rendered as formatted text with clickable links to referenced standards and documents.
 
-This is dense, formal text. If you're preparing a bid, treat this as the authoritative description of what the government expects from the part you'll supply.
+This is dense, formal content. If you're preparing a bid, treat this as the authoritative description of what the government expects from the part you'll supply.
 
 ## Recent and pinned searches
 
@@ -135,5 +141,6 @@ For more detailed or custom exports, click the **Request a custom report →** l
 ## Related articles
 
 - [Researching Vendors](/help/vendor-research) — Vendor profiles and competitive intelligence  
+- [Sending RFQs to Vendors](/help/requests-for-quote) — Request quotes from a part's manufacturers  
 - [Setting Up Bid-Matching Profiles](/help/bid-matching-profiles) — Match incoming solicitations automatically  
 - [Plans and Pricing](/help/plans-and-pricing) — Compare feature access by plan
