@@ -72,7 +72,7 @@ The Recent Solicitations tab shows active and recently closed solicitations for 
 - **Solicitation \#** — The solicitation identifier. DLA solicitations with a PDF open it in a viewer; SAM.gov opportunities open on SAM.gov.  
 - **Purchase req** — The internal purchase requisition number  
 - **Status** — Solicitation status (open, closed, and so on)  
-- **Rating** — GPH's fit indicator for the opportunity  
+- **Rating** — The solicitation's DPAS (Defense Priorities and Allocations System) rating, a government-assigned priority for defense and emergency orders. **DX** is the highest national-defense priority and **DO** is the standard priority; both take precedence over unrated commercial work. Most solicitations are unrated and show a dash.  
 - **Agency** — Source agency (DLA, DIBBS, or other)  
 - **Set-Aside** — The set-aside category, shown as a code badge; hover it for the full label  
 - **Qty** — Required quantity (with unit of measure)  
