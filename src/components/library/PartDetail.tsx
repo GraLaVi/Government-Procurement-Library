@@ -20,6 +20,7 @@ import {
   PartProcurementRecord,
   PartProcurementHistoryResponse,
   PartSolicitation,
+  SolicitationAward,
   PartSolicitationsResponse,
   PartManufacturer,
   PartManufacturersResponse,
@@ -98,6 +99,9 @@ const SOLICITATIONS_CSV_COLUMNS: CsvColumn<PartSolicitation>[] = [
   { header: "Unit Price", value: (r) => r.unit_price ?? "" },
   { header: "Estimated Value", value: (r) => r.estimated_value ?? "" },
   { header: "Status", value: (r) => r.status ?? "" },
+  { header: "Contract #", value: (r) => r.award?.contract_number ?? "" },
+  { header: "Awardee", value: (r) => r.award?.awardee_name ?? "" },
+  { header: "Award Total", value: (r) => r.award?.total_value ?? "" },
   { header: "Rating", value: (r) => r.rating ?? "" },
   { header: "Agency", value: (r) => r.agency_code ?? "" },
   { header: "Set-Aside", value: (r) => r.set_aside_label ?? r.set_aside ?? "" },
@@ -1397,6 +1401,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
   );
   const amendmentSummaries = useAmendmentSummaries(solIds);
   const [amendmentModal, setAmendmentModal] = useState<{ id: number; number: string | null } | null>(null);
+  const [contractModal, setContractModal] = useState<SolicitationAward | null>(null);
 
   const columns = useMemo<ColumnDef<PartSolicitation>[]>(
     () => [
@@ -1516,10 +1521,25 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
       {
         id: "status",
         accessorKey: "status",
-        header: "Status",
-        cell: ({ row }) => (
-          <span className="text-xs font-medium text-foreground">{row.original.status || "—"}</span>
-        ),
+        header: "Status / Contract #",
+        cell: ({ row }) => {
+          const award = row.original.award;
+          return award?.contract_number ? (
+            <button
+              type="button"
+              title="View contract details"
+              onClick={(e) => {
+                e.stopPropagation();
+                setContractModal(award);
+              }}
+              className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
+            >
+              {award.contract_number}
+            </button>
+          ) : (
+            <span className="text-xs font-medium text-foreground">{row.original.status || "—"}</span>
+          );
+        },
       },
       {
         id: "rating",
@@ -1747,6 +1767,55 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         solicitationNumber={amendmentModal?.number ?? null}
         onClose={() => setAmendmentModal(null)}
       />
+      {/* Contract-details modal — opened from the contract number in the
+          "Status / Contract #" column when the solicitation has been awarded. */}
+      {contractModal && (
+        <Modal
+          isOpen={true}
+          onClose={() => setContractModal(null)}
+          title={`Contract ${contractModal.contract_number ?? ""}`.trim()}
+          size="md"
+        >
+          <div className="flex flex-col gap-6">
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Awardee
+              </h3>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                <dt className="text-muted-foreground">Vendor</dt>
+                <dd className="font-medium text-foreground">
+                  {contractModal.awardee_name || "—"}
+                </dd>
+                <dt className="text-muted-foreground">CAGE</dt>
+                <dd className="font-mono text-foreground">{contractModal.awardee_cage || "—"}</dd>
+              </dl>
+            </section>
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Award
+              </h3>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                <dt className="text-muted-foreground">Award date</dt>
+                <dd className="text-foreground">{formatContractDate(contractModal.award_date) || "—"}</dd>
+                <dt className="text-muted-foreground">Quantity</dt>
+                <dd className="text-foreground">
+                  {contractModal.quantity != null
+                    ? `${contractModal.quantity.toLocaleString()}${contractModal.unit_of_measure ? ` ${contractModal.unit_of_measure}` : ""}`
+                    : "—"}
+                </dd>
+                <dt className="text-muted-foreground">Unit price</dt>
+                <dd className="text-foreground">
+                  {contractModal.unit_price != null ? formatCurrency(contractModal.unit_price) : "—"}
+                </dd>
+                <dt className="text-muted-foreground">Total value</dt>
+                <dd className="font-semibold text-foreground">
+                  {contractModal.total_value != null ? formatCurrency(contractModal.total_value) : "—"}
+                </dd>
+              </dl>
+            </section>
+          </div>
+        </Modal>
+      )}
       {/* Custom-reports upsell — below the table so the data stays at
           the top of the panel. */}
       <div className="flex justify-end">

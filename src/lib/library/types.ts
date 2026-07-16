@@ -537,12 +537,30 @@ export interface PartProcurementHistoryResponse {
   total_count: number;
 }
 
+// Award details for an awarded solicitation, from order_details + the awardee vendor.
+// Present only when the solicitation has a linked award; drives the contract modal.
+export interface SolicitationAward {
+  contract_number: string | null;
+  award_date: string | null;
+  quantity: number | null;
+  unit_of_measure: string | null;
+  unit_price: number | null;
+  total_value: number | null;
+  awardee_cage: string | null;
+  awardee_name: string | null;
+}
+
 export interface PartSolicitation {
   solicitation_id: number;
   solicitation_number: string;
   agency_code: string | null;
   close_date: string | null;
+  // For DLA rows this is dla_solicitation_items.closed_status; for SAM rows a synthesized
+  // open/closed value. Shown in the Status column when the row has no award.
   status: string | null;
+  // Award details when the solicitation has a linked order_details row; null otherwise.
+  // When present, the contract number is shown (opening a details modal) in place of status.
+  award?: SolicitationAward | null;
   // Legacy raw set-aside string. Kept for one release; prefer set_aside_label.
   set_aside: string | null;
   set_aside_code?: string | null;
