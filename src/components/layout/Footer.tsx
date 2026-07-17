@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { CookiePreferencesLink } from "@/components/layout/CookiePreferencesLink";
+import { SELF_SERVE_SIGNUP, SIGNUP_ENTRY_HREF } from "@/lib/signup/entryPoint";
 
 const footerLinks = {
   Product: [
     { href: "/#products", label: "Products" },
     { href: "/#features", label: "Features" },
     { href: "/pricing", label: "Pricing" },
-    { href: "/signup", label: "Request Beta Access" },
+    {
+      href: SIGNUP_ENTRY_HREF,
+      label: SELF_SERVE_SIGNUP ? "Sign Up" : "Request Beta Access",
+    },
   ],
   Company: [
     { href: "/about", label: "About" },
@@ -63,7 +67,10 @@ export function Footer() {
               <h3 className="font-semibold mb-4">{category}</h3>
               <ul className="space-y-3">
                 {links.map((link) => (
-                  <li key={link.href}>
+                  // Key on label, not href: in self-serve mode the signup link
+                  // and the "Pricing" link both resolve to /pricing, so href is
+                  // no longer unique within the column. Labels always are.
+                  <li key={link.label}>
                     {"external" in link && link.external ? (
                       <a
                         href={link.href}

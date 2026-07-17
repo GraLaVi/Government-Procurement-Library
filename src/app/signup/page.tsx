@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -110,12 +110,21 @@ function SignupPageContent() {
     : null;
   const intentLabel = intentProductName ?? (intentIsPaid ? "the plan you selected" : null);
 
-  // Already-logged-in visitors don't need to apply.
+  // Already-logged-in visitors don't need to apply. And in self-serve mode a
+  // tier must be chosen first: a bare /signup (no ?tier/?plan intent) would
+  // silently drop the visitor onto the Free path, so bounce them to /pricing
+  // where they pick Free / Basic / Advanced explicitly. In beta this never
+  // fires (DEV_SIGNUP_ENABLED is false) so the beta application flow is intact.
   useEffect(() => {
-    if (!authLoading && user) {
+    if (authLoading) return;
+    if (user) {
       router.replace("/dashboard");
+      return;
     }
-  }, [authLoading, user, router]);
+    if (DEV_SIGNUP_ENABLED && !hasUrlIntent) {
+      router.replace("/pricing");
+    }
+  }, [authLoading, user, router, hasUrlIntent]);
 
   const [step, setStep] = useState<Step>("cage");
   // Beta is the production default; the visitor switches to self_serve
@@ -150,6 +159,25 @@ function SignupPageContent() {
   // subscription. The checkbox is only rendered when the URL intent is
   // paid; Free / beta paths don't surface it.
   const [tosAccepted, setTosAccepted] = useState(false);
+  // Inline highlight on the ToS checkbox when the visitor submits without
+  // accepting it — the top error banner can be off-screen on this long form,
+  // so we flag the checkbox locally too (right where their cursor is).
+  const [tosError, setTosError] = useState(false);
+  // Bumped on every account-form submit attempt so the scroll-to-error effect
+  // re-runs even when the same validation message is set twice in a row.
+  const [submitAttempt, setSubmitAttempt] = useState(0);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  // Pull the error banner into view (and move focus to it, so screen readers
+  // announce it) whenever an error is surfaced. Without this the banner
+  // renders at the top of the form while the visitor is looking at the submit
+  // button at the bottom, making a failed click look like nothing happened.
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      errorRef.current.focus();
+    }
+  }, [error, submitAttempt]);
 
   // Locked to the beta plan catalog. The picker UI was removed — every
   // applicant requests whatever PLAN_OPTIONS currently lists (Advanced only
@@ -245,6 +273,10 @@ function SignupPageContent() {
   const submitApplication = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setTosError(false);
+    // Force the scroll-to-error effect to re-run for this attempt even if the
+    // resulting message is identical to the previous one.
+    setSubmitAttempt((n) => n + 1);
     // Missing required fields: surface a single banner message that
     // points the visitor at the asterisked labels, and focus the first
     // empty input so they land on the right place to start typing.
@@ -276,6 +308,7 @@ function SignupPageContent() {
       return;
     }
     if (((intentIsPaid) || signupPath === "beta") && !tosAccepted) {
+      setTosError(true);
       setError(
         signupPath === "beta"
           ? "Please accept the Terms of Service, Privacy Policy, and Beta Program Terms to continue."
@@ -413,10 +446,15 @@ function SignupPageContent() {
       <Navbar />
       <main className="max-w-screen-md mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-28">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide mb-3">
-            <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-            Private beta
-          </div>
+          {/* Beta-only badge. In self-serve the visitor always arrives with a
+              tier intent, so the "You're signing up for {tier}" copy below
+              carries the context instead. */}
+          {!DEV_SIGNUP_ENABLED && (
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide mb-3">
+              <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+              Private beta
+            </div>
+          )}
           <h1 className="text-3xl font-bold text-foreground">
             {hasUrlIntent || (signupPath === "self_serve" && step !== "cage")
               ? "Create your account"
@@ -497,7 +535,12 @@ function SignupPageContent() {
           {step === "cage" && (
             <div className="space-y-4">
               {error && (
-                <div className="p-3 bg-error/5 border border-error/20 text-error rounded text-sm">
+                <div
+                  ref={errorRef}
+                  role="alert"
+                  tabIndex={-1}
+                  className="p-3 bg-error/5 border border-error/20 text-error rounded text-sm outline-none scroll-mt-24"
+                >
                   {error}
                 </div>
               )}
@@ -630,7 +673,12 @@ function SignupPageContent() {
           {step === "account" && (
             <form onSubmit={submitApplication} className="space-y-4" noValidate>
               {error && (
-                <div className="p-3 bg-error/5 border border-error/20 text-error rounded text-sm">
+                <div
+                  ref={errorRef}
+                  role="alert"
+                  tabIndex={-1}
+                  className="p-3 bg-error/5 border border-error/20 text-error rounded text-sm outline-none scroll-mt-24"
+                >
                   {error}
                 </div>
               )}
@@ -827,12 +875,20 @@ function SignupPageContent() {
                   signups don't surface this; their flow doesn't open a
                   Stripe subscription at signup time. */}
               {intentIsPaid && (
-                <div className="border border-border rounded-lg p-3 bg-muted-light/40">
+                <div
+                  className={`border rounded-lg p-3 bg-muted-light/40 ${
+                    tosError ? "border-error ring-1 ring-error/40" : "border-border"
+                  }`}
+                >
                   <label className="flex gap-3 items-start cursor-pointer">
                     <input
                       type="checkbox"
                       checked={tosAccepted}
-                      onChange={(e) => setTosAccepted(e.target.checked)}
+                      onChange={(e) => {
+                        setTosAccepted(e.target.checked);
+                        if (e.target.checked) setTosError(false);
+                      }}
+                      aria-invalid={tosError}
                       className="mt-1 h-4 w-4 rounded text-primary focus:ring-primary border-border"
                     />
                     <span className="text-sm text-foreground">
@@ -858,6 +914,11 @@ function SignupPageContent() {
                       payment method is required up front.
                     </span>
                   </label>
+                  {tosError && (
+                    <p className="mt-2 text-xs text-error font-medium">
+                      Please accept the Terms to continue.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -897,12 +958,20 @@ function SignupPageContent() {
                   Beta Program Terms must all be acknowledged before we
                   record an application. */}
               {signupPath === "beta" && (
-                <div className="border border-border rounded-lg p-3 bg-muted-light/40">
+                <div
+                  className={`border rounded-lg p-3 bg-muted-light/40 ${
+                    tosError ? "border-error ring-1 ring-error/40" : "border-border"
+                  }`}
+                >
                   <label className="flex gap-3 items-start cursor-pointer">
                     <input
                       type="checkbox"
                       checked={tosAccepted}
-                      onChange={(e) => setTosAccepted(e.target.checked)}
+                      onChange={(e) => {
+                        setTosAccepted(e.target.checked);
+                        if (e.target.checked) setTosError(false);
+                      }}
+                      aria-invalid={tosError}
                       className="mt-1 h-4 w-4 rounded text-primary focus:ring-primary border-border"
                     />
                     <span className="text-sm text-foreground">
@@ -936,6 +1005,11 @@ function SignupPageContent() {
                       . The Beta Program is free; no payment method is required.
                     </span>
                   </label>
+                  {tosError && (
+                    <p className="mt-2 text-xs text-error font-medium">
+                      Please accept the Terms to continue.
+                    </p>
+                  )}
                 </div>
               )}
 

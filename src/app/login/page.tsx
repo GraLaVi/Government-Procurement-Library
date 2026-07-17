@@ -12,6 +12,7 @@ import {
   DEFAULT_PAGE_FALLBACK,
   resolveDefaultPagePath,
 } from "@/lib/preferences/defaultPage";
+import { SELF_SERVE_SIGNUP, SIGNUP_ENTRY_HREF } from "@/lib/signup/entryPoint";
 
 // Surface the right copy for the three "inactive" 403 variants the backend
 // returns. The substrings come from src/api/v1/auth/service.py.
@@ -44,12 +45,23 @@ function LoginForm() {
   // Validate redirect parameter - don't allow redirecting to auth pages to prevent loops
   const rawRedirect = searchParams.get("redirect");
   const authRoutes = [AUTH_CONFIG.ROUTES.LOGIN, '/forgot-password'];
+  // Only accept same-origin relative paths. A value like
+  // "https://evil.com" or "//evil.com" would otherwise be handed to
+  // router.push/replace and navigate the user off-site (open redirect /
+  // phishing vector). Require a single leading "/" and reject protocol-
+  // relative ("//") and any "scheme:" prefix.
+  // Must start with "/", and the char after it must not be "/" (protocol-
+  // relative "//evil.com") or "\" (browsers normalize "/\evil.com" to that).
+  const isSafeRedirect = (path: string): boolean =>
+    path.startsWith("/") && path[1] !== "/" && path[1] !== "\\";
   // ?redirect=… wins (session-expired flow that wants to bounce the user
   // back to where they were). Without it, fall back to /dashboard here —
   // the post-login handler below upgrades that to the user's
   // default_page preference once preferences are loadable.
   const explicitRedirect =
-    rawRedirect && !authRoutes.includes(rawRedirect) ? rawRedirect : null;
+    rawRedirect && isSafeRedirect(rawRedirect) && !authRoutes.includes(rawRedirect)
+      ? rawRedirect
+      : null;
   const redirect = explicitRedirect ?? DEFAULT_PAGE_FALLBACK;
 
   // Fetch the user's preferred default page after a successful login.
@@ -353,8 +365,8 @@ function LoginForm() {
             {/* Sign up link */}
             <p className="mt-8 text-center text-sm text-muted">
               Don&apos;t have an account?{" "}
-              <Link href="/signup" className="text-primary font-medium hover:underline">
-                Sign up
+              <Link href={SIGNUP_ENTRY_HREF} className="text-primary font-medium hover:underline">
+                {SELF_SERVE_SIGNUP ? "Get started" : "Sign up"}
               </Link>
             </p>
           </div>

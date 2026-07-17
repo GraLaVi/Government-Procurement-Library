@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/Button";
 import { ShieldIcon, ZapIcon } from "@/components/icons";
+import { SELF_SERVE_SIGNUP, SIGNUP_ENTRY_HREF } from "@/lib/signup/entryPoint";
 
 export function CTA() {
   return (
@@ -15,33 +16,35 @@ export function CTA() {
             <div>
               <div className="inline-flex items-center gap-2 bg-white/15 text-white px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
                 <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                Beta seats available
+                {SELF_SERVE_SIGNUP ? "Now available" : "Beta seats available"}
               </div>
               <h2 className="mt-5 text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
                 Ready to Win More Federal Contracts?
               </h2>
               <p className="mt-6 text-lg text-white/80 leading-relaxed">
-                Apply for a beta seat to get hands-on with live DLA solicitation
-                feeds, NSN/NIIN search, and bid-matching. Pick a plan when
-                you&apos;re ready — your team is approved before any charge.
+                {SELF_SERVE_SIGNUP
+                  ? "Get hands-on with live DLA solicitation feeds, NSN/NIIN search, and bid-matching. Pick the plan that fits — start free and upgrade anytime."
+                  : "Apply for a beta seat to get hands-on with live DLA solicitation feeds, NSN/NIIN search, and bid-matching. Pick a plan when you're ready — your team is approved before any charge."}
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
                 <Button
-                  href="/signup"
+                  href={SIGNUP_ENTRY_HREF}
                   variant="secondary"
                   size="lg"
                   className="!bg-white !text-primary hover:!bg-white/90"
                 >
-                  Request Beta Access
+                  {SELF_SERVE_SIGNUP ? "Get Started" : "Request Beta Access"}
                 </Button>
+                {/* Self-serve primary already routes to /pricing, so offer
+                    sign-in here instead of a duplicate pricing link. */}
                 <Button
-                  href="/pricing"
+                  href={SELF_SERVE_SIGNUP ? "/login" : "/pricing"}
                   variant="outline"
                   size="lg"
                   className="!border-white/30 !text-white hover:!bg-white/10"
                 >
-                  View Pricing
+                  {SELF_SERVE_SIGNUP ? "Sign in" : "View Pricing"}
                 </Button>
               </div>
             </div>

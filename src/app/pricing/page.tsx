@@ -617,11 +617,15 @@ function PricingPageContent() {
         {sortedPlans.map((plan) => {
           const activePriceId = selected[plan.id];
           const activePrice = plan.prices.find((p) => p.id === activePriceId);
-          // Org-wide plans always charge for quantity=1 — they grant access
-          // to every user under the customer regardless of seat count, so a
-          // picker would be misleading.
-          const isOrgWide = !plan.requires_seat_assignment;
-          const seatCount = isOrgWide
+          // Flat-rate plans always charge for quantity=1 — a single flat
+          // license covers the whole tier ("up to N users"), billed once
+          // regardless of how many users are assigned, so a per-seat picker
+          // would be misleading. This covers both org-wide plans
+          // (!requires_seat_assignment) and seat-assigned tiers that bill a
+          // flat fee for an allowance (`max_customer_users` set, e.g. Advanced
+          // up to 20). The backend enforces this by billing quantity=1.
+          const billsFlat = !plan.requires_seat_assignment || plan.max_customer_users != null;
+          const seatCount = billsFlat
             ? 1
             : Math.max(1, seats[plan.id] || plan.default_seat_count || 1);
           const totalCents = activePrice ? computeTotalCents(activePrice, seatCount) : null;
@@ -681,8 +685,10 @@ function PricingPageContent() {
                     <div className="text-muted text-sm">
                       {intervalLabel(activePrice.interval_count)}
                       {perMonthSuffix(totalCents, activePrice.interval_count, activePrice.currency)}
-                      {isOrgWide
-                        ? " · all users included"
+                      {billsFlat
+                        ? plan.max_customer_users != null
+                          ? ` · up to ${plan.max_customer_users} users`
+                          : " · all users included"
                         : isVolume
                           ? ` · ${seatCount} seat${seatCount === 1 ? "" : "s"}`
                           : isTiered
@@ -734,10 +740,11 @@ function PricingPageContent() {
                 </div>
               )}
 
-              {/* Seat picker — only shown for per-seat plans. Org-wide plans
-                  charge a flat fee that covers every user under the customer,
-                  so the picker would be confusing. */}
-              {activePrice && !isGraduated && !isOrgWide && (
+              {/* Seat picker — only shown for genuinely per-seat-billed plans.
+                  Flat-rate plans (org-wide, or a flat fee for an allowance
+                  like "up to 20 users") bill quantity=1, so the picker would
+                  be confusing. */}
+              {activePrice && !isGraduated && !billsFlat && (
                 <div className="mb-4">
                   <label className="block text-xs text-muted mb-1">Number of users</label>
                   <div className="flex items-center gap-2">

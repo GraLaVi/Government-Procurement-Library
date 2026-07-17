@@ -6,10 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
-import { AssignedProduct } from "@/lib/users/types";
-import { resolveOrgTier, tierBadgeForKey } from "@/lib/library/tier";
+import { tierBadgeForKey } from "@/lib/library/tier";
 import { clearPendingSignup } from "@/lib/signup/pendingSignup";
 
 type Price = {
@@ -27,6 +25,9 @@ type Plan = {
   key: string;
   name: string;
   prices: Price[];
+  // Hard cap on seats for this plan (from feature_limits.max_seat_count).
+  // null = uncapped.
+  max_seat_count: number | null;
 };
 
 type Subscription = {
@@ -126,7 +127,6 @@ function statusBadge(status: string): { label: string; className: string } {
 }
 
 type ActiveModal =
-  | { kind: "seats"; sub: Subscription }
   | { kind: "interval"; sub: Subscription }
   | { kind: "switchPlan"; sub: Subscription }
   | { kind: "cancel"; sub: Subscription }
@@ -150,7 +150,6 @@ function BillingPageContent() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [products, setProducts] = useState<AssignedProduct[]>([]);
   const [pmStatus, setPmStatus] = useState<PaymentMethodStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -167,11 +166,10 @@ function BillingPageContent() {
     setIsLoading(true);
     setError(null);
     try {
-      const [subsResp, invsResp, plansResp, prodsResp, pmResp] = await Promise.all([
+      const [subsResp, invsResp, plansResp, pmResp] = await Promise.all([
         fetchWithAuth("/api/billing/subscriptions"),
         fetchWithAuth("/api/billing/invoices"),
         fetch("/api/billing/plans"),
-        fetchWithAuth("/api/users/organization/products"),
         fetchWithAuth("/api/billing/payment-method-status"),
       ]);
 
@@ -194,9 +192,6 @@ function BillingPageContent() {
       setSubscriptions(await subsResp.json());
       setInvoices((await invsResp.json() as InvoiceListResponse).invoices);
       setPlans(await plansResp.json());
-      // Products is informational; if it fails, show the rest of the page anyway.
-      if (prodsResp.ok) setProducts(await prodsResp.json());
-      else setProducts([]);
       // Payment-method/trial status drives the top banner + CTA swap. A failed
       // fetch shouldn't block the page; just treat as non-subscriber.
       if (pmResp.ok) setPmStatus(await pmResp.json());
@@ -311,10 +306,6 @@ function BillingPageContent() {
   // we have stripe_customer_id on the customer row, since service.create_portal
   // needs it.) We just enable Portal whenever there's at least one sub.
   const hasStripeCustomer = subscriptions.length > 0;
-
-  // Org-wide library tier (Free / Basic / Advanced), derived from the org's
-  // product grants — mirrors the manage-users page badge.
-  const orgTier = resolveOrgTier(products);
 
   // Trial-state banner drivers.
   const isTrialing = pmStatus?.subscription_status === "trialing";
@@ -463,31 +454,12 @@ function BillingPageContent() {
                 key={sub.id}
                 sub={sub}
                 plans={plans}
-                onAddSeats={() => setModal({ kind: "seats", sub })}
                 onChangeInterval={() => setModal({ kind: "interval", sub })}
                 onSwitchPlan={() => setModal({ kind: "switchPlan", sub })}
                 onCancel={() => setModal({ kind: "cancel", sub })}
                 onReactivate={() => reactivate(sub)}
               />
             ))}
-          </div>
-        )}
-
-        <h2 className="text-lg font-semibold text-foreground mb-4">Your plan tier</h2>
-        {isLoading ? (
-          <div className="bg-card-bg border border-border rounded-xl p-6 mb-8 text-muted text-sm">
-            Loading plan tier…
-          </div>
-        ) : (
-          <div className="bg-card-bg border border-border rounded-xl p-6 mb-8">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-sm text-muted">Your organization is on the</span>
-              <Badge variant={orgTier.variant}>{orgTier.label}</Badge>
-              <span className="text-sm text-muted">library.</span>
-            </div>
-            <p className="text-xs text-muted mt-2">
-              This tier covers all features for everyone in your organization.
-            </p>
           </div>
         )}
       </TabPanel>
@@ -542,14 +514,6 @@ function BillingPageContent() {
         Back to <Link href="/account" className="text-primary hover:underline">Account</Link>.
       </div>
 
-      {modal?.kind === "seats" && (
-        <SeatsModal
-          sub={modal.sub}
-          onClose={() => setModal(null)}
-          onSaved={(next) => { replaceSub(next); setModal(null); }}
-          onError={setError}
-        />
-      )}
       {modal?.kind === "interval" && (
         <IntervalModal
           sub={modal.sub}
@@ -583,7 +547,6 @@ function BillingPageContent() {
 function SubscriptionCard({
   sub,
   plans,
-  onAddSeats,
   onChangeInterval,
   onSwitchPlan,
   onCancel,
@@ -591,7 +554,6 @@ function SubscriptionCard({
 }: {
   sub: Subscription;
   plans: Plan[];
-  onAddSeats: () => void;
   onChangeInterval: () => void;
   onSwitchPlan: () => void;
   onCancel: () => void;
@@ -613,6 +575,9 @@ function SubscriptionCard({
   // key; fall back to the raw plan name so a real paid plan is never hidden
   // behind a guessed tier.
   const planLabel = tierBadgeForKey(matchingPlan?.key)?.label ?? rawName;
+  // The plan's seat cap (feature_limits.max_seat_count). When present we show
+  // "used of cap"; otherwise just the provisioned seat count.
+  const maxSeats = matchingPlan?.max_seat_count ?? null;
   const hasOtherIntervals = (matchingPlan?.prices.length ?? 0) > 1;
   // "Other plans available" = at least one plan that isn't the current sub's plan.
   // The Plan type lacks an id-key per kind, so identify the current one by name.
@@ -637,7 +602,9 @@ function SubscriptionCard({
       </div>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <dt className="text-muted">Seats</dt>
-        <dd className="text-card-foreground font-medium">{sub.seat_quantity}</dd>
+        <dd className="text-card-foreground font-medium">
+          {maxSeats != null ? `${sub.seat_quantity} of ${maxSeats}` : sub.seat_quantity}
+        </dd>
 
         {trialActive && (
           <>
@@ -668,7 +635,6 @@ function SubscriptionCard({
 
       {!isTerminal && (
         <div className="mt-5 pt-4 border-t border-border flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={onAddSeats}>Change seats</Button>
           {hasOtherIntervals && (
             <Button variant="outline" size="sm" onClick={onChangeInterval}>Change interval</Button>
           )}
@@ -707,73 +673,6 @@ function ModalShell({ title, subtitle, children, onClose }: {
         {children}
       </div>
     </div>
-  );
-}
-
-function SeatsModal({
-  sub, onClose, onSaved, onError,
-}: {
-  sub: Subscription;
-  onClose: () => void;
-  onSaved: (s: Subscription) => void;
-  onError: (msg: string | null) => void;
-}) {
-  const [count, setCount] = useState(sub.seat_quantity);
-  const [saving, setSaving] = useState(false);
-
-  const save = async () => {
-    if (count < 1) return;
-    setSaving(true);
-    onError(null);
-    try {
-      const resp = await fetchWithAuth(`/api/billing/subscriptions/${sub.id}/seats`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seat_quantity: count }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) { onError(data.error || "Failed to update seats"); return; }
-      onSaved(data);
-    } catch {
-      onError("An unexpected error occurred");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const subtotalCents = (sub.unit_amount_cents ?? 0) * count;
-
-  return (
-    <ModalShell title="Change seats" subtitle={sub.product_name || sub.product_group_name || "Plan"} onClose={onClose}>
-      <label className="block text-sm text-card-foreground mb-2">Seat count</label>
-      <input
-        type="number"
-        min={1}
-        value={count}
-        onChange={(e) => setCount(Math.max(1, Number(e.target.value) || 1))}
-        className="w-full px-3 py-2 text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-primary"
-      />
-      {(sub.unit_amount_cents ?? 0) > 0 ? (
-        <p className="text-xs text-muted mt-2">
-          New subtotal: <span className="text-card-foreground font-medium">
-            {formatMoney(subtotalCents, sub.currency)} {intervalLabel(sub.interval_count).toLowerCase()}
-          </span>
-        </p>
-      ) : (
-        <p className="text-xs text-muted mt-2">
-          Volume pricing: Stripe will compute your new total at the bracket your seat count falls into.
-        </p>
-      )}
-      <p className="text-xs text-muted mt-1">
-        Stripe prorates the difference on your next invoice.
-      </p>
-      <div className="flex justify-end gap-2 mt-5">
-        <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
-        <Button variant="primary" size="sm" onClick={save} disabled={saving || count === sub.seat_quantity}>
-          {saving ? "Saving…" : "Save"}
-        </Button>
-      </div>
-    </ModalShell>
   );
 }
 
