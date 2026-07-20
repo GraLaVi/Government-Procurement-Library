@@ -622,8 +622,9 @@ function PricingPageContent() {
           // regardless of how many users are assigned, so a per-seat picker
           // would be misleading. This covers both org-wide plans
           // (!requires_seat_assignment) and seat-assigned tiers that bill a
-          // flat fee for an allowance (`max_customer_users` set, e.g. Advanced
-          // up to 20). The backend enforces this by billing quantity=1.
+          // flat fee for an allowance (`max_customer_users` set, e.g. Basic
+          // and Advanced up to 3). The backend enforces this by billing
+          // quantity=1.
           const billsFlat = !plan.requires_seat_assignment || plan.max_customer_users != null;
           const seatCount = billsFlat
             ? 1
@@ -742,7 +743,7 @@ function PricingPageContent() {
 
               {/* Seat picker — only shown for genuinely per-seat-billed plans.
                   Flat-rate plans (org-wide, or a flat fee for an allowance
-                  like "up to 20 users") bill quantity=1, so the picker would
+                  like "up to 3 users") bill quantity=1, so the picker would
                   be confusing. */}
               {activePrice && !isGraduated && !billsFlat && (
                 <div className="mb-4">

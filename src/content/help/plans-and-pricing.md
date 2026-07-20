@@ -54,8 +54,8 @@ Go to **Account \> Billing** to see everything about your subscription in one pl
 
 The **Current Plan** card shows:
 
-- Your plan name, billing interval (for example, Monthly or Annual), and the per-seat price.
-- **Seats** — displayed as *used of maximum*, for example "1 of 20". The number after "of" is the seat ceiling your plan allows; the number before it is how many are currently in use.
+- Your plan name, billing interval (for example, Monthly or Annual), and the plan price.
+- **Seats** — displayed as *used of maximum*, for example "1 of 3". The number after "of" is the seat ceiling your plan allows (Basic and Advanced both include up to 3 users); the number before it is how many are currently in use.
 - If you're on a free trial, a banner tells you **when the trial ends** and **how much your card will be charged** on that date. Your card isn't charged until the trial converts.
 - Your **current billing period** and, if you've scheduled a cancellation, the date access ends.
 

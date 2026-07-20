@@ -73,6 +73,37 @@ type PaymentMethodStatus = {
   days_remaining: number | null;
 };
 
+// Stripe-side billing view (GET /api/billing/billing-details). The billing
+// contact/card here is whoever entered the card in the Stripe Portal, which
+// may differ from the signup user. All fields best-effort / nullable.
+type BillingDetails = {
+  has_stripe_customer: boolean;
+  portal_available: boolean;
+  billing_name: string | null;
+  billing_email: string | null;
+  billing_phone: string | null;
+  billing_address: {
+    line1: string | null;
+    line2: string | null;
+    city: string | null;
+    state: string | null;
+    postal_code: string | null;
+    country: string | null;
+  } | null;
+  card: {
+    brand: string | null;
+    last4: string | null;
+    exp_month: number | null;
+    exp_year: number | null;
+    funding: string | null;
+  } | null;
+  next_payment: {
+    amount_cents: number | null;
+    currency: string | null;
+    date: string | null;
+  } | null;
+};
+
 function trialDeadlineSentence(days: number | null | undefined): string {
   if (days == null) return "soon";
   if (days <= 0) return "today";
@@ -142,7 +173,15 @@ export default function BillingPage() {
 
 function BillingPageContent() {
   const router = useRouter();
-  const { user, isLoading: authLoading, refreshUser } = useAuth();
+  const { user, isLoading: authLoading, refreshUser, hasAnyProductAccess } = useAuth();
+  // Every signed-up org holds the Free tier as a baseline comp grant (it isn't a
+  // Stripe subscription), so a customer with no paid sub is on Free — surface
+  // that in the Current Plan card instead of "no active plan".
+  const onFreeTier = hasAnyProductAccess([
+    "library_search_free",
+    "library_vendor_search_free",
+    "library_parts_search_free",
+  ]);
   const searchParams = useSearchParams();
   const checkoutFlag = searchParams.get("checkout");
   const checkoutSessionId = searchParams.get("session_id");
@@ -151,6 +190,7 @@ function BillingPageContent() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [pmStatus, setPmStatus] = useState<PaymentMethodStatus | null>(null);
+  const [billingDetails, setBillingDetails] = useState<BillingDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [portalPending, setPortalPending] = useState(false);
@@ -166,11 +206,12 @@ function BillingPageContent() {
     setIsLoading(true);
     setError(null);
     try {
-      const [subsResp, invsResp, plansResp, pmResp] = await Promise.all([
+      const [subsResp, invsResp, plansResp, pmResp, bdResp] = await Promise.all([
         fetchWithAuth("/api/billing/subscriptions"),
         fetchWithAuth("/api/billing/invoices"),
         fetch("/api/billing/plans"),
         fetchWithAuth("/api/billing/payment-method-status"),
+        fetchWithAuth("/api/billing/billing-details"),
       ]);
 
       if (!subsResp.ok) {
@@ -196,6 +237,9 @@ function BillingPageContent() {
       // fetch shouldn't block the page; just treat as non-subscriber.
       if (pmResp.ok) setPmStatus(await pmResp.json());
       else setPmStatus(null);
+      // Stripe-side billing details — best-effort; never block the page.
+      if (bdResp.ok) setBillingDetails(await bdResp.json());
+      else setBillingDetails(null);
     } catch (err) {
       console.error(err);
       setError("An unexpected error occurred");
@@ -380,19 +424,10 @@ function BillingPageContent() {
           </p>
         </div>
         <div className="flex gap-2">
-          {hasStripeCustomer && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openPortal}
-              disabled={portalPending}
-            >
-              {portalPending ? "Opening…" : "Manage payment method"}
-            </Button>
-          )}
-          {/* Hide "View plans" for trialing customers without a card — picking
-              a plan there creates a duplicate Stripe subscription instead of
-              adding a card. Banner above directs them to the Customer Portal. */}
+          {/* "Manage payment method" moved into the Payment & billing card
+              below. Hide "View plans" for trialing customers without a card —
+              picking a plan there creates a duplicate Stripe subscription
+              instead of adding a card. Banner above directs them to the Portal. */}
           {!trialingNoCard && (
             <Button href="/pricing" variant="outline" size="sm">
               View plans
@@ -439,14 +474,20 @@ function BillingPageContent() {
             Loading subscription details…
           </div>
         ) : subscriptions.length === 0 ? (
-          <div className="bg-card-bg border border-border rounded-xl p-6 mb-8">
-            <p className="text-muted text-sm">You don&apos;t have an active plan yet.</p>
-            <div className="mt-4">
-              <Button href="/pricing" variant="primary" size="sm">
-                Browse plans
-              </Button>
+          onFreeTier ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+              <FreePlanCard />
             </div>
-          </div>
+          ) : (
+            <div className="bg-card-bg border border-border rounded-xl p-6 mb-8">
+              <p className="text-muted text-sm">You don&apos;t have an active plan yet.</p>
+              <div className="mt-4">
+                <Button href="/pricing" variant="primary" size="sm">
+                  Browse plans
+                </Button>
+              </div>
+            </div>
+          )
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
             {subscriptions.map((sub) => (
@@ -461,6 +502,24 @@ function BillingPageContent() {
               />
             ))}
           </div>
+        )}
+
+        {/* Stripe-side payment & billing details, and the sole entry point to
+            the Stripe Portal. Shown for any customer with a Stripe link
+            (subscribers / trialers, incl. canceled); Free customers have
+            nothing here yet. Uses the reliable hasStripeCustomer signal so the
+            "Manage in Stripe" action survives a failed billing-details fetch. */}
+        {!isLoading && (hasStripeCustomer || billingDetails?.has_stripe_customer) && (
+          <>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Payment &amp; billing</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+              <PaymentBillingCard
+                details={billingDetails}
+                onManage={openPortal}
+                portalPending={portalPending}
+              />
+            </div>
+          </>
         )}
       </TabPanel>
 
@@ -544,6 +603,143 @@ function BillingPageContent() {
   );
 }
 
+// Stripe-side payment & billing details. The card/contact shown here is
+// whatever was entered in the Stripe Customer Portal (the person who actually
+// pays), which may differ from the signed-in user. Read-only; all changes go
+// through the Stripe portal (the only PCI-safe place to manage a card).
+function PaymentBillingCard({
+  details,
+  onManage,
+  portalPending,
+}: {
+  details: BillingDetails | null;
+  onManage: () => void;
+  portalPending: boolean;
+}) {
+  const { card, billing_name, billing_email, billing_address, next_payment } =
+    details ?? ({} as Partial<BillingDetails>);
+
+  const brand = card?.brand
+    ? card.brand.charAt(0).toUpperCase() + card.brand.slice(1)
+    : null;
+  const cardLabel = card?.last4 ? `${brand ? `${brand} ` : ""}•••• ${card.last4}` : null;
+  const expLabel =
+    card?.exp_month && card?.exp_year
+      ? `exp ${card.exp_month}/${String(card.exp_year).slice(-2)}`
+      : null;
+
+  const contact =
+    billing_name || billing_email
+      ? [billing_name, billing_email].filter(Boolean).join(" · ")
+      : null;
+
+  const addr = billing_address;
+  const addressLine =
+    addr && (addr.line1 || addr.city)
+      ? [
+          addr.line1,
+          addr.line2,
+          [addr.city, addr.state].filter(Boolean).join(", "),
+          addr.postal_code,
+          addr.country,
+        ]
+          .filter(Boolean)
+          .join(", ")
+      : null;
+
+  return (
+    <div className="bg-card-bg border border-border rounded-xl p-6">
+      <div className="flex items-start justify-between mb-3">
+        <h3 className="text-lg font-semibold text-card-foreground">Payment &amp; billing</h3>
+      </div>
+      {!details ? (
+        <p className="text-sm text-muted">
+          We couldn&apos;t load your billing details right now. You can still
+          manage your card and billing info in the Stripe portal.
+        </p>
+      ) : (
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <dt className="text-muted">Card</dt>
+        <dd className="text-card-foreground font-medium">
+          {cardLabel ? (
+            <>
+              {cardLabel}
+              {expLabel && <span className="text-muted font-normal"> · {expLabel}</span>}
+            </>
+          ) : (
+            <span className="text-muted font-normal">No card on file</span>
+          )}
+        </dd>
+
+        <dt className="text-muted">Billing contact</dt>
+        <dd className="text-card-foreground font-medium">
+          {contact ?? <span className="text-muted font-normal">Not set yet</span>}
+        </dd>
+
+        {addressLine && (
+          <>
+            <dt className="text-muted">Billing address</dt>
+            <dd className="text-card-foreground font-medium">{addressLine}</dd>
+          </>
+        )}
+
+        {next_payment?.amount_cents != null && (
+          <>
+            <dt className="text-muted">Next charge</dt>
+            <dd className="text-card-foreground font-medium">
+              {formatMoney(next_payment.amount_cents, next_payment.currency)}
+              {next_payment.date ? ` on ${formatDate(next_payment.date)}` : ""}
+            </dd>
+          </>
+        )}
+      </dl>
+      )}
+
+      <div className="mt-5 pt-4 border-t border-border flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={onManage} disabled={portalPending}>
+          {portalPending ? "Opening…" : "Manage in Stripe"}
+        </Button>
+      </div>
+      <p className="text-xs text-muted mt-3">
+        Update your card, billing contact, or address in the secure Stripe portal.
+      </p>
+    </div>
+  );
+}
+
+// Shown in the Current Plan tab when the customer has no Stripe subscription.
+// Every org holds the Free tier as a baseline comp grant, so this is their
+// actual current plan — mirror the SubscriptionCard styling so it reads as one.
+function FreePlanCard() {
+  const badge = statusBadge("active");
+  return (
+    <div className="bg-card-bg border border-border rounded-xl p-6">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h3 className="text-lg font-semibold text-card-foreground">Procurement Intelligence — Free</h3>
+          <p className="text-muted text-sm">Included with your account · $0</p>
+        </div>
+        <span className={badge.className}>{badge.label}</span>
+      </div>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <dt className="text-muted">Seats</dt>
+        <dd className="text-card-foreground font-medium">1 of 1</dd>
+        <dt className="text-muted">Price</dt>
+        <dd className="text-card-foreground font-medium">Free</dd>
+      </dl>
+      <p className="text-sm text-muted mt-3">
+        The Free tier includes 1 user. Upgrade to Basic or Advanced for the full
+        parts &amp; vendor library, bid matching, and up to 3 users.
+      </p>
+      <div className="mt-5 pt-4 border-t border-border flex flex-wrap gap-2">
+        <Button href="/pricing" variant="primary" size="sm">
+          Upgrade plan
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function SubscriptionCard({
   sub,
   plans,
@@ -571,10 +767,11 @@ function SubscriptionCard({
     if (sub.product_group_name && p.kind === "product_group") return p.name === sub.product_group_name;
     return false;
   });
-  // Prefer a clean Free/Basic/Advanced tier label from the matching plan's
-  // key; fall back to the raw plan name so a real paid plan is never hidden
-  // behind a guessed tier.
-  const planLabel = tierBadgeForKey(matchingPlan?.key)?.label ?? rawName;
+  // Display as "Procurement Intelligence — <tier>" using the clean
+  // Free/Basic/Advanced tier label from the matching plan's key; fall back to
+  // the raw plan name so a real paid plan is never hidden behind a guessed tier.
+  const tierName = tierBadgeForKey(matchingPlan?.key)?.label;
+  const planLabel = tierName ? `Procurement Intelligence — ${tierName}` : rawName;
   // The plan's seat cap (feature_limits.max_seat_count). When present we show
   // "used of cap"; otherwise just the provisioned seat count.
   const maxSeats = matchingPlan?.max_seat_count ?? null;
@@ -595,7 +792,7 @@ function SubscriptionCard({
           <p className="text-muted text-sm">
             {intervalLabel(sub.interval_count)}
             {" · "}
-            {formatMoney(sub.unit_amount_cents, sub.currency)} / seat
+            {formatMoney(sub.unit_amount_cents, sub.currency)}
           </p>
         </div>
         <span className={badge.className}>{badge.label}</span>
@@ -613,10 +810,17 @@ function SubscriptionCard({
           </>
         )}
 
-        <dt className="text-muted">Current period</dt>
-        <dd className="text-card-foreground font-medium">
-          {formatDate(sub.current_period_start)} → {formatDate(sub.current_period_end)}
-        </dd>
+        {/* During a trial the period end equals "Trial ends" above, so we
+            hide this row to avoid showing the same date twice. Once the sub is
+            active/paid it shows the real billing cycle. */}
+        {!trialActive && (
+          <>
+            <dt className="text-muted">Current period</dt>
+            <dd className="text-card-foreground font-medium">
+              {formatDate(sub.current_period_start)} → {formatDate(sub.current_period_end)}
+            </dd>
+          </>
+        )}
 
         {sub.cancel_at_period_end && (
           <>
@@ -739,7 +943,7 @@ function IntervalModal({
                 <span className="text-sm font-medium text-card-foreground">{intervalLabel(p.interval_count)}</span>
               </div>
               <span className="text-sm text-muted">
-                {formatMoney(p.unit_amount_cents, p.currency)} / seat
+                {formatMoney(p.unit_amount_cents, p.currency)}
               </span>
             </label>
           ))}
@@ -871,7 +1075,7 @@ function SwitchPlanModal({
                       <span className="text-sm font-medium text-card-foreground">{intervalLabel(p.interval_count)}</span>
                     </div>
                     <span className="text-sm text-muted">
-                      {formatMoney(p.unit_amount_cents, p.currency)} / seat
+                      {formatMoney(p.unit_amount_cents, p.currency)}
                     </span>
                   </label>
                 ))}
