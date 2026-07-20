@@ -50,18 +50,28 @@ If you move to a plan with a lower profile limit, your existing profiles aren't 
 
 ## Checking your current plan
 
-Go to **Account \> Billing** to see everything about your subscription in one place.
+Go to **Account \> Billing** to see everything about your subscription in one place. Your plan appears as **Procurement Intelligence — Free**, **— Basic**, or **— Advanced**.
 
-The **Current Plan** card shows:
+### Current plan card
 
-- Your plan name, billing interval (for example, Monthly or Annual), and the plan price.
-- **Seats** — displayed as *used of maximum*, for example "1 of 3". The number after "of" is the seat ceiling your plan allows (Basic and Advanced both include up to 3 users); the number before it is how many are currently in use.
-- If you're on a free trial, a banner tells you **when the trial ends** and **how much your card will be charged** on that date. Your card isn't charged until the trial converts.
-- Your **current billing period** and, if you've scheduled a cancellation, the date access ends.
+- Your plan name and, for paid plans, the billing interval (for example, Monthly or Annual) and the plan price.
+- **Seats** — displayed as *used of maximum*, for example "1 of 3". The number after "of" is the seat ceiling your plan allows (Free includes 1 user; Basic and Advanced both include up to 3); the number before it is how many are currently in use.
+- If you're on a **free trial**, a banner tells you when the trial ends. Add a payment method before then to keep your plan — without one, your subscription ends and you return to the Free tier (no charge). Your card is never charged during the trial.
+- Once your plan is active, the card shows your **current billing period** and, if you've scheduled a cancellation, the date access ends.
 
-From the same card you can **change your billing interval**, **change your plan**, **cancel** (at the end of the period or immediately), or **reactivate** a plan you've scheduled to cancel. Use **Manage payment method** to update your card through the secure Stripe billing portal.
+On the **Free** plan you'll see a Free plan card with an **Upgrade plan** button instead of a paid subscription. From a paid plan card you can **change your billing interval**, **change your plan**, **cancel** (at the end of the period or immediately), or **reactivate** a plan you've scheduled to cancel.
 
-Your seat count is set when you subscribe and isn't self-service editable. If you need more seats, contact support and we'll adjust your subscription.
+Your seat ceiling is fixed by your plan (Basic and Advanced both allow up to 3 users) and isn't self-service editable. If you need more, contact support.
+
+### Payment & billing card
+
+Below your plan, the **Payment & billing** card shows the billing details Stripe has on file:
+
+- **Card** — the card that will be charged (brand and last four digits), or "No card on file" if you haven't added one yet.
+- **Billing contact** — the name and email on the payment account. This can differ from your login: it's whoever entered the payment details.
+- **Billing address** and **Next charge** (amount and date), when available.
+
+Use **Manage in Stripe** to add or update your card, billing contact, or address in Stripe's secure billing portal — no separate Stripe login required. Card details are only ever entered in Stripe and are never stored by GPH.
 
 To review past charges, open the **Invoice history** tab on the same page — each invoice lists its number, date, amount, status, and a link to the PDF.
 
