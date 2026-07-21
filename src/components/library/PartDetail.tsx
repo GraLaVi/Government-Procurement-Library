@@ -32,6 +32,7 @@ import {
   PartPackagingResponse,
   ProcurementItemDescription,
   ProcurementItemDescriptionResponse,
+  SDDTBlock,
   PartTabCounts,
   formatNSN,
   formatNiin,
@@ -2643,13 +2644,152 @@ function ProcurementItemDescriptionPanel({ description, isLoading, error, onRetr
     );
   }
 
+  // The backend concatenates the CTDF description text with SDDT text blocks
+  // rendered as <a class="sddt-link"> links to a separate page. We strip those
+  // anchors out of the CTDF HTML and render each SDDT block as a click-to-open
+  // popover (see SddtPopover) sourced from the structured sddt_blocks data —
+  // no navigation to another page.
+  const ctdfHtml = stripSddtLinks(description.description);
+  const sddtBlocks = description.sddt_blocks ?? [];
+
   return (
     <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card">
-      <div
-        className="procurement-description [&_a.sddt-link]:text-primary [&_a.sddt-link]:underline [&_a.sddt-link]:decoration-dotted [&_a.sddt-link]:hover:decoration-solid [&_a.sddt-link]:cursor-pointer"
-        dangerouslySetInnerHTML={{ __html: description.description }}
-      />
+      {ctdfHtml && (
+        <div
+          className="procurement-description"
+          dangerouslySetInnerHTML={{ __html: ctdfHtml }}
+        />
+      )}
+      {sddtBlocks.length > 0 && (
+        <div className={`flex flex-col items-start gap-1 ${ctdfHtml ? "mt-2" : ""}`}>
+          {sddtBlocks.map((block) => (
+            <SddtPopover key={block.id} block={block} />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+// Remove the server-rendered SDDT anchor links (and any trailing line breaks
+// they leave behind) from the procurement description HTML, leaving just the
+// CTDF text. Uses the DOM rather than a regex so titles/attributes containing
+// '>' can't break parsing. Falls back to the raw HTML during SSR.
+function stripSddtLinks(html: string): string {
+  if (typeof document === "undefined") return html;
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  container.querySelectorAll("a.sddt-link").forEach((el) => el.remove());
+  // Trim trailing <br> / whitespace text nodes left after removing the links.
+  let node: ChildNode | null = container.lastChild;
+  while (
+    node &&
+    ((node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === "BR") ||
+      (node.nodeType === Node.TEXT_NODE && !node.textContent?.trim()))
+  ) {
+    const prev = node.previousSibling;
+    container.removeChild(node);
+    node = prev;
+  }
+  return container.innerHTML.trim();
+}
+
+// Click-to-open popover for a single SDDT (Supplemental Data Definition Text)
+// block. Replaces the old link that navigated to /library/parts/viewsddt and
+// the native title-attribute tooltip. Positioned with fixed coordinates (like
+// CodeTooltip) to avoid overflow clipping; closes on outside click or Escape.
+function SddtPopover({ block }: { block: SDDTBlock }) {
+  const [open, setOpen] = useState(false);
+  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Position the popover once it is open and measured.
+  useEffect(() => {
+    if (!open || !triggerRef.current || !popoverRef.current) return;
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const popoverRect = popoverRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const width = popoverRect.width || 320;
+    const height = popoverRect.height || 240;
+    const spacing = 6;
+
+    // Left-align to the trigger, clamped to the viewport.
+    const left = Math.max(8, Math.min(triggerRect.left, viewportWidth - width - 8));
+
+    // Prefer below the trigger; flip above when there isn't room.
+    const spaceBelow = viewportHeight - triggerRect.bottom;
+    let top =
+      spaceBelow >= height + spacing || spaceBelow >= triggerRect.top
+        ? triggerRect.bottom + spacing
+        : triggerRect.top - height - spacing;
+    top = Math.max(8, Math.min(top, viewportHeight - height - 8));
+
+    setPopoverStyle({ position: "fixed", left: `${left}px`, top: `${top}px`, zIndex: 9999 });
+  }, [open]);
+
+  // Close on outside click or Escape.
+  useEffect(() => {
+    if (!open) return;
+    const handlePointer = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        !popoverRef.current?.contains(target) &&
+        !triggerRef.current?.contains(target)
+      ) {
+        setOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="text-left text-primary underline decoration-dotted hover:decoration-solid cursor-pointer"
+      >
+        {block.title}
+      </button>
+      {open && (
+        <div
+          ref={popoverRef}
+          style={popoverStyle}
+          role="dialog"
+          aria-label={block.title}
+          className="fixed w-80 max-w-[90vw] rounded shadow-lg bg-card-bg border border-border text-foreground"
+        >
+          <div className="flex items-start justify-between gap-2 px-2.5 py-1.5 bg-muted-light border-b border-border">
+            <span className="font-semibold text-xs">{block.title}</span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Close"
+              className="text-muted hover:text-foreground text-sm leading-none shrink-0"
+            >
+              &times;
+            </button>
+          </div>
+          <div className="p-2.5 max-h-72 overflow-auto">
+            <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-snug text-foreground">
+              {block.text_content}
+            </pre>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
