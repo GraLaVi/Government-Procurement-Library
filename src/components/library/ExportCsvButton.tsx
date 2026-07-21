@@ -1,19 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import type { LibraryTier } from "@/lib/library/tier";
+import {
+  buildCsv,
+  todayIsoDate,
+  triggerDownload,
+  type CsvColumn,
+} from "@/lib/library/csv";
 
-/**
- * Describes a single column in the exported CSV. The `value` accessor
- * runs against each row and should return something safely string-able
- * (numbers, plain strings, null/undefined). For composite display cells
- * (e.g. "Buyer Contact" = email + phone), let the accessor pick whichever
- * field works best for CSV — typically the email.
- */
-export interface CsvColumn<T> {
-  header: string;
-  value: (row: T) => string | number | null | undefined;
-}
+// Re-exported so existing importers of `CsvColumn` from this module keep
+// working; the canonical definition now lives in @/lib/library/csv.
+export type { CsvColumn } from "@/lib/library/csv";
 
 interface ExportCsvButtonProps<T> {
   /** Highest parts-library tier the current user holds. From
@@ -38,46 +37,6 @@ interface ExportCsvButtonProps<T> {
   compact?: boolean;
 }
 
-function todayIsoDate(): string {
-  // Local date in YYYY-MM-DD — mirrors the backend `csv_response` suffix
-  // format so exports across the app feel consistent.
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function escapeCsvCell(value: string | number | null | undefined): string {
-  if (value === null || value === undefined) return "";
-  const s = String(value);
-  // Quote if the cell contains a comma, double-quote, newline, or
-  // leading/trailing whitespace — and escape internal quotes by
-  // doubling them per RFC 4180.
-  if (/[",\n\r]/.test(s) || s !== s.trim()) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
-  return s;
-}
-
-function buildCsv<T>(rows: T[], columns: CsvColumn<T>[]): string {
-  const headerLine = columns.map((c) => escapeCsvCell(c.header)).join(",");
-  const dataLines = rows.map((row) =>
-    columns.map((c) => escapeCsvCell(c.value(row))).join(","),
-  );
-  return [headerLine, ...dataLines].join("\n");
-}
-
-function triggerDownload(content: string, filename: string): void {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
 function DownloadIcon() {
   return (
     <svg
@@ -92,6 +51,20 @@ function DownloadIcon() {
         strokeLinejoin="round"
         d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"
       />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      className="w-3 h-3"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
     </svg>
   );
 }
@@ -119,6 +92,18 @@ export function ExportCsvButton<T>({
   onExport,
   compact = false,
 }: ExportCsvButtonProps<T>) {
+  // Downloads land silently in the browser's Downloads folder, so flash a
+  // "Downloaded" confirmation on the button for a couple of seconds. Hooks
+  // run before the `tier === null` early return so hook order stays stable.
+  const [justExported, setJustExported] = useState(false);
+  const exportTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (exportTimer.current) window.clearTimeout(exportTimer.current);
+    },
+    [],
+  );
+
   if (tier === null) return null;
 
   const isAdvanced = tier === "advanced";
@@ -129,7 +114,37 @@ export function ExportCsvButton<T>({
     onExport?.();
     const csv = buildCsv(rows, columns);
     triggerDownload(csv, `${filename}-${todayIsoDate()}.csv`);
+    setJustExported(true);
+    if (exportTimer.current) window.clearTimeout(exportTimer.current);
+    exportTimer.current = window.setTimeout(() => setJustExported(false), 2500);
   };
+
+  // The advanced (downloadable) button — shared by the compact and full
+  // layouts so the "Downloaded" confirmation behaves identically in both.
+  const advancedButton = (
+    <button
+      type="button"
+      onClick={handleExport}
+      disabled={disabledForData}
+      title={
+        justExported
+          ? "Saved to your Downloads folder"
+          : disabledForData
+            ? "No rows to export yet"
+            : "Download the current rows as CSV"
+      }
+      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-medium transition-colors ${
+        justExported
+          ? "border-success/40 bg-success/10 text-success"
+          : disabledForData
+            ? "border-border bg-muted-light/40 text-muted cursor-not-allowed"
+            : "border-border bg-card-bg text-card-foreground hover:bg-muted-light hover:border-primary/40"
+      }`}
+    >
+      {justExported ? <CheckIcon /> : <DownloadIcon />}
+      <span aria-live="polite">{justExported ? "Downloaded" : label}</span>
+    </button>
+  );
 
   // Compact mode renders the button only — for inline placement in tab
   // bars / toolbars where vertical space matters. Hosts are responsible
@@ -137,24 +152,7 @@ export function ExportCsvButton<T>({
   // upsell hint nearby (e.g. below the table).
   if (compact) {
     return isAdvanced ? (
-      <button
-        type="button"
-        onClick={handleExport}
-        disabled={disabledForData}
-        title={
-          disabledForData
-            ? "No rows to export yet"
-            : "Download the current rows as CSV"
-        }
-        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-medium transition-colors ${
-          disabledForData
-            ? "border-border bg-muted-light/40 text-muted cursor-not-allowed"
-            : "border-border bg-card-bg text-card-foreground hover:bg-muted-light hover:border-primary/40"
-        }`}
-      >
-        <DownloadIcon />
-        <span>{label}</span>
-      </button>
+      advancedButton
     ) : (
       <Link
         href="/pricing"
@@ -174,24 +172,7 @@ export function ExportCsvButton<T>({
   return (
     <div className="flex flex-col items-end gap-1">
       {isAdvanced ? (
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={disabledForData}
-          title={
-            disabledForData
-              ? "No rows to export yet"
-              : "Download the current rows as CSV"
-          }
-          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border text-xs font-medium transition-colors ${
-            disabledForData
-              ? "border-border bg-muted-light/40 text-muted cursor-not-allowed"
-              : "border-border bg-card-bg text-card-foreground hover:bg-muted-light hover:border-primary/40"
-          }`}
-        >
-          <DownloadIcon />
-          <span>{label}</span>
-        </button>
+        advancedButton
       ) : (
         // Disabled state for Basic/Free. The wrapper <Link> makes the
         // whole control an upsell route to /pricing.

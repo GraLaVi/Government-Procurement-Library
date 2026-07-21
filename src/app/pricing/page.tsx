@@ -585,7 +585,7 @@ function PricingPageContent() {
         <span className="h-px w-8 bg-border" aria-hidden="true" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Free tier — auto-granted on signup, no Stripe involvement. */}
         <div className="bg-card-bg border border-border rounded-xl p-6 flex flex-col">
           <h2 className="text-xl font-semibold text-card-foreground">Free</h2>

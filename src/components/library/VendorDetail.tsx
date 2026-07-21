@@ -12,7 +12,7 @@
 // - Loading/error messages: "text-xs text-muted" or "text-xs text-error"
 // - Empty states: "text-xs text-muted"
 // ============================================================================
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
@@ -33,7 +33,7 @@ import {
   formatNumber,
   formatAwardDate,
 } from "@/lib/library/types";
-import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { DetailSections, DetailToolbar } from "@/components/library/DetailSections";
 import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
@@ -41,6 +41,9 @@ import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveVendorTier, tierMeets } from "@/lib/library/tier";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
+import { usePreferences } from "@/lib/hooks/usePreferences";
+import { resolveResultsLayout } from "@/lib/preferences/resultsLayout";
+import { buildCsv, buildCombinedCsv, triggerDownload, todayIsoDate } from "@/lib/library/csv";
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
@@ -154,8 +157,16 @@ type TabId = "demographics" | "contacts" | "awards" | "bookings" | "solicitation
 export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps) {
   const { hasAnyProductAccess } = useAuth();
   const tier = resolveVendorTier(hasAnyProductAccess);
+  const { preferences } = usePreferences();
+  const layout = resolveResultsLayout(preferences);
 
   const [activeTab, setActiveTab] = useState<TabId>("demographics");
+
+  // Print-the-whole-record support (used from both layouts). In tabs mode we
+  // load + expand every section before printing so the printout is complete.
+  const [expandForPrint, setExpandForPrint] = useState(false);
+  const [printRequested, setPrintRequested] = useState(false);
+  const [preparingPrint, setPreparingPrint] = useState(false);
 
   // Awards state
   const [awards, setAwards] = useState<VendorAward[]>([]);
@@ -370,8 +381,167 @@ export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps)
     }
   }, [tier, activeTab, tabs]);
 
+  // One-pager: when the linear layout is active, load every tier-permitted
+  // section up front (each fetch guards against duplicate calls) and fire the
+  // same view-audit the tab clicks would.
+  useEffect(() => {
+    if (layout !== "linear" || !vendor?.cage_code) return;
+    const trackView = (view: string) =>
+      fetch(
+        `/api/library/vendor/${encodeURIComponent(vendor.cage_code)}/track-view?view=${view}`,
+        { method: "POST" },
+      ).catch(() => { /* audit must never break UX */ });
+    if (tierMeets(tier, "basic") && !awardsFetched) {
+      trackView("awards");
+      fetchAwards();
+    }
+    if (tierMeets(tier, "advanced")) {
+      if (!bookingsFetched) { trackView("bookings"); fetchBookings(); }
+      if (!solicitationsFetched) { trackView("solicitations"); fetchSolicitations(); }
+    }
+  }, [
+    layout, tier, vendor?.cage_code,
+    awardsFetched, bookingsFetched, solicitationsFetched,
+    fetchAwards, fetchBookings, fetchSolicitations,
+  ]);
+
+  // Section content + per-section export actions, shared by both layouts.
+  const sectionContent: Record<TabId, ReactNode> = {
+    demographics: (
+      <DemographicsPanel
+        vendor={vendor}
+        physicalAddress={physicalAddress}
+        mailingAddress={mailingAddress}
+      />
+    ),
+    contacts: <ContactsPanel contacts={vendor.contacts || []} />,
+    awards: (
+      <AwardsPanel
+        awards={awards}
+        totalCount={awardsTotal}
+        isLoading={isLoadingAwards}
+        error={awardsError}
+        onRetry={fetchAwards}
+      />
+    ),
+    bookings: (
+      <BookingsPanel
+        months={bookingMonths}
+        totals={bookingTotals}
+        isLoading={isLoadingBookings}
+        error={bookingsError}
+        onRetry={fetchBookings}
+      />
+    ),
+    solicitations: (
+      <SolicitationsPanel
+        solicitations={solicitations}
+        totalCount={solicitationsTotal}
+        isLoading={isLoadingSolicitations}
+        error={solicitationsError}
+        onRetry={fetchSolicitations}
+      />
+    ),
+  };
+  const sectionAction: Partial<Record<TabId, ReactNode>> = {
+    awards: (
+      <ExportCsvButton
+        tier={tier}
+        rows={awards}
+        columns={AWARDS_CSV_COLUMNS}
+        filename={`vendor-awards-${vendor.cage_code}`}
+        compact
+      />
+    ),
+    bookings: (
+      <ExportCsvButton
+        tier={tier}
+        rows={bookingMonths}
+        columns={BOOKINGS_CSV_COLUMNS}
+        filename={`vendor-bookings-${vendor.cage_code}`}
+        compact
+      />
+    ),
+    solicitations: (
+      <ExportCsvButton
+        tier={tier}
+        rows={solicitations}
+        columns={VENDOR_SOLICITATIONS_CSV_COLUMNS}
+        filename={`vendor-solicitations-${vendor.cage_code}`}
+        compact
+      />
+    ),
+  };
+  const sections = tabs.map((t) => ({
+    id: t.id,
+    label: t.label,
+    content: sectionContent[t.id],
+    action: sectionAction[t.id],
+  }));
+
+  // Advanced-tier one-pager toolbar: a single combined CSV of the tabular
+  // sections (empty sections are skipped by buildCombinedCsv).
+  const handleExportAll = () => {
+    const csv = buildCombinedCsv([
+      { title: "Recent Awards", csv: buildCsv(awards, AWARDS_CSV_COLUMNS) },
+      { title: "Contracts Booked", csv: buildCsv(bookingMonths, BOOKINGS_CSV_COLUMNS) },
+      { title: "Open Solicitations", csv: buildCsv(solicitations, VENDOR_SOLICITATIONS_CSV_COLUMNS) },
+    ]);
+    triggerDownload(csv, `vendor-${vendor.cage_code}-${todayIsoDate()}.csv`);
+  };
+
+  // ---- Print the whole record (works from tabs and linear) ----
+  const loadAllSections = useCallback(async () => {
+    const jobs: Promise<unknown>[] = [];
+    if (tierMeets(tier, "basic")) jobs.push(fetchAwards());
+    if (tierMeets(tier, "advanced")) {
+      jobs.push(fetchBookings());
+      jobs.push(fetchSolicitations());
+    }
+    await Promise.all(jobs);
+  }, [tier, fetchAwards, fetchBookings, fetchSolicitations]);
+
+  const handlePrint = useCallback(async () => {
+    setPreparingPrint(true);
+    try {
+      await loadAllSections();
+    } finally {
+      setPreparingPrint(false);
+    }
+    setExpandForPrint(true);
+    setPrintRequested(true);
+  }, [loadAllSections]);
+
+  // Fire the print dialog once the expanded (all-sections) render has painted.
+  useEffect(() => {
+    if (!expandForPrint || !printRequested) return;
+    setPrintRequested(false);
+    const id = window.requestAnimationFrame(() => window.print());
+    return () => window.cancelAnimationFrame(id);
+  }, [expandForPrint, printRequested]);
+
+  // Return to the on-screen layout after the print dialog closes.
+  useEffect(() => {
+    const done = () => setExpandForPrint(false);
+    window.addEventListener("afterprint", done);
+    return () => window.removeEventListener("afterprint", done);
+  }, []);
+
+  // While preparing/printing, render every section stacked (linear) so the
+  // whole record prints even from the tabbed layout.
+  const effectiveLayout = expandForPrint ? "linear" : layout;
+
+  const toolbar =
+    tier === "advanced" ? (
+      <DetailToolbar
+        onPrint={handlePrint}
+        onExportAll={layout === "linear" ? handleExportAll : undefined}
+        printPreparing={preparingPrint}
+      />
+    ) : undefined;
+
   return (
-    <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
+    <div className="library-detail-print-root bg-card-bg rounded-lg border border-border overflow-hidden">
       {/* Header */}
       <div className="px-3 py-2 border-b border-border bg-muted-light">
         <div className="flex items-start justify-between gap-3">
@@ -399,89 +569,13 @@ export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps)
         </div>
       </div>
 
-      {/* Tabs — paired with a right-side export button so the action
-          sits inline with the tab labels and doesn't push the table
-          content down. Only the awards and solicitations tabs export
-          today; other tabs render nothing on the right. */}
-      <div className="px-4 pt-3 flex items-end justify-between gap-3">
-        <Tabs
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-        />
-        {activeTab === "awards" && (
-          <ExportCsvButton
-            tier={tier}
-            rows={awards}
-            columns={AWARDS_CSV_COLUMNS}
-            filename={`vendor-awards-${vendor.cage_code}`}
-            compact
-          />
-        )}
-        {activeTab === "bookings" && (
-          <ExportCsvButton
-            tier={tier}
-            rows={bookingMonths}
-            columns={BOOKINGS_CSV_COLUMNS}
-            filename={`vendor-bookings-${vendor.cage_code}`}
-            compact
-          />
-        )}
-        {activeTab === "solicitations" && (
-          <ExportCsvButton
-            tier={tier}
-            rows={solicitations}
-            columns={VENDOR_SOLICITATIONS_CSV_COLUMNS}
-            filename={`vendor-solicitations-${vendor.cage_code}`}
-            compact
-          />
-        )}
-      </div>
-
-      {/* Tab Panels */}
-      <div className="p-3">
-        <TabPanel tabId="demographics" activeTab={activeTab}>
-          <DemographicsPanel
-            vendor={vendor}
-            physicalAddress={physicalAddress}
-            mailingAddress={mailingAddress}
-          />
-        </TabPanel>
-
-        <TabPanel tabId="contacts" activeTab={activeTab}>
-          <ContactsPanel contacts={vendor.contacts || []} />
-        </TabPanel>
-
-        <TabPanel tabId="awards" activeTab={activeTab}>
-          <AwardsPanel
-            awards={awards}
-            totalCount={awardsTotal}
-            isLoading={isLoadingAwards}
-            error={awardsError}
-            onRetry={fetchAwards}
-          />
-        </TabPanel>
-
-        <TabPanel tabId="bookings" activeTab={activeTab}>
-          <BookingsPanel
-            months={bookingMonths}
-            totals={bookingTotals}
-            isLoading={isLoadingBookings}
-            error={bookingsError}
-            onRetry={fetchBookings}
-          />
-        </TabPanel>
-
-        <TabPanel tabId="solicitations" activeTab={activeTab}>
-          <SolicitationsPanel
-            solicitations={solicitations}
-            totalCount={solicitationsTotal}
-            isLoading={isLoadingSolicitations}
-            error={solicitationsError}
-            onRetry={fetchSolicitations}
-          />
-        </TabPanel>
-      </div>
+      <DetailSections
+        layout={effectiveLayout}
+        sections={sections}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        toolbar={toolbar}
+      />
     </div>
   );
 }

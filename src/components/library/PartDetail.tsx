@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from "react";
 import Link from "next/link";
 
 // ============================================================================
@@ -44,7 +44,7 @@ import {
   formatPartIdentity,
   isPartNumberOnly,
 } from "@/lib/library/types";
-import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { DetailSections, DetailToolbar } from "@/components/library/DetailSections";
 import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
@@ -54,6 +54,9 @@ import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import type { RfqManufacturerSelection } from "@/lib/rfq/types";
 import { resolvePartsTier, tierMeets, type LibraryTier } from "@/lib/library/tier";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
+import { usePreferences } from "@/lib/hooks/usePreferences";
+import { resolveResultsLayout } from "@/lib/preferences/resultsLayout";
+import { buildCsv, buildCombinedCsv, triggerDownload, todayIsoDate } from "@/lib/library/csv";
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
@@ -302,6 +305,14 @@ export function PartDetail({ part }: PartDetailProps) {
   const { hasAnyProductAccess } = useAuth();
   const tier = resolvePartsTier(hasAnyProductAccess);
   const isFreeOnly = tier === "free";
+  const { preferences } = usePreferences();
+  const layout = resolveResultsLayout(preferences);
+
+  // Print-the-whole-record support (used from both layouts). In tabs mode we
+  // load + expand every section before printing so the printout is complete.
+  const [expandForPrint, setExpandForPrint] = useState(false);
+  const [printRequested, setPrintRequested] = useState(false);
+  const [preparingPrint, setPreparingPrint] = useState(false);
 
   // URL key for addressing this part in the read API: its NSN, or "ID-<part_id>"
   // for NSN-less (DIBBS part-number-only) parts whose nsn comes back as "".
@@ -801,8 +812,223 @@ export function PartDetail({ part }: PartDetailProps) {
     }
   }, [tier, activeTab, tabs]);
 
+  // One-pager: when the linear layout is active, load every tier-permitted
+  // section up front (each fetch guards against duplicate calls) and fire the
+  // same view-audit the tab clicks would. Overview + free-tier solicitations
+  // need no fetch.
+  useEffect(() => {
+    if (layout !== "linear" || !partReqKey) return;
+    const trackView = (view: string) =>
+      fetch(
+        `/api/library/parts/${encodeURIComponent(partReqKey)}/track-view?view=${view}`,
+        { method: "POST" },
+      ).catch(() => { /* audit must never break UX */ });
+    if (tierMeets(tier, "advanced") && !procurementFetched) {
+      trackView("procurement_history");
+      fetchProcurementHistory();
+    }
+    if (!isFreeOnly && !solicitationsFetched) {
+      trackView("solicitations");
+      fetchSolicitations();
+    }
+    if (tierMeets(tier, "advanced") && !manufacturersFetched) {
+      trackView("manufacturers");
+      fetchManufacturers();
+    }
+    if (tierMeets(tier, "basic") && !technicalFetched) {
+      trackView("technical_characteristics");
+      fetchTechnicalCharacteristics();
+    }
+    if (tierMeets(tier, "basic") && !endUseFetched) {
+      trackView("end_use_description");
+      fetchEndUseDescriptions();
+    }
+    if (tierMeets(tier, "advanced") && !packagingFetched) {
+      trackView("packaging");
+      fetchPackaging();
+    }
+    if (tierMeets(tier, "basic") && !procurementItemDescFetched) {
+      trackView("procurement_item_description");
+      fetchProcurementItemDescription();
+    }
+  }, [
+    layout, tier, isFreeOnly, partReqKey,
+    procurementFetched, solicitationsFetched, manufacturersFetched, technicalFetched,
+    endUseFetched, packagingFetched, procurementItemDescFetched,
+    fetchProcurementHistory, fetchSolicitations, fetchManufacturers,
+    fetchTechnicalCharacteristics, fetchEndUseDescriptions, fetchPackaging,
+    fetchProcurementItemDescription,
+  ]);
+
+  // Section content + per-section export actions, shared by both layouts.
+  const sectionContent: Record<TabId, ReactNode> = {
+    overview: (
+      <OverviewPanel part={part} codeDefinitions={codeDefinitions} codeTypeNames={codeTypeNames} />
+    ),
+    procurement: (
+      <ProcurementPanel
+        records={procurementRecords}
+        totalCount={procurementTotal}
+        isLoading={isLoadingProcurement}
+        error={procurementError}
+        onRetry={fetchProcurementHistory}
+      />
+    ),
+    solicitations: isFreeOnly ? (
+      <FreeSolicitationsView count={tabCounts?.solicitations_count_30d ?? null} />
+    ) : (
+      <SolicitationsPanel
+        solicitations={solicitations}
+        totalCount={solicitationsTotal}
+        isLoading={isLoadingSolicitations}
+        error={solicitationsError}
+        onRetry={fetchSolicitations}
+      />
+    ),
+    manufacturers: (
+      <ManufacturersPanel
+        nsn={part.nsn}
+        manufacturers={manufacturers}
+        totalCount={manufacturersTotal}
+        isLoading={isLoadingManufacturers}
+        error={manufacturersError}
+        onRetry={fetchManufacturers}
+      />
+    ),
+    technical: (
+      <TechnicalCharacteristicsPanel
+        characteristics={technicalCharacteristics}
+        totalCount={technicalTotal}
+        isLoading={isLoadingTechnical}
+        error={technicalError}
+        onRetry={fetchTechnicalCharacteristics}
+      />
+    ),
+    enduse: (
+      <EndUseDescriptionPanel
+        descriptions={endUseDescriptions}
+        totalCount={endUseTotal}
+        isLoading={isLoadingEndUse}
+        error={endUseError}
+        onRetry={fetchEndUseDescriptions}
+      />
+    ),
+    packaging: (
+      <PackagingPanel
+        packaging={packaging}
+        codeDefinitions={packagingCodeDefinitions}
+        markingDefinitions={packagingMarkingDefinitions}
+        supplemental={packagingSupplemental}
+        isLoading={isLoadingPackaging}
+        error={packagingError}
+        onRetry={fetchPackaging}
+      />
+    ),
+    procurementitemdesc: (
+      <ProcurementItemDescriptionPanel
+        description={procurementItemDescription}
+        isLoading={isLoadingProcurementItemDesc}
+        error={procurementItemDescError}
+        onRetry={fetchProcurementItemDescription}
+      />
+    ),
+  };
+  const sectionAction: Partial<Record<TabId, ReactNode>> = {
+    procurement: (
+      <ExportCsvButton
+        tier={tier}
+        rows={procurementRecords}
+        columns={PROCUREMENT_CSV_COLUMNS}
+        filename={`procurement-history-${partReqKey}`}
+        compact
+      />
+    ),
+    solicitations: !isFreeOnly ? (
+      <ExportCsvButton
+        tier={tier}
+        rows={solicitations}
+        columns={SOLICITATIONS_CSV_COLUMNS}
+        filename={`solicitations-${partReqKey}`}
+        compact
+      />
+    ) : undefined,
+  };
+  const sections = tabs.map((t) => ({
+    id: t.id,
+    label: t.label,
+    content: sectionContent[t.id],
+    action: sectionAction[t.id],
+  }));
+
+  // Advanced-tier one-pager toolbar: a single combined CSV of the tabular
+  // sections that carry column specs (empty sections are skipped).
+  const handleExportAll = () => {
+    const csv = buildCombinedCsv([
+      { title: "Procurement History", csv: buildCsv(procurementRecords, PROCUREMENT_CSV_COLUMNS) },
+      { title: "Recent Solicitations", csv: buildCsv(solicitations, SOLICITATIONS_CSV_COLUMNS) },
+    ]);
+    triggerDownload(csv, `part-${partReqKey}-${todayIsoDate()}.csv`);
+  };
+
+  // ---- Print the whole record (works from tabs and linear) ----
+  const loadAllSections = useCallback(async () => {
+    const jobs: Promise<unknown>[] = [];
+    if (tierMeets(tier, "advanced")) jobs.push(fetchProcurementHistory());
+    if (!isFreeOnly) jobs.push(fetchSolicitations());
+    if (tierMeets(tier, "advanced")) jobs.push(fetchManufacturers());
+    if (tierMeets(tier, "basic")) jobs.push(fetchTechnicalCharacteristics());
+    if (tierMeets(tier, "basic")) jobs.push(fetchEndUseDescriptions());
+    if (tierMeets(tier, "advanced")) jobs.push(fetchPackaging());
+    if (tierMeets(tier, "basic")) jobs.push(fetchProcurementItemDescription());
+    await Promise.all(jobs);
+  }, [
+    tier, isFreeOnly,
+    fetchProcurementHistory, fetchSolicitations, fetchManufacturers,
+    fetchTechnicalCharacteristics, fetchEndUseDescriptions, fetchPackaging,
+    fetchProcurementItemDescription,
+  ]);
+
+  const handlePrint = useCallback(async () => {
+    setPreparingPrint(true);
+    try {
+      await loadAllSections();
+    } finally {
+      setPreparingPrint(false);
+    }
+    setExpandForPrint(true);
+    setPrintRequested(true);
+  }, [loadAllSections]);
+
+  // Fire the print dialog once the expanded (all-sections) render has painted.
+  useEffect(() => {
+    if (!expandForPrint || !printRequested) return;
+    setPrintRequested(false);
+    const id = window.requestAnimationFrame(() => window.print());
+    return () => window.cancelAnimationFrame(id);
+  }, [expandForPrint, printRequested]);
+
+  // Return to the on-screen layout after the print dialog closes.
+  useEffect(() => {
+    const done = () => setExpandForPrint(false);
+    window.addEventListener("afterprint", done);
+    return () => window.removeEventListener("afterprint", done);
+  }, []);
+
+  // While preparing/printing, render every section stacked (linear) so the
+  // whole record prints even from the tabbed layout.
+  const effectiveLayout = expandForPrint ? "linear" : layout;
+
+  const toolbar =
+    tier === "advanced" ? (
+      <DetailToolbar
+        onPrint={handlePrint}
+        onExportAll={layout === "linear" ? handleExportAll : undefined}
+        printPreparing={preparingPrint}
+      />
+    ) : undefined;
+
   return (
-    <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
+    <div className="library-detail-print-root bg-card-bg rounded-lg border border-border overflow-hidden">
       {/* Header */}
       <div className="px-3 py-2 border-b border-border bg-muted-light">
         <div className="flex items-start justify-between gap-3">
@@ -825,118 +1051,13 @@ export function PartDetail({ part }: PartDetailProps) {
         </div>
       </div>
 
-      {/* Tabs — paired with a right-side export button so the action
-          sits inline with the tab labels and doesn't push the table
-          content down. Only the procurement and solicitations tabs
-          export today; other tabs render nothing on the right. */}
-      <div className="px-4 pt-3 flex items-end justify-between gap-3">
-        <Tabs
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-        />
-        {activeTab === "procurement" && (
-          <ExportCsvButton
-            tier={tier}
-            rows={procurementRecords}
-            columns={PROCUREMENT_CSV_COLUMNS}
-            filename={`procurement-history-${partReqKey}`}
-            compact
-          />
-        )}
-        {activeTab === "solicitations" && !isFreeOnly && (
-          <ExportCsvButton
-            tier={tier}
-            rows={solicitations}
-            columns={SOLICITATIONS_CSV_COLUMNS}
-            filename={`solicitations-${partReqKey}`}
-            compact
-          />
-        )}
-      </div>
-
-      {/* Tab Panels */}
-      <div className="p-3">
-        <TabPanel tabId="overview" activeTab={activeTab}>
-          <OverviewPanel part={part} codeDefinitions={codeDefinitions} codeTypeNames={codeTypeNames} />
-        </TabPanel>
-
-        <TabPanel tabId="procurement" activeTab={activeTab}>
-          <ProcurementPanel
-            records={procurementRecords}
-            totalCount={procurementTotal}
-            isLoading={isLoadingProcurement}
-            error={procurementError}
-            onRetry={fetchProcurementHistory}
-          />
-        </TabPanel>
-
-        <TabPanel tabId="solicitations" activeTab={activeTab}>
-          {isFreeOnly ? (
-            <FreeSolicitationsView count={tabCounts?.solicitations_count_30d ?? null} />
-          ) : (
-            <SolicitationsPanel
-              solicitations={solicitations}
-              totalCount={solicitationsTotal}
-              isLoading={isLoadingSolicitations}
-              error={solicitationsError}
-              onRetry={fetchSolicitations}
-            />
-          )}
-        </TabPanel>
-
-        <TabPanel tabId="manufacturers" activeTab={activeTab}>
-          <ManufacturersPanel
-            nsn={part.nsn}
-            manufacturers={manufacturers}
-            totalCount={manufacturersTotal}
-            isLoading={isLoadingManufacturers}
-            error={manufacturersError}
-            onRetry={fetchManufacturers}
-          />
-        </TabPanel>
-
-        <TabPanel tabId="technical" activeTab={activeTab}>
-          <TechnicalCharacteristicsPanel
-            characteristics={technicalCharacteristics}
-            totalCount={technicalTotal}
-            isLoading={isLoadingTechnical}
-            error={technicalError}
-            onRetry={fetchTechnicalCharacteristics}
-          />
-        </TabPanel>
-
-        <TabPanel tabId="enduse" activeTab={activeTab}>
-          <EndUseDescriptionPanel
-            descriptions={endUseDescriptions}
-            totalCount={endUseTotal}
-            isLoading={isLoadingEndUse}
-            error={endUseError}
-            onRetry={fetchEndUseDescriptions}
-          />
-        </TabPanel>
-
-        <TabPanel tabId="packaging" activeTab={activeTab}>
-          <PackagingPanel
-            packaging={packaging}
-            codeDefinitions={packagingCodeDefinitions}
-            markingDefinitions={packagingMarkingDefinitions}
-            supplemental={packagingSupplemental}
-            isLoading={isLoadingPackaging}
-            error={packagingError}
-            onRetry={fetchPackaging}
-          />
-        </TabPanel>
-
-        <TabPanel tabId="procurementitemdesc" activeTab={activeTab}>
-          <ProcurementItemDescriptionPanel
-            description={procurementItemDescription}
-            isLoading={isLoadingProcurementItemDesc}
-            error={procurementItemDescError}
-            onRetry={fetchProcurementItemDescription}
-          />
-        </TabPanel>
-      </div>
+      <DetailSections
+        layout={effectiveLayout}
+        sections={sections}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        toolbar={toolbar}
+      />
     </div>
   );
 }

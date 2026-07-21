@@ -3,6 +3,9 @@
 export interface UserPreferences {
   theme?: 'light' | 'dark' | 'system';
   default_page?: string;
+  // How vendor/part detail sections are laid out: separate tabs (default)
+  // or a linear one-pager. Shared across both vendor and part detail.
+  results_layout?: 'tabs' | 'linear';
   vendor_search?: {
     default_type?: string;
   };

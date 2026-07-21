@@ -214,3 +214,35 @@ html {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------------------------------------------------------------------
+   Print — the one-pager "Print" button prints just the vendor/part record.
+   Everything outside the detail card is hidden via the visibility trick so
+   we don't need to know every chrome selector (nav, sidebar, search form).
+   Reached only from the linear layout, where all sections are already
+   mounted, so the whole record prints.
+   --------------------------------------------------------------------- */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .library-detail-print-root,
+  .library-detail-print-root * {
+    visibility: visible;
+  }
+  .library-detail-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  /* Hide the jump-rail + its toolbar buttons when printing. */
+  .library-detail-print-root .no-print {
+    display: none !important;
+  }
+  .library-detail-print-root section {
+    break-inside: avoid;
+  }
+}
