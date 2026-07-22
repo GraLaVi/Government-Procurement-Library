@@ -498,6 +498,24 @@ function PricingPageContent() {
     [plans],
   );
 
+  // Large-screen column count tracks how many cards are actually rendered
+  // (the hardcoded Free card + every enabled plan), so disabling a product
+  // shrinks the grid to fit the remaining cards instead of leaving an empty
+  // slot at the end of the row. Full literal class strings so Tailwind's JIT
+  // keeps them; capped at 5 columns to avoid over-thin cards. Below lg the
+  // grid falls back to the responsive 1/2-column defaults.
+  const totalCards = 1 + sortedPlans.length;
+  const lgColsClass =
+    totalCards <= 1
+      ? "lg:grid-cols-1"
+      : totalCards === 2
+        ? "lg:grid-cols-2"
+        : totalCards === 3
+          ? "lg:grid-cols-3"
+          : totalCards === 4
+            ? "lg:grid-cols-4"
+            : "lg:grid-cols-5";
+
   return (
     <>
       {/* Authenticated users see the in-app Header; unauthenticated visitors
@@ -585,7 +603,7 @@ function PricingPageContent() {
         <span className="h-px w-8 bg-border" aria-hidden="true" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${lgColsClass} gap-6`}>
         {/* Free tier — auto-granted on signup, no Stripe involvement. */}
         <div className="bg-card-bg border border-border rounded-xl p-6 flex flex-col">
           <h2 className="text-xl font-semibold text-card-foreground">Free</h2>
