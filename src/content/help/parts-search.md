@@ -11,6 +11,7 @@ The Library Search lets you look up any part in the federal procurement catalog 
 - [Where to search](#where-to-search)  
 - [The five search types](#the-five-search-types)  
 - [Reading a part record](#reading-a-part-record)  
+- [Tabs or one page](#tabs-or-one-page)  
 - [Overview tab](#overview-tab)  
 - [Procurement History tab](#procurement-history-tab)  
 - [Recent Solicitations tab](#recent-solicitations-tab)  
@@ -44,9 +45,18 @@ On the Library Search page, choose a search type using the radio buttons above t
 
 When you select a part from the search results, GPH opens its full record. At the top, you'll see the NSN, the part description (e.g., *TUBE ASSEMBLY, METAL*), and a series of tabs covering different aspects of the part. Parts that exist only as a manufacturer part number with no assigned NSN (common for DIBBS records) carry a **P/N only — no NSN** badge in the header.
 
-Each tab name includes a count in parentheses showing how many records are available — for example, "Procurement History (9)" or "Manufacturers (8)." Tabs with zero records are still selectable but contain no data for that part.
+Each section name includes a count in parentheses showing how many records are available — for example, "Procurement History (9)" or "Manufacturers (8)." Sections with zero records are still selectable but contain no data for that part.
 
-The data shown in each tab is described below.
+The data shown in each section is described below.
+
+## Tabs or one page
+
+GPH can present a part record two ways, and you choose which in **Account → Preferences** under **Results layout**:
+
+- **Tabs** (the default) — Each section is its own tab, and you view one at a time. Sections load as you open them, keeping the page compact.  
+- **One page** — Every section is stacked on a single scrollable page with a jump-to navigation rail, so you can scan the whole record at once. On the Advanced plan, this view also lets you print or export the entire record together.
+
+The setting applies to both part records and vendor profiles, and you can switch back and forth at any time. The section descriptions below are the same regardless of which layout you choose. For more on changing preferences, see [Managing your account](/help/account-settings#results-layout).
 
 ## Overview tab
 

@@ -53,6 +53,15 @@ Choose how GPH appears in your browser:
 
 Pick where you'd like to land after signing in. The dashboard is used if no preference is set. Options include the **Dashboard**, **Parts search**, **Vendor search**, **Bid matching**, or **Account**.
 
+### Results layout
+
+Choose how vendor and part records are laid out when you open one:
+
+- **Tabs** — Show one section at a time. Each section loads when you open its tab, so the view stays compact. This is the default.  
+- **One page** — Stack every section on a single scrollable page with a jump-to navigation rail on the side. You see the whole record at once, and (on the Advanced plan) you can print or export the entire record together.
+
+This single setting applies to both vendor profiles and part records. See [Researching vendors](/help/vendor-research) and [Searching for parts](/help/parts-search) for what each view contains.
+
 ### Cookie Preferences
 
 GPH uses two categories of browser cookies:

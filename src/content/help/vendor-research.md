@@ -10,6 +10,7 @@ Every government contractor has a CAGE code — a 5-character identifier assigne
 
 - [Where to search](#where-to-search)  
 - [Reading a vendor profile](#reading-a-vendor-profile)  
+- [Tabs or one page](#tabs-or-one-page)  
 - [Demographics tab](#demographics-tab)  
 - [Contacts tab](#contacts-tab)  
 - [Recent Awards tab](#recent-awards-tab)  
@@ -29,7 +30,16 @@ GPH offers two entry points for vendor search.
 
 When you select a vendor from the search results, GPH opens their full profile. At the top, you'll see the vendor name with status badges: a **SAM status** badge (**Active**, **Inactive**, or **Expired**), an **Excluded** badge when the vendor is on the federal exclusion (debarment) list, and an **SB** badge when they qualify as a small business.
 
-Below the header, the vendor's data is split across tabs. Tab counts in parentheses (e.g., "Recent Awards (50)") show how many records are available. How many tabs you see depends on your plan.
+Below the header, the vendor's data is split across sections. Section counts in parentheses (e.g., "Recent Awards (50)") show how many records are available. How many sections you see depends on your plan.
+
+## Tabs or one page
+
+GPH can present a vendor profile two ways, and you choose which in **Account → Preferences** under **Results layout**:
+
+- **Tabs** (the default) — Each section is its own tab, and you view one at a time. Sections load as you open them, keeping the page compact.  
+- **One page** — Every section is stacked on a single scrollable page with a jump-to navigation rail, so you can scan the whole profile at once. On the Advanced plan, this view also lets you print or export the entire profile together.
+
+The setting applies to both vendor profiles and part records, and you can switch back and forth at any time. The section descriptions below are the same regardless of which layout you choose. For more on changing preferences, see [Managing your account](/help/account-settings#results-layout).
 
 ## Demographics tab
 
