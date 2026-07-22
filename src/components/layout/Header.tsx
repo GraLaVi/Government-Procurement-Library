@@ -213,7 +213,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               )}
               {/* RFQ: the full menu shows for everyone as an upsell surface. Received
                   works for all tiers; sender pages self-gate to the upgrade CTA for
-                  customers without vendor_rfq. */}
+                  customers without library_search_advanced_rfq. */}
               <div className="relative" ref={rfqDropdownRef}>
                 <button
                   onClick={() => setIsRfqDropdownOpen(!isRfqDropdownOpen)}

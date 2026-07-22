@@ -73,7 +73,7 @@ export default function RfqListPage() {
   }, [filterUser]);
 
   useEffect(() => {
-    if (filterInitialized && hasProductAccess("vendor_rfq")) {
+    if (filterInitialized && hasProductAccess("library_search_advanced_rfq")) {
       load();
     }
   }, [filterInitialized, hasProductAccess, load]);
@@ -82,11 +82,11 @@ export default function RfqListPage() {
     return <div className="p-6 text-sm text-muted">Loading…</div>;
   }
 
-  if (!hasProductAccess("vendor_rfq")) {
+  if (!hasProductAccess("library_search_advanced_rfq")) {
     return (
       <AccessDeniedPage
         featureName="Request for Quotes"
-        featureKey="vendor_rfq"
+        featureKey="library_search_advanced_rfq"
         description="Send structured RFQs to vendors directly from parts search and track every quote in one place."
         benefits={[
           "Send RFQs to vendors from the parts Manufacturers tab",

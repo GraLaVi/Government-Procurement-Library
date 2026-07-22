@@ -63,7 +63,7 @@ export default function RfqDetailPage() {
   }, [rfqId]);
 
   useEffect(() => {
-    if (!authLoading && hasProductAccess("vendor_rfq")) load();
+    if (!authLoading && hasProductAccess("library_search_advanced_rfq")) load();
   }, [authLoading, hasProductAccess, load]);
 
   const act = async (action: "close" | "cancel") => {
@@ -87,11 +87,11 @@ export default function RfqDetailPage() {
 
   if (authLoading) return <div className="p-6 text-sm text-muted">Loading…</div>;
 
-  if (!hasProductAccess("vendor_rfq")) {
+  if (!hasProductAccess("library_search_advanced_rfq")) {
     return (
       <AccessDeniedPage
         featureName="Request for Quotes"
-        featureKey="vendor_rfq"
+        featureKey="library_search_advanced_rfq"
         description="Send structured RFQs to vendors and track every quote in one place."
         benefits={["Send RFQs from parts search", "Collect structured quotes", "Track responses"]}
       />

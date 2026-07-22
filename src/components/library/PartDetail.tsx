@@ -1965,7 +1965,7 @@ function manufacturerRowKey(m: PartManufacturer): string {
 function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, onRetry }: ManufacturersPanelProps) {
   // RFQ is a separate paid product; only surface the entry when the user holds it.
   const { hasProductAccess } = useAuth();
-  const canSendRfq = hasProductAccess("vendor_rfq");
+  const canSendRfq = hasProductAccess("library_search_advanced_rfq");
 
   // Local selection state (the shared DataTable keeps its own selection
   // internal and doesn't surface it, so we track our own via a checkbox column).
