@@ -240,7 +240,7 @@ export default function TeamNotificationsPage() {
         activeTypes.map((nt) => (
           <section
             key={nt.id}
-            className="rounded-xl border border-border bg-white overflow-hidden"
+            className="rounded-xl border border-border bg-card-bg overflow-hidden"
           >
             <header className="px-6 py-4 border-b border-border bg-muted-light/30">
               <h2 className="text-base font-semibold text-foreground">{nt.name}</h2>
@@ -415,7 +415,7 @@ function RowEditor({
           value={currentFrequency}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled || saving}
-          className="text-xs border border-border rounded px-2 py-1 bg-white text-foreground"
+          className="text-xs border border-border rounded px-2 py-1 bg-card-bg text-foreground"
         >
           <option value="">
             Default (
