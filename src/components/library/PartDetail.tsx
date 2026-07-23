@@ -1308,19 +1308,7 @@ function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: Pr
           const rec = row.original;
           return (
             <span className="inline-flex items-center gap-1">
-              {rec.contract_number ? (
-                <Link
-                  href={`/library/parts?search_type=contract_number&q=${encodeURIComponent(rec.contract_number)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {rec.contract_number}
-                </Link>
-              ) : (
-                <span className="text-xs font-mono font-semibold">—</span>
-              )}
+              <span className="text-xs font-mono font-semibold">{rec.contract_number || "—"}</span>
               {rec.has_pdf && rec.order_detail_id && (
                 <button
                   type="button"
@@ -2188,7 +2176,7 @@ function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, 
         <div className="text-xs text-muted">
           {totalCount} manufacturer{totalCount !== 1 ? "s" : ""} found
         </div>
-        {canSendRfq && (
+        {canSendRfq ? (
           <button
             type="button"
             disabled={selectedKeys.size === 0}
@@ -2197,6 +2185,20 @@ function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, 
           >
             Create RFQ{selectedKeys.size > 0 ? ` (${selectedKeys.size})` : ""}
           </button>
+        ) : (
+          // Vendor RFQ is a separate paid add-on; upsell customers who have
+          // advanced access (they can see this tab) but not the RFQ product.
+          <Link
+            href="/pricing"
+            title="Add Vendor RFQ to email quote requests to these vendors"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-transparent px-2.5 py-1 text-xs text-muted transition-colors hover:border-primary/40 hover:text-primary"
+          >
+            <svg className="w-3.5 h-3.5 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+            </svg>
+            <span>Unlock <span className="font-semibold text-primary">RFQ</span></span>
+            <span aria-hidden>→</span>
+          </Link>
         )}
       </div>
       {toast && (

@@ -698,6 +698,19 @@ export default function BidMatchingPage() {
               ? "Create and manage automated bid-matching profiles for your organization"
               : "View your organization's bid-matching profiles"}
           </p>
+          {isAdmin && (
+            <p className="text-xs text-muted mt-2">
+              Have a large list of NIINs, part numbers, or CAGE codes to load at
+              once? We handle bulk imports for you — email{" "}
+              <a
+                href="mailto:support@gphusa.com"
+                className="text-primary hover:underline"
+              >
+                support@gphusa.com
+              </a>
+              .
+            </p>
+          )}
         </div>
         {isAdmin && (
           <Button
