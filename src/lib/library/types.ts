@@ -104,6 +104,8 @@ export interface VendorSolicitation {
   set_aside: string | null;
   set_aside_code?: string | null;
   set_aside_label?: string | null;
+  // Free-form rating value from solicitations.rating; null on SAM rows.
+  rating?: string | null;
   // Part-level fields are null on SAM rows (an opportunity can span many parts).
   quantity: number | null;
   niin: string | null;

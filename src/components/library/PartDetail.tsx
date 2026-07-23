@@ -60,6 +60,7 @@ import { buildCsv, buildCombinedCsv, triggerDownload, todayIsoDate } from "@/lib
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
+import { DpasRatingTooltip } from "@/components/library/DpasRatingTooltip";
 
 // Module-scope CSV column specs for the part-detail tab exports. Kept
 // outside the component bodies so the parent-level export button
@@ -1667,9 +1668,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         id: "rating",
         accessorKey: "rating",
         header: "Rating",
-        cell: ({ row }) => (
-          <span className="text-xs font-medium text-foreground">{row.original.rating || "—"}</span>
-        ),
+        cell: ({ row }) => <DpasRatingTooltip rating={row.original.rating} />,
       },
       {
         id: "agency_code",

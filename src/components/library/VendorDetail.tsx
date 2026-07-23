@@ -47,6 +47,7 @@ import { buildCsv, buildCombinedCsv, triggerDownload, todayIsoDate } from "@/lib
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
+import { DpasRatingTooltip } from "@/components/library/DpasRatingTooltip";
 
 // DoD PIID formatter: many SAM.gov solicitation numbers arrive without the
 // canonical dashes (e.g. "FA821326R3048"). When a value has no dashes AND matches
@@ -120,6 +121,7 @@ const VENDOR_SOLICITATIONS_CSV_COLUMNS: CsvColumn<VendorSolicitation>[] = [
   { header: "Source", value: (r) => r.source ?? "DLA" },
   { header: "Close Date", value: (r) => r.close_date ?? "" },
   { header: "Solicitation #", value: (r) => formatSolicitationNumber(r.solicitation_number) },
+  { header: "Rating", value: (r) => r.rating ?? "" },
   { header: "Notice Type", value: (r) => r.notice_type ?? "" },
   { header: "Status", value: (r) => r.status },
   { header: "Agency", value: (r) => r.agency_code ?? "" },
@@ -1616,6 +1618,12 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
             </span>
           );
         },
+      },
+      {
+        id: "rating",
+        accessorKey: "rating",
+        header: "Rating",
+        cell: ({ row }) => <DpasRatingTooltip rating={row.original.rating} />,
       },
       {
         id: "nsn",
