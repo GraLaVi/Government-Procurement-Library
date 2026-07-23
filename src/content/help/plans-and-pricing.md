@@ -54,6 +54,8 @@ If you move to a plan with a lower profile limit, your existing profiles aren't 
 
 Go to **Account \> Billing** to see everything about your subscription in one place. Your plan appears as **Procurement Intelligence — Free**, **— Basic**, **— Advanced**, or **— Advanced + RFQ**.
 
+*Note: Billing is available to account admins only. If you're a member and don't see Billing under Account, ask your account admin to make plan, seat, or payment changes.*
+
 ### Current plan card
 
 - Your plan name and, for paid plans, the billing interval (for example, Monthly or Annual) and the plan price.
