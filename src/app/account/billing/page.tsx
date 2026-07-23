@@ -160,6 +160,7 @@ function statusBadge(status: string): { label: string; className: string } {
 type ActiveModal =
   | { kind: "interval"; sub: Subscription }
   | { kind: "switchPlan"; sub: Subscription }
+  | { kind: "seats"; sub: Subscription }
   | { kind: "cancel"; sub: Subscription }
   | null;
 
@@ -173,7 +174,7 @@ export default function BillingPage() {
 
 function BillingPageContent() {
   const router = useRouter();
-  const { user, isLoading: authLoading, refreshUser, hasAnyProductAccess } = useAuth();
+  const { user, isLoading: authLoading, refreshUser, hasAnyProductAccess, logout } = useAuth();
   // Every signed-up org holds the Free tier as a baseline comp grant (it isn't a
   // Stripe subscription), so a customer with no paid sub is on Free — surface
   // that in the Current Plan card instead of "no active plan".
@@ -195,6 +196,7 @@ function BillingPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [portalPending, setPortalPending] = useState(false);
   const [modal, setModal] = useState<ActiveModal>(null);
+  const [showCloseAccount, setShowCloseAccount] = useState(false);
   const [activeTab, setActiveTab] = useState("plan");
   // Tracks the post-Checkout finalization step (Option 2 self-serve flow):
   // when /pricing's signup-and-checkout sent the visitor to Stripe, the
@@ -299,6 +301,15 @@ function BillingPageContent() {
     if (!authLoading && user) loadData();
   }, [authLoading, user, loadData]);
 
+  // Billing is admin-only. Non-admin (member) users are redirected to /account.
+  // The logged-out signup-and-checkout finalize flow is unaffected — its first
+  // user is always the account admin.
+  useEffect(() => {
+    if (!authLoading && user && !user.roles?.includes("admin")) {
+      router.replace("/account");
+    }
+  }, [authLoading, user, router]);
+
   // Poll once after a Stripe redirect so the webhook has time to provision.
   useEffect(() => {
     if (checkoutFlag !== "success") return;
@@ -307,6 +318,33 @@ function BillingPageContent() {
     const timer = setTimeout(loadData, 2000);
     return () => clearTimeout(timer);
   }, [checkoutFlag, subscriptions.length, isLoading, loadData]);
+
+  // Deep-link from "Add a seat" (e.g. the at-cap CTA on /account/users):
+  // once subscriptions + plans are loaded, auto-open the Change-seats modal
+  // for the customer's live per-seat subscription so they land straight on
+  // the seat picker. Clears the param afterward so it doesn't re-fire.
+  const seatActionParam = searchParams.get("action");
+  useEffect(() => {
+    if (seatActionParam !== "add-seat") return;
+    if (isLoading || modal !== null) return;
+    if (subscriptions.length === 0 || plans.length === 0) return;
+    const target = subscriptions.find((sub) => {
+      if (sub.status === "canceled" || sub.status === "incomplete_expired") return false;
+      const plan = plans.find((p) =>
+        sub.plan_kind && sub.plan_id !== null
+          ? p.kind === sub.plan_kind && p.id === sub.plan_id
+          : (!!sub.product_name && p.kind === "product" && p.name === sub.product_name) ||
+            (!!sub.product_group_name && p.kind === "product_group" && p.name === sub.product_group_name),
+      );
+      return plan?.max_seat_count != null;
+    });
+    if (target) {
+      setModal({ kind: "seats", sub: target });
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("action");
+      router.replace(`/account/billing${params.toString() ? `?${params.toString()}` : ""}`, { scroll: false });
+    }
+  }, [seatActionParam, isLoading, modal, subscriptions, plans, searchParams, router]);
 
   const openPortal = async () => {
     setPortalPending(true);
@@ -371,6 +409,16 @@ function BillingPageContent() {
           <p className="mt-4 text-muted">Setting up your account…</p>
           {error && <p className="mt-3 text-sm text-error">{error}</p>}
         </div>
+      </div>
+    );
+  }
+
+  // Admin-only page. Members never see billing content — the effect above
+  // redirects them; this guard prevents any flash of billing data meanwhile.
+  if (user && !user.roles?.includes("admin")) {
+    return (
+      <div className="p-6 text-sm text-muted">
+        Billing is managed by your account administrator. Redirecting…
       </div>
     );
   }
@@ -497,6 +545,7 @@ function BillingPageContent() {
                 plans={plans}
                 onChangeInterval={() => setModal({ kind: "interval", sub })}
                 onSwitchPlan={() => setModal({ kind: "switchPlan", sub })}
+                onChangeSeats={() => setModal({ kind: "seats", sub })}
                 onCancel={() => setModal({ kind: "cancel", sub })}
                 onReactivate={() => reactivate(sub)}
               />
@@ -569,9 +618,40 @@ function BillingPageContent() {
         </div>
       </TabPanel>
 
+      {/* Danger zone — admin-only account closure. Kept visually separate from
+          plan actions to avoid confusion with "Downgrade to Free" (which keeps
+          the account). Closing deactivates the account; it does not delete data. */}
+      {activeTab === "plan" && user?.roles?.includes("admin") && (
+        <div className="mt-10 border border-error/30 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-error">Close account</h3>
+          <p className="text-xs text-muted mt-1 max-w-xl">
+            Deactivate your organization&apos;s account: this cancels billing and signs out every
+            user. It&apos;s <span className="font-medium">not a deletion</span> — your data is
+            preserved and support can reopen the account. To simply stop paying while keeping a
+            free account, use <span className="font-medium">Downgrade to Free</span> above instead.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3 border-error/40 text-error hover:bg-error/5"
+            onClick={() => setShowCloseAccount(true)}
+          >
+            Close account
+          </Button>
+        </div>
+      )}
+
       <div className="mt-6 text-xs text-muted">
         Back to <Link href="/account" className="text-primary hover:underline">Account</Link>.
       </div>
+
+      {showCloseAccount && (
+        <CloseAccountModal
+          onClose={() => setShowCloseAccount(false)}
+          onClosed={async () => { await logout(); router.push("/login"); }}
+          onError={setError}
+        />
+      )}
 
       {modal?.kind === "interval" && (
         <IntervalModal
@@ -584,6 +664,15 @@ function BillingPageContent() {
       )}
       {modal?.kind === "switchPlan" && (
         <SwitchPlanModal
+          sub={modal.sub}
+          plans={plans}
+          onClose={() => setModal(null)}
+          onSaved={(next) => { replaceSub(next); setModal(null); }}
+          onError={setError}
+        />
+      )}
+      {modal?.kind === "seats" && (
+        <SeatsModal
           sub={modal.sub}
           plans={plans}
           onClose={() => setModal(null)}
@@ -745,6 +834,7 @@ function SubscriptionCard({
   plans,
   onChangeInterval,
   onSwitchPlan,
+  onChangeSeats,
   onCancel,
   onReactivate,
 }: {
@@ -752,6 +842,7 @@ function SubscriptionCard({
   plans: Plan[];
   onChangeInterval: () => void;
   onSwitchPlan: () => void;
+  onChangeSeats: () => void;
   onCancel: () => void;
   onReactivate: () => void;
 }) {
@@ -800,7 +891,10 @@ function SubscriptionCard({
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <dt className="text-muted">Seats</dt>
         <dd className="text-card-foreground font-medium">
-          {maxSeats != null ? `${sub.seat_quantity} of ${maxSeats}` : sub.seat_quantity}
+          {sub.seat_quantity} seat{sub.seat_quantity === 1 ? "" : "s"}
+          {maxSeats != null && sub.seat_quantity < maxSeats && (
+            <span className="text-muted font-normal"> · up to {maxSeats}</span>
+          )}
         </dd>
 
         {trialActive && (
@@ -845,10 +939,15 @@ function SubscriptionCard({
           {otherPlansExist && (
             <Button variant="outline" size="sm" onClick={onSwitchPlan}>Change plan</Button>
           )}
+          {/* Per-seat plans (those with a seat ceiling) can add/remove seats
+              self-service. Flat plans (no max_seat_count) omit this. */}
+          {maxSeats != null && (
+            <Button variant="outline" size="sm" onClick={onChangeSeats}>Change seats</Button>
+          )}
           {sub.cancel_at_period_end ? (
             <Button variant="outline" size="sm" onClick={onReactivate}>Reactivate</Button>
           ) : (
-            <Button variant="outline" size="sm" onClick={onCancel}>Cancel subscription</Button>
+            <Button variant="outline" size="sm" onClick={onCancel}>Downgrade to Free</Button>
           )}
         </div>
       )}
@@ -956,6 +1055,105 @@ function IntervalModal({
         <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
         <Button variant="primary" size="sm" onClick={save} disabled={saving || selected === null || otherPrices.length === 0}>
           {saving ? "Switching…" : "Switch"}
+        </Button>
+      </div>
+    </ModalShell>
+  );
+}
+
+function SeatsModal({
+  sub, plans, onClose, onSaved, onError,
+}: {
+  sub: Subscription;
+  plans: Plan[];
+  onClose: () => void;
+  onSaved: (s: Subscription) => void;
+  onError: (msg: string | null) => void;
+}) {
+  const matchingPlan = useMemo(() => plans.find((p) => {
+    if (sub.plan_kind && sub.plan_id !== null) return p.kind === sub.plan_kind && p.id === sub.plan_id;
+    if (sub.product_name && p.kind === "product") return p.name === sub.product_name;
+    if (sub.product_group_name && p.kind === "product_group") return p.name === sub.product_group_name;
+    return false;
+  }), [plans, sub]);
+  const maxSeats = matchingPlan?.max_seat_count ?? 10;
+
+  const [qty, setQty] = useState<number>(sub.seat_quantity);
+  const [saving, setSaving] = useState(false);
+  const clamp = (n: number) => Math.max(1, Math.min(maxSeats, n));
+  const unchanged = qty === sub.seat_quantity;
+
+  const save = async () => {
+    if (unchanged) return;
+    setSaving(true);
+    onError(null);
+    try {
+      const resp = await fetchWithAuth(`/api/billing/subscriptions/${sub.id}/seats`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seat_quantity: qty }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) { onError(data.error || "Failed to change seats"); return; }
+      onSaved(data);
+    } catch {
+      onError("An unexpected error occurred");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalShell
+      title="Change seats"
+      subtitle={sub.product_name || sub.product_group_name || "Plan"}
+      onClose={onClose}
+    >
+      <p className="text-sm text-muted mb-4">
+        Seats set how many users your team can have — every user gets your plan&apos;s
+        tier. You&apos;re billed per seat; Stripe prorates the change on your next invoice.
+      </p>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setQty((q) => clamp(q - 1))}
+          disabled={qty <= 1}
+          className="w-9 h-9 rounded border border-border bg-card-bg text-card-foreground hover:border-primary/50 disabled:opacity-50"
+          aria-label="Decrease seats"
+        >
+          −
+        </button>
+        <input
+          type="number"
+          min={1}
+          max={maxSeats}
+          value={qty}
+          onChange={(e) => setQty(clamp(Number(e.target.value) || 1))}
+          className="w-20 px-2 py-1.5 text-center text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-primary"
+        />
+        <button
+          type="button"
+          onClick={() => setQty((q) => clamp(q + 1))}
+          disabled={qty >= maxSeats}
+          className="w-9 h-9 rounded border border-border bg-card-bg text-card-foreground hover:border-primary/50 disabled:opacity-50"
+          aria-label="Increase seats"
+        >
+          +
+        </button>
+        <span className="text-xs text-muted">
+          {qty === sub.seat_quantity ? "current" : `was ${sub.seat_quantity}`} · max {maxSeats}
+        </span>
+      </div>
+      {qty < sub.seat_quantity && (
+        <p className="text-[11px] text-muted mt-3">
+          Reducing seats below your active user count is blocked — deactivate users on the
+          Manage Users page first.
+        </p>
+      )}
+      <div className="flex justify-end gap-2 mt-5">
+        <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button variant="primary" size="sm" onClick={save} disabled={saving || unchanged}>
+          {saving ? "Saving…" : "Update seats"}
         </Button>
       </div>
     </ModalShell>
@@ -1119,6 +1317,79 @@ function SwitchPlanModal({
   );
 }
 
+function CloseAccountModal({
+  onClose, onClosed, onError,
+}: {
+  onClose: () => void;
+  onClosed: () => void | Promise<void>;
+  onError: (msg: string | null) => void;
+}) {
+  const [confirmText, setConfirmText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const canConfirm = confirmText.trim().toUpperCase() === "CLOSE";
+
+  const save = async () => {
+    if (!canConfirm) return;
+    setSaving(true);
+    onError(null);
+    try {
+      const resp = await fetchWithAuth("/api/billing/close-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: true }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) { onError(data.error || "Failed to close account"); setSaving(false); return; }
+      await onClosed();
+    } catch {
+      onError("An unexpected error occurred");
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalShell title="Close account" subtitle="Deactivates your whole account" onClose={onClose}>
+      <div className="space-y-3 text-sm">
+        <p className="text-muted">
+          This <span className="font-medium text-card-foreground">deactivates your organization&apos;s account</span>:
+        </p>
+        <ul className="list-disc list-inside text-xs text-muted space-y-1">
+          <li>Your paid subscription is canceled and billing stops.</li>
+          <li>Every user is signed out and can no longer log in.</li>
+          <li>Your data is <span className="font-medium text-card-foreground">preserved, not deleted</span> — contact support to reopen.</li>
+        </ul>
+        <p className="text-xs text-muted">
+          Just want to stop paying? Use <span className="font-medium">Downgrade to Free</span> instead — it keeps your account active.
+        </p>
+        <div>
+          <label className="block text-xs text-muted mb-1">
+            Type <span className="font-semibold text-card-foreground">CLOSE</span> to confirm
+          </label>
+          <input
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder="CLOSE"
+            className="w-full px-3 py-2 text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-error"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 mt-5">
+        <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button
+          variant="primary"
+          size="sm"
+          className="bg-error hover:bg-error/90 border-error"
+          onClick={save}
+          disabled={saving || !canConfirm}
+        >
+          {saving ? "Closing…" : "Close account"}
+        </Button>
+      </div>
+    </ModalShell>
+  );
+}
+
 function CancelModal({
   sub, onClose, onSaved, onError,
 }: {
@@ -1150,9 +1421,12 @@ function CancelModal({
   };
 
   return (
-    <ModalShell title="Cancel subscription" subtitle={sub.product_name || sub.product_group_name || "Plan"} onClose={onClose}>
-      <p className="text-sm text-muted mb-3">
-        Choose when to end your subscription. You can reactivate anytime before the cancellation takes effect.
+    <ModalShell title="Downgrade to Free" subtitle={sub.product_name || sub.product_group_name || "Plan"} onClose={onClose}>
+      <p className="text-sm text-muted mb-2">
+        Ending your paid plan moves your account to the <span className="font-medium text-card-foreground">Free tier</span> — it doesn&apos;t close your account.
+      </p>
+      <p className="text-xs text-muted mb-3">
+        You keep your account and data. Bid-matching profiles beyond the Free limit are paused (not deleted), and you can re-upgrade anytime to bring them back.
       </p>
       <div className="space-y-2">
         <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -1162,26 +1436,26 @@ function CancelModal({
           <div>
             <div className="text-sm font-medium text-card-foreground">At end of current period</div>
             <div className="text-xs text-muted mt-0.5">
-              Keep access until {formatDate(sub.current_period_end)}, then cancel automatically.
+              Keep your paid features until {formatDate(sub.current_period_end)}, then move to Free automatically.
             </div>
           </div>
         </label>
         <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-          !atPeriodEnd ? "border-error bg-error/5" : "border-border hover:border-error/50"
+          !atPeriodEnd ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
         }`}>
           <input type="radio" checked={!atPeriodEnd} onChange={() => setAtPeriodEnd(false)} className="mt-0.5" />
           <div>
-            <div className="text-sm font-medium text-card-foreground">Cancel immediately</div>
+            <div className="text-sm font-medium text-card-foreground">Move to Free now</div>
             <div className="text-xs text-muted mt-0.5">
-              Access ends now. No refund of the current period — see Stripe&apos;s policy for prorated credit.
+              Drop to the Free tier immediately. No refund of the current period — see Stripe&apos;s policy for prorated credit.
             </div>
           </div>
         </label>
       </div>
       <div className="flex justify-end gap-2 mt-5">
-        <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>Keep subscription</Button>
+        <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>Keep my plan</Button>
         <Button variant="primary" size="sm" onClick={save} disabled={saving}>
-          {saving ? "Cancelling…" : (atPeriodEnd ? "Schedule cancellation" : "Cancel now")}
+          {saving ? "Saving…" : (atPeriodEnd ? "Schedule downgrade" : "Move to Free now")}
         </Button>
       </div>
     </ModalShell>

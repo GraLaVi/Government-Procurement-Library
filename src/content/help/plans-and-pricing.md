@@ -4,17 +4,19 @@ meta_title: "Plans and Pricing | GPH Help"
 description: "Compare Government Procurement Hub plans, understand which features are tier-gated, and learn how to manage your subscription."
 ---
 
-GPH is available on three plans: Free, Basic, and Advanced. This article explains what each plan includes from a help and operations standpoint — when you've hit a feature gate, want to understand what your current tier covers, or are deciding whether to upgrade.
+GPH is available on four plans: Free, Basic, Advanced, and Advanced + RFQ. This article explains what each plan includes from a help and operations standpoint — when you've hit a feature gate, want to understand what your current tier covers, or are deciding whether to upgrade.
 
-For current pricing and the full marketing comparison, see the [pricing page](/pricing).
+Paid plans are **priced per seat**: you choose how many users (seats) you need — up to 10 — and every user on your account gets your plan's full tier. Larger teams get automatic volume discounts. For current pricing and the full comparison, see the [pricing page](/pricing).
 
-## The three plans at a glance
+## The plans at a glance
 
-**Free** — Try GPH with a limited view. Search and look up parts and vendors with their basic identifiers, and set up one bid-matching profile to see how many matches your business would receive. Viewing the actual solicitation details, complete part and vendor data, and other features requires a paid plan.
+**Free** — Try GPH with a limited view. Search and look up parts and vendors with their basic identifiers, and set up one bid-matching profile to see how many matches your business would receive. Viewing the actual solicitation details, complete part and vendor data, and other features requires a paid plan. Free is a single user.
 
 **Basic** — Unlock the full data picture: complete part records (manufacturers, technical specifications, packaging, end-use data), vendor profiles (contacts, recent awards, and the 13-month Contracts Booked breakdown), and solicitation detail. Up to 5 bid-matching profiles. Up to daily match notifications.
 
 **Advanced** — Everything in Basic plus the features power users rely on: full procurement history on parts, open solicitations on vendor profiles, pinned searches, CSV exports, immediate match notifications, and up to 20 bid-matching profiles.
+
+**Advanced + RFQ** — Everything in Advanced, plus the ability to send RFQs (Requests for Quote) to vendors from within GPH.
 
 ## Features available only on Advanced
 
@@ -50,18 +52,42 @@ If you move to a plan with a lower profile limit, your existing profiles aren't 
 
 ## Checking your current plan
 
-Go to **Account \> Billing** to see everything about your subscription in one place. Your plan appears as **Procurement Intelligence — Free**, **— Basic**, or **— Advanced**.
+Go to **Account \> Billing** to see everything about your subscription in one place. Your plan appears as **Procurement Intelligence — Free**, **— Basic**, **— Advanced**, or **— Advanced + RFQ**.
 
 ### Current plan card
 
 - Your plan name and, for paid plans, the billing interval (for example, Monthly or Annual) and the plan price.
-- **Seats** — displayed as *used of maximum*, for example "1 of 3". The number after "of" is the seat ceiling your plan allows (Free includes 1 user; Basic and Advanced both include up to 3); the number before it is how many are currently in use.
-- If you're on a **free trial**, a banner tells you when the trial ends. Add a payment method before then to keep your plan — without one, your subscription ends and you return to the Free tier (no charge). Your card is never charged during the trial.
+- **Seats** — the number of seats on your subscription (what you're billed for), shown as, for example, "3 seats · up to 10". This is also the **maximum number of users you can add** — one seat per user. Free includes 1 user. (The *used-of-total* view, e.g. "2 of 3 seats used", appears on the **Manage Users** page.)
+- If you're on a **free trial**, a banner tells you when the trial ends. Add a payment method before then to keep your plan — without one, your subscription ends and you return to the Free tier (no charge). Your card is never charged *during* the trial, and any seats you add during the trial are simply included in what you're billed when the trial converts.
 - Once your plan is active, the card shows your **current billing period** and, if you've scheduled a cancellation, the date access ends.
 
-On the **Free** plan you'll see a Free plan card with an **Upgrade plan** button instead of a paid subscription. From a paid plan card you can **change your billing interval**, **change your plan**, **cancel** (at the end of the period or immediately), or **reactivate** a plan you've scheduled to cancel.
+On the **Free** plan you'll see a Free plan card with an **Upgrade plan** button instead of a paid subscription. From a paid plan card you can **change your billing interval**, **change your plan**, **change your seats**, **downgrade to Free**, or **reactivate** a plan you've scheduled to downgrade.
 
-Your seat ceiling is fixed by your plan (Basic and Advanced both allow up to 3 users) and isn't self-service editable. If you need more, contact support.
+### Downgrading to Free (ending a paid plan)
+
+Ending your paid plan **moves your account to the Free tier — it doesn't close your account.** On your plan card, choose **Downgrade to Free** and pick when it takes effect:
+
+- **At end of current period** — keep your paid features until the period ends, then move to Free automatically.
+- **Move to Free now** — drop to the Free tier immediately (no refund for the current period).
+
+Either way you keep your account and your data. Bid-matching profiles beyond the Free limit are **paused, not deleted**, and re-upgrading brings them back (you choose which to reactivate). If you scheduled the downgrade for period end, you can **Reactivate** any time before it takes effect to stay on your paid plan.
+
+### Closing your account
+
+If you want to stop using GPH entirely, an account admin can **Close account** from the bottom of the Billing page. This **deactivates** the whole account: it cancels billing and signs out every user. It is **not a deletion** — your data is preserved and support can reopen the account if you come back. Because it affects everyone, it requires typing **CLOSE** to confirm and is available to admins only. If you only want to stop paying, use **Downgrade to Free** instead.
+
+### Adding or removing seats
+
+Because paid plans are billed per seat, you can adjust your seat count yourself at any time — up to a maximum of 10. On your plan card, choose **Change seats**, set the new number, and confirm. Every user on your account always has your full plan tier — seats simply set how many users you can have (one seat per user).
+
+**When you're charged:**
+
+- On a **paid (active) plan**, adding a seat is prorated automatically — you pay for the added seat only for the remainder of the current billing period, on your next invoice.
+- During a **free trial**, adding seats doesn't charge you anything up front. The seats you have when the trial converts are what you're first billed for. So you can build out your team during the trial: set your seats to the number of people you want (up to 10), invite them, and you'll be billed for that count when the trial ends.
+
+You don't have to start on the Billing page. If you're out of seats and click **+ Add User** on the **Manage Users** page, GPH tells you you're at your seat limit and offers an **Add a seat** shortcut that takes you straight to the seat picker. Add the seat, then add the user.
+
+If you want to **reduce** your seat count below the number of users you currently have, first deactivate users on the **Manage Users** page (**Account \> Users**) until your active-user count is at or below the new seat number; GPH blocks a reduction that would leave a paying user without a seat. Need more than 10 users? [Contact sales](mailto:sales@gphusa.com).
 
 ### Payment & billing card
 

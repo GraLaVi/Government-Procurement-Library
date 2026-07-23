@@ -32,8 +32,16 @@ const formatRoleName = (role: string): string => {
 type ConfirmAction = "delete" | "deactivate" | "activate" | "reset-password" | null;
 
 export default function UsersPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, hasAnyProductAccess } = useAuth();
   const router = useRouter();
+  // Paid plans buy more capacity by adding a seat (Billing → Change seats);
+  // Free customers add capacity by subscribing (upgrade on /pricing). This
+  // decides which action the "at cap" CTA offers.
+  const onPaidPlan = hasAnyProductAccess([
+    "library_search_basic",
+    "library_search_advanced",
+    "library_search_advanced_rfq",
+  ]);
 
   // Users list state
   const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -55,6 +63,9 @@ export default function UsersPage() {
 
   // Modal state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // Shown when the admin tries to add a user but all seats are in use, so the
+  // "+ Add User" button never silently no-ops — it explains the next step.
+  const [showSeatCapNotice, setShowSeatCapNotice] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
 
@@ -277,6 +288,9 @@ export default function UsersPage() {
     return null;
   }
 
+  const hasSeatCap = userCap !== null && userCap.cap !== null;
+  const atSeatCap = hasSeatCap && userCap!.used >= (userCap!.cap as number);
+
   return (
     <>
       {/* Breadcrumb */}
@@ -293,12 +307,13 @@ export default function UsersPage() {
       </nav>
 
       {/* Page header — user-cap status is folded into the subtitle line so
-          the header stays clean. At cap, an inline "Upgrade →" link in the
-          warning color routes to /pricing. The Add User button mirrors
-          the cap (disabled + tooltip at cap). */}
+          the header stays clean. At cap, an inline CTA routes paid plans to
+          Billing → Change seats (buy a seat, prorated) and Free plans to
+          /pricing (subscribe). The Add User button stays clickable at cap and
+          opens an advisory dialog rather than silently no-op'ing. */}
       {(() => {
-        const hasCap = userCap !== null && userCap.cap !== null;
-        const atCap = hasCap && (userCap!.used >= (userCap!.cap as number));
+        const capCtaHref = onPaidPlan ? "/account/billing?action=add-seat" : "/pricing";
+        const capCtaLabel = onPaidPlan ? "Add a seat" : "Upgrade";
         return (
           <div className="flex items-start justify-between mb-8 gap-4">
             <div>
@@ -306,19 +321,19 @@ export default function UsersPage() {
               <p className="text-muted mt-1">
                 Add, edit, and manage team members in your organization
               </p>
-              {hasCap && (
+              {hasSeatCap && (
                 <p className="text-muted mt-0.5">
-                  <span className={atCap ? "text-warning font-medium" : "font-medium"}>
-                    {userCap!.used} of {userCap!.cap} users used
+                  <span className={atSeatCap ? "text-warning font-medium" : "font-medium"}>
+                    {userCap!.used} of {userCap!.cap} seat{userCap!.cap === 1 ? "" : "s"} used
                   </span>
-                  {atCap && (
+                  {atSeatCap && (
                     <>
                       {" · "}
                       <Link
-                        href="/pricing"
+                        href={capCtaHref}
                         className="text-warning font-medium hover:underline"
                       >
-                        Upgrade &rarr;
+                        {capCtaLabel} &rarr;
                       </Link>
                     </>
                   )}
@@ -327,13 +342,7 @@ export default function UsersPage() {
             </div>
             <Button
               variant="primary"
-              onClick={() => setIsCreateModalOpen(true)}
-              disabled={atCap}
-              title={
-                atCap
-                  ? "You've reached your plan's user limit. Upgrade to add more team members."
-                  : undefined
-              }
+              onClick={() => (atSeatCap ? setShowSeatCapNotice(true) : setIsCreateModalOpen(true))}
             >
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -575,6 +584,24 @@ export default function UsersPage() {
           })()}
         </div>
       )}
+
+      {/* At-cap advisory — the "+ Add User" button opens this instead of
+          silently no-op'ing when every seat is in use. */}
+      <ConfirmDialog
+        isOpen={showSeatCapNotice}
+        onClose={() => setShowSeatCapNotice(false)}
+        onConfirm={() => {
+          setShowSeatCapNotice(false);
+          router.push(onPaidPlan ? "/account/billing?action=add-seat" : "/pricing");
+        }}
+        title={onPaidPlan ? "Add a seat to invite another user" : "Upgrade to add users"}
+        message={
+          onPaidPlan
+            ? `You're using all ${userCap?.cap ?? ""} of your seats. To add another user, add a seat to your plan first — it's prorated, and during a trial the added seat is billed when your trial converts.`
+            : "The Free plan includes 1 user. Upgrade to a paid plan to add your team."
+        }
+        confirmLabel={onPaidPlan ? "Add a seat" : "See plans"}
+      />
 
       {/* Create User Modal */}
       <CreateUserModal

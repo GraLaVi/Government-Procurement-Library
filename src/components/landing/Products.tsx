@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChartIcon, DatabaseIcon, SearchIcon, TargetIcon, CheckIcon } from "@/components/icons";
+import { ChartIcon, DatabaseIcon, SearchIcon, TargetIcon, CheckIcon, ZapIcon } from "@/components/icons";
 
 type ProductCta = { href: string; label: string };
 
@@ -41,7 +41,7 @@ const products: Array<{
       "Recent solicitation detail",
       "Bid-matching: 5 profiles with full solicitation view",
       "Daily match notifications",
-      "$59/month",
+      "$59 per user / mo — volume discounts for teams",
     ],
   },
   {
@@ -57,9 +57,23 @@ const products: Array<{
       "20 bid-matching profiles with full solicitation view",
       "Saved searches, pinned items, and CSV exports",
       "Immediate match notifications",
-      "$99/month",
+      "$99 per user / mo — volume discounts for teams",
     ],
     highlighted: true,
+  },
+  {
+    icon: ZapIcon,
+    family: "Parts & Vendor Library",
+    tier: "Advanced + RFQ",
+    tagline: "From research to quote, in one place.",
+    description:
+      "Everything in Advanced, plus send Requests for Quote to vendors directly from GPH — turn the opportunities you find into sourcing conversations without leaving the platform.",
+    features: [
+      "Everything in Advanced",
+      "Send RFQs to vendors from any part or vendor record",
+      "Track quote requests and responses in one place",
+      "$179 per user / mo — volume discounts for teams",
+    ],
   },
   {
     icon: ChartIcon,
@@ -81,13 +95,13 @@ const products: Array<{
 ];
 
 export function Products() {
-  // Split the products into the three subscription tiers (rendered as
-  // a tight 3-up grid) and the bespoke Data Reports offer (rendered as
-  // a full-width horizontal panel below). Keeping the layouts visually
-  // distinct signals that Data Reports is a different kind of product
-  // — quoted per engagement, not a subscription tier — and avoids the
-  // "four-card row feels squished / single-card row looks lonely"
-  // problem you get from a uniform grid.
+  // Split the products into the four subscription tiers (rendered as a
+  // 4-up grid: Free / Basic / Advanced / Advanced+RFQ) and the bespoke
+  // Data Reports offer (rendered as a full-width horizontal panel below).
+  // Keeping the layouts visually distinct signals that Data Reports is a
+  // different kind of product — quoted per engagement, not a subscription
+  // tier — and avoids the "single-card row looks lonely" problem you get
+  // from folding it into the tier grid.
   const tierProducts = products.filter((p) => p.family !== "Data Reports");
   const customReportsProduct = products.find((p) => p.family === "Data Reports");
 
@@ -100,7 +114,8 @@ export function Products() {
             The Procurement Intelligence platform.
           </h2>
           <p className="mt-4 text-lg text-muted dark:text-foreground/70">
-            Start free, then upgrade as your pipeline grows. Every paid plan
+            Start free, then upgrade as your pipeline grows. Paid plans are
+            priced per user with volume discounts for teams, and every one
             includes bid-matching — Advanced unlocks 20 profiles and
             immediate notifications.
           </p>
@@ -116,15 +131,15 @@ export function Products() {
           <span className="h-px w-8 bg-border" aria-hidden="true" />
         </div>
 
-        {/* Tier products — 3-up grid */}
-        <div className="mt-6 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Tier products — 4-up grid (2-up on md) */}
+        <div className="mt-6 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {tierProducts.map((product) => {
             const Icon = product.icon;
             const productKey = `${product.family}-${product.tier}`;
             return (
               <div
                 key={productKey}
-                className={`relative bg-white dark:bg-card-bg rounded-2xl p-8 border transition-all duration-300 flex flex-col ${
+                className={`relative bg-white dark:bg-card-bg rounded-2xl p-5 xl:p-6 border transition-all duration-300 flex flex-col ${
                   product.highlighted
                     ? "border-primary shadow-xl shadow-primary/10 lg:-translate-y-2"
                     : "border-border hover:border-primary/30 hover:shadow-lg"
@@ -135,19 +150,19 @@ export function Products() {
                     Most popular
                   </div>
                 )}
-                <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center">
-                  <Icon className="w-6 h-6 text-primary" />
+                <div className="w-10 h-10 bg-primary-light rounded-lg flex items-center justify-center">
+                  <Icon className="w-5 h-5 text-primary" />
                 </div>
-                <h3 className="mt-5 text-xl font-semibold text-secondary dark:text-card-foreground">
+                <h3 className="mt-4 text-xl font-semibold text-secondary dark:text-card-foreground">
                   {product.tier}
                 </h3>
                 <p className="mt-1 text-sm font-medium text-primary">
                   {product.tagline}
                 </p>
-                <p className="mt-3 text-muted dark:text-card-foreground/80 leading-relaxed">
+                <p className="mt-2 text-muted dark:text-card-foreground/80 leading-relaxed">
                   {product.description}
                 </p>
-                <ul className="mt-6 space-y-2.5">
+                <ul className="mt-4 space-y-2">
                   {product.features.map((feature) => (
                     <li
                       key={feature}
@@ -158,7 +173,7 @@ export function Products() {
                     </li>
                   ))}
                 </ul>
-                <div className="mt-8 pt-6 border-t border-border">
+                <div className="mt-6 pt-4 border-t border-border">
                   {product.cta ? (
                     <a
                       href={product.cta.href}

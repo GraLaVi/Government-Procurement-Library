@@ -73,11 +73,13 @@ For details on what data is stored in each category, see the cookie policy linke
 
 ## Managing users
 
-The Manage Users page is where account admins add team members, change their roles, and remove users who've left the organization. The page shows your current users, their assigned roles, and the number of seats used against your plan's user capacity.
+The Manage Users page is where account admins add team members, change their roles, and remove users who've left the organization. The page shows your current users, their assigned roles, and how many seats are in use — for example "2 of 5 seats used" — against the number of seats on your plan. Every user you add gets your account's full plan tier: it's one seat per user.
 
 *Note: Manage Users is available to account admins only.*
 
 **To add a user**, click **\+ Add User** and follow the prompts. New users receive an email invitation to set up their account.
+
+If you've already filled every seat, **\+ Add User** tells you you're at your seat limit and offers an **Add a seat** shortcut straight to the seat picker (on a paid plan) or an **Upgrade** link (on Free). Add a seat, then add the user. On a paid plan a seat is prorated; during a free trial the added seat costs nothing until the trial converts. See [Adding or removing seats](/help/plans-and-pricing#adding-or-removing-seats).
 
 **Per-user actions** are available from the actions menu (three-dot icon) at the end of each user row:
 
@@ -105,5 +107,5 @@ Once added, contacts appear in your contacts list. To subscribe a contact to spe
 ## Related articles
 
 - [Notifications](/help/notifications) — Configure email alerts for yourself and your team  
-- [Plans and Pricing](/help/plans-and-pricing) — Compare what each plan includes, including user capacity  
+- [Plans and Pricing](/help/plans-and-pricing) — Compare what each plan includes, and add or remove seats  
 - [Setting Up Bid-Matching Profiles](/help/bid-matching-profiles) — Create the profiles that drive your match alerts

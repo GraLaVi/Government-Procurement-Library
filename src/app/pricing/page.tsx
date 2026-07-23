@@ -66,9 +66,10 @@ type Plan = {
   description: string | null;
   default_seat_count: number | null;
   default_trial_days: number | null;
-  // True = per-seat product (admin assigns each user a seat). False = org-wide
-  // (every user under the customer gets access automatically; checkout uses
-  // quantity=1 and the seat picker is hidden on /pricing).
+  // Access model only — NOT the billing model. FALSE = org-wide (every user
+  // under the customer inherits the tier). The seat picker's visibility keys
+  // off the price being tiered / having a seat ceiling, not this flag, because
+  // paid tiers are org-wide-access AND per-seat-billed at the same time.
   requires_seat_assignment: boolean;
   // Stripe-Dashboard-set default price for this product. When present, the
   // pricing page pre-selects this price instead of the cheapest interval.
@@ -150,6 +151,25 @@ function findVolumeTier(tiers: PriceTier[], quantity: number): PriceTier | null 
 // Compute the period total for a given price + seat count, regardless of scheme.
 // Returns null when the price/tiers don't support this seat count
 // (e.g. graduated mode is not yet supported).
+// Graduated ("progressive") tiers: each bracket's units are billed at that
+// bracket's rate, then summed — the way Stripe computes graduated pricing.
+// `tiers` are ascending by up_to_quantity (null = the final, unbounded tier).
+function computeGraduatedCents(tiers: PriceTier[], quantity: number): number | null {
+  if (tiers.length === 0 || quantity < 1) return null;
+  let total = 0;
+  let prevUpTo = 0;
+  for (const t of tiers) {
+    const upTo = t.up_to_quantity ?? Infinity;
+    const unitsInBracket = Math.min(quantity, upTo) - prevUpTo;
+    if (unitsInBracket > 0) {
+      total += unitsInBracket * t.unit_amount_cents + t.flat_amount_cents;
+    }
+    prevUpTo = upTo;
+    if (quantity <= upTo) break;
+  }
+  return total;
+}
+
 function computeTotalCents(price: Price, quantity: number): number | null {
   if (price.billing_scheme === "per_unit") {
     return price.unit_amount_cents * quantity;
@@ -159,7 +179,9 @@ function computeTotalCents(price: Price, quantity: number): number | null {
     if (!t) return null;
     return t.unit_amount_cents * quantity + t.flat_amount_cents;
   }
-  // Graduated tiers — not modeled yet on the pricing page; surface "—".
+  if (price.billing_scheme === "tiered" && price.tiers_mode === "graduated") {
+    return computeGraduatedCents(price.tiers, quantity);
+  }
   return null;
 }
 
@@ -363,7 +385,16 @@ function PricingPageContent() {
     if (!DIRECT_SUBSCRIBE_ENABLED) return;
     const priceId = selected[plan.id];
     if (!priceId) return;
-    const seatCount = Math.max(1, seats[plan.id] || plan.default_seat_count || 1);
+    // Mirror the card's per-seat vs flat gate: flat plans (free / per_unit
+    // single-license) always bill quantity=1; per-seat plans send the picker
+    // value. Keeps a flat plan's default_seat_count from multiplying the price.
+    const activePrice = plan.prices.find((p) => p.id === priceId);
+    const billsPerSeat =
+      activePrice?.billing_scheme === "tiered" ||
+      (plan.max_seat_count != null && plan.max_customer_users == null);
+    const seatCount = billsPerSeat
+      ? Math.max(1, seats[plan.id] || plan.default_seat_count || 1)
+      : 1;
     // Tier slug (basic / advanced / …) lets /signup show a specific
     // "Parts and Vendor Library — <Tier>" badge instead of the generic
     // "the plan you selected". Pulled from the plan name via the same
@@ -635,15 +666,18 @@ function PricingPageContent() {
         {sortedPlans.map((plan) => {
           const activePriceId = selected[plan.id];
           const activePrice = plan.prices.find((p) => p.id === activePriceId);
-          // Flat-rate plans always charge for quantity=1 — a single flat
-          // license covers the whole tier ("up to N users"), billed once
-          // regardless of how many users are assigned, so a per-seat picker
-          // would be misleading. This covers both org-wide plans
-          // (!requires_seat_assignment) and seat-assigned tiers that bill a
-          // flat fee for an allowance (`max_customer_users` set, e.g. Basic
-          // and Advanced up to 3). The backend enforces this by billing
-          // quantity=1.
-          const billsFlat = !plan.requires_seat_assignment || plan.max_customer_users != null;
+          // Per-seat BILLING is independent of the access model. Access is
+          // org-wide (every user under the customer inherits the tier — see
+          // requires_seat_assignment, which stays FALSE), but paid tiers are
+          // billed per seat: the seat count sets the Stripe quantity AND the
+          // customer's user cap. Show the seat picker whenever the price is
+          // tiered (graduated/volume) or the plan carries a seat ceiling
+          // without a flat user allowance. Free / flat single-license plans
+          // (per_unit, or a `max_customer_users` allowance) bill quantity=1.
+          const billsPerSeat =
+            activePrice?.billing_scheme === "tiered" ||
+            (plan.max_seat_count != null && plan.max_customer_users == null);
+          const billsFlat = !billsPerSeat;
           const seatCount = billsFlat
             ? 1
             : Math.max(1, seats[plan.id] || plan.default_seat_count || 1);
@@ -706,13 +740,9 @@ function PricingPageContent() {
                       {perMonthSuffix(totalCents, activePrice.interval_count, activePrice.currency)}
                       {billsFlat
                         ? plan.max_customer_users != null
-                          ? ` · up to ${plan.max_customer_users} users`
+                          ? ` · up to ${plan.max_customer_users} user${plan.max_customer_users === 1 ? "" : "s"}`
                           : " · all users included"
-                        : isVolume
-                          ? ` · ${seatCount} seat${seatCount === 1 ? "" : "s"}`
-                          : isTiered
-                            ? ""
-                            : ` · ${seatCount} seat${seatCount === 1 ? "" : "s"}`}
+                        : ` · ${seatCount} seat${seatCount === 1 ? "" : "s"}`}
                     </div>
                     {plan.default_trial_days && plan.default_trial_days > 0 && (
                       <>
@@ -763,7 +793,7 @@ function PricingPageContent() {
                   Flat-rate plans (org-wide, or a flat fee for an allowance
                   like "up to 3 users") bill quantity=1, so the picker would
                   be confusing. */}
-              {activePrice && !isGraduated && !billsFlat && (
+              {activePrice && !billsFlat && (
                 <div className="mb-4">
                   <label className="block text-xs text-muted mb-1">Number of users</label>
                   <div className="flex items-center gap-2">
@@ -814,6 +844,11 @@ function PricingPageContent() {
                       Volume pricing — your full team gets the rate of the bracket your seat count falls into.
                     </p>
                   )}
+                  {isGraduated && activePrice.tiers.length > 1 && (
+                    <p className="text-[11px] text-muted mt-1.5">
+                      Graduated pricing — each bracket of seats is billed at its own rate, then added up.
+                    </p>
+                  )}
                   {atSeatCap && planSeatCap != null && (
                     <p className="text-[11px] text-muted mt-1.5">
                       Need more than {planSeatCap} users?{" "}
@@ -828,15 +863,21 @@ function PricingPageContent() {
                 </div>
               )}
 
-              {/* Tier table (volume only) */}
-              {isVolume && activePrice.tiers.length > 1 && (
+              {/* Tier table (volume + graduated) */}
+              {isTiered && activePrice.tiers.length > 1 && (
                 <div className="mb-4 border border-border rounded-lg overflow-hidden text-xs">
-                  <div className="px-3 py-1.5 bg-muted-light/40 text-muted">Volume tiers</div>
+                  <div className="px-3 py-1.5 bg-muted-light/40 text-muted">
+                    {isGraduated ? "Graduated tiers" : "Volume tiers"}
+                  </div>
                   <div className="divide-y divide-border">
                     {activePrice.tiers.map((t, idx) => {
                       const lower = idx === 0 ? 1 : (activePrice.tiers[idx - 1].up_to_quantity ?? 0) + 1;
                       const upper = t.up_to_quantity;
-                      const isCurrent = findVolumeTier(activePrice.tiers, seatCount) === t;
+                      // Volume: the single bracket the seat count lands in is "current".
+                      // Graduated: every bracket up to the seat count contributes.
+                      const isCurrent = isGraduated
+                        ? seatCount >= lower
+                        : findVolumeTier(activePrice.tiers, seatCount) === t;
                       return (
                         <div
                           key={idx}
@@ -878,7 +919,6 @@ function PricingPageContent() {
                     disabled={
                       !DIRECT_SUBSCRIBE_ENABLED ||
                       !activePrice ||
-                      isGraduated ||
                       totalCents === null ||
                       checkoutPending === plan.id ||
                       (!!user && !user.email_verified)
