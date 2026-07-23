@@ -2020,11 +2020,21 @@ function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, 
         const key = manufacturerRowKey(row.original);
         const eligible = row.original.is_active;
         const statusLabel = formatSamStatus(row.original.sam_status);
+        const expiry = row.original.registration_expiration_date;
+        const isExpired =
+          expiry !== null && new Date(expiry) < new Date(new Date().toDateString());
         const disabledReason = eligible
           ? ""
-          : statusLabel
-            ? `Vendor's SAM.gov registration is ${statusLabel.toLowerCase()} — RFQs can only be sent to actively registered vendors.`
-            : "No SAM.gov registration found for this CAGE code — RFQs can only be sent to actively registered vendors.";
+          : !statusLabel
+            ? "No SAM.gov registration found for this CAGE code — RFQs can only be sent to actively registered vendors."
+            : statusLabel.toLowerCase() === "active"
+              // sam_status is 'A' but the vendor is still ineligible: the
+              // registration lapsed by date, or the vendor is excluded/debarred.
+              // Don't claim it's "active" — name the expiry when that's the cause.
+              ? isExpired
+                ? "Vendor's SAM.gov registration has expired — RFQs can only be sent to actively registered vendors."
+                : "Vendor's SAM.gov registration is not active — RFQs can only be sent to actively registered vendors."
+              : `Vendor's SAM.gov registration is ${statusLabel.toLowerCase()} — RFQs can only be sent to actively registered vendors.`;
         return (
           <Tooltip content={disabledReason}>
             <input
