@@ -72,6 +72,13 @@ export const HELP_ARTICLES: HelpArticleMeta[] = [
     group: "platform",
   },
   {
+    slug: "demand-intelligence",
+    title: "Reading Demand & Stock Data",
+    blurb:
+      "Use DLA's demand forecast and inventory signals on a part's Demand & Stock tab to decide what to bid on and how to price.",
+    group: "platform",
+  },
+  {
     slug: "requests-for-quote",
     title: "Sending RFQs to Vendors",
     blurb:

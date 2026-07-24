@@ -696,6 +696,51 @@ export interface PartTabCounts {
   solicitations_count_30d?: number | null;
 }
 
+// ============================================================================
+// Demand Intelligence (DLA forecasts + inventory position) — Advanced tier
+// ============================================================================
+
+export interface DemandForecastPoint {
+  forecast_date: string; // ISO date, first day of forecast month
+  forecast_qty: number;
+}
+
+export interface DemandTrendPoint {
+  as_of_date: string; // ISO date, snapshot date
+  total_stock: number | null;
+  backorder_qty: number | null;
+}
+
+export interface PartDemand {
+  nsn: string;
+  niin: string | null;
+  has_stock: boolean;
+  has_forecast: boolean;
+  // Latest inventory position
+  total_stock: number | null;
+  backorder_qty: number | null;
+  annual_demand_qty: number | null;
+  reorder_point: number | null;
+  condition_code: string | null;
+  // Derived signals. below_reorder_point is null when reorder_point is null
+  // ("no signal"), never false in that case.
+  below_reorder_point: boolean | null;
+  on_backorder: boolean;
+  months_of_supply: number | null;
+  rop_gap: number | null;
+  coverage_ratio: number | null;
+  forecast_next_12mo: number | null;
+  forecast_total_24mo: number | null;
+  demand_type: string; // 'recurring' | 'one_off' | 'unknown'
+  stock_trend: string | null; // 'rising' | 'falling' | 'flat' | null
+  forecast_curve: DemandForecastPoint[];
+  trend_series: DemandTrendPoint[];
+  // Freshness
+  stock_as_of_date: string | null;
+  stock_data_date: string | null;
+  forecast_data_date: string | null;
+}
+
 // Parts search type configuration
 export interface PartsSearchTypeConfig {
   value: PartsSearchType;

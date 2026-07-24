@@ -2,7 +2,8 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
-import { useMyBusinessSummary, useBidMatchAnalytics, useUpcomingSolicitations } from "@/lib/hooks/useAnalytics";
+import { useMyBusinessSummary, useBidMatchAnalytics, useUpcomingSolicitations, useOpenSolicitationsAndCompetitors } from "@/lib/hooks/useAnalytics";
+import { resolveLibraryTier, type LibraryTier } from "@/lib/library/tier";
 import {
   KPICard,
   KPICardSkeleton,
@@ -19,25 +20,29 @@ import { RecentSearches } from "@/components/dashboard/RecentSearches";
 import { BidMatchingResultsCard } from "@/components/dashboard/BidMatchingResultsCard";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
-  const business = useMyBusinessSummary();
-  // Bid-matching matches closing soon. The endpoint 403s (forbidden) when the
-  // customer has no bid_matching product, so the table self-hides for them.
-  const bidMatch = useBidMatchAnalytics();
+  const { user, hasAnyProductAccess } = useAuth();
+  // Resolved client-side from the product list useAuth() already loaded
+  // before this page rendered — no network call. This decides which branch
+  // to mount BEFORE any tier-gated endpoint is hit, so we never fire a
+  // doomed-to-403 request against a higher tier's endpoint just to learn
+  // what tier the user holds (each branch below fetches only what it can
+  // actually use).
+  const tier = resolveLibraryTier(hasAnyProductAccess);
 
   const userName = user?.first_name || user?.email?.split("@")[0] || "User";
 
   // Three branches:
-  //   - tier === null      → no library access (subscription expired) —
-  //                          full resubscribe prompt, no product surface
-  //   - forbidden=true and
-  //     tier ∈ {basic,free} → search-launcher dashboard (Free is the
-  //                          baseline; Basic adds bid-matching caps;
-  //                          analytics is gated either way)
-  //   - otherwise          → Advanced — analytics dashboard
-  const showResubscribe = business.forbidden && business.tier === null;
-  const showLauncher = business.forbidden && (business.tier === "basic" || business.tier === "free");
-  const showAdvanced = !business.forbidden;
+  //   - tier === null                       → no library access (subscription
+  //                                            expired) — full resubscribe prompt
+  //   - tier ∈ {advanced,basic,free}         → search-launcher dashboard (Free is
+  //                                            the baseline; Basic adds bid-matching
+  //                                            caps; Advanced adds full search plus
+  //                                            two lightweight KPI cards — full
+  //                                            analytics is Maximum-only)
+  //   - tier === "maximum"                   → full analytics dashboard
+  const showResubscribe = tier === null;
+  const showLauncher = tier === "advanced" || tier === "basic" || tier === "free";
+  const showMaximum = tier === "maximum";
 
   return (
     <>
@@ -52,8 +57,8 @@ export default function DashboardPage() {
       </div>
 
       {showResubscribe && <ResubscribePrompt />}
-      {showLauncher && <BasicDashboard />}
-      {showAdvanced && <FullDashboard business={business} bidMatch={bidMatch} />}
+      {showLauncher && <BasicDashboard tier={tier} />}
+      {showMaximum && <FullDashboard />}
     </>
   );
 }
@@ -96,10 +101,13 @@ function ResubscribePrompt() {
   );
 }
 
-function BasicDashboard() {
-  // Parts-based "closing soonest" table — shown to basic + free via the
-  // tier-open endpoint (useMyBusinessSummary 403s these tiers). The bid-
-  // matching table is intentionally NOT here; it's Advanced-only.
+interface BasicDashboardProps {
+  tier: LibraryTier;
+}
+
+function BasicDashboard({ tier }: BasicDashboardProps) {
+  // Parts-based "closing soonest" table — shown to basic + free + advanced
+  // via the tier-open endpoint (useMyBusinessSummary is Maximum-only).
   const upcoming = useUpcomingSolicitations();
 
   return (
@@ -107,8 +115,12 @@ function BasicDashboard() {
       <PaymentMethodAlert />
       <OnboardingChecklist />
       <QuickSearchLauncher />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <BidMatchingResultsCard />
+        {/* Only mounted for Advanced tier, so the lightweight KPI endpoint is
+            only ever called by users who can actually use it — Basic/Free
+            never fire this request at all. */}
+        {tier === "advanced" && <AdvancedKpiCards />}
       </div>
       {upcoming.isLoading ? (
         <ChartSkeleton height="h-48" />
@@ -120,12 +132,47 @@ function BasicDashboard() {
   );
 }
 
-interface FullDashboardProps {
-  business: ReturnType<typeof useMyBusinessSummary>;
-  bidMatch: ReturnType<typeof useBidMatchAnalytics>;
+// Open Solicitations + Competitors — restored for Advanced tier via a
+// lightweight endpoint that doesn't require the Maximum-gated analytics
+// bundle. Basic/Free never see these two cards (matches pre-Maximum
+// behavior, where only Advanced had the full dashboard).
+function AdvancedKpiCards() {
+  const kpis = useOpenSolicitationsAndCompetitors();
+
+  if (kpis.isLoading) {
+    return (
+      <>
+        <KPICardSkeleton />
+        <KPICardSkeleton />
+      </>
+    );
+  }
+  if (!kpis.data) return null;
+
+  return (
+    <>
+      <KPICard
+        label="Open Solicitations"
+        value={formatNumber(kpis.data.open_solicitations_count)}
+        subtitle="Matching your manufactured parts"
+        tooltip="Based on your Procurement History, items sold by your CAGE, this is the number of open solicitations."
+        href={`/library/vendor-search?cage_code=${encodeURIComponent(kpis.data.cage_code)}&tab=solicitations`}
+      />
+      <KPICard
+        label="Competitors on Your Parts"
+        value={formatNumber(kpis.data.competitor_count)}
+        subtitle="Distinct vendors on the same parts"
+      />
+    </>
+  );
 }
 
-function FullDashboard({ business, bidMatch }: FullDashboardProps) {
+function FullDashboard() {
+  const business = useMyBusinessSummary();
+  // Bid-matching matches closing soon. The endpoint 403s (forbidden) when the
+  // customer has no bid_matching product, so the table self-hides for them.
+  const bidMatch = useBidMatchAnalytics();
+
   return (
     <div className="space-y-6">
       <PaymentMethodAlert />
@@ -146,6 +193,7 @@ function FullDashboard({ business, bidMatch }: FullDashboardProps) {
               value={formatNumber(business.data.open_solicitations_count)}
               subtitle="Matching your manufactured parts"
               tooltip="Based on your Procurement History, items sold by your CAGE, this is the number of open solicitations."
+              href={`/library/vendor-search?cage_code=${encodeURIComponent(business.data.cage_code)}&tab=solicitations`}
             />
             <KPICard
               label="Historical Contract Value"

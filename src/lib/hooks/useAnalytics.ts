@@ -176,10 +176,10 @@ export function useMarketAnalytics() {
 }
 
 // Effective library tier returned alongside a 403 from the analytics endpoint.
-// "basic" / "free" → render the search-launcher dashboard.
-// null             → no library product at all (subscription expired) —
-//                    render the resubscribe prompt.
-export type LibraryTier = "basic" | "free" | null;
+// "advanced" / "basic" / "free" → render the search-launcher dashboard.
+// null                          → no library product at all (subscription
+//                                 expired) — render the resubscribe prompt.
+export type LibraryTier = "advanced" | "basic" | "free" | null;
 
 export function useMyBusinessAnalytics() {
   const [data, setData] = useState<CustomerAnalytics | null>(null);
@@ -201,13 +201,13 @@ export function useMyBusinessAnalytics() {
         return;
       }
 
-      // 403 = user lacks the full library tier. Body carries `tier` so the
-      // dashboard can branch (basic → launcher; null → resubscribe).
+      // 403 = user lacks the Maximum library tier. Body carries `tier` so the
+      // dashboard can branch (advanced/basic/free → launcher; null → resubscribe).
       if (response.status === 403) {
         const errData = await response.json().catch(() => ({}));
         setForbidden(true);
         const t = errData.tier;
-        setTier(t === "basic" || t === "free" ? t : null);
+        setTier(t === "advanced" || t === "basic" || t === "free" ? t : null);
         setData(null);
         return;
       }
@@ -277,7 +277,7 @@ export function useMyBusinessSummary() {
         const errData = await response.json().catch(() => ({}));
         setForbidden(true);
         const t = errData.tier;
-        setTier(t === "basic" || t === "free" ? t : null);
+        setTier(t === "advanced" || t === "basic" || t === "free" ? t : null);
         setData(null);
         return;
       }
@@ -313,8 +313,8 @@ export function useMyBusinessSummary() {
 // ============================================================================
 
 // Standalone fetch of just the parts-based "closing soonest" list. Unlike
-// useMyBusinessSummary (Advanced-only, 403s basic/free), this endpoint is open
-// to any library tier, so basic/free dashboards can render the table too.
+// useMyBusinessSummary (Maximum-only, 403s advanced/basic/free), this endpoint
+// is open to any library tier, so basic/free dashboards can render the table too.
 export function useUpcomingSolicitations() {
   const [data, setData] = useState<UpcomingSolicitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -345,6 +345,67 @@ export function useUpcomingSolicitations() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       console.error('Failed to fetch upcoming solicitations:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    intervalRef.current = setInterval(fetchData, 60 * 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [fetchData]);
+
+  return { data, isLoading, error, refetch: fetchData };
+}
+
+// ============================================================================
+// Open Solicitations + Competitors — Advanced tier and up (not Maximum-only)
+// ============================================================================
+
+export interface OpenSolicitationsCompetitors {
+  cage_code: string;
+  open_solicitations_count: number;
+  competitor_count: number;
+  generated_at: string;
+}
+
+// The two KPI cards Advanced tier had before Maximum split off the full
+// analytics bundle. Unlike useMyBusinessSummary (Maximum-only), this hits a
+// lightweight endpoint open to Advanced tier and up — same two indexed
+// queries, without the other premium widgets.
+export function useOpenSolicitationsAndCompetitors() {
+  const [data, setData] = useState<OpenSolicitationsCompetitors | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await fetchWithAuth('/api/library/analytics/my-business/open-solicitations-competitors', {
+        credentials: 'include',
+      });
+
+      // 401 (unauthenticated) / 403 (below Advanced) / 404 (no CAGE) → no
+      // cards, not an error worth surfacing on the dashboard.
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
+        setData(null);
+        return;
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to fetch open solicitations and competitors');
+      }
+
+      const result: OpenSolicitationsCompetitors = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      console.error('Failed to fetch open solicitations and competitors:', err);
     } finally {
       setIsLoading(false);
     }

@@ -47,6 +47,37 @@ interface BidMatchResult {
   set_aside_code?: string | null;
   set_aside_label?: string | null;
   sam_url?: string | null;
+  // Advanced-tier DLA demand signal — strongest across the opportunity's NIINs
+  // ('on_backorder' | 'below_reorder_point' | 'recurring'). Null/absent when no
+  // signal or the customer lacks the Advanced parts tier.
+  demand_signal?: string | null;
+}
+
+// Small demand chip for the results table. Neutral, descriptive labels.
+const DEMAND_SIGNAL_CHIP: Record<string, { label: string; cls: string }> = {
+  on_backorder: {
+    label: "On backorder",
+    cls: "border-amber-300 dark:border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-50/60 dark:bg-amber-500/5",
+  },
+  below_reorder_point: {
+    label: "Below reorder point",
+    cls: "border-rose-300 dark:border-rose-500/40 text-rose-700 dark:text-rose-300 bg-rose-50/60 dark:bg-rose-500/5",
+  },
+  recurring: {
+    label: "Recurring demand",
+    cls: "border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-50/60 dark:bg-emerald-500/5",
+  },
+};
+
+function DemandSignalChip({ signal }: { signal?: string | null }) {
+  if (!signal) return null;
+  const c = DEMAND_SIGNAL_CHIP[signal];
+  if (!c) return null;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium ${c.cls}`}>
+      {c.label}
+    </span>
+  );
 }
 
 interface BidMatchResultsTableProps {
@@ -290,6 +321,9 @@ export function BidMatchResultsTable({
                             Updated{result.latest_post_match_amendment_at ? ` ${timeAgo(result.latest_post_match_amendment_at)}` : " since"}
                           </button>
                         )}
+                        {/* DLA demand signal (Advanced tier) — strongest across
+                            the opportunity's NIINs; informs the bid decision. */}
+                        <DemandSignalChip signal={result.demand_signal} />
                       </div>
                       {result.agency_code && (
                         <div className="text-xs text-muted-foreground mt-0.5">{result.agency_code}</div>

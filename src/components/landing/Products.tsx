@@ -64,15 +64,15 @@ const products: Array<{
   {
     icon: ZapIcon,
     family: "Parts & Vendor Library",
-    tier: "Advanced + RFQ",
-    tagline: "From research to quote, in one place.",
+    tier: "Maximum",
+    tagline: "The deepest procurement intelligence available.",
     description:
-      "Everything in Advanced, plus send Requests for Quote to vendors directly from GPH — turn the opportunities you find into sourcing conversations without leaving the platform.",
+      "Everything in Advanced, plus Procurement Analytics and DLA demand & stock intelligence — see market and inventory signals no other tier gets.",
     features: [
       "Everything in Advanced",
-      "Send RFQs to vendors from any part or vendor record",
-      "Track quote requests and responses in one place",
-      "$179 per user / mo — volume discounts for teams",
+      "Procurement Analytics dashboard",
+      "DLA demand & stock intelligence on every part",
+      "$149 per user / mo — volume discounts for teams",
     ],
   },
   {
@@ -96,7 +96,7 @@ const products: Array<{
 
 export function Products() {
   // Split the products into the four subscription tiers (rendered as a
-  // 4-up grid: Free / Basic / Advanced / Advanced+RFQ) and the bespoke
+  // 4-up grid: Free / Basic / Advanced / Maximum) and the bespoke
   // Data Reports offer (rendered as a full-width horizontal panel below).
   // Keeping the layouts visually distinct signals that Data Reports is a
   // different kind of product — quoted per engagement, not a subscription

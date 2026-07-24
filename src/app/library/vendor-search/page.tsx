@@ -531,7 +531,11 @@ function VendorSearchPageContent() {
                   </div>
                 </div>
               ) : vendorDetail ? (
-                <VendorDetail vendor={vendorDetail} prefetchedTabCounts={prefetchedTabCounts ?? undefined} />
+                <VendorDetail
+                  vendor={vendorDetail}
+                  prefetchedTabCounts={prefetchedTabCounts ?? undefined}
+                  initialTab={searchParams.get('tab') === 'solicitations' ? 'solicitations' : undefined}
+                />
               ) : null}
             </div>
           ) : (

@@ -149,20 +149,24 @@ const VENDOR_SOLICITATIONS_CSV_COLUMNS: CsvColumn<VendorSolicitation>[] = [
   { header: "Set-Aside", value: (r) => r.set_aside_label ?? r.set_aside ?? "" },
 ];
 
+export type TabId = "demographics" | "contacts" | "awards" | "bookings" | "solicitations";
+
 interface VendorDetailProps {
   vendor: VendorDetailType;
   prefetchedTabCounts?: VendorTabCounts;
+  // Deep-link support, e.g. from the dashboard's Open Solicitations card
+  // (?tab=solicitations) — falls back to Demographics when omitted or when
+  // the requested tab isn't visible at the viewer's tier.
+  initialTab?: TabId;
 }
 
-type TabId = "demographics" | "contacts" | "awards" | "bookings" | "solicitations";
-
-export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps) {
+export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: VendorDetailProps) {
   const { hasAnyProductAccess } = useAuth();
   const tier = resolveVendorTier(hasAnyProductAccess);
   const { preferences } = usePreferences();
   const layout = resolveResultsLayout(preferences);
 
-  const [activeTab, setActiveTab] = useState<TabId>("demographics");
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "demographics");
 
   // Print-the-whole-record support (used from both layouts). In tabs mode we
   // load + expand every section before printing so the printout is complete.
@@ -338,6 +342,22 @@ export function VendorDetail({ vendor, prefetchedTabCounts }: VendorDetailProps)
       fetchSolicitations();
     }
   }, [vendor?.cage_code, awardsFetched, fetchAwards, bookingsFetched, fetchBookings, solicitationsFetched, fetchSolicitations]);
+
+  // A deep-linked initialTab seeds activeTab directly (see useState above),
+  // bypassing the click-triggered lazy fetch in handleTabChange — without
+  // this, landing on the Solicitations tab via a link would show an empty
+  // state despite the tab badge reporting real data. Fire the matching fetch
+  // once on mount, mirroring what a click on that tab would have done.
+  useEffect(() => {
+    if (initialTab === 'awards' && !awardsFetched) {
+      fetchAwards();
+    } else if (initialTab === 'bookings' && !bookingsFetched) {
+      fetchBookings();
+    } else if (initialTab === 'solicitations' && !solicitationsFetched) {
+      fetchSolicitations();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Mount-only, matching the one-shot seed of activeTab from initialTab
 
   // Build tabs dynamically with counts in parenthesis for better readability.
   // Prefer the eagerly-fetched tabCounts; fall back to data-fetched totals once loaded.

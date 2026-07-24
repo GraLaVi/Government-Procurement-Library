@@ -107,6 +107,7 @@ function splitFamilyTier(name: string): { family: string; tier: string | null } 
 const TIER_DISPLAY_ORDER: Record<string, number> = {
   basic: 1,
   advanced: 2,
+  maximum: 3,
 };
 
 function tierSortKey(plan: Plan): number {

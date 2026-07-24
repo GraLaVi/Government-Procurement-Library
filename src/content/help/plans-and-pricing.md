@@ -4,7 +4,7 @@ meta_title: "Plans and Pricing | GPH Help"
 description: "Compare Government Procurement Hub plans, understand which features are tier-gated, and learn how to manage your subscription."
 ---
 
-GPH is available on four plans: Free, Basic, Advanced, and Advanced + RFQ. This article explains what each plan includes from a help and operations standpoint — when you've hit a feature gate, want to understand what your current tier covers, or are deciding whether to upgrade.
+GPH is available on four plans: Free, Basic, Advanced, and Maximum. This article explains what each plan includes from a help and operations standpoint — when you've hit a feature gate, want to understand what your current tier covers, or are deciding whether to upgrade.
 
 Paid plans are **priced per seat**: you choose how many users (seats) you need — up to 10 — and every user on your account gets your plan's full tier. Larger teams get automatic volume discounts. For current pricing and the full comparison, see the [pricing page](/pricing).
 
@@ -16,7 +16,7 @@ Paid plans are **priced per seat**: you choose how many users (seats) you need �
 
 **Advanced** — Everything in Basic plus the features power users rely on: full procurement history on parts, open solicitations on vendor profiles, pinned searches, CSV exports, immediate match notifications, and up to 20 bid-matching profiles.
 
-**Advanced + RFQ** — Everything in Advanced, plus the ability to send RFQs (Requests for Quote) to vendors from within GPH.
+**Maximum** — Everything in Advanced, plus the Procurement Analytics dashboard and DLA demand & stock intelligence on every part.
 
 ## Features available only on Advanced
 
@@ -52,7 +52,7 @@ If you move to a plan with a lower profile limit, your existing profiles aren't 
 
 ## Checking your current plan
 
-Go to **Account \> Billing** to see everything about your subscription in one place. Your plan appears as **Procurement Intelligence — Free**, **— Basic**, **— Advanced**, or **— Advanced + RFQ**.
+Go to **Account \> Billing** to see everything about your subscription in one place. Your plan appears as **Procurement Intelligence — Free**, **— Basic**, **— Advanced**, or **— Maximum**.
 
 *Note: Billing is available to account admins only. If you're a member and don't see Billing under Account, ask your account admin to make plan, seat, or payment changes.*
 

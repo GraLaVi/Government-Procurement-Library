@@ -34,6 +34,7 @@ import {
   ProcurementItemDescriptionResponse,
   SDDTBlock,
   PartTabCounts,
+  PartDemand,
   formatNSN,
   formatNiin,
   formatCurrency,
@@ -47,6 +48,12 @@ import {
 import { DetailSections, DetailToolbar } from "@/components/library/DetailSections";
 import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { KPICard } from "@/components/analytics/KPICard";
+import { CHART_COLORS } from "@/components/analytics/ChartColors";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, ResponsiveContainer,
+} from "recharts";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -113,6 +120,30 @@ const SOLICITATIONS_CSV_COLUMNS: CsvColumn<PartSolicitation>[] = [
   { header: "Buyer Name", value: (r) => r.buyer_name ?? "" },
   { header: "Buyer Email", value: (r) => r.buyer_email ?? "" },
   { header: "Buyer Phone", value: (r) => r.buyer_phone ?? "" },
+];
+
+// ---- Demand Intelligence (DLA forecast + stock) display helpers -----------
+// Format a monthly DLA release/snapshot date for the freshness line, e.g.
+// "Jun 30, 2026". Dates arrive as ISO "YYYY-MM-DD"; parse as UTC so the day
+// never shifts across timezones.
+function formatDemandDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+// Short month label for the forecast chart x-axis, e.g. "Aug '26".
+function formatForecastMonth(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" }).replace(" ", " '");
+}
+
+// CSV export: one row per forecast month (the tabular part of the demand data).
+const DEMAND_CSV_COLUMNS: CsvColumn<{ forecast_date: string; forecast_qty: number }>[] = [
+  { header: "Forecast Month", value: (r) => r.forecast_date ?? "" },
+  { header: "Forecast Qty", value: (r) => r.forecast_qty ?? "" },
 ];
 
 // ============================================================================
@@ -348,6 +379,12 @@ export function PartDetail({ part }: PartDetailProps) {
   const [manufacturersError, setManufacturersError] = useState<string | null>(null);
   const [manufacturersFetched, setManufacturersFetched] = useState(false);
 
+  // Demand intelligence state (DLA forecast + stock; Advanced tier)
+  const [demand, setDemand] = useState<PartDemand | null>(null);
+  const [isLoadingDemand, setIsLoadingDemand] = useState(false);
+  const [demandError, setDemandError] = useState<string | null>(null);
+  const [demandFetched, setDemandFetched] = useState(false);
+
   // Technical characteristics state
   const [technicalCharacteristics, setTechnicalCharacteristics] = useState<PartTechnicalCharacteristic[]>([]);
   const [technicalTotal, setTechnicalTotal] = useState(0);
@@ -550,6 +587,31 @@ export function PartDetail({ part }: PartDetailProps) {
     }
   }, [partReqKey, manufacturersFetched, isLoadingManufacturers]);
 
+  // Fetch demand intelligence when tab is clicked (lazy loading, Advanced tier)
+  const fetchDemand = useCallback(async () => {
+    if (demandFetched || isLoadingDemand) return;
+
+    setIsLoadingDemand(true);
+    setDemandError(null);
+
+    try {
+      const response = await fetch(`/api/library/parts/${encodeURIComponent(partReqKey)}/demand`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load demand intelligence');
+      }
+
+      setDemand(data as PartDemand);
+      setDemandFetched(true);
+    } catch (error) {
+      console.error('Demand intelligence fetch error:', error);
+      setDemandError(error instanceof Error ? error.message : 'Failed to load demand intelligence');
+    } finally {
+      setIsLoadingDemand(false);
+    }
+  }, [partReqKey, demandFetched, isLoadingDemand]);
+
   // Fetch technical characteristics when tab is clicked (lazy loading)
   const fetchTechnicalCharacteristics = useCallback(async () => {
     if (technicalFetched || isLoadingTechnical) return;
@@ -730,6 +792,15 @@ export function PartDetail({ part }: PartDetailProps) {
     }
   }, [partReqKey, procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
 
+  // Demand & Stock now lives on the Overview tab (Maximum tier), so fetch it
+  // eagerly on mount rather than on a tab click. fetchDemand self-guards
+  // against duplicate calls; the endpoint 403s below Maximum so we skip them.
+  useEffect(() => {
+    if (partReqKey && tierMeets(tier, "maximum")) {
+      fetchDemand();
+    }
+  }, [partReqKey, tier, fetchDemand]);
+
   // Build tabs dynamically with counts.
   // Prefer data-fetched totals once loaded; fall back to lightweight tabCounts.
   const procurementLabel = procurementFetched
@@ -784,28 +855,31 @@ export function PartDetail({ part }: PartDetailProps) {
       ? `Procurement Item Description (${tabCounts.has_procurement_item_description ? 1 : 0})`
       : "Procurement Item Description";
 
-  // `minTier` declares the lowest tier that can see each tab:
-  //   free     → Overview + (light) Solicitations
-  //   basic    → adds Technical, End Use, Procurement Item Description
-  //   advanced → adds Procurement, Manufacturers, Packaging
-  // The Solicitations tab content branches by tier internally — Free
-  // sees a count + upgrade CTA; Basic+ sees the full list.
+  // Tab visibility by tier:
+  //   free     → Overview + (light) Solicitations teaser
+  //   basic    → adds Technical, End Use, Procurement Item Description,
+  //              and Manufacturers (Solicitations is NOT shown at Basic —
+  //              it trades up to Advanced instead).
+  //   advanced → adds Procurement, Solicitations (full), Packaging
+  // Solicitations is the only non-monotonic case (visible at Free as a
+  // teaser, hidden at Basic, visible again at Advanced+), so it gets its
+  // own `visible` expression rather than a simple minimum-tier check.
   const solicitationsLabelForTier = isFreeOnly
     ? (tabCounts?.solicitations_count_30d != null
         ? `Solicitations (${tabCounts.solicitations_count_30d})`
         : "Solicitations")
     : solicitationsLabel;
-  const allTabs: Array<{ id: TabId; label: string; disabled: boolean; minTier: "free" | "basic" | "advanced" }> = [
-    { id: "overview", label: "Overview", disabled: false, minTier: "free" },
-    { id: "procurement", label: procurementLabel, disabled: false, minTier: "advanced" },
-    { id: "solicitations", label: solicitationsLabelForTier, disabled: false, minTier: "free" },
-    { id: "manufacturers", label: manufacturersLabel, disabled: false, minTier: "advanced" },
-    { id: "technical", label: technicalLabel, disabled: false, minTier: "basic" },
-    { id: "enduse", label: endUseLabel, disabled: false, minTier: "basic" },
-    { id: "packaging", label: packagingLabel, disabled: false, minTier: "advanced" },
-    { id: "procurementitemdesc", label: pidLabel, disabled: false, minTier: "basic" },
+  const allTabs: Array<{ id: TabId; label: string; disabled: boolean; visible: boolean }> = [
+    { id: "overview", label: "Overview", disabled: false, visible: true },
+    { id: "procurement", label: procurementLabel, disabled: false, visible: tierMeets(tier, "advanced") },
+    { id: "solicitations", label: solicitationsLabelForTier, disabled: false, visible: isFreeOnly || tierMeets(tier, "advanced") },
+    { id: "manufacturers", label: manufacturersLabel, disabled: false, visible: tierMeets(tier, "basic") },
+    { id: "technical", label: technicalLabel, disabled: false, visible: tierMeets(tier, "basic") },
+    { id: "enduse", label: endUseLabel, disabled: false, visible: tierMeets(tier, "basic") },
+    { id: "packaging", label: packagingLabel, disabled: false, visible: tierMeets(tier, "advanced") },
+    { id: "procurementitemdesc", label: pidLabel, disabled: false, visible: tierMeets(tier, "basic") },
   ];
-  const tabs = allTabs.filter((t) => tierMeets(tier, t.minTier));
+  const tabs = allTabs.filter((t) => t.visible);
 
   useEffect(() => {
     if (!tabs.some((t) => t.id === activeTab)) {
@@ -828,11 +902,11 @@ export function PartDetail({ part }: PartDetailProps) {
       trackView("procurement_history");
       fetchProcurementHistory();
     }
-    if (!isFreeOnly && !solicitationsFetched) {
+    if (tierMeets(tier, "advanced") && !solicitationsFetched) {
       trackView("solicitations");
       fetchSolicitations();
     }
-    if (tierMeets(tier, "advanced") && !manufacturersFetched) {
+    if (tierMeets(tier, "basic") && !manufacturersFetched) {
       trackView("manufacturers");
       fetchManufacturers();
     }
@@ -864,7 +938,16 @@ export function PartDetail({ part }: PartDetailProps) {
   // Section content + per-section export actions, shared by both layouts.
   const sectionContent: Record<TabId, ReactNode> = {
     overview: (
-      <OverviewPanel part={part} codeDefinitions={codeDefinitions} codeTypeNames={codeTypeNames} />
+      <OverviewPanel
+        part={part}
+        codeDefinitions={codeDefinitions}
+        codeTypeNames={codeTypeNames}
+        showDemand={tierMeets(tier, "maximum")}
+        demand={demand}
+        isLoadingDemand={isLoadingDemand}
+        demandError={demandError}
+        onRetryDemand={fetchDemand}
+      />
     ),
     procurement: (
       <ProcurementPanel
@@ -884,6 +967,9 @@ export function PartDetail({ part }: PartDetailProps) {
         isLoading={isLoadingSolicitations}
         error={solicitationsError}
         onRetry={fetchSolicitations}
+        demand={demand}
+        onEnsureDemand={tierMeets(tier, "maximum") ? fetchDemand : undefined}
+        onViewDemand={tierMeets(tier, "maximum") ? () => handleTabChange("overview") : undefined}
       />
     ),
     manufacturers: (
@@ -967,6 +1053,7 @@ export function PartDetail({ part }: PartDetailProps) {
     const csv = buildCombinedCsv([
       { title: "Procurement History", csv: buildCsv(procurementRecords, PROCUREMENT_CSV_COLUMNS) },
       { title: "Recent Solicitations", csv: buildCsv(solicitations, SOLICITATIONS_CSV_COLUMNS) },
+      { title: "DLA Demand Forecast", csv: buildCsv(demand?.forecast_curve ?? [], DEMAND_CSV_COLUMNS) },
     ]);
     triggerDownload(csv, `part-${partReqKey}-${todayIsoDate()}.csv`);
   };
@@ -975,8 +1062,9 @@ export function PartDetail({ part }: PartDetailProps) {
   const loadAllSections = useCallback(async () => {
     const jobs: Promise<unknown>[] = [];
     if (tierMeets(tier, "advanced")) jobs.push(fetchProcurementHistory());
-    if (!isFreeOnly) jobs.push(fetchSolicitations());
-    if (tierMeets(tier, "advanced")) jobs.push(fetchManufacturers());
+    if (tierMeets(tier, "advanced")) jobs.push(fetchSolicitations());
+    if (tierMeets(tier, "basic")) jobs.push(fetchManufacturers());
+    if (tierMeets(tier, "maximum")) jobs.push(fetchDemand());
     if (tierMeets(tier, "basic")) jobs.push(fetchTechnicalCharacteristics());
     if (tierMeets(tier, "basic")) jobs.push(fetchEndUseDescriptions());
     if (tierMeets(tier, "advanced")) jobs.push(fetchPackaging());
@@ -984,7 +1072,7 @@ export function PartDetail({ part }: PartDetailProps) {
     await Promise.all(jobs);
   }, [
     tier, isFreeOnly,
-    fetchProcurementHistory, fetchSolicitations, fetchManufacturers,
+    fetchProcurementHistory, fetchSolicitations, fetchManufacturers, fetchDemand,
     fetchTechnicalCharacteristics, fetchEndUseDescriptions, fetchPackaging,
     fetchProcurementItemDescription,
   ]);
@@ -1068,9 +1156,16 @@ interface OverviewPanelProps {
   part: PartDetailType;
   codeDefinitions: Record<string, string>;
   codeTypeNames: Record<string, string>;
+  // Demand & Stock (Advanced tier) renders as a section on this tab. Data is
+  // fetched eagerly by the parent on mount; these props feed the panel.
+  showDemand?: boolean;
+  demand?: PartDemand | null;
+  isLoadingDemand?: boolean;
+  demandError?: string | null;
+  onRetryDemand?: () => void;
 }
 
-function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelProps) {
+function OverviewPanel({ part, codeDefinitions, codeTypeNames, showDemand, demand, isLoadingDemand, demandError, onRetryDemand }: OverviewPanelProps) {
   // NSN-less (DIBBS part-number-only) parts have no NSN/NIIN/FSC; identify them
   // by manufacturer CAGE + part number instead (mirrors the legacy 'M'-class view).
   const identifiers = [
@@ -1275,12 +1370,414 @@ function OverviewPanel({ part, codeDefinitions, codeTypeNames }: OverviewPanelPr
             </h3>
           </div>
           <div className="p-3 space-y-2">
-            {codesToDisplay.map((item) => 
+            {codesToDisplay.map((item) =>
               renderCodeWithTooltip(item.code, item.type, item.label)
             )}
           </div>
         </div>
+
       </div>
+
+      {/* Demand & Stock section (Advanced tier). Collapsible so the Overview
+          tab stays scannable; auto-opens when there's an urgent buy signal. */}
+      {showDemand && (
+        <DemandOverviewSection
+          demand={demand ?? null}
+          isLoading={!!isLoadingDemand}
+          error={demandError ?? null}
+          onRetry={onRetryDemand ?? (() => {})}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Demand & Stock Panel (DLA forecast + inventory position; Advanced tier)
+// ============================================================================
+interface DemandPanelProps {
+  demand: PartDemand | null;
+  isLoading: boolean;
+  error: string | null;
+  onRetry: () => void;
+}
+
+// Collapsible wrapper for the Overview tab: a compact header (signal chips +
+// months-of-supply + freshness) that expands to the full DemandPanel. Auto-opens
+// when the part carries an urgent buy signal (backorder / below reorder point)
+// so those never hide behind a click; otherwise starts collapsed to keep the
+// Overview tab tidy.
+function DemandOverviewSection({ demand, isLoading, error, onRetry }: DemandPanelProps) {
+  // `open` defaults to "follow the signal" (auto-open on an urgent buy signal)
+  // until the user clicks, after which their explicit choice wins. Deriving it
+  // this way avoids a setState-in-effect and still auto-opens when demand loads.
+  const [override, setOverride] = useState<boolean | null>(null);
+  const hasSignal = !!demand && (demand.on_backorder || demand.below_reorder_point === true);
+  const open = override ?? hasSignal;
+  const hasData = !!demand && (demand.has_stock || demand.has_forecast);
+
+  return (
+    <div className="pt-1 border-t border-border/60">
+      <button
+        type="button"
+        onClick={() => setOverride(!open)}
+        aria-expanded={open}
+        className="w-full flex items-center gap-2 py-2 text-left group"
+      >
+        <svg
+          className={`w-4 h-4 text-muted transition-transform ${open ? "rotate-90" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        <span className="text-sm font-semibold text-foreground">Demand &amp; Stock</span>
+
+        {/* Collapsed summary (hidden once expanded to avoid duplication). */}
+        {!open && (
+          <span className="flex flex-wrap items-center gap-2 min-w-0">
+            {isLoading && !demand ? (
+              <span className="text-xs text-muted">Loading…</span>
+            ) : hasData ? (
+              <>
+                {demand!.on_backorder && <DemandSignalChip kind="on_backorder" />}
+                {demand!.below_reorder_point === true && <DemandSignalChip kind="below_reorder_point" />}
+                {demand!.demand_type === "recurring" && <DemandSignalChip kind="recurring" />}
+                {demand!.demand_type === "one_off" && <DemandSignalChip kind="one_off" />}
+                {demand!.months_of_supply != null && (
+                  <span className="text-xs text-muted">~{demand!.months_of_supply} mo of supply</span>
+                )}
+              </>
+            ) : demand ? (
+              <span className="text-xs text-muted">No DLA data on file</span>
+            ) : null}
+          </span>
+        )}
+
+        <span className="ml-auto text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+          {open ? "Hide" : "View"}
+        </span>
+      </button>
+
+      {open && (
+        <div className="pt-1">
+          <DemandPanel demand={demand} isLoading={isLoading} error={error} onRetry={onRetry} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Colored signal chip, reusing the analytics tile palette (rose/amber/emerald/
+// slate). Deliberately neutral, descriptive labels — not a pricing directive.
+const DEMAND_CHIP_TONES = {
+  rose: {
+    box: "border-rose-300 dark:border-rose-500/40 text-rose-700 dark:text-rose-300 bg-rose-50/60 dark:bg-rose-500/5",
+    dot: "bg-rose-500",
+  },
+  amber: {
+    box: "border-amber-300 dark:border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-50/60 dark:bg-amber-500/5",
+    dot: "bg-amber-500",
+  },
+  emerald: {
+    box: "border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-50/60 dark:bg-emerald-500/5",
+    dot: "bg-emerald-500",
+  },
+  slate: {
+    box: "border-slate-300 dark:border-slate-500/40 text-slate-700 dark:text-slate-300 bg-slate-50/60 dark:bg-slate-500/5",
+    dot: "bg-slate-500",
+  },
+} as const;
+
+// Central definition of each demand signal: its tone, label, and a plain-language
+// explanation shown on hover (same tooltip affordance as the Part Codes cards).
+// Keeping label + tip together here means every place that renders a chip stays
+// consistent and self-documenting for the customer.
+const DEMAND_SIGNAL_META = {
+  on_backorder: {
+    tone: "amber",
+    label: "On backorder",
+    tip: "DLA has orders for this item it hasn't been able to fill. Shortages like this often lead to expedited or priority buys.",
+  },
+  below_reorder_point: {
+    tone: "rose",
+    label: "Below reorder point",
+    tip: "On-hand stock has dropped below the level at which DLA's system triggers a replenishment buy.",
+  },
+  recurring: {
+    tone: "emerald",
+    label: "Recurring demand",
+    tip: "DLA has both a standing annual demand and a forward forecast for this item, so it's bought again and again — not a one-time purchase. Winning a recurring NSN can be worth pricing competitively for the repeat business.",
+  },
+  one_off: {
+    tone: "slate",
+    label: "One-off buy",
+    tip: "DLA shows no ongoing annual demand and no forward forecast for this item, so this looks like a single purchase rather than a repeating stream.",
+  },
+  stock_falling: {
+    tone: "amber",
+    label: "Stock trending down",
+    tip: "DLA's on-hand quantity has fallen across its recent monthly snapshots.",
+  },
+} as const;
+
+function DemandSignalChip({ kind }: { kind: keyof typeof DEMAND_SIGNAL_META }) {
+  const m = DEMAND_SIGNAL_META[kind];
+  const t = DEMAND_CHIP_TONES[m.tone];
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium ${t.box}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} />
+        {m.label}
+      </span>
+      {/* Explicit "?" affordance sits OUTSIDE the chip (only it is hoverable),
+          mirroring the neutral "?" marker on the KPI tiles. */}
+      <Tooltip content={m.tip}>
+        <span
+          aria-label={`What “${m.label}” means`}
+          className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-muted/40 text-[9px] font-semibold leading-none text-muted/70 hover:text-muted cursor-pointer"
+        >
+          ?
+        </span>
+      </Tooltip>
+    </span>
+  );
+}
+
+function DemandPanel({ demand, isLoading, error, onRetry }: DemandPanelProps) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+          <span className="text-xs text-muted">Loading demand intelligence...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-6">
+        <p className="text-xs text-error mb-2">{error}</p>
+        <button onClick={onRetry} className="text-xs text-primary hover:underline">Retry</button>
+      </div>
+    );
+  }
+
+  if (!demand) return null;
+
+  const d = demand;
+
+  if (!d.has_stock && !d.has_forecast) {
+    return (
+      <div className="text-center py-6 space-y-1">
+        <p className="text-xs text-muted">No DLA demand or stock data is on file for this NIIN.</p>
+        <p className="text-[11px] text-muted/70">
+          Absence of a record is not the same as zero demand — DLA publishes forecasts for a subset of items.
+        </p>
+      </div>
+    );
+  }
+
+  // Forecast chart + trend series (computed inline; no hooks after the guards above).
+  const chartData = d.forecast_curve.map((p) => ({ label: formatForecastMonth(p.forecast_date), qty: p.forecast_qty }));
+  const trendValues = d.trend_series.map((t) => t.total_stock ?? 0);
+
+  // On-hand vs reorder-point bar (only meaningful when DLA publishes a ROP).
+  const hasRop = d.reorder_point != null;
+  const ropMax = Math.max(d.total_stock ?? 0, d.reorder_point ?? 0, 1);
+  const stockPct = Math.min(((d.total_stock ?? 0) / ropMax) * 100, 100);
+  const ropPct = Math.min(((d.reorder_point ?? 0) / ropMax) * 100, 100);
+
+  return (
+    <div className="space-y-4">
+      {/* Signal chips */}
+      <div className="flex flex-wrap items-center gap-2">
+        {d.on_backorder && <DemandSignalChip kind="on_backorder" />}
+        {d.below_reorder_point === true && <DemandSignalChip kind="below_reorder_point" />}
+        {d.demand_type === "recurring" && <DemandSignalChip kind="recurring" />}
+        {d.demand_type === "one_off" && <DemandSignalChip kind="one_off" />}
+        {d.stock_trend === "falling" && <DemandSignalChip kind="stock_falling" />}
+      </div>
+
+      {/* KPI tiles */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KPICard
+          label="Months of supply"
+          value={d.months_of_supply != null ? `${d.months_of_supply}` : "—"}
+          subtitle="at DLA's annual demand rate"
+          tooltip="On-hand stock divided by DLA's monthly demand (annual demand ÷ 12). Blank when DLA has not published an annual demand quantity."
+        />
+        <KPICard
+          label="On hand"
+          value={d.has_stock && d.total_stock != null ? formatNumber(d.total_stock) : "—"}
+          subtitle="units DLA holds"
+          tooltip="Units DLA had on hand at its latest wholesale inventory snapshot."
+        />
+        <KPICard
+          label="Annual demand"
+          value={d.annual_demand_qty != null ? formatNumber(d.annual_demand_qty) : "—"}
+          subtitle="DLA ADQ (realized)"
+          tooltip="DLA's annual demand quantity — the realized (backward-looking) annual usage rate."
+        />
+        <KPICard
+          label="Forecast (12 mo)"
+          value={d.has_forecast && d.forecast_next_12mo != null ? formatNumber(d.forecast_next_12mo) : "—"}
+          subtitle={d.coverage_ratio != null ? `coverage ${d.coverage_ratio}×` : "projected demand"}
+          tooltip="DLA's projected demand over the next 12 months. Coverage = on-hand ÷ forecast; below 1× means DLA holds less than it expects to need."
+        />
+      </div>
+
+      {/* On-hand vs reorder point */}
+      {hasRop && (
+        <div className="bg-card-bg rounded-xl border border-border p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-card-foreground">On hand vs. reorder point</h3>
+            {d.rop_gap != null && d.rop_gap > 0 && (
+              <span className="text-xs text-muted">Gap to reorder point: {formatNumber(d.rop_gap)} units</span>
+            )}
+          </div>
+          <div className="relative h-4 rounded-full bg-muted/20 overflow-hidden">
+            <div
+              className={`absolute inset-y-0 left-0 ${d.below_reorder_point ? "bg-rose-500" : "bg-emerald-500"}`}
+              style={{ width: `${stockPct}%` }}
+            />
+            <div className="absolute inset-y-0 w-0.5 bg-foreground/70" style={{ left: `${ropPct}%` }} title="Reorder point" />
+          </div>
+          <div className="flex items-center justify-between mt-1.5 text-xs text-muted">
+            <span>On hand: {formatNumber(d.total_stock)}</span>
+            <span>Reorder point: {formatNumber(d.reorder_point)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Forecast curve */}
+      {d.has_forecast && chartData.length > 0 ? (
+        <div className="bg-card-bg rounded-xl border border-border p-4">
+          <h3 className="text-sm font-semibold text-card-foreground mb-1">DLA demand forecast</h3>
+          <p className="text-xs text-muted mb-4">
+            Projected monthly demand{d.forecast_total_24mo != null ? ` — ${formatNumber(d.forecast_total_24mo)} units over 24 months` : ""}
+          </p>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 10, fill: "var(--muted)" }}
+                tickLine={false}
+                axisLine={{ stroke: "var(--border)" }}
+                interval={chartData.length > 12 ? 1 : 0}
+                minTickGap={4}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "var(--muted)" }}
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={false}
+                width={44}
+              />
+              <RechartsTooltip
+                contentStyle={{
+                  backgroundColor: "var(--card-bg)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "6px",
+                  color: "var(--card-foreground)",
+                  fontSize: "12px",
+                }}
+                formatter={(value) => formatNumber(Number(value))}
+              />
+              <Bar dataKey="qty" name="Forecast qty" fill={CHART_COLORS.primary} radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <div className="bg-card-bg rounded-xl border border-border p-4">
+          <h3 className="text-sm font-semibold text-card-foreground mb-1">DLA demand forecast</h3>
+          <p className="text-xs text-muted">No DLA forecast is on file for this NIIN (absence is not zero demand).</p>
+        </div>
+      )}
+
+      {/* Stock trend sparkline (only meaningful with multiple snapshots) */}
+      {trendValues.length >= 2 && (
+        <div className="bg-card-bg rounded-xl border border-border p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-card-foreground">Stock trend</h3>
+              <p className="text-xs text-muted">On-hand across monthly DLA snapshots</p>
+            </div>
+            <div className={d.stock_trend === "falling" ? "text-rose-500" : d.stock_trend === "rising" ? "text-emerald-500" : "text-muted"}>
+              <DemandSparkline values={trendValues} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Freshness + caveats */}
+      <div className="text-[11px] text-muted/80 leading-relaxed space-y-1 pt-1">
+        <p>
+          {d.has_stock && (
+            <>DLA inventory position as of <span className="font-medium">{formatDemandDate(d.stock_as_of_date)}</span>. </>
+          )}
+          {d.has_forecast && (
+            <>Forecast released <span className="font-medium">{formatDemandDate(d.forecast_data_date)}</span>. </>
+          )}
+          Figures are DLA estimates published monthly and are not a guarantee of a solicitation.
+        </p>
+        <p>
+          <Link href="/help/demand-intelligence" className="text-primary hover:underline">
+            How to read demand &amp; stock data →
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Inline sparkline for the stock-trend snapshot history (currentColor stroke,
+// mirrors the analytics Sparkline recipe).
+function DemandSparkline({ values }: { values: number[] }) {
+  if (!values.length) return <span className="text-muted text-xs">—</span>;
+  const max = Math.max(...values, 1);
+  const w = 96;
+  const h = 24;
+  const stepX = values.length > 1 ? w / (values.length - 1) : 0;
+  const points = values
+    .map((v, i) => `${(i * stepX).toFixed(1)},${(h - (v / max) * h).toFixed(1)}`)
+    .join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden>
+      <polyline fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={points} />
+    </svg>
+  );
+}
+
+// Compact one-line demand-context strip shown above the Recent Solicitations
+// table, so the bid decision has DLA demand/stock context in view. Reuses the
+// signal chips; renders nothing until demand data (with signals worth noting)
+// is available. Neutral labels only — no pricing directive.
+function DemandContextStrip({ demand, onViewDemand }: { demand?: PartDemand | null; onViewDemand?: () => void }) {
+  if (!demand || (!demand.has_stock && !demand.has_forecast)) return null;
+  const d = demand;
+  const chips: ReactNode[] = [];
+  if (d.on_backorder) chips.push(<DemandSignalChip key="bo" kind="on_backorder" />);
+  if (d.below_reorder_point === true) chips.push(<DemandSignalChip key="rop" kind="below_reorder_point" />);
+  if (d.demand_type === "recurring") chips.push(<DemandSignalChip key="rec" kind="recurring" />);
+  if (d.demand_type === "one_off") chips.push(<DemandSignalChip key="one" kind="one_off" />);
+  // Nothing worth surfacing (e.g. unknown demand type, no signals): stay quiet.
+  if (chips.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted-light/50 px-3 py-2">
+      <span className="text-xs text-muted font-medium">DLA demand context:</span>
+      {chips}
+      {d.months_of_supply != null && (
+        <span className="text-xs text-muted">· ~{d.months_of_supply} mo of supply</span>
+      )}
+      {onViewDemand && (
+        <button type="button" onClick={onViewDemand} className="ml-auto text-xs text-primary hover:underline">
+          Demand &amp; stock →
+        </button>
+      )}
     </div>
   );
 }
@@ -1496,9 +1993,19 @@ interface SolicitationsPanelProps {
   isLoading: boolean;
   error: string | null;
   onRetry: () => void;
+  // Demand context for the bid decision (Advanced tier). Reuses the same
+  // /demand endpoint the Demand tab uses — the panel ensures it is fetched.
+  demand?: PartDemand | null;
+  onEnsureDemand?: () => void;
+  onViewDemand?: () => void;
 }
 
-function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRetry }: SolicitationsPanelProps) {
+function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRetry, demand, onEnsureDemand, onViewDemand }: SolicitationsPanelProps) {
+  // Pull demand context once when this tab mounts so the strip can render
+  // alongside the opportunities without the user opening the Demand tab.
+  useEffect(() => {
+    onEnsureDemand?.();
+  }, [onEnsureDemand]);
   const [pdfModal, setPdfModal] = useState<{ id: number; number: string } | null>(null);
   const pdfUrl = pdfModal ? `/api/library/solicitations/${pdfModal.id}/pdf` : null;
 
@@ -1827,6 +2334,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
 
   return (
     <div className="space-y-3">
+      <DemandContextStrip demand={demand} onViewDemand={onViewDemand} />
       <DataTable
         data={solicitations}
         columns={columns}
@@ -1952,7 +2460,7 @@ function manufacturerRowKey(m: PartManufacturer): string {
 function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, onRetry }: ManufacturersPanelProps) {
   // RFQ is a separate paid product; only surface the entry when the user holds it.
   const { hasProductAccess } = useAuth();
-  const canSendRfq = hasProductAccess("library_search_advanced_rfq");
+  const canSendRfq = hasProductAccess("request_for_quote");
 
   // Local selection state (the shared DataTable keeps its own selection
   // internal and doesn't surface it, so we track our own via a checkbox column).

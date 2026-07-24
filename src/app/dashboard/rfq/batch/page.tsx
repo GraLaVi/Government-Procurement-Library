@@ -61,7 +61,7 @@ export default function RfqBatchPage() {
   }, [filterUser]);
 
   useEffect(() => {
-    if (!authLoading && hasProductAccess("library_search_advanced_rfq")) load();
+    if (!authLoading && hasProductAccess("request_for_quote")) load();
   }, [authLoading, hasProductAccess, load]);
 
   const selectedItems = useMemo(() => items.filter((i) => selected.has(i.id)), [items, selected]);
@@ -138,11 +138,11 @@ export default function RfqBatchPage() {
 
   if (authLoading) return <div className="p-6 text-sm text-muted">Loading…</div>;
 
-  if (!hasProductAccess("library_search_advanced_rfq")) {
+  if (!hasProductAccess("request_for_quote")) {
     return (
       <AccessDeniedPage
         featureName="Request for Quotes"
-        featureKey="library_search_advanced_rfq"
+        featureKey="request_for_quote"
         description="Stage RFQ items into a shared cart and send them to vendors in one go."
         benefits={["Shared team cart", "Send one RFQ per vendor", "Track every quote"]}
       />

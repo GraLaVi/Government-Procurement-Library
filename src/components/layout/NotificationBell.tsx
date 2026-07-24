@@ -86,10 +86,12 @@ export function NotificationBell() {
     setOpen(false);
     if (!item.read) {
       setUnread((u) => Math.max(0, u - item.count));
-      // Bid-match items are derived (no stored rows) — clearing them advances a
-      // per-user watermark rather than marking row ids read.
+      // Bid-match and DLA-signal items are derived (no stored rows) — clearing
+      // them advances a per-user watermark rather than marking row ids read.
       if (item.event_type === "bid_match") {
         fetch("/api/notifications/inbox/bid-matches/seen", { method: "POST" }).catch(() => null);
+      } else if (item.event_type === "dla_signal") {
+        fetch("/api/notifications/inbox/dla-signals/seen", { method: "POST" }).catch(() => null);
       } else {
         fetch("/api/notifications/inbox/read", {
           method: "POST",

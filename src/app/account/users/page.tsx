@@ -40,7 +40,7 @@ export default function UsersPage() {
   const onPaidPlan = hasAnyProductAccess([
     "library_search_basic",
     "library_search_advanced",
-    "library_search_advanced_rfq",
+    "library_search_maximum",
   ]);
 
   // Users list state

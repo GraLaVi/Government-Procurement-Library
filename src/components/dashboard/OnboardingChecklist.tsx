@@ -9,14 +9,18 @@ import { useDashboardMilestones } from "@/lib/hooks/useDashboardMilestones";
 // set of onboarding steps changes meaningfully — bump to `.v2`.
 const DISMISS_KEY = "dashboard.onboardingChecklist.dismissed.v1";
 
-// Onboarding timeline for the Basic-tier dashboard. Auto-completes as the
-// user does each action (derived from recent_actions). Returns null once
-// all milestones are checked, so it cleanly disappears for returning users.
+// Onboarding checklist shown on every tier's dashboard (BasicDashboard and
+// FullDashboard both render this). Auto-completes as the user does each
+// action (derived from recent_actions). Returns null once all milestones
+// are checked, so it cleanly disappears for returning users.
 //
-// Visual model: vertical journey with numbered nodes connected by a line.
-// The first uncompleted step is highlighted as the "current" node (primary
-// color, "Start →" CTA); later steps stay muted to imply order without
-// shouting. Each completed step shows a green check + "Done" pill.
+// Visual model: horizontal stepper spanning the full card width. Each
+// milestone owns a column — node, label, and action all stacked directly
+// underneath each other — so the label and its CTA never drift apart the
+// way a stretched full-width row would. The first uncompleted step is
+// highlighted as the "current" node (primary color, pill "Start →" button);
+// later steps stay muted to imply order without shouting. Completed steps
+// show a green check + "Done" pill.
 export function OnboardingChecklist() {
   const { milestones, allComplete, isLoading } = useDashboardMilestones();
   // null = "haven't checked localStorage yet" so SSR + initial client render
@@ -45,7 +49,7 @@ export function OnboardingChecklist() {
   const firstUndoneIdx = milestones.findIndex((m) => !m.completed);
 
   return (
-    <div className="bg-card-bg border border-border rounded-xl p-5 max-w-lg">
+    <div className="bg-card-bg border border-border rounded-xl p-5">
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
         <h2 className="text-base font-semibold text-foreground">
           Getting started
@@ -92,12 +96,12 @@ export function OnboardingChecklist() {
         </div>
       </div>
 
-      <ol className="space-y-4">
+      <ol className="flex items-start">
         {milestones.map((m, idx) => {
-          const isLast = idx === milestones.length - 1;
+          const isFirst = idx === 0;
           const isNext = idx === firstUndoneIdx;
           // The hook joins a trial-countdown to the payment-method label
-          // with " — "; split it back out so the timeline can render the
+          // with " — "; split it back out so the stepper can render the
           // urgency as a subdued subtitle rather than burying it in the
           // headline.
           const [mainLabel, ...rest] = m.label.split(" — ");
@@ -106,7 +110,7 @@ export function OnboardingChecklist() {
           const nodeClasses = m.completed
             ? "bg-success border-success text-white"
             : isNext
-              ? "bg-primary border-primary text-white"
+              ? "bg-primary border-primary text-white ring-4 ring-primary-light"
               : "bg-card-bg border-border text-muted";
 
           const labelClasses = m.completed
@@ -115,25 +119,29 @@ export function OnboardingChecklist() {
               ? "text-foreground font-medium"
               : "text-foreground";
 
+          // Connector between this node and the previous one — colored when
+          // the step to the left is done, muted otherwise. Rendered on every
+          // step but the first; positioned to span from the previous node's
+          // center to this one's (top-3 = half the 24px node height).
+          const prevCompleted = idx > 0 && milestones[idx - 1].completed;
+
           return (
-            <li key={m.id} className="relative flex gap-3">
-              {/* Connector to the next node. left-3 centers it on the 24px
-                  circle; the negative bottom extends past the li so it
-                  meets the top of the next li's node (which is space-y-4
-                  = 1rem below). The color hints at completion: green when
-                  the step above is done, muted otherwise. */}
-              {!isLast && (
+            <li
+              key={m.id}
+              className="relative flex-1 min-w-0 flex flex-col items-center text-center px-2"
+            >
+              {!isFirst && (
                 <span
                   aria-hidden="true"
-                  className={`absolute left-3 top-6 -bottom-4 w-px ${
-                    m.completed ? "bg-success/50" : "bg-border"
+                  className={`absolute top-3 left-[-50%] w-full h-px ${
+                    prevCompleted ? "bg-success/50" : "bg-border"
                   }`}
                 />
               )}
 
               <span
                 aria-hidden="true"
-                className={`shrink-0 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold ${nodeClasses}`}
+                className={`relative z-10 shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold ${nodeClasses}`}
               >
                 {m.completed ? (
                   <svg
@@ -154,46 +162,48 @@ export function OnboardingChecklist() {
                 )}
               </span>
 
-              <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className={`text-sm ${labelClasses}`}>{mainLabel}</div>
-                  {subtitle && !m.completed && (
-                    <div className="text-xs text-muted mt-0.5">{subtitle}</div>
-                  )}
-                  {/* Contextual help: deep-link to the article for this step.
-                      Opens in a new tab so the user keeps their place in
-                      setup. Hidden once the step is done to keep the card
-                      uncluttered for returning users. */}
-                  {!m.completed && m.learnMoreSlug && (
-                    <Link
-                      href={`/help/${m.learnMoreSlug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-block text-xs text-muted hover:text-primary hover:underline mt-1"
-                    >
-                      Learn more
-                    </Link>
-                  )}
-                </div>
-                <div className="shrink-0 text-xs">
-                  {m.completed ? (
-                    <span className="text-success font-medium">Done</span>
-                  ) : isNext ? (
-                    <Link
-                      href={m.href}
-                      className="text-primary font-medium hover:underline"
-                    >
-                      Start →
-                    </Link>
-                  ) : (
-                    <Link
-                      href={m.href}
-                      className="text-muted hover:text-primary hover:underline"
-                    >
-                      Try →
-                    </Link>
-                  )}
-                </div>
+              <div className={`text-sm mt-2 leading-snug ${labelClasses}`}>{mainLabel}</div>
+              {subtitle && !m.completed && (
+                <div className="text-xs text-muted mt-0.5">{subtitle}</div>
+              )}
+              {/* Contextual help: deep-link to the article for this step.
+                  Opens in a new tab so the user keeps their place in setup.
+                  Hidden once the step is done to keep the card uncluttered
+                  for returning users. */}
+              {!m.completed && m.learnMoreSlug && (
+                <Link
+                  href={`/help/${m.learnMoreSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted hover:text-primary hover:underline mt-1"
+                >
+                  Learn more
+                </Link>
+              )}
+
+              <div className="mt-2 text-xs">
+                {m.completed ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success/10 text-success font-medium px-2 py-0.5">
+                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Done
+                  </span>
+                ) : isNext ? (
+                  <Link
+                    href={m.href}
+                    className="inline-block rounded-full bg-primary text-white font-semibold px-3 py-1 hover:bg-primary-hover transition-colors"
+                  >
+                    Start →
+                  </Link>
+                ) : (
+                  <Link
+                    href={m.href}
+                    className="text-muted font-medium hover:text-primary hover:underline"
+                  >
+                    Try →
+                  </Link>
+                )}
               </div>
             </li>
           );

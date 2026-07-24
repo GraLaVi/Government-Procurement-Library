@@ -58,6 +58,8 @@ interface BidMatchResult {
   set_aside_code?: string | null;
   set_aside_label?: string | null;
   sam_url?: string | null;
+  // Advanced-tier DLA demand signal (strongest across the opportunity's NIINs).
+  demand_signal?: string | null;
 }
 
 interface ResultsResponse {

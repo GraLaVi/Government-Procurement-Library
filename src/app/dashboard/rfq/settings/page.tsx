@@ -161,7 +161,7 @@ export default function RfqSettingsPage() {
   };
 
   useEffect(() => {
-    if (!authLoading && hasProductAccess("library_search_advanced_rfq")) load();
+    if (!authLoading && hasProductAccess("request_for_quote")) load();
   }, [authLoading, hasProductAccess, load]);
 
   useEffect(() => {
@@ -195,11 +195,11 @@ export default function RfqSettingsPage() {
 
   if (authLoading) return <div className="p-6 text-sm text-muted">Loading…</div>;
 
-  if (!hasProductAccess("library_search_advanced_rfq")) {
+  if (!hasProductAccess("request_for_quote")) {
     return (
       <AccessDeniedPage
         featureName="Request for Quotes"
-        featureKey="library_search_advanced_rfq"
+        featureKey="request_for_quote"
         description="Configure how your RFQs are sent and closed."
         benefits={["Auto-close overdue RFQs", "Default response windows"]}
       />
