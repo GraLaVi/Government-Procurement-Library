@@ -12,7 +12,7 @@ Paid plans are **priced per seat**: you choose how many users (seats) you need �
 
 **Free** — Try GPH with a limited view. Search and look up parts and vendors with their basic identifiers, and set up one bid-matching profile to see how many matches your business would receive. Viewing the actual solicitation details, complete part and vendor data, and other features requires a paid plan. Free is a single user.
 
-**Basic** — Unlock the full data picture: complete part records (manufacturers, technical specifications, packaging, end-use data), vendor profiles (contacts, recent awards, and the 13-month Contracts Booked breakdown), and solicitation detail. Up to 5 bid-matching profiles. Up to daily match notifications.
+**Basic** — Unlock the full data picture: complete part records (manufacturers, technical specifications, packaging, end-use data) and vendor profiles (contacts, recent awards, and the 13-month Contracts Booked breakdown). Up to 5 bid-matching profiles. Up to daily match notifications.
 
 **Advanced** — Everything in Basic plus the features power users rely on: full procurement history on parts, open solicitations on vendor profiles, pinned searches, CSV exports, immediate match notifications, and up to 20 bid-matching profiles.
 
@@ -23,6 +23,7 @@ Paid plans are **priced per seat**: you choose how many users (seats) you need �
 If you've hit a paywall on one of these features, upgrading to Advanced unlocks all of them:
 
 - **Procurement History tab** on part records — Past contract awards with vendors, prices, and quantities for any part  
+- **Recent Solicitations tab** on part records — Active and recently closed solicitations for the part (Free sees a count and upgrade prompt; Basic doesn't see this tab at all)  
 - **Open Solicitations tab** on vendor profiles — All currently active solicitations relevant to a vendor's product lines  
 - **Pinned searches** — Save frequent searches for quick access from the Library Search page  
 - **CSV exports** — Download search results, awards data, and other tables for offline analysis  

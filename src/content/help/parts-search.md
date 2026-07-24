@@ -92,7 +92,7 @@ The Recent Solicitations tab shows active and recently closed solicitations for 
 
 Solicitations that have been changed show an amber **Amended** badge (with a **×N** count for multiple amendments); click it for a change timeline. SAM.gov rows that carry attachments show a documents button with the attachment count. To learn more about viewing a solicitation PDF or amendment history, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
 
-*Note: on the Free plan this tab shows a count of recent solicitations and an upgrade prompt rather than the full table.*
+*Note: on the Free plan this tab shows a count of recent solicitations and an upgrade prompt rather than the full table. It isn't shown at all on Basic — the full table is available on Advanced and Maximum.*
 
 ## Manufacturers tab
 
@@ -107,6 +107,8 @@ The Manufacturers tab lists every known manufacturer or supplier of the part, in
 This is the part's competitive intelligence at a glance — you can see exactly who else makes or supplies the part.
 
 If you have the RFQ add-on, this tab is also where you start a Request for Quote: select one or more vendors and click **Create RFQ** to send them a quote request. See [Sending RFQs to vendors](/help/requests-for-quote) for the full workflow.
+
+*Note: this tab is available starting on the Basic plan.*
 
 ## Technical Characteristics tab
 
