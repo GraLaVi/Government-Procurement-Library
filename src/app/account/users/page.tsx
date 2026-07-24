@@ -55,6 +55,19 @@ export default function UsersPage() {
   const [orgProducts, setOrgProducts] = useState<AssignableItem[]>([]);
   const orgTier = resolveOrgTier(orgProducts);
 
+  // RFQ is a standalone, per-seat add-on (not a library tier) — unlike the
+  // org-wide tiers above, access must be explicitly assigned to named users.
+  // Only shown when the org actually holds the product.
+  const rfqProduct = orgProducts.find(
+    (p) => p.kind === "product" && p.product_key === "request_for_quote"
+  ) ?? null;
+  const [rfqSeatUsage, setRfqSeatUsage] = useState<{ used: number; cap: number | null } | null>(null);
+  // userId -> source ('user_direct' = individually assigned seat;
+  // 'customer_direct'/'customer_group' = org-wide comp/admin grant, not
+  // seat-gated and not toggleable here).
+  const [rfqAssignments, setRfqAssignments] = useState<Record<number, string>>({});
+  const [rfqTogglingUserId, setRfqTogglingUserId] = useState<number | null>(null);
+
   // Org-level user-cap from feature_limits.max_customer_users (or
   // seat_quantity on an active library subscription). Drives the
   // "X / Y users" pill and disables the Add User button at cap.
@@ -137,6 +150,49 @@ export default function UsersPage() {
     }
   }, []);
 
+  // Fetch RFQ seat usage (used/cap out of the customer's purchased RFQ
+  // seats). Filtered client-side from the shared per-product seat-usage
+  // list — same endpoint the org-wide seat pill would use for other
+  // seat-required products.
+  const fetchRfqSeatUsage = useCallback(async () => {
+    try {
+      const response = await fetch("/api/billing/seat-usage", { credentials: 'include' });
+      if (response.ok) {
+        const data: Array<{ product_key: string; used: number; cap: number | null }> = await response.json();
+        const rfq = data.find((row) => row.product_key === "request_for_quote");
+        setRfqSeatUsage(rfq ? { used: rfq.used, cap: rfq.cap } : null);
+      }
+    } catch {
+      // Soft-fail — the backend still enforces the cap on assign.
+    }
+  }, []);
+
+  // Fetch which of the currently-listed users hold the RFQ seat, and how
+  // (individually assigned vs. an org-wide comp/admin grant). N+1 by
+  // design — mirrors the equivalent internal-staff dashboard UI, and org
+  // sizes here are small.
+  const fetchRfqAssignments = useCallback(async (forUsers: ManagedUser[]) => {
+    if (!rfqProduct) {
+      setRfqAssignments({});
+      return;
+    }
+    try {
+      const entries = await Promise.all(
+        forUsers.filter((u) => u.is_active).map(async (u) => {
+          const response = await fetch(`/api/users/${u.id}/products`, { credentials: 'include' });
+          if (!response.ok) return [u.id, undefined] as const;
+          const data: { source: Record<string, string> } = await response.json();
+          return [u.id, data.source?.[String(rfqProduct.id)]] as const;
+        })
+      );
+      setRfqAssignments(
+        Object.fromEntries(entries.filter((e): e is [number, string] => Boolean(e[1])))
+      );
+    } catch {
+      // Soft-fail — RFQ column just shows nothing assigned until retried.
+    }
+  }, [rfqProduct]);
+
   // Initial fetch
   useEffect(() => {
     if (!authLoading && user) {
@@ -147,8 +203,17 @@ export default function UsersPage() {
       fetchUsers();
       fetchOrgProducts();
       fetchUserCap();
+      fetchRfqSeatUsage();
     }
-  }, [authLoading, user, router, fetchUsers, fetchOrgProducts, fetchUserCap]);
+  }, [authLoading, user, router, fetchUsers, fetchOrgProducts, fetchUserCap, fetchRfqSeatUsage]);
+
+  // Once the org's products are known (so we know whether RFQ is held) and
+  // the user list has loaded, fetch per-user RFQ assignment state.
+  useEffect(() => {
+    if (rfqProduct && users.length > 0) {
+      fetchRfqAssignments(users);
+    }
+  }, [rfqProduct, users, fetchRfqAssignments]);
 
   // Close menus when clicking outside, scrolling, or resizing
   useEffect(() => {
@@ -259,6 +324,36 @@ export default function UsersPage() {
     }
   };
 
+  // Assign/unassign the RFQ seat for a single user. Org-wide grants
+  // (customer_direct/customer_group — comp/admin) aren't toggled here; only
+  // individually-assigned seats (user_direct) are.
+  const toggleRfqSeat = async (targetUser: ManagedUser) => {
+    if (!rfqProduct) return;
+    const isAssigned = rfqAssignments[targetUser.id] === "user_direct";
+
+    setError(null);
+    setRfqTogglingUserId(targetUser.id);
+    try {
+      const response = await fetch(`/api/users/${targetUser.id}/products/${rfqProduct.id}`, {
+        method: isAssigned ? "DELETE" : "POST",
+      });
+
+      if (!isAssigned || response.status !== 204) {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setError(data.error || `Failed to ${isAssigned ? "unassign" : "assign"} RFQ seat`);
+          return;
+        }
+      }
+
+      await Promise.all([fetchRfqAssignments(users), fetchRfqSeatUsage()]);
+    } catch {
+      setError("An unexpected error occurred");
+    } finally {
+      setRfqTogglingUserId(null);
+    }
+  };
+
   const openConfirmDialog = (action: ConfirmAction, targetUser: ManagedUser) => {
     setConfirmAction(action);
     setConfirmUser(targetUser);
@@ -336,6 +431,19 @@ export default function UsersPage() {
                         {capCtaLabel} &rarr;
                       </Link>
                     </>
+                  )}
+                </p>
+              )}
+              {rfqProduct && rfqSeatUsage && (
+                <p className="text-muted mt-0.5">
+                  {rfqSeatUsage.cap === null || rfqSeatUsage.cap === 0 ? (
+                    <span className="text-warning font-medium">
+                      RFQ add-on: no active subscription — seats can&apos;t be assigned yet
+                    </span>
+                  ) : (
+                    <span className={rfqSeatUsage.used >= rfqSeatUsage.cap ? "text-warning font-medium" : "font-medium"}>
+                      {rfqSeatUsage.used} of {rfqSeatUsage.cap} RFQ seat{rfqSeatUsage.cap === 1 ? "" : "s"} assigned
+                    </span>
                   )}
                 </p>
               )}
@@ -437,6 +545,11 @@ export default function UsersPage() {
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
                   Status
                 </th>
+                {rfqProduct && (
+                  <th className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
+                    RFQ
+                  </th>
+                )}
                 <th className="text-right px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
                   Actions
                 </th>
@@ -445,7 +558,7 @@ export default function UsersPage() {
             <tbody className="divide-y divide-border">
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-muted">
+                  <td colSpan={rfqProduct ? 7 : 6} className="px-6 py-8 text-center text-muted">
                     No users found
                   </td>
                 </tr>
@@ -502,6 +615,44 @@ export default function UsersPage() {
                         {u.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </td>
+                    {rfqProduct && (
+                      <td className="px-6 py-4">
+                        {!u.is_active ? (
+                          <span className="text-sm text-muted">—</span>
+                        ) : (
+                          (() => {
+                            const source = rfqAssignments[u.id];
+                            if (source === "customer_direct" || source === "customer_group") {
+                              return (
+                                <span className="text-xs text-muted" title="Granted org-wide (comp/admin) — not an individually assigned seat">
+                                  Org-wide
+                                </span>
+                              );
+                            }
+                            const isAssigned = source === "user_direct";
+                            const isToggling = rfqTogglingUserId === u.id;
+                            const atCap = rfqSeatUsage != null && rfqSeatUsage.cap != null && rfqSeatUsage.used >= rfqSeatUsage.cap;
+                            const disabled = isToggling || (!isAssigned && atCap);
+                            return (
+                              <button
+                                onClick={() => toggleRfqSeat(u)}
+                                disabled={disabled}
+                                title={!isAssigned && atCap ? "No RFQ seats available — buy more or unassign one" : undefined}
+                                className={`text-xs font-medium px-2 py-1 -mx-2 rounded transition-colors ${
+                                  isAssigned
+                                    ? "text-success hover:text-error hover:bg-error/10"
+                                    : disabled
+                                      ? "text-muted cursor-not-allowed"
+                                      : "text-muted hover:text-primary hover:bg-primary/10"
+                                }`}
+                              >
+                                {isToggling ? "…" : isAssigned ? "✓ Assigned" : "Assign"}
+                              </button>
+                            );
+                          })()
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 text-right">
                       {/* Menu always opens — even on the current user's own row.
                           Self-targeted destructive actions (Deactivate, Delete)
