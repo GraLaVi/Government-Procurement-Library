@@ -71,9 +71,27 @@ const products: Array<{
     features: [
       "Everything in Advanced",
       "Procurement Analytics dashboard",
-      "DLA demand & stock intelligence on every part",
+      "Demand forecasting on every part",
+      "DLA stock-level intelligence",
       "$149 per user / mo — volume discounts for teams",
     ],
+  },
+  {
+    icon: TargetIcon,
+    family: "Request for Quote",
+    tier: "Add-on",
+    tagline: "Send RFQs to vendors and collect quotes, right from the platform.",
+    description:
+      "Send structured RFQs to vendors and collect quotes, with a shared batch cart, a private vendor contact book, and response tracking. Available as an add-on on any paid plan.",
+    features: [
+      "Structured RFQs with line-item detail",
+      "Shared batch cart and private vendor contact book",
+      "Response tracking across every recipient",
+    ],
+    cta: {
+      href: "/pricing",
+      label: "See pricing →",
+    },
   },
   {
     icon: ChartIcon,
@@ -96,14 +114,34 @@ const products: Array<{
 
 export function Products() {
   // Split the products into the four subscription tiers (rendered as a
-  // 4-up grid: Free / Basic / Advanced / Maximum) and the bespoke
-  // Data Reports offer (rendered as a full-width horizontal panel below).
-  // Keeping the layouts visually distinct signals that Data Reports is a
-  // different kind of product — quoted per engagement, not a subscription
-  // tier — and avoids the "single-card row looks lonely" problem you get
-  // from folding it into the tier grid.
-  const tierProducts = products.filter((p) => p.family !== "Data Reports");
+  // 4-up grid: Free / Basic / Advanced / Maximum) and two non-tier offers,
+  // each its own full-width horizontal panel below: the RFQ add-on (stacks
+  // alongside a paid tier, not a tier itself — see /pricing, which mirrors
+  // this split) and the bespoke Data Reports engagement. Keeping the
+  // layouts visually distinct signals these aren't subscription tiers and
+  // avoids the "single-card row looks lonely" problem you get from folding
+  // either into the tier grid.
+  // Maximum is temporarily hidden from the landing page (kept in `products`
+  // and still fully live on /pricing) — resurface by dropping the tier
+  // !== "Maximum" clause below.
+  const tierProducts = products.filter(
+    (p) => p.family !== "Data Reports" && p.family !== "Request for Quote" && p.tier !== "Maximum",
+  );
+  const rfqProduct = products.find((p) => p.family === "Request for Quote");
   const customReportsProduct = products.find((p) => p.family === "Data Reports");
+
+  // Large-screen column count tracks how many tier cards are actually
+  // rendered, so hiding Maximum shrinks the grid instead of leaving an
+  // empty slot at the end of the row. Full literal class strings so
+  // Tailwind's JIT keeps them (same pattern as /pricing).
+  const lgColsClass =
+    tierProducts.length <= 1
+      ? "lg:grid-cols-1"
+      : tierProducts.length === 2
+        ? "lg:grid-cols-2"
+        : tierProducts.length === 3
+          ? "lg:grid-cols-3"
+          : "lg:grid-cols-4";
 
   return (
     <section id="products" className="py-20 lg:py-32">
@@ -131,8 +169,8 @@ export function Products() {
           <span className="h-px w-8 bg-border" aria-hidden="true" />
         </div>
 
-        {/* Tier products — 4-up grid (2-up on md) */}
-        <div className="mt-6 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Tier products — up to 4-up grid (2-up on md) */}
+        <div className={`mt-6 grid md:grid-cols-2 ${lgColsClass} gap-6`}>
           {tierProducts.map((product) => {
             const Icon = product.icon;
             const productKey = `${product.family}-${product.tier}`;
@@ -195,68 +233,17 @@ export function Products() {
           })}
         </div>
 
-        {/* Data Reports — full-width horizontal panel. Different shape
-            on purpose: subdued background, two-column internal layout on
-            lg+, dashed accent border. Reads as "and if none of the above
-            fit, here's the custom path." */}
-        {customReportsProduct && (() => {
-          const Icon = customReportsProduct.icon;
-          return (
-            <div className="mt-6 rounded-2xl border border-border bg-muted-light/40 dark:bg-card-bg p-8 lg:p-10">
-              <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8 items-start">
-                {/* Left: identity + pitch */}
-                <div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-xl font-semibold text-secondary dark:text-card-foreground">
-                          {customReportsProduct.family}
-                        </h3>
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                          {customReportsProduct.tier}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm font-medium text-primary">
-                        {customReportsProduct.tagline}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-muted dark:text-card-foreground/80 leading-relaxed">
-                    {customReportsProduct.description}
-                  </p>
-                </div>
-
-                {/* Right: features + CTA */}
-                <div className="lg:border-l lg:border-border lg:pl-8">
-                  <ul className="space-y-2.5">
-                    {customReportsProduct.features.map((feature) => (
-                      <li
-                        key={feature}
-                        className="flex items-start gap-2 text-sm text-foreground dark:text-card-foreground/90"
-                      >
-                        <CheckIcon className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {customReportsProduct.cta && (
-                    <div className="mt-6">
-                      <a
-                        href={customReportsProduct.cta.href}
-                        className="inline-flex items-center text-primary font-medium hover:underline"
-                      >
-                        {customReportsProduct.cta.label}
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        {/* RFQ add-on + Data Reports — side by side, one per non-tier
+            offer. Different shape from the tier grid on purpose (subdued
+            background) to signal "and here's what stacks alongside / beyond
+            the tiers above" without reading as a second row of the same
+            CTA repeated. RFQ first since it's a real purchasable add-on;
+            Data Reports second since it's the bespoke "nothing above fits?
+            talk to us" path. */}
+        <div className="mt-6 grid md:grid-cols-2 gap-6">
+          {rfqProduct && <NonTierPanel product={rfqProduct} />}
+          {customReportsProduct && <NonTierPanel product={customReportsProduct} />}
+        </div>
 
         <p className="mt-12 text-center text-sm text-muted dark:text-foreground/70">
           Pricing varies by billing period. Visit{" "}
@@ -267,5 +254,56 @@ export function Products() {
         </p>
       </div>
     </section>
+  );
+}
+
+function NonTierPanel({ product }: { product: (typeof products)[number] }) {
+  const Icon = product.icon;
+  return (
+    <div className="rounded-2xl border border-border bg-muted-light/40 dark:bg-card-bg p-6 lg:p-8 flex flex-col">
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center flex-shrink-0">
+          <Icon className="w-6 h-6 text-primary" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-xl font-semibold text-secondary dark:text-card-foreground">
+              {product.family}
+            </h3>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+              {product.tier}
+            </span>
+          </div>
+          <p className="mt-1 text-sm font-medium text-primary">
+            {product.tagline}
+          </p>
+        </div>
+      </div>
+      <p className="mt-4 text-muted dark:text-card-foreground/80 leading-relaxed">
+        {product.description}
+      </p>
+
+      <ul className="mt-4 space-y-2.5">
+        {product.features.map((feature) => (
+          <li
+            key={feature}
+            className="flex items-start gap-2 text-sm text-foreground dark:text-card-foreground/90"
+          >
+            <CheckIcon className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+      {product.cta && (
+        <div className="mt-6 pt-4 border-t border-border">
+          <a
+            href={product.cta.href}
+            className="inline-flex items-center text-primary font-medium hover:underline"
+          >
+            {product.cta.label}
+          </a>
+        </div>
+      )}
+    </div>
   );
 }
