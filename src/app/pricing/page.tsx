@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
@@ -10,7 +11,16 @@ import { Footer } from "@/components/layout/Footer";
 import { TermsAcceptanceModal } from "@/components/billing/TermsAcceptanceModal";
 import { clearPendingSignup, readPendingSignup } from "@/lib/signup/pendingSignup";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
-import { ChartIcon, CheckIcon } from "@/components/icons";
+import { ChartIcon, CheckIcon, TargetIcon } from "@/components/icons";
+import {
+  type Price,
+  formatMoney,
+  intervalLabel,
+  findVolumeTier,
+  computeTotalCents,
+  maxPickerSeats,
+  perMonthSuffix,
+} from "@/lib/billing/pricing";
 
 // Minimal shape of a Subscription row from /api/billing/subscriptions —
 // only the fields the pricing page needs to identify the user's current plan.
@@ -40,23 +50,9 @@ const CURRENT_SUB_STATUSES = new Set([
 const DIRECT_SUBSCRIBE_ENABLED =
   process.env.NEXT_PUBLIC_ENABLE_DEV_SIGNUP === "true";
 
-type PriceTier = {
-  up_to_quantity: number | null; // null = infinity
-  unit_amount_cents: number;
-  flat_amount_cents: number;
-};
-
-type Price = {
-  id: number;
-  stripe_price_id: string;
-  interval_unit: string;
-  interval_count: number;
-  unit_amount_cents: number;
-  currency: string;
-  billing_scheme: "per_unit" | "tiered";
-  tiers_mode: "volume" | "graduated" | null;
-  tiers: PriceTier[];
-};
+// Add-ons stack alongside a paid tier (see the RFQ panel + /account/billing's
+// "Add-ons" section) — never shown as a tier-grid card, never a plan pick.
+const isAddonPlan = (p: Plan) => p.kind === "product" && p.category === "feature";
 
 type Plan = {
   kind: "product" | "product_group";
@@ -64,6 +60,11 @@ type Plan = {
   key: string;
   name: string;
   description: string | null;
+  // products.category ('service' | 'feature' | ...). product_groups always
+  // come back null. 'feature' products (e.g. request_for_quote) are add-ons,
+  // not tiers — excluded from the tier grid and instead get their own panel
+  // below it; see isAddonPlan.
+  category: string | null;
   default_seat_count: number | null;
   default_trial_days: number | null;
   // Access model only — NOT the billing model. FALSE = org-wide (every user
@@ -81,13 +82,6 @@ type Plan = {
   max_seat_count: number | null;
   max_customer_users: number | null;
 };
-
-function formatMoney(cents: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency || "USD",
-  }).format(cents / 100);
-}
 
 // Split "Parts and Vendor Library — Advanced" into family + tier so the
 // pricing card can render the tier as a small pill next to the family name —
@@ -122,85 +116,6 @@ const MOST_POPULAR_TIER = "advanced";
 
 function isMostPopular(plan: Plan): boolean {
   return splitFamilyTier(plan.name).tier?.toLowerCase() === MOST_POPULAR_TIER;
-}
-
-function intervalLabel(months: number): string {
-  switch (months) {
-    case 1:
-      return "Monthly";
-    case 3:
-      return "Quarterly";
-    case 6:
-      return "Semi-annual";
-    case 12:
-      return "Annual";
-    default:
-      return `Every ${months} months`;
-  }
-}
-
-// Find the volume bracket the seat count falls into (first tier whose up_to >= qty,
-// or the last/infinity tier).
-function findVolumeTier(tiers: PriceTier[], quantity: number): PriceTier | null {
-  if (tiers.length === 0) return null;
-  for (const t of tiers) {
-    if (t.up_to_quantity === null || quantity <= t.up_to_quantity) return t;
-  }
-  return tiers[tiers.length - 1];
-}
-
-// Compute the period total for a given price + seat count, regardless of scheme.
-// Returns null when the price/tiers don't support this seat count
-// (e.g. graduated mode is not yet supported).
-// Graduated ("progressive") tiers: each bracket's units are billed at that
-// bracket's rate, then summed — the way Stripe computes graduated pricing.
-// `tiers` are ascending by up_to_quantity (null = the final, unbounded tier).
-function computeGraduatedCents(tiers: PriceTier[], quantity: number): number | null {
-  if (tiers.length === 0 || quantity < 1) return null;
-  let total = 0;
-  let prevUpTo = 0;
-  for (const t of tiers) {
-    const upTo = t.up_to_quantity ?? Infinity;
-    const unitsInBracket = Math.min(quantity, upTo) - prevUpTo;
-    if (unitsInBracket > 0) {
-      total += unitsInBracket * t.unit_amount_cents + t.flat_amount_cents;
-    }
-    prevUpTo = upTo;
-    if (quantity <= upTo) break;
-  }
-  return total;
-}
-
-function computeTotalCents(price: Price, quantity: number): number | null {
-  if (price.billing_scheme === "per_unit") {
-    return price.unit_amount_cents * quantity;
-  }
-  if (price.billing_scheme === "tiered" && price.tiers_mode === "volume") {
-    const t = findVolumeTier(price.tiers, quantity);
-    if (!t) return null;
-    return t.unit_amount_cents * quantity + t.flat_amount_cents;
-  }
-  if (price.billing_scheme === "tiered" && price.tiers_mode === "graduated") {
-    return computeGraduatedCents(price.tiers, quantity);
-  }
-  return null;
-}
-
-// Maximum seats we let the picker reach. For tiered prices we use the largest
-// finite up_to bound × 2; for unbounded ("up_to: inf"), default to 1000.
-function maxPickerSeats(price: Price): number {
-  if (price.billing_scheme !== "tiered" || price.tiers.length === 0) return 1000;
-  const finite = price.tiers
-    .map((t) => t.up_to_quantity)
-    .filter((x): x is number => typeof x === "number");
-  if (finite.length === 0) return 1000;
-  return Math.max(...finite) * 2;
-}
-
-// "$X / mo" given a total for a 1/3/6/12-month interval. Returns "" if interval=1.
-function perMonthSuffix(totalCents: number, intervalCount: number, currency: string): string {
-  if (intervalCount === 1) return "/mo";
-  return ` (${formatMoney(totalCents / intervalCount, currency)}/mo)`;
 }
 
 export default function PricingPage() {
@@ -302,14 +217,20 @@ function PricingPageContent() {
     loadPlans();
   }, [loadPlans]);
 
-  // Fetch the user's current subscription once we know they're logged in.
-  // Used to badge "Currently on this plan" and swap the Subscribe CTA for
-  // "Manage in portal" on the matching plan card.
+  // Fetch the user's current TIER subscription once we know they're logged
+  // in. Used to badge "Currently on this plan" / swap the Subscribe CTA for
+  // "Manage in portal" on the matching plan card, AND to gate the RFQ
+  // add-on panel below (only a paid-tier customer can add it). Waits for
+  // `plans` so add-on subscriptions (e.g. request_for_quote) can be told
+  // apart from tier subscriptions and excluded — otherwise a customer who
+  // adds the RFQ add-on after their tier could have it picked as
+  // "currentSub" since /billing/subscriptions returns most-recent-first.
   useEffect(() => {
     if (authLoading || !user) {
       setCurrentSub(null);
       return;
     }
+    if (plans.length === 0) return;
     let cancelled = false;
     (async () => {
       try {
@@ -324,9 +245,11 @@ function PricingPageContent() {
           setCurrentSub(null);
           return;
         }
-        const active = (data as CurrentSub[]).find(
-          (s) => CURRENT_SUB_STATUSES.has(s.status) && s.plan_id !== null,
-        );
+        const active = (data as CurrentSub[]).find((s) => {
+          if (!CURRENT_SUB_STATUSES.has(s.status) || s.plan_id === null) return false;
+          const matchedPlan = plans.find((p) => p.kind === s.plan_kind && p.id === s.plan_id);
+          return !matchedPlan || !isAddonPlan(matchedPlan);
+        });
         setCurrentSub(active || null);
       } catch {
         if (!cancelled) setCurrentSub(null);
@@ -335,7 +258,7 @@ function PricingPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user]);
+  }, [authLoading, user, plans]);
 
   const openPortal = async () => {
     setPortalPending(true);
@@ -520,15 +443,29 @@ function PricingPageContent() {
   );
 
   // Sort plans in display order (basic → advanced → other). The Free
-  // card is hardcoded above the list, so it always lands first.
+  // card is hardcoded above the list, so it always lands first. Add-ons
+  // (category='feature') are excluded — they get their own panel below the
+  // grid instead of a purchasable tier card.
   const sortedPlans = useMemo(
-    () => [...plans].sort((a, b) => {
+    () => plans.filter((p) => !isAddonPlan(p)).sort((a, b) => {
       const tierDelta = tierSortKey(a) - tierSortKey(b);
       if (tierDelta !== 0) return tierDelta;
       return a.name.localeCompare(b.name);
     }),
     [plans],
   );
+
+  // The RFQ add-on panel below the tier grid. Only 'request_for_quote'
+  // exists today; a future second add-on would need its own panel (this
+  // one's copy is written specifically for RFQ, not generic add-on copy).
+  const rfqPlan = useMemo(() => plans.find((p) => p.key === "request_for_quote") ?? null, [plans]);
+  const rfqPrice = rfqPlan?.prices[0] ?? null;
+  const rfqSeatCount = rfqPlan?.default_seat_count ?? 1;
+  const rfqTotalCents = rfqPrice ? computeTotalCents(rfqPrice, rfqSeatCount) : null;
+  // Add-ons require an active paid-tier subscription — Free-tier and
+  // logged-out visitors can't add one yet. currentSub already excludes
+  // add-on subscriptions (see the effect above), so "has one" == "has a paid tier".
+  const hasPaidTier = currentSub !== null;
 
   // Large-screen column count tracks how many cards are actually rendered
   // (the hardcoded Free card + every enabled plan), so disabling a product
@@ -943,48 +880,45 @@ function PricingPageContent() {
 
       </div>
 
-      {/* Data Reports — bespoke engagements, no Stripe product. Rendered
-          outside the tier grid as a full-width horizontal panel (same
-          treatment and content as the landing-page Products section) so
-          the two views match. <h2> instead of <h3> because the pricing
-          page's heading hierarchy starts at <h1> (landing nests under an
-          <h2>, hence <h3> there). */}
-      <div className="mt-6 rounded-2xl border border-border bg-muted-light/40 dark:bg-card-bg p-8 lg:p-10">
-        <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8 items-start">
-          {/* Left: identity + pitch */}
-          <div>
+      {/* RFQ add-on + Data Reports — side by side, not stacked full-width
+          panels, so two similar-looking CTA cards don't repeat down the
+          page. Neither is a tier (kept out of the grid above). RFQ's CTA
+          routes to /account/billing's "Add-ons" section instead of starting
+          a standalone checkout here — it only makes sense alongside a paid
+          tier subscription. <h2> instead of <h3> because the pricing page's
+          heading hierarchy starts at <h1> (landing nests under an <h2>,
+          hence <h3> there — same content otherwise). */}
+      <div className="mt-6 grid md:grid-cols-2 gap-6">
+        {rfqPlan && (
+          <div className="rounded-2xl border border-border bg-muted-light/40 dark:bg-card-bg p-6 lg:p-8 flex flex-col">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center flex-shrink-0">
-                <ChartIcon className="w-6 h-6 text-primary" />
+                <TargetIcon className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl font-semibold text-secondary dark:text-card-foreground">
-                    Data Reports
+                    {rfqPlan.name}
                   </h2>
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                    Quote
+                    Add-on
                   </span>
                 </div>
                 <p className="mt-1 text-sm font-medium text-primary">
-                  Bespoke procurement intelligence, scoped to your need.
+                  Send RFQs to vendors and collect quotes, right from the platform.
                 </p>
               </div>
             </div>
             <p className="mt-4 text-muted dark:text-card-foreground/80 leading-relaxed">
-              Tell us what you need — sourcing analysis, vendor scorecards,
-              contract intelligence, or a one-off pull from our data. We
-              scope, price, and deliver.
+              {rfqPlan.description ||
+                "Send structured RFQs to vendors and collect quotes, with a shared batch cart, a private vendor contact book, and response tracking."}
             </p>
-          </div>
 
-          {/* Right: features + CTA */}
-          <div className="lg:border-l lg:border-border lg:pl-8">
-            <ul className="space-y-2.5">
+            <ul className="mt-4 space-y-2.5">
               {[
-                "One-time deliverables or recurring cadence",
-                "Custom data extracts",
-                "Engagement-scoped pricing",
+                "Structured RFQs with line-item detail",
+                "Shared batch cart and private vendor contact book",
+                "Response tracking across every recipient",
               ].map((feature) => (
                 <li
                   key={feature}
@@ -995,14 +929,84 @@ function PricingPageContent() {
                 </li>
               ))}
             </ul>
-            <div className="mt-6">
-              <a
-                href="mailto:sales@gphusa.com?subject=Custom%20Reports%20Quote%20Request"
-                className="inline-flex items-center text-primary font-medium hover:underline"
-              >
-                Contact sales →
-              </a>
+
+            {rfqPrice && rfqTotalCents !== null && (
+              <p className="mt-4 text-sm text-muted">
+                From {formatMoney(rfqTotalCents, rfqPrice.currency)}
+                {perMonthSuffix(rfqTotalCents, rfqPrice.interval_count, rfqPrice.currency)}
+                {rfqPlan.requires_seat_assignment && ` for ${rfqSeatCount} seat${rfqSeatCount === 1 ? "" : "s"}`}
+              </p>
+            )}
+
+            <div className="mt-6 pt-4 border-t border-border">
+              {hasPaidTier ? (
+                <Button href="/account/billing" variant="primary" size="sm">
+                  Add to your plan →
+                </Button>
+              ) : user ? (
+                <p className="text-sm text-muted">
+                  Available once you&apos;re on a paid plan — pick a tier above to add it.
+                </p>
+              ) : (
+                <>
+                  <Link href="/signup" className="inline-flex items-center text-primary font-medium hover:underline">
+                    Sign up to get started →
+                  </Link>
+                  <p className="mt-1 text-xs text-muted">Available as an add-on on any paid plan.</p>
+                </>
+              )}
             </div>
+          </div>
+        )}
+
+        {/* Data Reports — bespoke engagements, no Stripe product. */}
+        <div className="rounded-2xl border border-border bg-muted-light/40 dark:bg-card-bg p-6 lg:p-8 flex flex-col">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center flex-shrink-0">
+              <ChartIcon className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-semibold text-secondary dark:text-card-foreground">
+                  Data Reports
+                </h2>
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                  Quote
+                </span>
+              </div>
+              <p className="mt-1 text-sm font-medium text-primary">
+                Bespoke procurement intelligence, scoped to your need.
+              </p>
+            </div>
+          </div>
+          <p className="mt-4 text-muted dark:text-card-foreground/80 leading-relaxed">
+            Tell us what you need — sourcing analysis, vendor scorecards,
+            contract intelligence, or a one-off pull from our data. We
+            scope, price, and deliver.
+          </p>
+
+          <ul className="mt-4 space-y-2.5">
+            {[
+              "One-time deliverables or recurring cadence",
+              "Custom data extracts",
+              "Engagement-scoped pricing",
+            ].map((feature) => (
+              <li
+                key={feature}
+                className="flex items-start gap-2 text-sm text-foreground dark:text-card-foreground/90"
+              >
+                <CheckIcon className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-6 pt-4 border-t border-border">
+            <a
+              href="mailto:sales@gphusa.com?subject=Custom%20Reports%20Quote%20Request"
+              className="inline-flex items-center text-primary font-medium hover:underline"
+            >
+              Contact sales →
+            </a>
           </div>
         </div>
       </div>
