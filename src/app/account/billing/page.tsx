@@ -9,26 +9,39 @@ import { Button } from "@/components/ui/Button";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { tierBadgeForKey } from "@/lib/library/tier";
 import { clearPendingSignup } from "@/lib/signup/pendingSignup";
-
-type Price = {
-  id: number;
-  stripe_price_id: string;
-  interval_unit: string;
-  interval_count: number;
-  unit_amount_cents: number;
-  currency: string;
-};
+import { TermsAcceptanceModal } from "@/components/billing/TermsAcceptanceModal";
+import {
+  type Price,
+  formatMoney as formatPriceMoney,
+  intervalLabel as priceIntervalLabel,
+  computeTotalCents,
+  maxPickerSeats,
+} from "@/lib/billing/pricing";
 
 type Plan = {
   kind: "product" | "product_group";
   id: number;
   key: string;
   name: string;
+  description: string | null;
+  // products.category ('service' | 'feature' | ...). product_groups always
+  // come back null — a bundled library tier, never a standalone add-on.
+  // 'feature' products (e.g. request_for_quote) are add-ons that stack
+  // alongside a plan; they must never appear in the plan-swap picker.
+  category: string | null;
+  default_seat_count: number | null;
+  requires_seat_assignment: boolean;
   prices: Price[];
   // Hard cap on seats for this plan (from feature_limits.max_seat_count).
   // null = uncapped.
   max_seat_count: number | null;
 };
+
+// Add-ons: billing-enabled 'feature' products, purchased as an independent
+// second Stripe subscription alongside the customer's library tier (see
+// SwitchPlanModal's `otherPlans` filter — the same category value keeps
+// these out of the tier-swap dropdown).
+const isAddonPlan = (p: Plan) => p.kind === "product" && p.category === "feature";
 
 type Subscription = {
   id: number;
@@ -162,7 +175,13 @@ type ActiveModal =
   | { kind: "switchPlan"; sub: Subscription }
   | { kind: "seats"; sub: Subscription }
   | { kind: "cancel"; sub: Subscription }
+  | { kind: "addAddon"; plan: Plan }
   | null;
+
+// Non-terminal subscription statuses — mirrors CURRENT_SUB_STATUSES on
+// /pricing (src/app/pricing/page.tsx). Used to decide whether a customer
+// already holds a given add-on.
+const LIVE_SUB_STATUSES = new Set(["trialing", "active", "past_due", "unpaid", "active_check"]);
 
 export default function BillingPage() {
   return (
@@ -389,6 +408,31 @@ function BillingPageContent() {
   // needs it.) We just enable Portal whenever there's at least one sub.
   const hasStripeCustomer = subscriptions.length > 0;
 
+  // Add-ons only make sense alongside a paid tier — a Free-tier customer
+  // can't add one yet (matches the same gate on /pricing's RFQ panel).
+  const hasPaidTier = subscriptions.some((s) => {
+    if (!LIVE_SUB_STATUSES.has(s.status)) return false;
+    const matchedPlan = plans.find((p) =>
+      s.plan_kind && s.plan_id !== null
+        ? p.kind === s.plan_kind && p.id === s.plan_id
+        : (!!s.product_name && p.kind === "product" && p.name === s.product_name) ||
+          (!!s.product_group_name && p.kind === "product_group" && p.name === s.product_group_name),
+    );
+    // Unknown plan (e.g. plans still loading) — don't block on it either way.
+    return matchedPlan ? !isAddonPlan(matchedPlan) : true;
+  });
+
+  // Add-ons the customer doesn't already hold — purchasable as an independent
+  // second subscription (see isAddonPlan). A "live" subscription to the same
+  // product name means they already have it; canceled/expired ones don't count.
+  const addonPlans = hasPaidTier
+    ? plans.filter(
+        (p) => isAddonPlan(p) && !subscriptions.some(
+          (s) => LIVE_SUB_STATUSES.has(s.status) && s.product_name === p.name,
+        ),
+      )
+    : [];
+
   // Trial-state banner drivers.
   const isTrialing = pmStatus?.subscription_status === "trialing";
   const trialingNoCard = !!pmStatus && pmStatus.is_subscriber && isTrialing && !pmStatus.has_payment_method;
@@ -553,6 +597,24 @@ function BillingPageContent() {
           </div>
         )}
 
+        {/* Add-ons stack alongside the current plan as an independent Stripe
+            subscription — never a plan swap. Hidden once the customer already
+            holds every available add-on. */}
+        {!isLoading && addonPlans.length > 0 && (
+          <>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Add-ons</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+              {addonPlans.map((plan) => (
+                <AddonCard
+                  key={`${plan.kind}-${plan.id}`}
+                  plan={plan}
+                  onAdd={() => setModal({ kind: "addAddon", plan })}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
         {/* Stripe-side payment & billing details, and the sole entry point to
             the Stripe Portal. Shown for any customer with a Stripe link
             (subscribers / trialers, incl. canceled); Free customers have
@@ -685,6 +747,13 @@ function BillingPageContent() {
           sub={modal.sub}
           onClose={() => setModal(null)}
           onSaved={(next) => { replaceSub(next); setModal(null); }}
+          onError={setError}
+        />
+      )}
+      {modal?.kind === "addAddon" && (
+        <AddAddonModal
+          plan={modal.plan}
+          onClose={() => setModal(null)}
           onError={setError}
         />
       )}
@@ -867,9 +936,18 @@ function SubscriptionCard({
   // "used of cap"; otherwise just the provisioned seat count.
   const maxSeats = matchingPlan?.max_seat_count ?? null;
   const hasOtherIntervals = (matchingPlan?.prices.length ?? 0) > 1;
-  // "Other plans available" = at least one plan that isn't the current sub's plan.
-  // The Plan type lacks an id-key per kind, so identify the current one by name.
+  // `sub.unit_amount_cents` is the raw per-unit Stripe price — 0 for tiered
+  // prices (the real per-seat amounts live in `tiers`, not `unit_amount_cents`;
+  // every current library tier and the RFQ add-on bills this way). Look up
+  // the matching Price (which carries `tiers`) from `plans` and compute the
+  // real period total at this subscription's seat count instead.
+  const matchingPrice = matchingPlan?.prices.find((p) => p.interval_count === sub.interval_count) ?? null;
+  const totalCents = matchingPrice ? computeTotalCents(matchingPrice, sub.seat_quantity) : sub.unit_amount_cents;
+  // "Other plans available" = at least one swappable (non-add-on) plan that
+  // isn't the current sub's plan. The Plan type lacks an id-key per kind, so
+  // identify the current one by name.
   const otherPlansExist = plans.some((p) => {
+    if (isAddonPlan(p)) return false;
     if (sub.product_name && p.kind === "product") return p.name !== sub.product_name;
     if (sub.product_group_name && p.kind === "product_group") return p.name !== sub.product_group_name;
     return true; // any cross-kind plan is also a candidate
@@ -883,7 +961,7 @@ function SubscriptionCard({
           <p className="text-muted text-sm">
             {intervalLabel(sub.interval_count)}
             {" · "}
-            {formatMoney(sub.unit_amount_cents, sub.currency)}
+            {formatMoney(totalCents, matchingPrice?.currency ?? sub.currency)}
           </p>
         </div>
         <span className={badge.className}>{badge.label}</span>
@@ -1042,7 +1120,7 @@ function IntervalModal({
                 <span className="text-sm font-medium text-card-foreground">{intervalLabel(p.interval_count)}</span>
               </div>
               <span className="text-sm text-muted">
-                {formatMoney(p.unit_amount_cents, p.currency)}
+                {formatMoney(computeTotalCents(p, sub.seat_quantity), p.currency)}
               </span>
             </label>
           ))}
@@ -1169,9 +1247,11 @@ function SwitchPlanModal({
   onSaved: (s: Subscription) => void;
   onError: (msg: string | null) => void;
 }) {
-  // Filter out the plan the customer is already on. Match by plan_kind+plan_id
-  // when available, otherwise fall back to product name.
+  // Filter out add-ons (they stack alongside a plan, never replace it — see
+  // the "Add-ons" section instead) and the plan the customer is already on.
+  // Match by plan_kind+plan_id when available, otherwise fall back to product name.
   const otherPlans = useMemo(() => plans.filter((p) => {
+    if (isAddonPlan(p)) return false;
     if (sub.plan_kind && sub.plan_id !== null) {
       return !(p.kind === sub.plan_kind && p.id === sub.plan_id);
     }
@@ -1273,7 +1353,7 @@ function SwitchPlanModal({
                       <span className="text-sm font-medium text-card-foreground">{intervalLabel(p.interval_count)}</span>
                     </div>
                     <span className="text-sm text-muted">
-                      {formatMoney(p.unit_amount_cents, p.currency)}
+                      {formatMoney(computeTotalCents(p, sub.seat_quantity), p.currency)}
                     </span>
                   </label>
                 ))}
@@ -1288,7 +1368,7 @@ function SwitchPlanModal({
                   <div className="flex justify-between">
                     <span className="text-muted">New total</span>
                     <span className="text-card-foreground font-medium">
-                      {formatMoney(selectedPrice.unit_amount_cents * sub.seat_quantity, selectedPrice.currency)}
+                      {formatMoney(computeTotalCents(selectedPrice, sub.seat_quantity), selectedPrice.currency)}
                       {" "}{intervalLabel(selectedPrice.interval_count).toLowerCase()}
                     </span>
                   </div>
@@ -1311,6 +1391,197 @@ function SwitchPlanModal({
           disabled={saving || selectedPriceId === null || otherPlans.length === 0}
         >
           {saving ? "Switching…" : "Switch plan"}
+        </Button>
+      </div>
+    </ModalShell>
+  );
+}
+
+// 'feature'-category add-on card (e.g. request_for_quote). Shows a starting
+// price at the plan's default seat count; exact price is picked in the modal.
+function AddonCard({ plan, onAdd }: { plan: Plan; onAdd: () => void }) {
+  const price = plan.prices[0] ?? null;
+  const seatCount = plan.default_seat_count ?? 1;
+  const total = price ? computeTotalCents(price, seatCount) : null;
+  return (
+    <div className="bg-card-bg border border-border rounded-xl p-6">
+      <h3 className="text-lg font-semibold text-card-foreground">{plan.name}</h3>
+      {plan.description && <p className="text-muted text-sm mt-1">{plan.description}</p>}
+      {price && total !== null && (
+        <p className="text-sm text-muted mt-3">
+          From {formatPriceMoney(total, price.currency)}{" "}
+          {priceIntervalLabel(price.interval_count).toLowerCase()}
+          {plan.requires_seat_assignment && ` for ${seatCount} seat${seatCount === 1 ? "" : "s"}`}
+        </p>
+      )}
+      <div className="mt-5 pt-4 border-t border-border">
+        <Button variant="primary" size="sm" onClick={onAdd}>Add to your account</Button>
+      </div>
+    </div>
+  );
+}
+
+// Purchases a 'feature'-category add-on as an independent second Stripe
+// subscription (POST /billing/checkout-session) — the same mechanism
+// /pricing uses for "existing customer adding a sub". Never touches the
+// customer's existing plan subscription(s).
+function AddAddonModal({
+  plan, onClose, onError,
+}: {
+  plan: Plan;
+  onClose: () => void;
+  onError: (msg: string | null) => void;
+}) {
+  const prices = plan.prices; // pre-ordered by interval_count (GET /billing/plans)
+  const maxSeats = plan.max_seat_count ?? (prices[0] ? maxPickerSeats(prices[0]) : 10);
+
+  const [seatQty, setSeatQty] = useState(() => Math.max(1, Math.min(plan.default_seat_count ?? 1, maxSeats)));
+  const [selectedPriceId, setSelectedPriceId] = useState<number | null>(prices[0]?.id ?? null);
+  const [showTos, setShowTos] = useState(false);
+  const [checkoutPending, setCheckoutPending] = useState(false);
+
+  const clamp = (n: number) => Math.max(1, Math.min(maxSeats, n));
+  const selectedPrice = prices.find((p) => p.id === selectedPriceId) ?? null;
+  const total = selectedPrice ? computeTotalCents(selectedPrice, seatQty) : null;
+
+  const startCheckout = async (tosVersion: string, tosAcceptedAt: string) => {
+    if (selectedPriceId === null) return;
+    setCheckoutPending(true);
+    onError(null);
+    try {
+      const resp = await fetchWithAuth("/api/billing/checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          price_id: selectedPriceId,
+          seat_quantity: seatQty,
+          tos_version: tosVersion,
+          tos_accepted_at: tosAcceptedAt,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.checkout_url) {
+        onError(data.error || "Failed to start checkout");
+        setCheckoutPending(false);
+        setShowTos(false);
+        return;
+      }
+      window.location.href = data.checkout_url;
+    } catch {
+      onError("An unexpected error occurred");
+      setCheckoutPending(false);
+      setShowTos(false);
+    }
+  };
+
+  // The ToS confirm step reuses the same component /pricing uses, rendered
+  // in place of the picker (not nested inside it) to avoid stacking two
+  // differently-z-indexed modal shells at once.
+  if (showTos) {
+    const summary = selectedPrice && total !== null
+      ? `${plan.name} · ${seatQty} seat${seatQty === 1 ? "" : "s"} · ${formatPriceMoney(total, selectedPrice.currency)} ${priceIntervalLabel(selectedPrice.interval_count).toLowerCase()}`
+      : plan.name;
+    return (
+      <TermsAcceptanceModal
+        isOpen
+        onCancel={() => { if (checkoutPending) return; setShowTos(false); }}
+        onConfirm={startCheckout}
+        planSummary={summary}
+        pending={checkoutPending}
+      />
+    );
+  }
+
+  return (
+    <ModalShell
+      title={`Add ${plan.name}`}
+      subtitle="Billed as a separate subscription alongside your current plan"
+      onClose={onClose}
+    >
+      {plan.description && <p className="text-sm text-muted mb-4">{plan.description}</p>}
+
+      {plan.requires_seat_assignment && (
+        <>
+          <label className="block text-sm text-card-foreground mb-2">Seats</label>
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => setSeatQty((q) => clamp(q - 1))}
+              disabled={seatQty <= 1}
+              className="w-9 h-9 rounded border border-border bg-card-bg text-card-foreground hover:border-primary/50 disabled:opacity-50"
+              aria-label="Decrease seats"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              min={1}
+              max={maxSeats}
+              value={seatQty}
+              onChange={(e) => setSeatQty(clamp(Number(e.target.value) || 1))}
+              className="w-20 px-2 py-1.5 text-center text-sm border border-border bg-card-bg rounded focus:ring-2 focus:ring-primary"
+            />
+            <button
+              type="button"
+              onClick={() => setSeatQty((q) => clamp(q + 1))}
+              disabled={seatQty >= maxSeats}
+              className="w-9 h-9 rounded border border-border bg-card-bg text-card-foreground hover:border-primary/50 disabled:opacity-50"
+              aria-label="Increase seats"
+            >
+              +
+            </button>
+            <span className="text-xs text-muted">max {maxSeats}</span>
+          </div>
+        </>
+      )}
+
+      {prices.length > 1 && (
+        <>
+          <label className="block text-sm text-card-foreground mb-2">Billing interval</label>
+          <div className="space-y-2 mb-4">
+            {prices.map((p) => {
+              const priceTotal = computeTotalCents(p, seatQty);
+              return (
+                <label
+                  key={p.id}
+                  className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                    selectedPriceId === p.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="addon-price"
+                      checked={selectedPriceId === p.id}
+                      onChange={() => setSelectedPriceId(p.id)}
+                    />
+                    <span className="text-sm font-medium text-card-foreground">{priceIntervalLabel(p.interval_count)}</span>
+                  </div>
+                  <span className="text-sm text-muted">
+                    {priceTotal !== null ? formatPriceMoney(priceTotal, p.currency) : "—"}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {selectedPrice && total !== null && (
+        <div className="bg-muted-light/40 border border-border rounded-lg p-3 mb-4 text-xs">
+          <div className="flex justify-between">
+            <span className="text-muted">Total</span>
+            <span className="text-card-foreground font-medium">
+              {formatPriceMoney(total, selectedPrice.currency)} {priceIntervalLabel(selectedPrice.interval_count).toLowerCase()}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 mt-2">
+        <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+        <Button variant="primary" size="sm" onClick={() => setShowTos(true)} disabled={selectedPriceId === null}>
+          Continue
         </Button>
       </div>
     </ModalShell>
