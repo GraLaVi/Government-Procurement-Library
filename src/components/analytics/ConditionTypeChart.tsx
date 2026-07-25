@@ -5,6 +5,10 @@ import {
 } from 'recharts';
 import { ConditionTypeCount } from '@/lib/hooks/useAnalytics';
 import { SET_ASIDE_COLORS } from './ChartColors';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY =
+  'Matches broken down by which condition type triggered them (NIIN, FSC, keyword, etc.), last 90 days. Source: your bid-match profile conditions.';
 
 interface ConditionTypeChartProps {
   data: ConditionTypeCount[];
@@ -14,7 +18,10 @@ export function ConditionTypeChart({ data }: ConditionTypeChartProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">Matches by Condition Type</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">Matches by Condition Type</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <div className="h-72 flex items-center justify-center text-muted">No condition data available</div>
       </div>
     );
@@ -27,7 +34,10 @@ export function ConditionTypeChart({ data }: ConditionTypeChartProps) {
 
   return (
     <div className="bg-card-bg rounded-xl border border-border p-6">
-      <h3 className="text-sm font-semibold text-card-foreground mb-4">Matches by Condition Type</h3>
+      <div className="flex items-center gap-1.5 mb-4">
+        <h3 className="text-sm font-semibold text-card-foreground">Matches by Condition Type</h3>
+        <CardInfoBadge content={INFO_COPY} />
+      </div>
       <ResponsiveContainer width="100%" height={288}>
         <PieChart>
           <Pie

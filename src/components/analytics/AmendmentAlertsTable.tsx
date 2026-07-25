@@ -2,6 +2,10 @@
 
 import { AmendmentAlertRow } from '@/lib/hooks/useAnalytics';
 import { SolicitationNumberLink } from '@/components/library/SolicitationNumberLink';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY =
+  "Solicitations you matched that were amended after the match was generated — check for changed terms before you bid. Source: DIBBS/SAM amendment history.";
 
 interface AmendmentAlertsTableProps {
   data: AmendmentAlertRow[];
@@ -46,7 +50,10 @@ export function AmendmentAlertsTable({ data }: AmendmentAlertsTableProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-1">Amendment Alerts</h3>
+        <div className="flex items-center gap-1.5 mb-1">
+          <h3 className="text-sm font-semibold text-card-foreground">Amendment Alerts</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <p className="text-xs text-muted">No matched solicitations have been amended in the last 90 days. All your intel is current.</p>
       </div>
     );
@@ -55,7 +62,10 @@ export function AmendmentAlertsTable({ data }: AmendmentAlertsTableProps) {
   return (
     <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
       <div className="px-6 py-4 border-b border-border">
-        <h3 className="text-sm font-semibold text-card-foreground">Amendment Alerts</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-card-foreground">Amendment Alerts</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <p className="text-xs text-muted mt-1">Matched solicitations changed AFTER your match was generated — review before bidding</p>
       </div>
       <div className="overflow-x-auto">

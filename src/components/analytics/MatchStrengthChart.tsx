@@ -6,6 +6,10 @@ import {
 } from 'recharts';
 import { MatchStrengthDay } from '@/lib/hooks/useAnalytics';
 import { CHART_COLORS } from './ChartColors';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY =
+  "Daily HARD vs SOFT bid-match signal strength, last 30 days. HARD = matched an exact identifier (NIIN/CAGE); SOFT = matched a keyword condition. Source: your active bid-match profiles.";
 
 interface MatchStrengthChartProps {
   data: MatchStrengthDay[];
@@ -15,7 +19,10 @@ export function MatchStrengthChart({ data }: MatchStrengthChartProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">Match Strength (HARD vs SOFT)</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">Match Strength (HARD vs SOFT)</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <div className="h-64 flex items-center justify-center text-muted">No matches in the last 30 days</div>
       </div>
     );
@@ -23,7 +30,10 @@ export function MatchStrengthChart({ data }: MatchStrengthChartProps) {
 
   return (
     <div className="bg-card-bg rounded-xl border border-border p-6">
-      <h3 className="text-sm font-semibold text-card-foreground mb-1">Match Strength (HARD vs SOFT)</h3>
+      <div className="flex items-center gap-1.5 mb-1">
+        <h3 className="text-sm font-semibold text-card-foreground">Match Strength (HARD vs SOFT)</h3>
+        <CardInfoBadge content={INFO_COPY} />
+      </div>
       <p className="text-xs text-muted mb-4">Daily counts over the last 30 days — HARD matches deserve immediate attention</p>
       <ResponsiveContainer width="100%" height={256}>
         <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>

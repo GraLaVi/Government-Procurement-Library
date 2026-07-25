@@ -1,6 +1,10 @@
 "use client";
 
 import { ResponseWindowBucket } from '@/lib/hooks/useAnalytics';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY =
+  "Your matched open solicitations, grouped by how soon they close — respond to 'urgent' first. Source: your Procurement History matched against open DIBBS/SAM solicitations.";
 
 interface ResponseWindowChipsProps {
   data: ResponseWindowBucket[];
@@ -32,7 +36,10 @@ export function ResponseWindowChips({ data }: ResponseWindowChipsProps) {
 
   return (
     <div className="bg-card-bg rounded-xl border border-border p-6">
-      <h3 className="text-sm font-semibold text-card-foreground mb-1">Response Window</h3>
+      <div className="flex items-center gap-1.5 mb-1">
+        <h3 className="text-sm font-semibold text-card-foreground">Response Window</h3>
+        <CardInfoBadge content={INFO_COPY} />
+      </div>
       <p className="text-xs text-muted mb-4">Days remaining to bid on your matched open solicitations</p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {data.map((b) => {

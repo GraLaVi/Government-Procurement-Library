@@ -43,6 +43,7 @@ interface NotificationType {
 interface BellSettings {
   bell_bid_matches: boolean;
   bid_match_bell_granularity: "rolling" | "per_day";
+  bell_dla_signals: boolean;
 }
 
 // Group types by category
@@ -344,6 +345,33 @@ export default function NotificationsPage() {
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
                     bell.bell_bid_matches ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="mt-5 pt-5 border-t border-border flex items-start gap-4">
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-semibold text-foreground">DLA buy-signal alerts</h4>
+                <p className="text-sm text-muted mt-1">
+                  Show a bell alert when parts you supply go on backorder or
+                  drop below DLA&apos;s reorder point (Maximum plan only).
+                </p>
+              </div>
+              {/* On/off toggle */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={bell.bell_dla_signals}
+                disabled={savingBell}
+                onClick={() => updateBell({ bell_dla_signals: !bell.bell_dla_signals })}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+                  bell.bell_dla_signals ? "bg-primary" : "bg-muted-light border border-border"
+                } ${savingBell ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    bell.bell_dla_signals ? "translate-x-6" : "translate-x-1"
                   }`}
                 />
               </button>

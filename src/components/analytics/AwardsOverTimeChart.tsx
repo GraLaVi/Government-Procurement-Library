@@ -6,6 +6,9 @@ import {
 } from 'recharts';
 import { MonthValue } from '@/lib/hooks/useAnalytics';
 import { CHART_COLORS, formatCurrency } from './ChartColors';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY = 'DIBBS award value by month, last 24 months, for your parts. Source: DIBBS award history.';
 
 interface AwardsOverTimeChartProps {
   data: MonthValue[];
@@ -15,7 +18,10 @@ export function AwardsOverTimeChart({ data }: AwardsOverTimeChartProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">Your DIBBS Awards Over Time (24 Months)</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">Your DIBBS Awards Over Time (24 Months)</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <div className="h-72 flex items-center justify-center text-muted">No award data available</div>
       </div>
     );
@@ -23,7 +29,10 @@ export function AwardsOverTimeChart({ data }: AwardsOverTimeChartProps) {
 
   return (
     <div className="bg-card-bg rounded-xl border border-border p-6">
-      <h3 className="text-sm font-semibold text-card-foreground mb-4">Your DIBBS Awards Over Time (24 Months)</h3>
+      <div className="flex items-center gap-1.5 mb-4">
+        <h3 className="text-sm font-semibold text-card-foreground">Your DIBBS Awards Over Time (24 Months)</h3>
+        <CardInfoBadge content={INFO_COPY} />
+      </div>
       <ResponsiveContainer width="100%" height={288}>
         <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />

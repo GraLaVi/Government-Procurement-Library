@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Tooltip } from '@/components/ui/Tooltip';
+import { CardInfoBadge } from './CardInfoBadge';
 
 interface KPICardProps {
   label: string;
@@ -16,14 +16,7 @@ export function KPICard({ label, value, subtitle, source, href, tooltip }: KPICa
   const labelNode = tooltip ? (
     <div className="text-sm text-muted mb-1 inline-flex items-center gap-1">
       <span>{label}</span>
-      <Tooltip content={tooltip}>
-        <span
-          aria-label="More info"
-          className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-muted/40 text-[10px] font-semibold text-muted/70 leading-none"
-        >
-          ?
-        </span>
-      </Tooltip>
+      <CardInfoBadge content={tooltip} />
     </div>
   ) : (
     <div className="text-sm text-muted mb-1">{label}</div>

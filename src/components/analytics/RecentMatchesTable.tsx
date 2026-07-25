@@ -2,6 +2,9 @@
 
 import { RecentMatch } from '@/lib/hooks/useAnalytics';
 import { SolicitationNumberLink } from '@/components/library/SolicitationNumberLink';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY = 'Your 5 most recently matched solicitations. Source: your bid-matching results.';
 
 interface RecentMatchesTableProps {
   data: RecentMatch[];
@@ -11,7 +14,10 @@ export function RecentMatchesTable({ data }: RecentMatchesTableProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">Recent Matches</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">Recent Matches</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <div className="text-muted text-sm">No bid-matching results yet</div>
       </div>
     );
@@ -20,7 +26,10 @@ export function RecentMatchesTable({ data }: RecentMatchesTableProps) {
   return (
     <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
       <div className="px-6 py-4 border-b border-border">
-        <h3 className="text-sm font-semibold text-card-foreground">Recent Matches</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-card-foreground">Recent Matches</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

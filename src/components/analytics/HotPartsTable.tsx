@@ -2,6 +2,10 @@
 
 import { HotPartRow } from '@/lib/hooks/useAnalytics';
 import { formatNumber } from './ChartColors';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY =
+  'Parts in your catalog with accelerating solicitation activity — more new postings in the last 30 days than their recent monthly average. Source: DIBBS/SAM solicitation postings.';
 
 interface HotPartsTableProps {
   data: HotPartRow[];
@@ -29,7 +33,10 @@ export function HotPartsTable({ data }: HotPartsTableProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">Hot Parts in Your Catalog</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">Hot Parts in Your Catalog</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <div className="text-muted text-sm">No solicitation activity in the last 30 days for your matched parts.</div>
       </div>
     );
@@ -38,7 +45,10 @@ export function HotPartsTable({ data }: HotPartsTableProps) {
   return (
     <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
       <div className="px-6 py-4 border-b border-border">
-        <h3 className="text-sm font-semibold text-card-foreground">Hot Parts in Your Catalog</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-card-foreground">Hot Parts in Your Catalog</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <p className="text-xs text-muted mt-1">Parts where new solicitation demand is accelerating vs the prior 90-day baseline</p>
       </div>
       <div className="overflow-x-auto">

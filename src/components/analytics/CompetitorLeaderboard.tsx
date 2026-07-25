@@ -2,6 +2,9 @@
 
 import { CompetitorRow } from '@/lib/hooks/useAnalytics';
 import { formatCurrency, formatNumber } from './ChartColors';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY = "Vendors who've won the most value on your parts, last 2 years. Source: DIBBS award history.";
 
 interface CompetitorLeaderboardProps {
   data: CompetitorRow[];
@@ -21,7 +24,10 @@ export function CompetitorLeaderboard({ data }: CompetitorLeaderboardProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">Competitors on Your Parts</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">Competitors on Your Parts</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <div className="text-muted text-sm">No competing vendor activity in the last 24 months.</div>
       </div>
     );
@@ -30,7 +36,10 @@ export function CompetitorLeaderboard({ data }: CompetitorLeaderboardProps) {
   return (
     <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
       <div className="px-6 py-4 border-b border-border">
-        <h3 className="text-sm font-semibold text-card-foreground">Competitors on Your Parts</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-card-foreground">Competitors on Your Parts</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <p className="text-xs text-muted mt-1">Top vendors winning on parts you supply (last 24 months)</p>
       </div>
       <div className="overflow-x-auto">

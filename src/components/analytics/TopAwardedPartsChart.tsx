@@ -6,6 +6,9 @@ import {
 } from 'recharts';
 import { PartValue } from '@/lib/hooks/useAnalytics';
 import { CHART_COLORS, formatCurrency } from './ChartColors';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY = 'Your 5 highest-value parts by total award value. Source: DIBBS award history.';
 
 interface TopAwardedPartsChartProps {
   data: PartValue[];
@@ -15,7 +18,10 @@ export function TopAwardedPartsChart({ data }: TopAwardedPartsChartProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">Top Awarded Parts (by Value)</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">Top Awarded Parts (by Value)</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <div className="h-64 flex items-center justify-center text-muted">No award data available</div>
       </div>
     );
@@ -32,7 +38,10 @@ export function TopAwardedPartsChart({ data }: TopAwardedPartsChartProps) {
 
   return (
     <div className="bg-card-bg rounded-xl border border-border p-6">
-      <h3 className="text-sm font-semibold text-card-foreground mb-4">Top Awarded Parts (by Value)</h3>
+      <div className="flex items-center gap-1.5 mb-4">
+        <h3 className="text-sm font-semibold text-card-foreground">Top Awarded Parts (by Value)</h3>
+        <CardInfoBadge content={INFO_COPY} />
+      </div>
       <ResponsiveContainer width="100%" height={data.length * 52 + 40}>
         <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />

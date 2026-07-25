@@ -2,6 +2,10 @@
 
 import { ProfileHealthRow } from '@/lib/hooks/useAnalytics';
 import { formatNumber } from './ChartColors';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY =
+  "Per-profile health check — flags profiles that haven't matched anything recently ('dormant') or match far more than typical ('over broad') and may need narrowing. Source: your bid-match profile activity.";
 
 interface ProfileHealthTableProps {
   data: ProfileHealthRow[];
@@ -36,7 +40,10 @@ export function ProfileHealthTable({ data }: ProfileHealthTableProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-1">Profile Health</h3>
+        <div className="flex items-center gap-1.5 mb-1">
+          <h3 className="text-sm font-semibold text-card-foreground">Profile Health</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <p className="text-xs text-muted">No active bid-matching profiles.</p>
       </div>
     );
@@ -45,7 +52,10 @@ export function ProfileHealthTable({ data }: ProfileHealthTableProps) {
   return (
     <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
       <div className="px-6 py-4 border-b border-border">
-        <h3 className="text-sm font-semibold text-card-foreground">Profile Health</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-card-foreground">Profile Health</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <p className="text-xs text-muted mt-1">Active profiles — flag dormant or over-broad ones for tuning</p>
       </div>
       <div className="overflow-x-auto">

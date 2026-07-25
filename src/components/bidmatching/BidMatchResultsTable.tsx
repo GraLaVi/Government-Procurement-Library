@@ -47,9 +47,9 @@ interface BidMatchResult {
   set_aside_code?: string | null;
   set_aside_label?: string | null;
   sam_url?: string | null;
-  // Advanced-tier DLA demand signal — strongest across the opportunity's NIINs
+  // Maximum-tier DLA demand signal — strongest across the opportunity's NIINs
   // ('on_backorder' | 'below_reorder_point' | 'recurring'). Null/absent when no
-  // signal or the customer lacks the Advanced parts tier.
+  // signal or the customer lacks the Maximum parts tier.
   demand_signal?: string | null;
 }
 
@@ -321,7 +321,7 @@ export function BidMatchResultsTable({
                             Updated{result.latest_post_match_amendment_at ? ` ${timeAgo(result.latest_post_match_amendment_at)}` : " since"}
                           </button>
                         )}
-                        {/* DLA demand signal (Advanced tier) — strongest across
+                        {/* DLA demand signal (Maximum tier) — strongest across
                             the opportunity's NIINs; informs the bid decision. */}
                         <DemandSignalChip signal={result.demand_signal} />
                       </div>

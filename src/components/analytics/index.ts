@@ -1,4 +1,5 @@
 export { KPICard } from './KPICard';
+export { CardInfoBadge } from './CardInfoBadge';
 export { KPICardSkeleton, ChartSkeleton } from './KPICardSkeleton';
 export { OpportunitiesTrendChart } from './OpportunitiesTrendChart';
 export { SetAsideMarketTable } from './SetAsideMarketTable';
@@ -20,4 +21,7 @@ export { MatchStrengthChart } from './MatchStrengthChart';
 export { AmendmentAlertsTable } from './AmendmentAlertsTable';
 export { ProfileHealthTable } from './ProfileHealthTable';
 export { TimeToCloseChips } from './TimeToCloseChips';
+export { DemandSignalChip } from './DemandSignalChip';
+export { BuySignalsTable } from './BuySignalsTable';
+export { MarketPrioritizationTable } from './MarketPrioritizationTable';
 export { formatCurrency, formatNumber } from './ChartColors';

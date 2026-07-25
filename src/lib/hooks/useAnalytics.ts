@@ -72,6 +72,8 @@ export interface PartPriceBenchmark {
   median_unit_price: number | null;
   p75_unit_price: number | null;
   max_unit_price: number | null;
+  // 'recurring' | 'one_off' | 'unknown' | null — DLA demand-forecast based tag
+  demand_type: string | null;
 }
 
 export interface CompetitorRow {
@@ -108,6 +110,19 @@ export interface ResponseWindowBucket {
   count: number;
 }
 
+export interface BuySignalRow {
+  niin: string;
+  fsc: string | null;
+  description: string | null;
+  // 'on_backorder' | 'below_reorder_point'
+  signal_type: string;
+  total_stock: number | null;
+  reorder_point: number | null;
+  backorder_qty: number | null;
+  rop_gap: number | null;
+  est_buy_value: number | null;
+}
+
 export interface CustomerAnalytics {
   cage_code: string;
   company_name: string | null;
@@ -123,6 +138,7 @@ export interface CustomerAnalytics {
   set_aside_win_rate: SetAsideWinRateRow[];
   hot_parts: HotPartRow[];
   response_window: ResponseWindowBucket[];
+  buy_signals: BuySignalRow[];
   generated_at: string;
 }
 
@@ -237,6 +253,79 @@ export function useMyBusinessAnalytics() {
   }, [fetchData]);
 
   return { data, isLoading, error, forbidden, tier, refetch: fetchData };
+}
+
+// ============================================================================
+// Market Prioritization — its own lightweight, Maximum-gated endpoint
+// ============================================================================
+
+export interface ProspectRow {
+  niin: string;
+  fsc: string | null;
+  description: string | null;
+  // 'on_backorder' | 'below_reorder_point' | 'low_coverage'
+  signal_type: string;
+  forecast_next_12mo: number | null;
+  est_value: number | null;
+}
+
+export interface MarketPrioritization {
+  cage_code: string;
+  market_prioritization: ProspectRow[];
+  generated_at: string;
+}
+
+// Kept off useMyBusinessAnalytics (like useOpenSolicitationsAndCompetitors) —
+// a distinct, heavier query. Same Maximum-tier gate/403 shape as /my-business.
+export function useMarketPrioritization() {
+  const [data, setData] = useState<MarketPrioritization | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await fetchWithAuth('/api/library/analytics/my-business/market-prioritization', {
+        credentials: 'include',
+      });
+
+      if (response.status === 401) {
+        setData(null);
+        return;
+      }
+
+      if (response.status === 403) {
+        setForbidden(true);
+        setData(null);
+        return;
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to fetch market prioritization');
+      }
+
+      const result: MarketPrioritization = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      console.error('Failed to fetch market prioritization:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    intervalRef.current = setInterval(fetchData, 60 * 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [fetchData]);
+
+  return { data, isLoading, error, forbidden, refetch: fetchData };
 }
 
 // ============================================================================

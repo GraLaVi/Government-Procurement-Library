@@ -2,6 +2,10 @@
 
 import { SetAsideMarketRow } from '@/lib/hooks/useAnalytics';
 import { formatNumber } from './ChartColors';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY =
+  'Currently open opportunities by set-aside category, with a 12-month trend and year-over-year change. Source: SAM.gov + DIBBS solicitations.';
 
 interface SetAsideMarketTableProps {
   data: SetAsideMarketRow[];
@@ -52,7 +56,10 @@ export function SetAsideMarketTable({ data }: SetAsideMarketTableProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">Set-Aside Distribution</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">Set-Aside Distribution</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <div className="text-muted text-sm">No set-aside data available</div>
       </div>
     );
@@ -61,7 +68,10 @@ export function SetAsideMarketTable({ data }: SetAsideMarketTableProps) {
   return (
     <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
       <div className="px-6 py-4 border-b border-border">
-        <h3 className="text-sm font-semibold text-card-foreground">Set-Aside Distribution</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-card-foreground">Set-Aside Distribution</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <p className="text-xs text-muted mt-1">Active SAM.gov opportunities, with 12-month posting trend and YoY change</p>
       </div>
       <div className="overflow-x-auto">

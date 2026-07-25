@@ -6,6 +6,9 @@ import {
 } from 'recharts';
 import { MonthCount } from '@/lib/hooks/useAnalytics';
 import { CHART_COLORS } from './ChartColors';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY = 'Monthly count of new SAM.gov opportunities, last 12 months. Source: SAM.gov.';
 
 interface OpportunitiesTrendChartProps {
   data: MonthCount[];
@@ -15,7 +18,10 @@ export function OpportunitiesTrendChart({ data }: OpportunitiesTrendChartProps) 
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">SAM.gov Opportunity Trend (12 Months)</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">SAM.gov Opportunity Trend (12 Months)</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <div className="h-72 flex items-center justify-center text-muted">No trend data available</div>
       </div>
     );
@@ -23,7 +29,10 @@ export function OpportunitiesTrendChart({ data }: OpportunitiesTrendChartProps) 
 
   return (
     <div className="bg-card-bg rounded-xl border border-border p-6">
-      <h3 className="text-sm font-semibold text-card-foreground mb-4">SAM.gov Opportunity Trend (12 Months)</h3>
+      <div className="flex items-center gap-1.5 mb-4">
+        <h3 className="text-sm font-semibold text-card-foreground">SAM.gov Opportunity Trend (12 Months)</h3>
+        <CardInfoBadge content={INFO_COPY} />
+      </div>
       <ResponsiveContainer width="100%" height={288}>
         <AreaChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <defs>

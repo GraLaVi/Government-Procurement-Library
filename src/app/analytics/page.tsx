@@ -1,6 +1,9 @@
 "use client";
 
-import { useMarketAnalytics, useMyBusinessAnalytics, useBidMatchAnalytics } from '@/lib/hooks/useAnalytics';
+import { useAuth } from "@/contexts/AuthContext";
+import { resolveLibraryTier } from "@/lib/library/tier";
+import { Button } from "@/components/ui/Button";
+import { useMarketAnalytics, useMyBusinessAnalytics, useBidMatchAnalytics, useMarketPrioritization } from '@/lib/hooks/useAnalytics';
 import {
   KPICard,
   KPICardSkeleton,
@@ -23,14 +26,19 @@ import {
   AmendmentAlertsTable,
   ProfileHealthTable,
   TimeToCloseChips,
+  BuySignalsTable,
+  MarketPrioritizationTable,
   formatCurrency,
   formatNumber,
 } from '@/components/analytics';
 
 export default function AnalyticsPage() {
-  const market = useMarketAnalytics();
-  const business = useMyBusinessAnalytics();
-  const bidMatch = useBidMatchAnalytics();
+  const { hasAnyProductAccess } = useAuth();
+  // Resolved client-side from the product list useAuth() already loaded
+  // before this page rendered — no network call, and no doomed-to-403
+  // requests fired against the Maximum-only analytics endpoints for users
+  // who can't use them.
+  const tier = resolveLibraryTier(hasAnyProductAccess);
 
   return (
     <>
@@ -42,6 +50,61 @@ export default function AnalyticsPage() {
         </p>
       </div>
 
+      {tier === "maximum" ? <MaximumAnalytics /> : <UpgradeToMaximumPrompt />}
+    </>
+  );
+}
+
+function UpgradeToMaximumPrompt() {
+  return (
+    <div className="bg-card-bg border border-border rounded-xl p-8 max-w-2xl mx-auto text-center">
+      <div className="w-16 h-16 bg-info/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg
+          className="w-8 h-8 text-info"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M13 10V3L4 14h7v7l9-11h-7z"
+          />
+        </svg>
+      </div>
+      <h2 className="text-xl font-bold text-foreground mb-2">
+        Procurement Analytics requires the Maximum plan
+      </h2>
+      <p className="text-muted mb-6">
+        Upgrade to Maximum to unlock competitive intel, opportunity targeting,
+        and bid-readiness alerts across your whole business.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <Button href="/pricing" variant="primary" size="md">
+          View Pricing
+        </Button>
+        <Button href="/account/billing" variant="outline" size="md">
+          Manage Billing
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function MaximumAnalytics() {
+  const market = useMarketAnalytics();
+  const business = useMyBusinessAnalytics();
+  const bidMatch = useBidMatchAnalytics();
+  const marketPrioritization = useMarketPrioritization();
+
+  const showResponseWindow = business.isLoading || !!business.data;
+  const showMatchStrength = bidMatch.isLoading || !!bidMatch.data;
+  const soloResponseWindow = showResponseWindow && !showMatchStrength;
+  const soloMatchStrength = showMatchStrength && !showResponseWindow;
+
+  return (
+    <>
       {/* ================================================================ */}
       {/* Section 1: Market Pulse                                          */}
       {/* ================================================================ */}
@@ -62,16 +125,19 @@ export default function AnalyticsPage() {
               label="DIBBS Open Solicitations"
               value={formatNumber(market.data.dibbs_open_solicitations_count)}
               source="Source: DIBBS"
+              tooltip="Solicitations currently open across DIBBS, DLA's parts-buying system. Source: DIBBS, live count."
             />
             <KPICard
               label="SAM.gov DoD Open Solicitations"
               value={formatNumber(market.data.sam_dod_open_solicitations_count)}
               source="Source: SAM.gov"
+              tooltip="Open Department of Defense opportunities posted on SAM.gov (agency code DLA). Source: SAM.gov, refreshed every 5 minutes."
             />
             <KPICard
               label="Recent DIBBS Awards (90d)"
               value={formatCurrency(market.data.dibbs_recent_awards_total)}
               source="Source: DIBBS"
+              tooltip="Total dollar value of DIBBS contract awards market-wide in the last 90 days — not specific to you. Source: DIBBS award data."
             />
           </div>
         ) : null}
@@ -94,22 +160,30 @@ export default function AnalyticsPage() {
       {/* Section 2: Act Now (urgency + match-quality alerts)              */}
       {/* ================================================================ */}
       {(business.isLoading || business.data || !bidMatch.forbidden) && (
-        <section className="mb-10">
+        <section id="buy-signals" className="mb-10 scroll-mt-8">
           <h2 className="text-lg font-semibold text-foreground mb-4">Act Now</h2>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Response Window (E) — from /my-business */}
             {business.isLoading ? (
-              <ChartSkeleton height="h-32" />
+              <div className={soloResponseWindow ? "lg:col-span-2" : undefined}>
+                <ChartSkeleton height="h-32" />
+              </div>
             ) : business.data ? (
-              <ResponseWindowChips data={business.data.response_window} />
+              <div className={soloResponseWindow ? "lg:col-span-2" : undefined}>
+                <ResponseWindowChips data={business.data.response_window} />
+              </div>
             ) : null}
 
             {/* Match Strength split (F) — bid-matching only */}
             {bidMatch.isLoading ? (
-              <ChartSkeleton height="h-32" />
+              <div className={soloMatchStrength ? "lg:col-span-2" : undefined}>
+                <ChartSkeleton height="h-32" />
+              </div>
             ) : bidMatch.data ? (
-              <MatchStrengthChart data={bidMatch.data.match_strength_split} />
+              <div className={soloMatchStrength ? "lg:col-span-2" : undefined}>
+                <MatchStrengthChart data={bidMatch.data.match_strength_split} />
+              </div>
             ) : null}
           </div>
 
@@ -119,6 +193,17 @@ export default function AnalyticsPage() {
               <AmendmentAlertsTable data={bidMatch.data.amendment_alerts} />
             </div>
           )}
+
+          {/* Buy Signals — parts you supply that DLA is flagging for a
+              near-term buy. Also the destination the bell's "buy is coming"
+              alert links to. */}
+          {business.isLoading ? (
+            <div className="mt-6"><ChartSkeleton height="h-48" /></div>
+          ) : business.data ? (
+            <div className="mt-6">
+              <BuySignalsTable data={business.data.buy_signals} />
+            </div>
+          ) : null}
         </section>
       )}
 
@@ -150,16 +235,19 @@ export default function AnalyticsPage() {
               label="Historical Contract Value"
               value={formatCurrency(business.data.procurement_history_total)}
               subtitle="Lifetime procurement total"
+              tooltip="Lifetime total value of contracts awarded to your CAGE. Source: DIBBS procurement history."
             />
             <KPICard
               label="Open Matched Solicitations"
               value={formatNumber(business.data.open_solicitations_count)}
               subtitle="Matching your manufactured parts"
+              tooltip="Currently open solicitations matching parts you manufacture. Source: DIBBS/SAM, matched to your procurement history."
             />
             <KPICard
               label="Competitors on Your Parts"
               value={formatNumber(business.data.competitor_count)}
               subtitle="Distinct vendors on same parts"
+              tooltip="Distinct vendors who've also won awards on the same parts as you, last 2 years. Source: DIBBS award history."
             />
           </div>
         ) : null}
@@ -226,9 +314,19 @@ export default function AnalyticsPage() {
 
         {/* Upcoming Solicitations Table */}
         {business.isLoading ? (
-          <ChartSkeleton height="h-48" />
+          <div className="mb-6"><ChartSkeleton height="h-48" /></div>
         ) : business.data ? (
-          <UpcomingSolicitationsTable data={business.data.upcoming_solicitations} />
+          <div className="mb-6">
+            <UpcomingSolicitationsTable data={business.data.upcoming_solicitations} />
+          </div>
+        ) : null}
+
+        {/* Market Prioritization — prospecting parts outside the customer's
+            catalog, ranked by DLA buy-imminence x estimated value. */}
+        {marketPrioritization.isLoading ? (
+          <ChartSkeleton height="h-48" />
+        ) : marketPrioritization.data ? (
+          <MarketPrioritizationTable data={marketPrioritization.data.market_prioritization} />
         ) : null}
       </section>
 
@@ -255,18 +353,21 @@ export default function AnalyticsPage() {
                   label="Active Profiles"
                   value={formatNumber(bidMatch.data.active_profiles_count)}
                   subtitle="Running bid-match profiles"
+                  tooltip="Bid-match search profiles you're currently running. Source: your ALAN bid-matching profiles."
                 />
                 <KPICard
                   label="Total Matches"
                   value={formatNumber(bidMatch.data.total_matches)}
                   subtitle="Lifetime matched solicitations"
                   href="/bidmatching"
+                  tooltip="Lifetime solicitations matched across all your profiles. Source: your bid-matching results."
                 />
                 <KPICard
                   label="Latest Run Matches"
                   value={formatNumber(bidMatch.data.latest_run_matches)}
                   subtitle="Most recent matching run"
                   href="/bidmatching"
+                  tooltip="Matches found in the most recent scheduled run. Source: your bid-matching results."
                 />
               </div>
 

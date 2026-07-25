@@ -1,6 +1,10 @@
 "use client";
 
 import { TimeToCloseBucket } from '@/lib/hooks/useAnalytics';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY =
+  'Close-date urgency for matches from the latest run, grouped into buckets. Source: your latest bid-matching run.';
 
 interface TimeToCloseChipsProps {
   data: TimeToCloseBucket[];
@@ -39,7 +43,10 @@ export function TimeToCloseChips({ data }: TimeToCloseChipsProps) {
 
   return (
     <div className="bg-card-bg rounded-xl border border-border p-6">
-      <h3 className="text-sm font-semibold text-card-foreground mb-1">Time to Close (Latest Run)</h3>
+      <div className="flex items-center gap-1.5 mb-1">
+        <h3 className="text-sm font-semibold text-card-foreground">Time to Close (Latest Run)</h3>
+        <CardInfoBadge content={INFO_COPY} />
+      </div>
       <p className="text-xs text-muted mb-4">
         {totalCount > 0
           ? `Days remaining on the ${totalCount.toLocaleString()} matches from your most recent run`

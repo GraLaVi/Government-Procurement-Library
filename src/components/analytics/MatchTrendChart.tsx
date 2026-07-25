@@ -6,6 +6,9 @@ import {
 } from 'recharts';
 import { DayCount } from '@/lib/hooks/useAnalytics';
 import { CHART_COLORS } from './ChartColors';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY = 'Daily count of matches found across all your profiles, last 30 days. Source: your bid-matching results.';
 
 interface MatchTrendChartProps {
   data: DayCount[];
@@ -15,7 +18,10 @@ export function MatchTrendChart({ data }: MatchTrendChartProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">Match Trend (Last 30 Days)</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">Match Trend (Last 30 Days)</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <div className="h-72 flex items-center justify-center text-muted">No matches in the last 30 days</div>
       </div>
     );
@@ -23,7 +29,10 @@ export function MatchTrendChart({ data }: MatchTrendChartProps) {
 
   return (
     <div className="bg-card-bg rounded-xl border border-border p-6">
-      <h3 className="text-sm font-semibold text-card-foreground mb-4">Match Trend (Last 30 Days)</h3>
+      <div className="flex items-center gap-1.5 mb-4">
+        <h3 className="text-sm font-semibold text-card-foreground">Match Trend (Last 30 Days)</h3>
+        <CardInfoBadge content={INFO_COPY} />
+      </div>
       <ResponsiveContainer width="100%" height={288}>
         <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />

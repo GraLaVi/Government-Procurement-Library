@@ -2,27 +2,14 @@
 
 import { UpcomingSolicitation } from '@/lib/hooks/useAnalytics';
 import { SolicitationNumberLink } from '@/components/library/SolicitationNumberLink';
-import { Tooltip } from '@/components/ui/Tooltip';
+import { CardInfoBadge } from './CardInfoBadge';
 
 interface UpcomingSolicitationsTableProps {
   data: UpcomingSolicitation[];
 }
 
-const UPCOMING_SOLICITATIONS_TOOLTIP =
-  "Up to 5 open solicitations requesting parts your CAGE has supplied before (matched via your Procurement History), soonest closing date first.";
-
-function HelpBadge() {
-  return (
-    <Tooltip content={UPCOMING_SOLICITATIONS_TOOLTIP}>
-      <span
-        aria-label="More info"
-        className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-muted/40 text-[10px] font-semibold text-muted/70 leading-none"
-      >
-        ?
-      </span>
-    </Tooltip>
-  );
-}
+const INFO_COPY =
+  "The next 5 solicitations closing soonest that match parts you supply. Source: DIBBS/SAM open solicitations.";
 
 // Parse a "YYYY-MM-DD" (or ISO timestamp) as a local-calendar date so the
 // displayed day doesn't shift in US timezones where `new Date("2026-05-07")`
@@ -54,7 +41,7 @@ export function UpcomingSolicitationsTable({ data }: UpcomingSolicitationsTableP
       <div className="bg-card-bg rounded-xl border border-border p-6">
         <h3 className="text-sm font-semibold text-card-foreground mb-4 inline-flex items-center gap-1">
           <span>Upcoming Solicitations</span>
-          <HelpBadge />
+          <CardInfoBadge content={INFO_COPY} />
         </h3>
         <div className="text-muted text-sm">No upcoming solicitations matched to your parts</div>
       </div>
@@ -66,7 +53,7 @@ export function UpcomingSolicitationsTable({ data }: UpcomingSolicitationsTableP
       <div className="px-6 py-4 border-b border-border">
         <h3 className="text-sm font-semibold text-card-foreground inline-flex items-center gap-1">
           <span>Upcoming Solicitations (Closing Soonest)</span>
-          <HelpBadge />
+          <CardInfoBadge content={INFO_COPY} />
         </h3>
       </div>
       <div className="overflow-x-auto">

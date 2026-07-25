@@ -2,6 +2,10 @@
 
 import { SetAsideWinRateRow } from '@/lib/hooks/useAnalytics';
 import { formatNumber } from './ChartColors';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const INFO_COPY =
+  'Your win rate by set-aside category — awards won ÷ solicitations matched, last 24 months. Source: DIBBS solicitations + award history.';
 
 interface SetAsideWinRateTableProps {
   data: SetAsideWinRateRow[];
@@ -24,7 +28,10 @@ export function SetAsideWinRateTable({ data }: SetAsideWinRateTableProps) {
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">Set-Aside Win Rate</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">Set-Aside Win Rate</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <div className="text-muted text-sm">No matched or won solicitations in the last 24 months.</div>
       </div>
     );
@@ -33,7 +40,10 @@ export function SetAsideWinRateTable({ data }: SetAsideWinRateTableProps) {
   return (
     <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
       <div className="px-6 py-4 border-b border-border">
-        <h3 className="text-sm font-semibold text-card-foreground">Set-Aside Win Rate</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-card-foreground">Set-Aside Win Rate</h3>
+          <CardInfoBadge content={INFO_COPY} />
+        </div>
         <p className="text-xs text-muted mt-1">Won / matched ratio per set-aside type (last 24 months)</p>
       </div>
       <div className="overflow-x-auto">

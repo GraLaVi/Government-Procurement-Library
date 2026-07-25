@@ -2,6 +2,15 @@
 
 import { PartPriceBenchmark } from '@/lib/hooks/useAnalytics';
 import { formatNumber } from './ChartColors';
+import { DemandSignalChip, DemandSignalKind } from './DemandSignalChip';
+import { CardInfoBadge } from './CardInfoBadge';
+
+const DEMAND_TYPE_KINDS: DemandSignalKind[] = ['recurring', 'one_off', 'unknown'];
+
+const WINNING_PRICE_INFO_COPY =
+  'Min / median / max unit price that actually won, per part, over the last 12 months — price to win without underbidding. Source: DIBBS award history.';
+const DEMAND_TYPE_INFO_COPY =
+  "Whether DLA's forecast and annual-demand data suggest this part is bought repeatedly (worth defending on price) or was likely a one-time buy. Source: DLA demand-forecast FOIA data.";
 
 interface WinningPriceBenchmarkTableProps {
   data: PartPriceBenchmark[];
@@ -37,7 +46,10 @@ export function WinningPriceBenchmarkTable({ data }: WinningPriceBenchmarkTableP
   if (!data.length) {
     return (
       <div className="bg-card-bg rounded-xl border border-border p-6">
-        <h3 className="text-sm font-semibold text-card-foreground mb-4">Winning Price Benchmark</h3>
+        <div className="flex items-center gap-1.5 mb-4">
+          <h3 className="text-sm font-semibold text-card-foreground">Winning Price Benchmark</h3>
+          <CardInfoBadge content={WINNING_PRICE_INFO_COPY} />
+        </div>
         <div className="text-muted text-sm">
           No award data available in the last 12 months for your parts.
         </div>
@@ -48,7 +60,10 @@ export function WinningPriceBenchmarkTable({ data }: WinningPriceBenchmarkTableP
   return (
     <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
       <div className="px-6 py-4 border-b border-border">
-        <h3 className="text-sm font-semibold text-card-foreground">Winning Price Benchmark</h3>
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-card-foreground">Winning Price Benchmark</h3>
+          <CardInfoBadge content={WINNING_PRICE_INFO_COPY} />
+        </div>
         <p className="text-xs text-muted mt-1">
           Min / median / max winning unit price over the last 12 months — your most-active parts
         </p>
@@ -63,12 +78,21 @@ export function WinningPriceBenchmarkTable({ data }: WinningPriceBenchmarkTableP
               <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Median</th>
               <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Max</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Range</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1.5">
+                  Demand
+                  <CardInfoBadge content={DEMAND_TYPE_INFO_COPY} />
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {data.map((row, i) => {
               const nsn = row.fsc && row.niin ? `${row.fsc}-${row.niin}` : row.niin || '-';
               const desc = row.description || '';
+              const demandKind = DEMAND_TYPE_KINDS.includes(row.demand_type as DemandSignalKind)
+                ? (row.demand_type as DemandSignalKind)
+                : null;
               return (
                 <tr key={i} className="hover:bg-muted-light/30 transition-colors">
                   <td className="px-6 py-3">
@@ -91,6 +115,9 @@ export function WinningPriceBenchmarkTable({ data }: WinningPriceBenchmarkTableP
                   </td>
                   <td className="px-4 py-3 text-primary">
                     <PriceRangeBar row={row} />
+                  </td>
+                  <td className="px-4 py-3">
+                    {demandKind ? <DemandSignalChip kind={demandKind} /> : <span className="text-muted text-xs">—</span>}
                   </td>
                 </tr>
               );
