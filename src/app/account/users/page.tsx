@@ -401,63 +401,72 @@ export default function UsersPage() {
         </ol>
       </nav>
 
-      {/* Page header — user-cap status is folded into the subtitle line so
-          the header stays clean. At cap, an inline CTA routes paid plans to
-          Billing → Change seats (buy a seat, prorated) and Free plans to
-          /pricing (subscribe). The Add User button stays clickable at cap and
-          opens an advisory dialog rather than silently no-op'ing. */}
+      {/* Page header. Seat usage is a compact badge next to the subtitle so
+          the header stays clean at a glance; at cap, a dedicated banner below
+          (matching the success/warning banner style used elsewhere on this
+          page) carries the actual CTA instead of a bare text link. The Add
+          User button stays clickable at cap and opens an advisory dialog
+          rather than silently no-op'ing. */}
       {(() => {
         const capCtaHref = onPaidPlan ? "/account/billing?action=add-seat" : "/pricing";
-        const capCtaLabel = onPaidPlan ? "Add a seat" : "Upgrade";
+        const capCtaLabel = onPaidPlan ? "Add a seat" : "See plans";
         return (
-          <div className="flex items-start justify-between mb-8 gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-secondary">Manage Users</h1>
-              <p className="text-muted mt-1">
-                Add, edit, and manage team members in your organization
-              </p>
-              {hasSeatCap && (
-                <p className="text-muted mt-0.5">
-                  <span className={atSeatCap ? "text-warning font-medium" : "font-medium"}>
-                    {userCap!.used} of {userCap!.cap} seat{userCap!.cap === 1 ? "" : "s"} used
-                  </span>
-                  {atSeatCap && (
-                    <>
-                      {" · "}
-                      <Link
-                        href={capCtaHref}
-                        className="text-warning font-medium hover:underline"
-                      >
-                        {capCtaLabel} &rarr;
-                      </Link>
-                    </>
-                  )}
+          <>
+            <div className="flex items-start justify-between mb-4 gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-secondary">Manage Users</h1>
+                <p className="text-muted mt-1">
+                  Add, edit, and manage team members in your organization
                 </p>
-              )}
-              {rfqProduct && rfqSeatUsage && (
-                <p className="text-muted mt-0.5">
-                  {rfqSeatUsage.cap === null || rfqSeatUsage.cap === 0 ? (
-                    <span className="text-warning font-medium">
-                      RFQ add-on: no active subscription — seats can&apos;t be assigned yet
-                    </span>
-                  ) : (
-                    <span className={rfqSeatUsage.used >= rfqSeatUsage.cap ? "text-warning font-medium" : "font-medium"}>
-                      {rfqSeatUsage.used} of {rfqSeatUsage.cap} RFQ seat{rfqSeatUsage.cap === 1 ? "" : "s"} assigned
-                    </span>
-                  )}
-                </p>
-              )}
+                {(hasSeatCap || (rfqProduct && rfqSeatUsage)) && (
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {hasSeatCap && (
+                      <Badge variant={atSeatCap ? "warning" : "info"} size="sm">
+                        {userCap!.used}/{userCap!.cap} seats
+                      </Badge>
+                    )}
+                    {rfqProduct && rfqSeatUsage && (
+                      rfqSeatUsage.cap === null || rfqSeatUsage.cap === 0 ? (
+                        <Badge variant="warning" size="sm">RFQ: no active subscription</Badge>
+                      ) : (
+                        <Badge
+                          variant={rfqSeatUsage.used >= rfqSeatUsage.cap ? "warning" : "info"}
+                          size="sm"
+                        >
+                          {rfqSeatUsage.used}/{rfqSeatUsage.cap} RFQ seats
+                        </Badge>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => (atSeatCap ? setShowSeatCapNotice(true) : setIsCreateModalOpen(true))}
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Add User
+              </Button>
             </div>
-            <Button
-              variant="primary"
-              onClick={() => (atSeatCap ? setShowSeatCapNotice(true) : setIsCreateModalOpen(true))}
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Add User
-            </Button>
-          </div>
+
+            {atSeatCap && (
+              <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-warning shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                  <p className="text-sm font-medium text-warning">
+                    You&apos;re using all {userCap!.cap} seat{userCap!.cap === 1 ? "" : "s"} on your plan.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => router.push(capCtaHref)}>
+                  {capCtaLabel}
+                </Button>
+              </div>
+            )}
+          </>
         );
       })()}
 

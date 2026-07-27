@@ -1,25 +1,33 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 import { usePaymentMethodStatus } from "@/lib/hooks/usePaymentMethodStatus";
 
-function trialDeadlineCopy(days: number | null | undefined): string | null {
-  if (days == null) return null;
-  if (days <= 0) return "Your trial ends today.";
-  if (days === 1) return "Your trial ends tomorrow.";
-  return `Your trial ends in ${days} days.`;
+function trialEndsFragment(days: number): string {
+  if (days <= 0) return "ends today";
+  if (days === 1) return "ends tomorrow";
+  return `ends in ${days} days`;
 }
 
 // Top-of-dashboard alert nudging paid subscribers who haven't added a card
-// on file yet. Renders only when is_subscriber && !has_payment_method, so
-// free-tier and beta-only customers never see it.
+// on file yet. Renders only when there's at least one trialing subscription
+// and no card on file, so free-tier customers never see it. A customer can
+// hold more than one concurrent trial (e.g. a library tier plus the RFQ
+// add-on) — one card covers all of them, so this is a single banner listing
+// every trial rather than one banner per subscription. Also admin-only:
+// billing (where the CTA links) is gated to customer admins, and non-admin
+// members can't add a payment method even if shown this — see
+// /account/billing's own admin gate for the same check.
 export function PaymentMethodAlert() {
+  const { user } = useAuth();
   const { status, isLoading } = usePaymentMethodStatus();
 
+  if (!user?.roles?.includes("admin")) return null;
   if (isLoading || !status) return null;
-  if (!status.is_subscriber || status.has_payment_method) return null;
+  if (status.trials.length === 0 || status.has_payment_method) return null;
 
-  const trialCopy = trialDeadlineCopy(status.days_remaining);
+  const { trials } = status;
 
   return (
     <div className="bg-warning/10 border border-warning/40 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -42,11 +50,22 @@ export function PaymentMethodAlert() {
           <div className="text-sm font-semibold text-foreground">
             Add a payment method
           </div>
-          <div className="text-sm text-muted">
-            {trialCopy
-              ? `${trialCopy} Add a card to keep your subscription active.`
-              : "Add a card on file to keep your subscription active."}
-          </div>
+          {trials.length === 1 ? (
+            <div className="text-sm text-muted">
+              Your trial {trialEndsFragment(trials[0].days_remaining)}. Add a card to keep your subscription active.
+            </div>
+          ) : (
+            <div className="text-sm text-muted">
+              <div>Add a card to keep every trial below active:</div>
+              <ul className="mt-0.5 space-y-0.5">
+                {trials.map((t) => (
+                  <li key={t.subscription_id}>
+                    {t.label} — {trialEndsFragment(t.days_remaining)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
       <Link

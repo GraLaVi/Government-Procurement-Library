@@ -150,6 +150,13 @@ function PricingPageContent() {
     priceId: number;
     seatCount: number;
   } | null>(null);
+  // Whether the logged-in customer already has a current-version ToS
+  // acceptance on file (from signup or an earlier purchase) — lets an
+  // existing customer subscribing to another plan/add-on skip re-consenting.
+  // null = unknown/loading; treated as "needs acceptance" until known so a
+  // slow/failed check never silently skips consent. Irrelevant for
+  // anonymous visitors, who always go through /signup first anyway.
+  const [needsTosAcceptance, setNeedsTosAcceptance] = useState<boolean | null>(null);
 
   const loadPlans = useCallback(async () => {
     setIsLoading(true);
@@ -250,6 +257,29 @@ function PricingPageContent() {
     };
   }, [authLoading, user, plans]);
 
+  // Whether an already-logged-in customer can skip re-consenting to the ToS
+  // on this purchase — irrelevant for anonymous visitors (they always go
+  // through /signup, which requires fresh consent).
+  useEffect(() => {
+    if (authLoading || !user) {
+      setNeedsTosAcceptance(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetchWithAuth("/api/billing/tos-status");
+        const data = await resp.json();
+        if (!cancelled) setNeedsTosAcceptance(resp.ok ? Boolean(data.needs_acceptance) : true);
+      } catch {
+        if (!cancelled) setNeedsTosAcceptance(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user]);
+
   const openPortal = async () => {
     setPortalPending(true);
     setError(null);
@@ -330,13 +360,29 @@ function PricingPageContent() {
     }
 
     setError(null);
+    // Already-logged-in customer with a current-version ToS acceptance on
+    // file (signup, or an earlier purchase) → skip the consent modal and
+    // check out directly. Anonymous visitors always go through the modal
+    // (their eventual signup-and-checkout call always needs fresh consent).
+    if (user && needsTosAcceptance === false) {
+      runCheckout(plan, priceId, seatCount);
+      return;
+    }
     setTosPending({ plan, priceId, seatCount });
   };
 
-  const handleTosConfirm = async (tosVersion: string, tosAcceptedAt: string) => {
-    if (!tosPending) return;
-    const { plan, priceId, seatCount } = tosPending;
-
+  // tosVersion/tosAcceptedAt are omitted for an already-consented logged-in
+  // customer (see handleSubscribe above) — the backend treats that the same
+  // as an admin-initiated checkout: no new consent required, no new audit
+  // row written. The anonymous signup-and-checkout path always requires
+  // them since that's a brand-new customer's first-ever consent.
+  const runCheckout = async (
+    plan: Plan,
+    priceId: number,
+    seatCount: number,
+    tosVersion?: string,
+    tosAcceptedAt?: string,
+  ) => {
     setCheckoutPending(plan.id);
     setError(null);
 
@@ -394,8 +440,9 @@ function PricingPageContent() {
         body: JSON.stringify({
           price_id: priceId,
           seat_quantity: seatCount,
-          tos_version: tosVersion,
-          tos_accepted_at: tosAcceptedAt,
+          ...(tosVersion && tosAcceptedAt
+            ? { tos_version: tosVersion, tos_accepted_at: tosAcceptedAt }
+            : {}),
         }),
       });
       const data = await response.json();
@@ -834,7 +881,8 @@ function PricingPageContent() {
                       !activePrice ||
                       totalCents === null ||
                       checkoutPending === plan.id ||
-                      (!!user && !user.email_verified)
+                      (!!user && !user.email_verified) ||
+                      (!!user && needsTosAcceptance === null)
                     }
                   >
                     {checkoutPending === plan.id
@@ -843,7 +891,9 @@ function PricingPageContent() {
                         ? "Sign up to subscribe"
                         : !user.email_verified
                           ? "Verify email to subscribe"
-                          : "Subscribe"}
+                          : needsTosAcceptance === null
+                            ? "Checking…"
+                            : "Subscribe"}
                   </Button>
                 )}
               </div>
@@ -994,7 +1044,11 @@ function PricingPageContent() {
         if (checkoutPending !== null) return;
         setTosPending(null);
       }}
-      onConfirm={handleTosConfirm}
+      onConfirm={(tosVersion, tosAcceptedAt) => {
+        if (!tosPending) return;
+        const { plan, priceId, seatCount } = tosPending;
+        runCheckout(plan, priceId, seatCount, tosVersion, tosAcceptedAt);
+      }}
       planSummary={tosPlanSummary}
       pending={checkoutPending !== null}
     />

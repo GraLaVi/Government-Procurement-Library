@@ -1,20 +1,26 @@
 import { useEffect, useState } from 'react';
 import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
 
+// One currently-trialing subscription. A customer can hold more than one at
+// once (e.g. a library tier plus the RFQ add-on), each on its own
+// independent trial clock — see docs/billing-dev.md.
+export interface TrialInfo {
+  subscription_id: number;
+  label: string;
+  trial_end: string;
+  days_remaining: number;
+}
+
 export interface PaymentMethodStatus {
-  is_subscriber: boolean;
   has_payment_method: boolean;
-  subscription_status: string | null;
-  trial_end: string | null;
-  days_remaining: number | null;
+  // Every trialing subscription, soonest-ending first. Empty for Free-only
+  // customers and once every trial has converted/ended.
+  trials: TrialInfo[];
 }
 
 const FALLBACK: PaymentMethodStatus = {
-  is_subscriber: false,
   has_payment_method: false,
-  subscription_status: null,
-  trial_end: null,
-  days_remaining: null,
+  trials: [],
 };
 
 // Fetches /api/billing/payment-method-status. Drives both the dashboard

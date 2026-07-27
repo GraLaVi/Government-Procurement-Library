@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRecentActions } from '@/lib/hooks/useRecentActions';
 import { usePaymentMethodStatus } from '@/lib/hooks/usePaymentMethodStatus';
 import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
@@ -29,8 +30,7 @@ interface BidProfileGate {
   hasActiveProfile: boolean;
 }
 
-function trialDeadlineSuffix(days: number | null | undefined): string {
-  if (days == null) return '';
+function trialDeadlineSuffix(days: number): string {
   if (days <= 0) return ' — trial ends today';
   if (days === 1) return ' — trial ends tomorrow';
   return ` — trial ends in ${days} days`;
@@ -41,14 +41,21 @@ function trialDeadlineSuffix(days: number | null | undefined): string {
 // no manual "dismiss" needed. The checklist hides itself when allComplete is
 // true (see OnboardingChecklist).
 //
-// The "Add a payment method" milestone is conditionally spliced in for paid
-// subscribers (Subscription row exists in an access-granting status) who
-// don't yet have a card on file. Beta and Free-only customers never see it.
+// The "Add a payment method" milestone is conditionally spliced in for
+// customers with at least one trialing subscription and no card on file.
+// Free-only customers never see it. A customer can hold more than one
+// concurrent trial (e.g. a library tier plus the RFQ add-on); this stepper
+// is a fixed small set of steps (not a variable-length list like the
+// dashboard banner), so it stays a single milestone and just surfaces
+// whichever trial ends soonest — pmStatus.trials is already sorted that
+// way. Also admin-only — billing (where this links) is gated to customer
+// admins, and a non-admin member can't act on this nudge even if shown it.
 export function useDashboardMilestones(): {
   milestones: DashboardMilestone[];
   allComplete: boolean;
   isLoading: boolean;
 } {
+  const { user } = useAuth();
   const parts = useRecentActions('parts_search');
   const vendors = useRecentActions('vendor_search');
   const { status: pmStatus, isLoading: pmLoading } = usePaymentMethodStatus();
@@ -104,10 +111,13 @@ export function useDashboardMilestones(): {
       },
     ];
 
-    if (pmStatus && pmStatus.is_subscriber && !pmStatus.has_payment_method) {
+    if (user?.roles?.includes('admin') && pmStatus && pmStatus.trials.length > 0 && !pmStatus.has_payment_method) {
+      // Sorted soonest-ending first by the backend — the first entry is the
+      // most urgent one to surface here.
+      const soonest = pmStatus.trials[0];
       base.push({
         id: 'add_payment_method',
-        label: `Add a payment method${trialDeadlineSuffix(pmStatus.days_remaining)}`,
+        label: `Add a payment method${trialDeadlineSuffix(soonest.days_remaining)}`,
         href: '/account/billing',
         completed: false,
         learnMoreSlug: 'plans-and-pricing',
@@ -124,7 +134,7 @@ export function useDashboardMilestones(): {
       });
     }
     return base;
-  }, [parts.actions, vendors.actions, pmStatus, bidGate]);
+  }, [parts.actions, vendors.actions, pmStatus, bidGate, user]);
 
   return {
     milestones,

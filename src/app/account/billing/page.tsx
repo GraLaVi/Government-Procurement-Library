@@ -78,12 +78,19 @@ type Invoice = {
 
 type InvoiceListResponse = { invoices: Invoice[]; total: number };
 
+// One currently-trialing subscription. A customer can hold more than one at
+// once (e.g. a library tier plus the RFQ add-on), each on its own
+// independent trial clock.
+type TrialInfo = {
+  subscription_id: number;
+  label: string;
+  trial_end: string;
+  days_remaining: number;
+};
+
 type PaymentMethodStatus = {
-  is_subscriber: boolean;
   has_payment_method: boolean;
-  subscription_status: string | null;
-  trial_end: string | null;
-  days_remaining: number | null;
+  trials: TrialInfo[]; // soonest-ending first
 };
 
 // Stripe-side billing view (GET /api/billing/billing-details). The billing
@@ -433,10 +440,13 @@ function BillingPageContent() {
       )
     : [];
 
-  // Trial-state banner drivers.
-  const isTrialing = pmStatus?.subscription_status === "trialing";
-  const trialingNoCard = !!pmStatus && pmStatus.is_subscriber && isTrialing && !pmStatus.has_payment_method;
-  const trialingWithCard = !!pmStatus && pmStatus.is_subscriber && isTrialing && pmStatus.has_payment_method;
+  // Trial-state banner drivers. A customer can hold more than one
+  // concurrent trial (e.g. a library tier plus the RFQ add-on), each on its
+  // own independent clock — pmStatus.trials lists every one, soonest-ending
+  // first. One payment method covers all of them.
+  const trials = pmStatus?.trials ?? [];
+  const trialingNoCard = trials.length > 0 && !!pmStatus && !pmStatus.has_payment_method;
+  const trialingWithCard = trials.length > 0 && !!pmStatus && pmStatus.has_payment_method;
 
   if (authLoading) return <div className="p-6">Loading...</div>;
 
@@ -476,11 +486,24 @@ function BillingPageContent() {
       {trialingNoCard && (
         <div className="mb-6 flex items-start justify-between gap-4 flex-wrap rounded-xl border border-warning/30 bg-warning/5 p-4">
           <div className="text-sm">
-            <p className="font-medium text-foreground">
-              Your trial ends {trialDeadlineSentence(pmStatus?.days_remaining)}.
-            </p>
+            {trials.length === 1 ? (
+              <p className="font-medium text-foreground">
+                Your trial ends {trialDeadlineSentence(trials[0].days_remaining)}.
+              </p>
+            ) : (
+              <>
+                <p className="font-medium text-foreground">Your trials are ending:</p>
+                <ul className="mt-1 space-y-0.5 text-foreground">
+                  {trials.map((t) => (
+                    <li key={t.subscription_id}>
+                      <span className="font-medium">{t.label}</span> — ends {trialDeadlineSentence(t.days_remaining)}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
             <p className="mt-1 text-muted">
-              Add a payment method to keep your access — without one, your subscription will cancel automatically when the trial ends.
+              Add a payment method to keep your access — without one, {trials.length === 1 ? "your subscription" : "these subscriptions"} will cancel automatically when the trial ends.
             </p>
           </div>
           <Button onClick={openPortal} disabled={portalPending}>
@@ -490,8 +513,23 @@ function BillingPageContent() {
       )}
       {trialingWithCard && (
         <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
-          <span className="font-medium">Trial ends {trialDeadlineSentence(pmStatus?.days_remaining)}</span>
-          <span className="text-muted"> — you&apos;ll be auto-charged once it does.</span>
+          {trials.length === 1 ? (
+            <>
+              <span className="font-medium">Trial ends {trialDeadlineSentence(trials[0].days_remaining)}</span>
+              <span className="text-muted"> — you&apos;ll be auto-charged once it does.</span>
+            </>
+          ) : (
+            <>
+              <span className="font-medium">Multiple trials ending:</span>{" "}
+              {trials.map((t, i) => (
+                <span key={t.subscription_id}>
+                  {i > 0 && ", "}
+                  {t.label} ({trialDeadlineSentence(t.days_remaining)})
+                </span>
+              ))}
+              <span className="text-muted"> — you&apos;ll be auto-charged once each does.</span>
+            </>
+          )}
         </div>
       )}
 
@@ -1459,12 +1497,34 @@ function AddAddonModal({
   const [selectedPriceId, setSelectedPriceId] = useState<number | null>(prices[0]?.id ?? null);
   const [showTos, setShowTos] = useState(false);
   const [checkoutPending, setCheckoutPending] = useState(false);
+  // null = still loading; default to "needs acceptance" (show the modal)
+  // until we hear otherwise, so a slow/failed status check never silently
+  // skips consent.
+  const [needsTosAcceptance, setNeedsTosAcceptance] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetchWithAuth("/api/billing/tos-status");
+        const data = await resp.json();
+        if (!cancelled) setNeedsTosAcceptance(resp.ok ? Boolean(data.needs_acceptance) : true);
+      } catch {
+        if (!cancelled) setNeedsTosAcceptance(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const clamp = (n: number) => Math.max(1, Math.min(maxSeats, n));
   const selectedPrice = prices.find((p) => p.id === selectedPriceId) ?? null;
   const total = selectedPrice ? computeTotalCents(selectedPrice, seatQty) : null;
 
-  const startCheckout = async (tosVersion: string, tosAcceptedAt: string) => {
+  // tosVersion/tosAcceptedAt are omitted when the customer already has a
+  // current-version acceptance on file (GET /billing/tos-status) — the
+  // backend treats that the same as an admin-initiated checkout: no new
+  // consent required, no new audit row written.
+  const startCheckout = async (tosVersion?: string, tosAcceptedAt?: string) => {
     if (selectedPriceId === null) return;
     setCheckoutPending(true);
     onError(null);
@@ -1475,8 +1535,9 @@ function AddAddonModal({
         body: JSON.stringify({
           price_id: selectedPriceId,
           seat_quantity: seatQty,
-          tos_version: tosVersion,
-          tos_accepted_at: tosAcceptedAt,
+          ...(tosVersion && tosAcceptedAt
+            ? { tos_version: tosVersion, tos_accepted_at: tosAcceptedAt }
+            : {}),
         }),
       });
       const data = await resp.json();
@@ -1600,8 +1661,13 @@ function AddAddonModal({
 
       <div className="flex justify-end gap-2 mt-2">
         <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" size="sm" onClick={() => setShowTos(true)} disabled={selectedPriceId === null}>
-          Continue
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => (needsTosAcceptance === false ? startCheckout() : setShowTos(true))}
+          disabled={selectedPriceId === null || checkoutPending || needsTosAcceptance === null}
+        >
+          {checkoutPending ? "Starting…" : needsTosAcceptance === null ? "Checking…" : "Continue"}
         </Button>
       </div>
     </ModalShell>
