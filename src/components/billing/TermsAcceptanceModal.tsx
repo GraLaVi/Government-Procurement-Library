@@ -14,11 +14,6 @@ interface TermsAcceptanceModalProps {
 
 export const TOS_VERSION = "2026-05-04";
 
-// Beta-program terms version. Bump in lock-step with the
-// `last_updated` front-matter on src/content/legal/beta_terms.md and the
-// backend `CURRENT_BETA_TERMS_VERSION` in billing/config.py.
-export const BETA_TERMS_VERSION = "2026-05-15";
-
 export function TermsAcceptanceModal({
   isOpen,
   onCancel,

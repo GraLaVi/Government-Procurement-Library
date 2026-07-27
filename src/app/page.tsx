@@ -1,6 +1,5 @@
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { BetaBanner } from "@/components/landing/BetaBanner";
 import { Hero } from "@/components/landing/Hero";
 import { WhatGPHDoes } from "@/components/landing/WhatGPHDoes";
 import { Products } from "@/components/landing/Products";
@@ -12,7 +11,6 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <BetaBanner />
       <main>
         <Hero />
         <WhatGPHDoes />

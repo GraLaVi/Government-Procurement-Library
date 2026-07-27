@@ -40,16 +40,6 @@ const CURRENT_SUB_STATUSES = new Set([
   "active_check",
 ]);
 
-// Beta gate. When true (dev), Subscribe buttons open Stripe Checkout
-// directly. When false (prod default during beta), they're disabled and
-// visitors are funneled to /signup, which routes them into the beta
-// application queue. Shares the same env flag /signup uses to gate the
-// self-serve path picker — both gestures bypass the beta queue, so they
-// move together. Existing subscribers' "Manage in portal" CTA is NOT
-// gated by this; people already on a plan can always manage it.
-const DIRECT_SUBSCRIBE_ENABLED =
-  process.env.NEXT_PUBLIC_ENABLE_DEV_SIGNUP === "true";
-
 // Add-ons stack alongside a paid tier (see the RFQ panel + /account/billing's
 // "Add-ons" section) — never shown as a tier-grid card, never a plan pick.
 const isAddonPlan = (p: Plan) => p.kind === "product" && p.category === "feature";
@@ -306,7 +296,6 @@ function PricingPageContent() {
   };
 
   const handleSubscribe = (plan: Plan) => {
-    if (!DIRECT_SUBSCRIBE_ENABLED) return;
     const priceId = selected[plan.id];
     if (!priceId) return;
     // Mirror the card's per-seat vs flat gate: flat plans (free / per_unit
@@ -507,19 +496,6 @@ function PricingPageContent() {
       {error && (
         <div className="bg-error/5 border border-error/20 rounded-xl p-4 mb-6 text-sm text-error max-w-xl mx-auto">
           {error}
-        </div>
-      )}
-
-      {!DIRECT_SUBSCRIBE_ENABLED && (
-        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 text-sm max-w-2xl mx-auto">
-          <p className="text-foreground font-medium">We&apos;re currently in private beta</p>
-          <p className="text-muted mt-1">
-            Subscriptions are paused while beta testing wraps up. To request access,{" "}
-            <a href="/signup" className="text-primary font-medium hover:underline">
-              apply via signup
-            </a>
-            .
-          </p>
         </div>
       )}
 
@@ -855,22 +831,19 @@ function PricingPageContent() {
                     className="w-full"
                     onClick={() => handleSubscribe(plan)}
                     disabled={
-                      !DIRECT_SUBSCRIBE_ENABLED ||
                       !activePrice ||
                       totalCents === null ||
                       checkoutPending === plan.id ||
                       (!!user && !user.email_verified)
                     }
                   >
-                    {!DIRECT_SUBSCRIBE_ENABLED
-                      ? "Beta — apply via signup"
-                      : checkoutPending === plan.id
-                        ? "Starting checkout…"
-                        : !user
-                          ? "Sign up to subscribe"
-                          : !user.email_verified
-                            ? "Verify email to subscribe"
-                            : "Subscribe"}
+                    {checkoutPending === plan.id
+                      ? "Starting checkout…"
+                      : !user
+                        ? "Sign up to subscribe"
+                        : !user.email_verified
+                          ? "Verify email to subscribe"
+                          : "Subscribe"}
                   </Button>
                 )}
               </div>

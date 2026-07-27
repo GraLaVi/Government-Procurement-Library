@@ -9,7 +9,7 @@ import { Footer } from "@/components/layout/Footer";
 import { PasswordRulesChecklist } from "@/components/auth/PasswordRulesChecklist";
 import { firstPasswordViolation } from "@/lib/auth/passwordRules";
 import { useAuth } from "@/contexts/AuthContext";
-import { BETA_TERMS_VERSION, TOS_VERSION } from "@/components/billing/TermsAcceptanceModal";
+import { TOS_VERSION } from "@/components/billing/TermsAcceptanceModal";
 
 type ValidateResponse = {
   eligible: boolean;
@@ -20,34 +20,7 @@ type ValidateResponse = {
   } | null;
 };
 
-type Step = "cage" | "path" | "account";
-type SignupPath = "beta" | "self_serve";
-
-// Dev-only "skip beta review" path. When this flag is set, the signup
-// flow inserts a path-picker step between CAGE check and the account
-// form so testers can submit to /api/billing/signup/customer (immediate
-// self-serve activation + Free comp grant + tokens) instead of the
-// beta-application queue. Off in prod — the visitor goes straight to
-// the beta path like today.
-const DEV_SIGNUP_ENABLED =
-  process.env.NEXT_PUBLIC_ENABLE_DEV_SIGNUP === "true";
-
-// Plan checkboxes shown on the application form. The product_keys here must
-// match the catalog keys in the FastAPI products / product_groups tables —
-// they are passed back to the backend verbatim and stored on the matching
-// beta_applications row for the admin reviewer.
-//
-// The current beta only offers Parts and Vendor Library — Advanced. To re-add Library
-// Basic or Bid Matching Advanced later, append entries here:
-//   { key: "library_search_basic", label: "Parts and Vendor Library — Basic", description: "..." },
-//   { key: "bid_matching_advanced", label: "Bid Matching Advanced",     description: "..." },
-const PLAN_OPTIONS: Array<{ key: string; label: string; description: string }> = [
-  {
-    key: "library_search_advanced",
-    label: "Parts and Vendor Library — Advanced",
-    description: "Combined parts + vendor library with all advanced tabs.",
-  },
-];
+type Step = "cage" | "account";
 
 // Red asterisk shown next to each required-field label. The full
 // "required fields…" explanation is surfaced in the top error banner
@@ -81,19 +54,10 @@ function SignupPageContent() {
 
   // Pricing-first intent — when the visitor arrives from /pricing the URL
   // carries either ?tier=free or ?plan=<priceId>&seats=<N>. Either form
-  // means: skip the path picker, lock to self-serve, and route the
-  // post-signup redirect by intent.
-  //
-  // In beta mode (DEV_SIGNUP_ENABLED=false, i.e. prod today) we ignore
-  // these params entirely so that every arrival — including Free clicks
-  // from /pricing — lands on the beta application path. This keeps the
-  // "all signups go through beta" rule honest; otherwise a /pricing →
-  // /signup?tier=free click would silently bypass the beta queue and
-  // show a misleading "You're signing up for … Free" badge for a flow
-  // that doesn't actually exist during beta.
-  const tierParam = DEV_SIGNUP_ENABLED ? searchParams.get("tier") : null;
-  const planParam = DEV_SIGNUP_ENABLED ? searchParams.get("plan") : null;
-  const seatsParam = DEV_SIGNUP_ENABLED ? searchParams.get("seats") : null;
+  // means: lock to self-serve, and route the post-signup redirect by intent.
+  const tierParam = searchParams.get("tier");
+  const planParam = searchParams.get("plan");
+  const seatsParam = searchParams.get("seats");
   const intentIsFree = tierParam === "free";
   const intentIsPaid = planParam !== null && planParam !== "";
   const hasUrlIntent = intentIsFree || intentIsPaid;
@@ -110,29 +74,22 @@ function SignupPageContent() {
     : null;
   const intentLabel = intentProductName ?? (intentIsPaid ? "the plan you selected" : null);
 
-  // Already-logged-in visitors don't need to apply. And in self-serve mode a
-  // tier must be chosen first: a bare /signup (no ?tier/?plan intent) would
-  // silently drop the visitor onto the Free path, so bounce them to /pricing
-  // where they pick Free / Basic / Advanced explicitly. In beta this never
-  // fires (DEV_SIGNUP_ENABLED is false) so the beta application flow is intact.
+  // Already-logged-in visitors don't need to sign up. A tier must be chosen
+  // first: a bare /signup (no ?tier/?plan intent) would silently drop the
+  // visitor onto the Free path, so bounce them to /pricing where they pick
+  // Free / Basic / Advanced explicitly.
   useEffect(() => {
     if (authLoading) return;
     if (user) {
       router.replace("/dashboard");
       return;
     }
-    if (DEV_SIGNUP_ENABLED && !hasUrlIntent) {
+    if (!hasUrlIntent) {
       router.replace("/pricing");
     }
   }, [authLoading, user, router, hasUrlIntent]);
 
   const [step, setStep] = useState<Step>("cage");
-  // Beta is the production default; the visitor switches to self_serve
-  // either via URL intent from /pricing (?tier=free / ?plan=…) or via
-  // the dev-only path picker when DEV_SIGNUP_ENABLED is true.
-  const [signupPath, setSignupPath] = useState<SignupPath>(
-    hasUrlIntent ? "self_serve" : "beta",
-  );
 
   // Step 1 state
   const [cageInput, setCageInput] = useState("");
@@ -157,7 +114,7 @@ function SignupPageContent() {
   const [emailChecking, setEmailChecking] = useState(false);
   // Paid-tier signups need ToS acceptance before we can create a Stripe
   // subscription. The checkbox is only rendered when the URL intent is
-  // paid; Free / beta paths don't surface it.
+  // paid; the Free path doesn't surface it.
   const [tosAccepted, setTosAccepted] = useState(false);
   // Inline highlight on the ToS checkbox when the visitor submits without
   // accepting it — the top error banner can be off-screen on this long form,
@@ -178,11 +135,6 @@ function SignupPageContent() {
       errorRef.current.focus();
     }
   }, [error, submitAttempt]);
-
-  // Locked to the beta plan catalog. The picker UI was removed — every
-  // applicant requests whatever PLAN_OPTIONS currently lists (Advanced only
-  // today). To change the requested plans, edit PLAN_OPTIONS above.
-  const requestedPlans = PLAN_OPTIONS.map((opt) => opt.key);
 
   const validateCage = useCallback(async (raw: string) => {
     const code = raw.trim().toUpperCase();
@@ -254,19 +206,6 @@ function SignupPageContent() {
 
   const advanceFromCage = () => {
     if (!cageResult?.eligible) return;
-    // Pricing-first visitors already picked their tier on /pricing —
-    // skip both the dev path picker and the beta form, lock to
-    // self-serve, and go straight to account creation.
-    if (hasUrlIntent) {
-      setSignupPath("self_serve");
-      setStep("account");
-      return;
-    }
-    setStep(DEV_SIGNUP_ENABLED ? "path" : "account");
-  };
-
-  const choosePath = (path: SignupPath) => {
-    setSignupPath(path);
     setStep("account");
   };
 
@@ -307,13 +246,9 @@ function SignupPageContent() {
       );
       return;
     }
-    if (((intentIsPaid) || signupPath === "beta") && !tosAccepted) {
+    if (intentIsPaid && !tosAccepted) {
       setTosError(true);
-      setError(
-        signupPath === "beta"
-          ? "Please accept the Terms of Service, Privacy Policy, and Beta Program Terms to continue."
-          : "Please accept the Terms of Service and Privacy Policy to continue.",
-      );
+      setError("Please accept the Terms of Service and Privacy Policy to continue.");
       return;
     }
 
@@ -324,7 +259,7 @@ function SignupPageContent() {
     // collection="if_required"` make Stripe skip the card form, so the
     // visitor sees a "Start trial" confirmation page and lands back on
     // /finalize-checkout signed in with the tier granted by the webhook.
-    if (signupPath === "self_serve" && intentIsPaid) {
+    if (intentIsPaid) {
       const priceIdNum = planParam ? parseInt(planParam, 10) : NaN;
       const seatQuantity = seatsParam ? Math.max(1, parseInt(seatsParam, 10) || 1) : 1;
       if (!Number.isFinite(priceIdNum)) {
@@ -370,45 +305,9 @@ function SignupPageContent() {
     // customer. The proxy sets auth cookies on success; we then refresh
     // the auth context and route the visitor based on the URL intent:
     //   ?tier=free       → /dashboard (Free already comp-granted)
-    //   (no URL intent)  → /pricing (dev path picker case)
-    if (signupPath === "self_serve") {
-      try {
-        const resp = await fetch("/api/billing/signup/customer", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            cage_code: cageInput.trim().toUpperCase(),
-            email: email.trim().toLowerCase(),
-            password,
-            first_name: firstName.trim(),
-            last_name: lastName.trim(),
-            company_name: companyName.trim() || undefined,
-          }),
-        });
-        const data = await resp.json();
-        if (!resp.ok || data.success === false) {
-          setError(data.error || "Failed to create your account. Please try again.");
-          setSubmitting(false);
-          return;
-        }
-        await refreshUser();
-        if (intentIsFree) {
-          router.push("/dashboard");
-        } else {
-          router.push("/pricing");
-        }
-      } catch {
-        setError("Unable to create your account. Please try again.");
-        setSubmitting(false);
-      }
-      return;
-    }
-
-    // Beta-application path (production default). ToS / Beta Terms
-    // consent is enforced up-front in the unified validation block.
-    const acceptedAtIso = new Date().toISOString();
+    //   (no URL intent)  → /pricing
     try {
-      const resp = await fetch("/api/auth/beta-application", {
+      const resp = await fetch("/api/billing/signup/customer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -417,22 +316,23 @@ function SignupPageContent() {
           password,
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          requested_plans: requestedPlans,
-          tos_version: TOS_VERSION,
-          tos_accepted_at: acceptedAtIso,
-          beta_terms_version: BETA_TERMS_VERSION,
-          beta_terms_accepted_at: acceptedAtIso,
+          company_name: companyName.trim() || undefined,
         }),
       });
       const data = await resp.json();
-      if (!resp.ok) {
-        setError(data.error || "Failed to submit application. Please try again.");
+      if (!resp.ok || data.success === false) {
+        setError(data.error || "Failed to create your account. Please try again.");
         setSubmitting(false);
         return;
       }
-      router.push(`/signup/pending?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+      await refreshUser();
+      if (intentIsFree) {
+        router.push("/dashboard");
+      } else {
+        router.push("/pricing");
+      }
     } catch {
-      setError("Unable to submit your application. Please try again.");
+      setError("Unable to create your account. Please try again.");
       setSubmitting(false);
     }
   };
@@ -446,19 +346,8 @@ function SignupPageContent() {
       <Navbar />
       <main className="max-w-screen-md mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-28">
         <div className="text-center mb-8">
-          {/* Beta-only badge. In self-serve the visitor always arrives with a
-              tier intent, so the "You're signing up for {tier}" copy below
-              carries the context instead. */}
-          {!DEV_SIGNUP_ENABLED && (
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide mb-3">
-              <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-              Private beta
-            </div>
-          )}
           <h1 className="text-3xl font-bold text-foreground">
-            {hasUrlIntent || (signupPath === "self_serve" && step !== "cage")
-              ? "Create your account"
-              : "Apply for beta access"}
+            Create your account
           </h1>
           <p className="text-muted mt-2">
             {hasUrlIntent ? (
@@ -467,15 +356,10 @@ function SignupPageContent() {
               ) : (
                 <>Create your account, then we&apos;ll send you to checkout.</>
               )
-            ) : signupPath === "self_serve" && step !== "cage" ? (
+            ) : (
               <>
                 After signup you&apos;ll choose Free, Basic, or Advanced on
                 the pricing page.
-              </>
-            ) : (
-              <>
-                We review beta applications by hand. Submit your details and
-                we&apos;ll email you when your account is approved.
               </>
             )}{" "}
             Already have an account?{" "}
@@ -498,25 +382,6 @@ function SignupPageContent() {
             </span>
             CAGE check
           </li>
-          {DEV_SIGNUP_ENABLED && !hasUrlIntent && (
-            <>
-              <li className="text-muted">→</li>
-              <li className={`flex items-center gap-2 ${step === "path" ? "text-foreground font-medium" : "text-muted"}`}>
-                <span
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                    step === "path"
-                      ? "bg-primary text-white"
-                      : step === "account"
-                        ? "bg-success text-white"
-                        : "bg-card-bg border border-border text-muted"
-                  }`}
-                >
-                  {step === "account" ? "✓" : "2"}
-                </span>
-                Choose path
-              </li>
-            </>
-          )}
           <li className="text-muted">→</li>
           <li className={`flex items-center gap-2 ${step === "account" ? "text-foreground font-medium" : "text-muted"}`}>
             <span
@@ -524,9 +389,9 @@ function SignupPageContent() {
                 step === "account" ? "bg-primary text-white" : "bg-card-bg border border-border text-muted"
               }`}
             >
-              {DEV_SIGNUP_ENABLED && !hasUrlIntent ? "3" : "2"}
+              2
             </span>
-            {signupPath === "self_serve" ? "Account details" : "Application details"}
+            Account details
           </li>
         </ol>
 
@@ -620,56 +485,7 @@ function SignupPageContent() {
             </div>
           )}
 
-          {/* ---------- Step 2 (dev-only): path picker ---------- */}
-          {step === "path" && DEV_SIGNUP_ENABLED && (
-            <div className="space-y-4">
-              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 text-xs text-amber-900 dark:text-amber-200">
-                <strong>Dev mode:</strong> this path picker is only shown
-                when <code>NEXT_PUBLIC_ENABLE_DEV_SIGNUP=true</code>. In
-                production the visitor goes straight to the beta application.
-              </div>
-              <p className="text-sm text-muted">How would you like to proceed?</p>
-
-              <button
-                type="button"
-                onClick={() => choosePath("beta")}
-                className="w-full text-left p-4 border border-border rounded-lg hover:border-primary/40 transition-colors"
-              >
-                <div className="font-medium text-sm text-foreground">
-                  Apply for beta access
-                </div>
-                <div className="text-xs text-muted mt-1">
-                  Reviewed by our team. Account stays inactive until approval.
-                  Free during the private-beta period.
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => choosePath("self_serve")}
-                className="w-full text-left p-4 border border-border rounded-lg hover:border-primary/40 transition-colors"
-              >
-                <div className="font-medium text-sm text-foreground">
-                  Self-serve signup{" "}
-                  <span className="text-[10px] uppercase tracking-wide text-primary/80 ml-1">
-                    test path
-                  </span>
-                </div>
-                <div className="text-xs text-muted mt-1">
-                  Skip the beta queue. Free tier is granted immediately. You
-                  can subscribe to Basic or Advanced from /pricing after signup.
-                </div>
-              </button>
-
-              <div className="flex justify-between gap-2 pt-2">
-                <Button variant="outline" onClick={() => setStep("cage")} type="button">
-                  ← Back
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* ---------- Step 3 (or 2 in prod): account ---------- */}
+          {/* ---------- Step 2: account ---------- */}
           {step === "account" && (
             <form onSubmit={submitApplication} className="space-y-4" noValidate>
               {error && (
@@ -871,9 +687,9 @@ function SignupPageContent() {
               <PasswordRulesChecklist password={password} className="-mt-2" />
 
               {/* ToS — required for paid signups because the next step
-                  creates a Stripe subscription in our name. Free / beta
-                  signups don't surface this; their flow doesn't open a
-                  Stripe subscription at signup time. */}
+                  creates a Stripe subscription in our name. Free signups
+                  don't surface this; their flow doesn't open a Stripe
+                  subscription at signup time. */}
               {intentIsPaid && (
                 <div
                   className={`border rounded-lg p-3 bg-muted-light/40 ${
@@ -922,105 +738,10 @@ function SignupPageContent() {
                 </div>
               )}
 
-              {/* Plan included in beta — display-only. The picker UI was
-                  removed (requestedPlans is locked to PLAN_OPTIONS) so the
-                  checkbox is shown checked + disabled purely to communicate
-                  what the applicant will get on approval. */}
-              {signupPath === "beta" && (
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Your beta access includes
-                  </label>
-                  <div className="space-y-2">
-                    {PLAN_OPTIONS.map((option) => (
-                      <div
-                        key={option.key}
-                        className="flex items-start gap-3 p-3 border border-border rounded-lg bg-muted-light/40"
-                      >
-                        <input
-                          type="checkbox"
-                          checked
-                          disabled
-                          aria-label={`${option.label} (included)`}
-                          className="mt-1"
-                        />
-                        <div>
-                          <div className="text-sm font-medium text-foreground">{option.label}</div>
-                          <div className="text-xs text-muted mt-0.5">{option.description}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Beta-application legal acceptance — ToS, Privacy, and the
-                  Beta Program Terms must all be acknowledged before we
-                  record an application. */}
-              {signupPath === "beta" && (
-                <div
-                  className={`border rounded-lg p-3 bg-muted-light/40 ${
-                    tosError ? "border-error ring-1 ring-error/40" : "border-border"
-                  }`}
-                >
-                  <label className="flex gap-3 items-start cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={tosAccepted}
-                      onChange={(e) => {
-                        setTosAccepted(e.target.checked);
-                        if (e.target.checked) setTosError(false);
-                      }}
-                      aria-invalid={tosError}
-                      className="mt-1 h-4 w-4 rounded text-primary focus:ring-primary border-border"
-                    />
-                    <span className="text-sm text-foreground">
-                      I have read and agree to the{" "}
-                      <a
-                        href="/legal/terms"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary underline hover:no-underline"
-                      >
-                        Terms of Service
-                      </a>
-                      ,{" "}
-                      <a
-                        href="/legal/privacy"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary underline hover:no-underline"
-                      >
-                        Privacy Policy
-                      </a>
-                      , and{" "}
-                      <a
-                        href="/legal/beta_terms"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary underline hover:no-underline"
-                      >
-                        Beta Program Terms
-                      </a>
-                      . The Beta Program is free; no payment method is required.
-                    </span>
-                  </label>
-                  {tosError && (
-                    <p className="mt-2 text-xs text-error font-medium">
-                      Please accept the Terms to continue.
-                    </p>
-                  )}
-                </div>
-              )}
-
               <div className="flex justify-between gap-2 pt-2">
                 <Button
                   variant="outline"
-                  onClick={() =>
-                    setStep(
-                      DEV_SIGNUP_ENABLED && !hasUrlIntent ? "path" : "cage",
-                    )
-                  }
+                  onClick={() => setStep("cage")}
                   disabled={submitting}
                   type="button"
                 >
@@ -1032,16 +753,12 @@ function SignupPageContent() {
                   disabled={submitting}
                 >
                   {submitting
-                    ? signupPath === "self_serve"
-                      ? intentIsPaid
-                        ? "Starting checkout…"
-                        : "Creating account…"
-                      : "Submitting…"
-                    : signupPath === "self_serve"
-                      ? intentIsPaid
-                        ? "Start trial"
-                        : "Create account"
-                      : "Submit application"}
+                    ? intentIsPaid
+                      ? "Starting checkout…"
+                      : "Creating account…"
+                    : intentIsPaid
+                      ? "Start trial"
+                      : "Create account"}
                 </Button>
               </div>
             </form>

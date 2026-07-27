@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/Button";
 import { MenuIcon, CloseIcon } from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
-import { SELF_SERVE_SIGNUP, SIGNUP_ENTRY_HREF } from "@/lib/signup/entryPoint";
 
 // Whether the given href should render as "current". Real routes match
 // on exact path or sub-path (so /library/parts/123 still highlights the
@@ -259,8 +258,8 @@ export function Navbar() {
                 <Button href="/login" variant="ghost" size="sm">
                   Sign in
                 </Button>
-                <Button href={SIGNUP_ENTRY_HREF} variant="primary" size="sm">
-                  {SELF_SERVE_SIGNUP ? "Get Started" : "Request Beta Access"}
+                <Button href="/pricing" variant="primary" size="sm">
+                  Get Started
                 </Button>
               </div>
             )}
@@ -415,8 +414,8 @@ export function Navbar() {
                     <Button href="/login" variant="outline" size="md">
                       Sign in
                     </Button>
-                    <Button href={SIGNUP_ENTRY_HREF} variant="primary" size="md">
-                      {SELF_SERVE_SIGNUP ? "Get Started" : "Request Beta Access"}
+                    <Button href="/pricing" variant="primary" size="md">
+                      Get Started
                     </Button>
                   </>
                 )}

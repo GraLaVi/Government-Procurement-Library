@@ -1,20 +1,17 @@
 import { ArrowRightIcon } from "@/components/icons";
-import { SELF_SERVE_SIGNUP } from "@/lib/signup/entryPoint";
 
 const steps = [
   {
     number: "01",
-    title: SELF_SERVE_SIGNUP ? "Sign Up in Minutes" : "Request Beta Access",
-    description: SELF_SERVE_SIGNUP
-      ? "Sign up with your work email and pick your plan — start free with no credit card required."
-      : "Sign up with your work email. Beta seats are reviewed and approved by the GPH team — no credit card needed to apply.",
+    title: "Sign Up in Minutes",
+    description:
+      "Sign up with your work email and pick your plan — start free with no credit card required.",
   },
   {
     number: "02",
     title: "Tell Us What You Sell",
-    description: SELF_SERVE_SIGNUP
-      ? "Set up your match profile — part numbers, part description, or the types of contracts you go after — and GPH starts watching for relevant opportunities."
-      : "Once approved, set up your match profile — part numbers, part description, or the types of contracts you go after — and GPH starts watching for relevant opportunities.",
+    description:
+      "Set up your match profile — part numbers, part description, or the types of contracts you go after — and GPH starts watching for relevant opportunities.",
   },
   {
     number: "03",
@@ -34,9 +31,7 @@ export function HowItWorks() {
             How GPH Works
           </h2>
           <p className="mt-4 text-lg text-muted dark:text-foreground/70">
-            {SELF_SERVE_SIGNUP
-              ? "From sign-up to your first matched solicitation"
-              : "From beta application to your first matched solicitation"}
+            From sign-up to your first matched solicitation
           </p>
         </div>
 

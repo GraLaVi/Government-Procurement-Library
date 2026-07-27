@@ -1,16 +1,12 @@
 import Link from "next/link";
 import { CookiePreferencesLink } from "@/components/layout/CookiePreferencesLink";
-import { SELF_SERVE_SIGNUP, SIGNUP_ENTRY_HREF } from "@/lib/signup/entryPoint";
 
 const footerLinks = {
   Product: [
     { href: "/#products", label: "Products" },
     { href: "/#features", label: "Features" },
     { href: "/pricing", label: "Pricing" },
-    {
-      href: SIGNUP_ENTRY_HREF,
-      label: SELF_SERVE_SIGNUP ? "Sign Up" : "Request Beta Access",
-    },
+    { href: "/pricing", label: "Sign Up" },
   ],
   Company: [
     { href: "/about", label: "About" },

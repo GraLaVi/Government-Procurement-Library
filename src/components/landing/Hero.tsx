@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/Button";
 import { CheckIcon } from "@/components/icons";
 import { TodaySolicitationsCard } from "@/components/landing/TodaySolicitationsCard";
-import { SELF_SERVE_SIGNUP, SIGNUP_ENTRY_HREF } from "@/lib/signup/entryPoint";
 
 const highlights = [
   "Live DLA and DIBBS solicitation feeds updated daily",
@@ -29,7 +28,7 @@ export function Hero() {
             {/* Status pill */}
             <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
               <span className="w-2 h-2 bg-success rounded-full animate-pulse" />
-              {SELF_SERVE_SIGNUP ? "Now available" : "Private beta · applications open"}
+              Now available
             </div>
 
             <h1 className="mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold text-secondary dark:text-foreground leading-tight">
@@ -39,7 +38,7 @@ export function Hero() {
               </span>
             </h1>
             <p className="mt-6 text-lg sm:text-xl text-muted dark:text-foreground/70 leading-relaxed">
-              Search DLA and DIBBS opportunities, track military branch RFQs,
+              Search DLA and DIBBS opportunities, track RFQs,
               and match your CAGE-coded capabilities to active solicitations —
               before your competitors do.
             </p>
@@ -58,27 +57,17 @@ export function Hero() {
 
             {/* CTAs */}
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
-              <Button href={SIGNUP_ENTRY_HREF} variant="primary" size="lg">
-                {SELF_SERVE_SIGNUP ? "Get Started" : "Request Beta Access"}
+              <Button href="/pricing" variant="primary" size="lg">
+                Get Started
               </Button>
-              {/* In self-serve the primary already goes to /pricing, so the
-                  secondary points to sign-in instead of duplicating it. */}
-              {SELF_SERVE_SIGNUP ? (
-                <Button href="/login" variant="outline" size="lg">
-                  Sign in
-                </Button>
-              ) : (
-                <Button href="/pricing" variant="outline" size="lg">
-                  View Pricing
-                </Button>
-              )}
+              <Button href="/login" variant="outline" size="lg">
+                Sign in
+              </Button>
             </div>
 
             {/* Trust indicator */}
             <p className="mt-6 text-sm text-muted dark:text-foreground/70">
-              {SELF_SERVE_SIGNUP
-                ? "Start on the Free tier — no credit card required. Upgrade anytime."
-                : "Beta access is reviewed and approved before activation. No credit card required to apply."}
+              Start on the Free tier — no credit card required. Upgrade anytime.
             </p>
           </div>
 
