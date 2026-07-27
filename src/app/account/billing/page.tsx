@@ -942,7 +942,16 @@ function SubscriptionCard({
   // the matching Price (which carries `tiers`) from `plans` and compute the
   // real period total at this subscription's seat count instead.
   const matchingPrice = matchingPlan?.prices.find((p) => p.interval_count === sub.interval_count) ?? null;
-  const totalCents = matchingPrice ? computeTotalCents(matchingPrice, sub.seat_quantity) : sub.unit_amount_cents;
+  // If we can't resolve a Price object, `sub.unit_amount_cents` is NOT a safe
+  // fallback: for every tiered plan it's a placeholder 0, not a real price,
+  // so falling back to it silently renders "$0.00" for a paid, non-free plan
+  // (e.g. a product missing/disabled in GET /billing/plans — this bit a
+  // Maximum-tier trial customer in 2026-07 when the product's
+  // `billing_enabled` flag was off). Only trust the raw field when it's
+  // genuinely nonzero; otherwise treat the price as unknown.
+  const totalCents = matchingPrice
+    ? computeTotalCents(matchingPrice, sub.seat_quantity)
+    : (sub.unit_amount_cents || null);
   // "Other plans available" = at least one swappable (non-add-on) plan that
   // isn't the current sub's plan. The Plan type lacks an id-key per kind, so
   // identify the current one by name.
@@ -961,7 +970,9 @@ function SubscriptionCard({
           <p className="text-muted text-sm">
             {intervalLabel(sub.interval_count)}
             {" · "}
-            {formatMoney(totalCents, matchingPrice?.currency ?? sub.currency)}
+            {totalCents != null
+              ? formatMoney(totalCents, matchingPrice?.currency ?? sub.currency)
+              : "Price unavailable"}
           </p>
         </div>
         <span className={badge.className}>{badge.label}</span>
@@ -1120,7 +1131,10 @@ function IntervalModal({
                 <span className="text-sm font-medium text-card-foreground">{intervalLabel(p.interval_count)}</span>
               </div>
               <span className="text-sm text-muted">
-                {formatMoney(computeTotalCents(p, sub.seat_quantity), p.currency)}
+                {(() => {
+                  const c = computeTotalCents(p, sub.seat_quantity);
+                  return c != null ? formatMoney(c, p.currency) : "Price unavailable";
+                })()}
               </span>
             </label>
           ))}
@@ -1353,7 +1367,10 @@ function SwitchPlanModal({
                       <span className="text-sm font-medium text-card-foreground">{intervalLabel(p.interval_count)}</span>
                     </div>
                     <span className="text-sm text-muted">
-                      {formatMoney(computeTotalCents(p, sub.seat_quantity), p.currency)}
+                      {(() => {
+                        const c = computeTotalCents(p, sub.seat_quantity);
+                        return c != null ? formatMoney(c, p.currency) : "Price unavailable";
+                      })()}
                     </span>
                   </label>
                 ))}
@@ -1368,7 +1385,10 @@ function SwitchPlanModal({
                   <div className="flex justify-between">
                     <span className="text-muted">New total</span>
                     <span className="text-card-foreground font-medium">
-                      {formatMoney(computeTotalCents(selectedPrice, sub.seat_quantity), selectedPrice.currency)}
+                      {(() => {
+                        const c = computeTotalCents(selectedPrice, sub.seat_quantity);
+                        return c != null ? formatMoney(c, selectedPrice.currency) : "Price unavailable";
+                      })()}
                       {" "}{intervalLabel(selectedPrice.interval_count).toLowerCase()}
                     </span>
                   </div>
@@ -1558,7 +1578,7 @@ function AddAddonModal({
                     <span className="text-sm font-medium text-card-foreground">{priceIntervalLabel(p.interval_count)}</span>
                   </div>
                   <span className="text-sm text-muted">
-                    {priceTotal !== null ? formatPriceMoney(priceTotal, p.currency) : "—"}
+                    {priceTotal !== null ? formatPriceMoney(priceTotal, p.currency) : "Price unavailable"}
                   </span>
                 </label>
               );
