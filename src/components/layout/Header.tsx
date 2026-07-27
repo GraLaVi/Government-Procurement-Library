@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { resolveLibraryTier } from "@/lib/library/tier";
 
 const librarySearchItems = [
   { href: "/library/parts", label: "Parts Search" },
@@ -54,7 +55,10 @@ interface HeaderProps {
 }
 
 export function Header({ showAccountLink = true }: HeaderProps) {
-  const { user, logout, isRfqResponderOnly } = useAuth();
+  const { user, logout, isRfqResponderOnly, hasAnyProductAccess } = useAuth();
+  // Analytics is Maximum-tier only — see /analytics's own gate, which uses
+  // the same resolveLibraryTier() helper.
+  const isMaximumTier = resolveLibraryTier(hasAnyProductAccess) === "maximum";
   const [isLibraryDropdownOpen, setIsLibraryDropdownOpen] = useState(false);
   const [isHelpDropdownOpen, setIsHelpDropdownOpen] = useState(false);
   const [isRfqDropdownOpen, setIsRfqDropdownOpen] = useState(false);
@@ -211,6 +215,14 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 Bid-Matching
               </Link>
               )}
+              {!isRfqResponderOnly && isMaximumTier && (
+              <Link
+                href="/analytics"
+                className={topLinkClass(isLinkActive("/analytics", pathname))}
+              >
+                Analytics
+              </Link>
+              )}
               {/* RFQ: the full menu shows for everyone as an upsell surface. Received
                   works for all tiers; sender pages self-gate to the upgrade CTA for
                   customers without the request_for_quote add-on. */}
@@ -330,6 +342,15 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   {item.label}
                 </Link>
               ))}
+              {!isRfqResponderOnly && isMaximumTier && (
+                <Link
+                  href="/analytics"
+                  className={mobileRowClass(isLinkActive("/analytics", pathname))}
+                  onClick={closeMobileMenu}
+                >
+                  Analytics
+                </Link>
+              )}
 
               {/* Library Search expandable section */}
               {!isRfqResponderOnly && (

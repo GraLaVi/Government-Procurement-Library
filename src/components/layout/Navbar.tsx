@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { MenuIcon, CloseIcon } from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
+import { resolveLibraryTier } from "@/lib/library/tier";
 
 // Whether the given href should render as "current". Real routes match
 // on exact path or sub-path (so /library/parts/123 still highlights the
@@ -66,10 +67,14 @@ export function Navbar() {
   const [isMobileHelpOpen, setIsMobileHelpOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const helpDropdownRef = useRef<HTMLDivElement>(null);
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, hasAnyProductAccess } = useAuth();
   const pathname = usePathname() || "/";
 
   const userInitial = user?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || "U";
+  // Analytics is Maximum-tier only — see /analytics's own gate, which uses
+  // the same resolveLibraryTier() helper. Hidden from the nav entirely for
+  // everyone else rather than shown-and-upsold, unlike Bid Matching.
+  const isMaximumTier = resolveLibraryTier(hasAnyProductAccess) === "maximum";
 
   // Visual treatment for active vs idle nav targets. Kept inline so the
   // same classes apply to <Link> rows and dropdown <button> triggers.
@@ -183,6 +188,15 @@ export function Navbar() {
                 className={topLinkClass(isLinkActive("/bidmatching", pathname))}
               >
                 Bid Matching
+              </Link>
+            )}
+            {/* Analytics - Maximum tier only. */}
+            {!isLoading && isAuthenticated && isMaximumTier && (
+              <Link
+                href="/analytics"
+                className={topLinkClass(isLinkActive("/analytics", pathname))}
+              >
+                Analytics
               </Link>
             )}
             {/* Help Dropdown - Only for authenticated users */}
@@ -335,6 +349,16 @@ export function Navbar() {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Bid Matching
+                </Link>
+              )}
+              {/* Mobile Analytics - Maximum tier only */}
+              {!isLoading && isAuthenticated && isMaximumTier && (
+                <Link
+                  href="/analytics"
+                  className={mobileLinkClass(isLinkActive("/analytics", pathname))}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Analytics
                 </Link>
               )}
               {/* Mobile Help - Only for authenticated users */}
