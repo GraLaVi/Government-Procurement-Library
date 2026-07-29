@@ -3,9 +3,14 @@ import { AUTH_CONFIG } from './config';
 
 type CookieStore = Awaited<ReturnType<typeof cookies>>;
 
+// Explicit opt-out rather than deriving from NODE_ENV: `next build && next
+// start` (used for local demos) sets NODE_ENV=production too, which would
+// mark cookies Secure even when served over plain HTTP — browsers silently
+// drop those cookies, breaking login. Defaults to secure (fail-safe); only
+// .env.development sets COOKIE_SECURE=false.
 const baseOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: process.env.COOKIE_SECURE !== 'false',
   sameSite: 'lax' as const,
   path: '/',
 };
