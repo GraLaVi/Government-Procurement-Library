@@ -117,6 +117,45 @@ start_server() {
     fi
 }
 
+# Function to start a production-mode server (for demos, when perf matters).
+# `next dev` recompiles each route on first visit (multi-second TTFB); `next
+# build` compiles everything up front so every page is instantly fast.
+demo_server() {
+    PID=$(get_pid)
+    if [ -n "$PID" ]; then
+        echo "Stopping existing server on port $PORT before rebuilding..."
+        stop_server
+    fi
+
+    check_dependencies
+
+    echo "Building $APP_NAME for production (this takes a minute)..."
+    cd "$PROJECT_DIR"
+
+    unset INTERNAL_API_URL NEXT_PUBLIC_API_URL
+    if [ -f "$PROJECT_DIR/.env.development" ]; then
+        set -a; source "$PROJECT_DIR/.env.development"; set +a
+    fi
+
+    if ! npm run build; then
+        echo "Error: build failed."
+        exit 1
+    fi
+
+    echo "Starting $APP_NAME in production mode on port $PORT..."
+    npm run start -- -p $PORT &
+
+    sleep 2
+    PID=$(get_pid)
+    if [ -n "$PID" ]; then
+        echo "Production server started successfully (PID: $PID)"
+        echo "Access at: http://localhost:$PORT"
+    else
+        echo "Failed to start production server"
+        exit 1
+    fi
+}
+
 # Function to stop the dev server
 stop_server() {
     PID=$(get_pid)
@@ -280,12 +319,15 @@ clean_processes() {
 
 # Function to show help message
 show_help() {
-    echo "Usage: $0 {start|stop|restart|status|clean}"
+    echo "Usage: $0 {start|demo|stop|restart|status|clean}"
     echo ""
     echo "Commands:"
-    echo "  start   - Start the development server"
-    echo "  stop    - Stop the development server"
-    echo "  restart - Restart the development server"
+    echo "  start   - Start the development server (next dev, hot reload)"
+    echo "  demo    - Build and start in production mode (next build && next start)."
+    echo "            Use this for demos: no per-route compile lag, lower memory"
+    echo "            over a long-running session. Slower to start, faster to use."
+    echo "  stop    - Stop the server (dev or demo)"
+    echo "  restart - Restart the development server (always comes back in dev mode)"
     echo "  status  - Check if the server is running"
     echo "  clean   - Kill any ghost processes on port 3001 (or DEV_PORT)"
     echo ""
@@ -297,6 +339,9 @@ show_help() {
 case "${1:-help}" in
     start)
         start_server
+        ;;
+    demo)
+        demo_server
         ;;
     stop)
         stop_server
