@@ -108,6 +108,10 @@ export interface BatchItem {
   notes: string | null;
   response_due_date: string | null;
   created_at: string;
+  /** The email/name this item would be sent to right now (saved vendor
+   * contact, falling back to a SAM.gov suggestion) — null if none on file. */
+  resolved_contact_email: string | null;
+  resolved_contact_name: string | null;
 }
 
 export interface RfqSettings {

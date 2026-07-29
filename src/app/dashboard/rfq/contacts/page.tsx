@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { RfqVendorContactEditModal } from "@/components/rfq/RfqVendorContactEditModal";
 import type { VendorContact } from "@/lib/rfq/types";
 
 const inputClass =
@@ -21,6 +22,7 @@ export default function RfqContactsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(emptyNew);
+  const [editingContact, setEditingContact] = useState<VendorContact | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,10 +70,6 @@ export default function RfqContactsPage() {
       setToast("Default contact updated.");
     }
     setBusy(false);
-  };
-
-  const saveField = async (c: VendorContact, field: string, value: string) => {
-    await patch(c.id, { [field]: value });
   };
 
   const remove = async (id: number) => {
@@ -174,23 +172,19 @@ export default function RfqContactsPage() {
                 <th className="px-3 py-2 text-left font-medium">Name</th>
                 <th className="px-3 py-2 text-left font-medium">Email</th>
                 <th className="px-3 py-2 text-left font-medium">Phone</th>
+                <th className="px-3 py-2 text-left font-medium">Title</th>
                 <th className="px-3 py-2 text-left font-medium">Default</th>
-                <th className="px-3 py-2 w-10"></th>
+                <th className="px-3 py-2 w-24"></th>
               </tr>
             </thead>
             <tbody>
               {contacts.map((c) => (
                 <tr key={c.id} className="border-t border-border">
                   <td className="px-3 py-2 font-mono text-xs text-foreground">{c.cage_code}</td>
-                  <td className="px-3 py-2">
-                    <input className={inputClass} defaultValue={c.contact_name ?? ""} onBlur={(e) => saveField(c, "contact_name", e.target.value)} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input className={inputClass} type="email" defaultValue={c.email} onBlur={(e) => saveField(c, "email", e.target.value)} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input className={inputClass} defaultValue={c.phone ?? ""} onBlur={(e) => saveField(c, "phone", e.target.value)} />
-                  </td>
+                  <td className="px-3 py-2 text-foreground">{c.contact_name || "—"}</td>
+                  <td className="px-3 py-2 text-foreground">{c.email}</td>
+                  <td className="px-3 py-2 text-foreground">{c.phone || "—"}</td>
+                  <td className="px-3 py-2 text-foreground">{c.title || "—"}</td>
                   <td className="px-3 py-2">
                     {c.is_default ? (
                       <Badge variant="success" size="sm">Default</Badge>
@@ -200,7 +194,10 @@ export default function RfqContactsPage() {
                       </button>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                    <button onClick={() => setEditingContact(c)} disabled={busy} className="text-xs text-primary hover:underline mr-3">
+                      Edit
+                    </button>
                     <button onClick={() => remove(c.id)} disabled={busy} className="text-xs text-error hover:underline">Delete</button>
                   </td>
                 </tr>
@@ -209,6 +206,17 @@ export default function RfqContactsPage() {
           </table>
         </div>
       )}
+
+      <RfqVendorContactEditModal
+        isOpen={editingContact !== null}
+        contact={editingContact}
+        onClose={() => setEditingContact(null)}
+        onSaved={(updated) => {
+          setContacts((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+          setEditingContact(null);
+          setToast("Contact updated.");
+        }}
+      />
     </div>
   );
 }

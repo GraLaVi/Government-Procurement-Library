@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { Button } from "@/components/ui/Button";
+import { RfqBatchItemEditModal } from "@/components/rfq/RfqBatchItemEditModal";
 import type { BatchItem, BatchContributor, RfqSendResponse } from "@/lib/rfq/types";
 
 const ALL = "all";
@@ -21,6 +22,7 @@ export default function RfqBatchPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [filterInitialized, setFilterInitialized] = useState(false);
+  const [editingItem, setEditingItem] = useState<BatchItem | null>(null);
 
   // Default the filter to the current user's own staged rows.
   useEffect(() => {
@@ -83,11 +85,19 @@ export default function RfqBatchPage() {
 
   const updateQty = async (id: number, quantity: number) => {
     if (!quantity || quantity <= 0) return;
-    await fetch(`/api/rfq/batch/items/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ quantity }),
-    }).catch(() => null);
+    try {
+      const res = await fetch(`/api/rfq/batch/items/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as BatchItem;
+        setItems((prev) => prev.map((i) => (i.id === id ? data : i)));
+      }
+    } catch {
+      /* best-effort quick edit */
+    }
   };
 
   const removeItem = async (id: number) => {
@@ -221,10 +231,11 @@ export default function RfqBatchPage() {
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" />
                 </th>
                 <th className="px-3 py-2 text-left font-medium">Vendor</th>
+                <th className="px-3 py-2 text-left font-medium">Recipient</th>
                 <th className="px-3 py-2 text-left font-medium">Part / NSN</th>
                 <th className="px-3 py-2 text-left font-medium">Qty</th>
                 <th className="px-3 py-2 text-left font-medium">Added by</th>
-                <th className="px-3 py-2 w-10"></th>
+                <th className="px-3 py-2 w-24"></th>
               </tr>
             </thead>
             <tbody>
@@ -236,6 +247,18 @@ export default function RfqBatchPage() {
                   <td className="px-3 py-2 text-foreground">
                     {it.vendor_name || it.cage_code}{" "}
                     <span className="font-mono text-xs text-muted">({it.cage_code})</span>
+                  </td>
+                  <td className="px-3 py-2">
+                    {it.resolved_contact_email ? (
+                      <div>
+                        <div className="text-xs text-foreground">{it.resolved_contact_email}</div>
+                        {it.resolved_contact_name && (
+                          <div className="text-[11px] text-muted">{it.resolved_contact_name}</div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-error">No contact on file</span>
+                    )}
                   </td>
                   <td className="px-3 py-2 font-mono text-xs text-foreground">
                     {it.part_number || it.nsn || it.description || "—"}
@@ -251,7 +274,14 @@ export default function RfqBatchPage() {
                     />
                   </td>
                   <td className="px-3 py-2 text-muted">{it.added_by_name || `User ${it.added_by_user_id}`}</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                    <button
+                      onClick={() => setEditingItem(it)}
+                      disabled={busy}
+                      className="text-xs text-primary hover:underline mr-3"
+                    >
+                      Edit
+                    </button>
                     <button
                       onClick={() => removeItem(it.id)}
                       disabled={busy}
@@ -266,6 +296,16 @@ export default function RfqBatchPage() {
           </table>
         </div>
       )}
+
+      <RfqBatchItemEditModal
+        isOpen={editingItem !== null}
+        item={editingItem}
+        onClose={() => setEditingItem(null)}
+        onSaved={(updated) => {
+          setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+          setEditingItem(null);
+        }}
+      />
     </div>
   );
 }

@@ -73,6 +73,12 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
 
   const vendors = useMemo(() => allVendors.filter((v) => !removed.has(v.cage_code)), [allVendors, removed]);
 
+  // True when at least one active vendor's contact is hand-typed rather than
+  // picked from their saved/SAM.gov options — that contact has no other home
+  // to live in, so it's always saved (no opt-out, no checkbox for it).
+  const anyCustomContact = vendors.some((v) => (contactSel[v.cage_code] || "custom") === "custom");
+  const effectiveSaveContacts = anyCustomContact || saveContacts;
+
   // Initialize line + contact state whenever the modal opens with a selection.
   useEffect(() => {
     if (!isOpen) return;
@@ -199,8 +205,8 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
         };
       });
 
-  const persistContacts = async () => {
-    if (!saveContacts) return;
+  const persistContacts = async (force = false) => {
+    if (!saveContacts && !force) return;
     await Promise.all(
       vendors
         .filter((v) => contacts[v.cage_code]?.contact_email?.trim() && contactSel[v.cage_code] === "custom")
@@ -233,7 +239,7 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           response_due_date: responseDueDate || null,
-          save_contacts: saveContacts,
+          save_contacts: effectiveSaveContacts,
           items: buildItems(true),
         }),
       });
@@ -260,7 +266,12 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
     setSubmitting(true);
     setError(null);
     try {
-      await persistContacts();
+      // Batch items don't carry contact info themselves — the vendor's saved
+      // default contact is what gets used when the batch is sent later. Any
+      // custom contact typed here must be persisted as that default,
+      // regardless of the "save for future RFQs" checkbox, or it's silently
+      // lost and send_batch() falls back to whatever was previously on file.
+      await persistContacts(true);
       const res = await fetch("/api/rfq/batch/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -417,10 +428,16 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
           );
         })}
 
-        <label className="flex items-center gap-2 text-sm text-muted">
-          <input type="checkbox" checked={saveContacts} onChange={(e) => setSaveContacts(e.target.checked)} />
-          Save entered contacts for future RFQs
-        </label>
+        {anyCustomContact ? (
+          <p className="text-xs text-muted">
+            Custom contacts are automatically saved as the vendor&apos;s default for future RFQs.
+          </p>
+        ) : (
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <input type="checkbox" checked={saveContacts} onChange={(e) => setSaveContacts(e.target.checked)} />
+            Save entered contacts for future RFQs
+          </label>
+        )}
 
         {error && (
           <div className="rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">{error}</div>
