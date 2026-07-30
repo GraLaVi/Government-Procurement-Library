@@ -2,6 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 
+/**
+ * FastAPI's `detail` is a string for HTTPException but an array of
+ * `{loc, msg, ...}` objects for 422 validation errors (e.g. a cleared name
+ * field). The profile page renders the error straight into JSX, so anything
+ * other than a string has to be flattened here.
+ */
+function toErrorMessage(detail: unknown, fallback: string): string {
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((d) => (typeof d === 'string' ? d : d?.msg))
+      .filter((m): m is string => typeof m === 'string' && m.length > 0);
+    if (messages.length) return messages.join('. ');
+  }
+  return fallback;
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
@@ -35,7 +52,12 @@ export async function PUT(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.detail || data.message || 'Failed to update profile' },
+        {
+          error: toErrorMessage(
+            data.detail ?? data.message,
+            'Failed to update profile',
+          ),
+        },
         { status: response.status }
       );
     }
