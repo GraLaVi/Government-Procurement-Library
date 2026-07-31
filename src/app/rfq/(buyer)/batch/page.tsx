@@ -168,7 +168,7 @@ export default function RfqBatchPage() {
             Staged items shared across your team. Sending groups them into one RFQ per vendor.
           </p>
         </div>
-        <Link href="/dashboard/rfq" className="text-xs text-primary hover:underline whitespace-nowrap">
+        <Link href="/rfq" className="text-xs text-primary hover:underline whitespace-nowrap">
           ← All RFQs
         </Link>
       </div>

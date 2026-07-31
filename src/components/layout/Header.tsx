@@ -30,10 +30,10 @@ const mainNavItems = [
 ];
 
 const rfqItems = [
-  { href: "/dashboard/rfq", label: "My RFQs" },
-  { href: "/dashboard/rfq/batch", label: "Batch" },
-  { href: "/dashboard/rfq/contacts", label: "Vendor Contacts" },
-  { href: "/dashboard/rfq/settings", label: "Settings" },
+  { href: "/rfq", label: "My RFQs" },
+  { href: "/rfq/batch", label: "Batch" },
+  { href: "/rfq/contacts", label: "Vendor Contacts" },
+  { href: "/rfq/settings", label: "Settings" },
   { href: "/rfq/received", label: "Received RFQs" },
 ];
 
@@ -47,6 +47,16 @@ function isLinkActive(href: string, pathname: string): boolean {
 // A dropdown trigger is active when any of its child items match.
 function isGroupActive(items: { href: string }[], pathname: string): boolean {
   return items.some((it) => isLinkActive(it.href, pathname));
+}
+
+// Within a dropdown, the most specific matching sibling wins. Needed for the
+// RFQ group, where "/rfq" (My RFQs) is a path parent of every other entry —
+// plain prefix matching would highlight it on /rfq/batch, /rfq/received, etc.
+function isGroupItemActive(item: { href: string }, items: { href: string }[], pathname: string): boolean {
+  if (!isLinkActive(item.href, pathname)) return false;
+  return !items.some(
+    (s) => s.href !== item.href && s.href.length > item.href.length && isLinkActive(s.href, pathname)
+  );
 }
 
 interface HeaderProps {
@@ -248,7 +258,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={dropdownItemClass(isLinkActive(item.href, pathname))}
+                        className={dropdownItemClass(isGroupItemActive(item, rfqItems, pathname))}
                         onClick={() => setIsRfqDropdownOpen(false)}
                       >
                         {item.label}
@@ -410,7 +420,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={mobileDropdownItemClass(isLinkActive(item.href, pathname))}
+                      className={mobileDropdownItemClass(isGroupItemActive(item, rfqItems, pathname))}
                       onClick={closeMobileMenu}
                     >
                       {item.label}

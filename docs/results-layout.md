@@ -60,8 +60,9 @@ Print works from **both** layouts:
    The button shows "Preparing…" while sections load.
 
 `@media print` rules in `globals.css` use a visibility trick scoped to
-`.library-detail-print-root` (a class on each detail card root); the jump-rail is
-marked `.no-print`.
+`.print-root` (a class on each detail card root — also used by the RFQ detail
+page); the jump-rail is marked `.no-print`. Companion classes: `.no-print`
+(hidden on paper) and `.print-only` (hidden on screen).
 
 ## CSV export
 

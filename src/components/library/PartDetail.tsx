@@ -975,6 +975,8 @@ export function PartDetail({ part }: PartDetailProps) {
     manufacturers: (
       <ManufacturersPanel
         nsn={part.nsn}
+        partId={part.id}
+        partDescription={part.description}
         manufacturers={manufacturers}
         totalCount={manufacturersTotal}
         isLoading={isLoadingManufacturers}
@@ -1117,7 +1119,7 @@ export function PartDetail({ part }: PartDetailProps) {
     ) : undefined;
 
   return (
-    <div className="library-detail-print-root bg-card-bg rounded-lg border border-border overflow-hidden">
+    <div className="print-root bg-card-bg rounded-lg border border-border overflow-hidden">
       {/* Header */}
       <div className="px-3 py-2 border-b border-border bg-muted-light">
         <div className="flex items-start justify-between gap-3">
@@ -2445,6 +2447,12 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
 // Manufacturers Panel
 interface ManufacturersPanelProps {
   nsn: string | null;
+  /** parts.id — travels with an RFQ selection so the line item can link back
+   * to this part (rfq_line_items.part_id). NSN-less parts have only this. */
+  partId: number;
+  /** parts.description — travels with an RFQ selection so vendors see a
+   * readable item name, not just a part number. */
+  partDescription: string | null;
   manufacturers: PartManufacturer[];
   totalCount: number;
   isLoading: boolean;
@@ -2457,7 +2465,7 @@ function manufacturerRowKey(m: PartManufacturer): string {
   return `${m.cage_code}-${m.part_number || ""}`;
 }
 
-function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, onRetry }: ManufacturersPanelProps) {
+function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, totalCount, isLoading, error, onRetry }: ManufacturersPanelProps) {
   // RFQ is a separate paid product; only surface the entry when the user holds it.
   const { hasProductAccess } = useAuth();
   const canSendRfq = hasProductAccess("request_for_quote");
@@ -2508,8 +2516,10 @@ function ManufacturersPanel({ nsn, manufacturers, totalCount, isLoading, error, 
           vendor_name: m.vendor_name,
           part_number: m.part_number,
           nsn,
+          part_id: partId,
+          description: partDescription,
         })),
-    [manufacturers, selectedKeys, nsn]
+    [manufacturers, selectedKeys, nsn, partId, partDescription]
   );
 
   const selectColumn = useMemo<ColumnDef<PartManufacturer>>(

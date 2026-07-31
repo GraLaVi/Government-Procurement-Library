@@ -563,7 +563,7 @@ export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: Vendor
     ) : undefined;
 
   return (
-    <div className="library-detail-print-root bg-card-bg rounded-lg border border-border overflow-hidden">
+    <div className="print-root bg-card-bg rounded-lg border border-border overflow-hidden">
       {/* Header */}
       <div className="px-3 py-2 border-b border-border bg-muted-light">
         <div className="flex items-start justify-between gap-3">

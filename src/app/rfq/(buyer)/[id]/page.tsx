@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
+  PLACEHOLDER_LINE_DESCRIPTION,
   rfqStatusLabel,
   type RfqDetail,
   type RfqResponseDetail,
 } from "@/lib/rfq/types";
 import { formatDateMmDdYyyy } from "@/lib/dates";
+import { formatNSN } from "@/lib/library/types";
 
 function statusVariant(status: string): "default" | "success" | "warning" | "error" {
   switch (status) {
@@ -38,6 +40,10 @@ export default function RfqDetailPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"close" | "cancel" | null>(null);
+  // Stamped when Print is clicked rather than during render — `new Date()` at
+  // render time would mismatch between the server and client HTML.
+  const [printedOn, setPrintedOn] = useState<string | null>(null);
+  const [printRequested, setPrintRequested] = useState(false);
 
   const load = useCallback(async () => {
     if (!rfqId) return;
@@ -66,6 +72,21 @@ export default function RfqDetailPage() {
     if (!authLoading && hasProductAccess("request_for_quote")) load();
   }, [authLoading, hasProductAccess, load]);
 
+  // Quote lines reference an rfq_line_items.id; this resolves one back to the
+  // requested line it answers.
+  const lineItemsById = useMemo(
+    () => new Map((rfq?.line_items ?? []).map((li) => [li.id, li])),
+    [rfq],
+  );
+
+  // Open the print dialog once the print-only header has actually painted.
+  useEffect(() => {
+    if (!printRequested) return;
+    setPrintRequested(false);
+    const id = window.requestAnimationFrame(() => window.print());
+    return () => window.cancelAnimationFrame(id);
+  }, [printRequested]);
+
   const act = async (action: "close" | "cancel") => {
     if (!rfqId) return;
     setBusy(true);
@@ -83,6 +104,14 @@ export default function RfqDetailPage() {
       setBusy(false);
       setConfirmAction(null);
     }
+  };
+
+  // The whole record is already loaded, so printing only needs the printed-on
+  // stamp to paint before the dialog opens. The browser's print dialog is also
+  // the "Save as PDF" path, so one button covers both.
+  const handlePrint = () => {
+    setPrintedOn(formatDateMmDdYyyy(new Date().toISOString()));
+    setPrintRequested(true);
   };
 
   if (authLoading) return <div className="p-6 text-sm text-muted">Loading…</div>;
@@ -104,7 +133,7 @@ export default function RfqDetailPage() {
     return (
       <div className="p-6">
         <p className="text-sm text-error">{error || "RFQ not found."}</p>
-        <Link href="/dashboard/rfq" className="text-sm text-primary hover:underline">← Back to RFQs</Link>
+        <Link href="/rfq" className="text-sm text-primary hover:underline">← Back to RFQs</Link>
       </div>
     );
   }
@@ -112,9 +141,9 @@ export default function RfqDetailPage() {
   const isOpen = rfq.status === "sent";
 
   return (
-    <div className="space-y-6">
+    <div className="print-root space-y-6">
       <div>
-        <Link href="/dashboard/rfq" className="text-xs text-primary hover:underline">← All RFQs</Link>
+        <Link href="/rfq" className="no-print text-xs text-primary hover:underline">← All RFQs</Link>
         <div className="mt-2 flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{rfq.title}</h1>
@@ -122,13 +151,19 @@ export default function RfqDetailPage() {
               Created {formatDateMmDdYyyy(rfq.created_at)}
               {rfq.response_due_date ? ` · Due ${formatDateMmDdYyyy(rfq.response_due_date)}` : ""}
             </p>
+            {/* Paper needs an identifier and a date the screen doesn't. */}
+            <p className="print-only text-sm text-muted mt-1">
+              RFQ #{rfq.id}
+              {printedOn ? ` · Printed ${printedOn}` : ""}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={statusVariant(rfq.status)} size="md">{rfqStatusLabel(rfq.status)}</Badge>
+            <Button variant="outline" size="sm" className="no-print" onClick={handlePrint} disabled={busy}>Print</Button>
             {isOpen && (
               <>
-                <Button variant="outline" size="sm" onClick={() => setConfirmAction("close")} disabled={busy}>Close</Button>
-                <Button variant="ghost" size="sm" onClick={() => setConfirmAction("cancel")} disabled={busy}>Cancel</Button>
+                <Button variant="outline" size="sm" className="no-print" onClick={() => setConfirmAction("close")} disabled={busy}>Close</Button>
+                <Button variant="ghost" size="sm" className="no-print" onClick={() => setConfirmAction("cancel")} disabled={busy}>Cancel</Button>
               </>
             )}
           </div>
@@ -136,7 +171,7 @@ export default function RfqDetailPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">{error}</div>
+        <div className="no-print rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">{error}</div>
       )}
 
       {/* Recipients */}
@@ -179,7 +214,8 @@ export default function RfqDetailPage() {
             <thead className="bg-card-bg/60 text-xs text-muted">
               <tr>
                 <th className="px-4 py-2 text-left font-medium">#</th>
-                <th className="px-4 py-2 text-left font-medium">Part / NSN</th>
+                <th className="px-4 py-2 text-left font-medium">Part number</th>
+                <th className="px-4 py-2 text-left font-medium">NSN</th>
                 <th className="px-4 py-2 text-left font-medium">Qty</th>
                 <th className="px-4 py-2 text-left font-medium">Need by</th>
                 <th className="px-4 py-2 text-left font-medium">Target $/unit</th>
@@ -191,7 +227,16 @@ export default function RfqDetailPage() {
                 <tr key={li.id} className="border-t border-border">
                   <td className="px-4 py-2 text-muted">{li.line_number}</td>
                   <td className="px-4 py-2 font-mono text-xs text-foreground">
-                    {li.part_number || li.nsn || li.description || "—"}
+                    {li.part_number || "—"}
+                    {/* The part description, which no longer has a column of
+                        its own. Legacy lines carry a placeholder here instead
+                        of a real description — don't show that. */}
+                    {li.description && li.description !== PLACEHOLDER_LINE_DESCRIPTION && (
+                      <div className="font-sans text-xs text-muted">{li.description}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs text-foreground">
+                    {formatNSN(li.nsn) || "—"}
                   </td>
                   <td className="px-4 py-2 text-foreground">
                     {li.quantity}{li.unit_of_measure ? ` ${li.unit_of_measure}` : ""}
@@ -231,7 +276,7 @@ export default function RfqDetailPage() {
                   <table className="w-full text-xs">
                     <thead className="bg-card-bg/60 text-muted">
                       <tr>
-                        <th className="px-3 py-1.5 text-left font-medium">Line</th>
+                        <th className="px-3 py-1.5 text-left font-medium">Line / Part</th>
                         <th className="px-3 py-1.5 text-left font-medium">Unit $</th>
                         <th className="px-3 py-1.5 text-left font-medium">Qty avail</th>
                         <th className="px-3 py-1.5 text-left font-medium">Lead</th>
@@ -240,16 +285,33 @@ export default function RfqDetailPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {resp.line_items.map((rli, i) => (
+                      {resp.line_items.map((rli, i) => {
+                        // rfq_line_item_id is a database id, meaningless next to
+                        // the requested-items table above — show the line number
+                        // and part it refers to instead.
+                        const li = lineItemsById.get(rli.rfq_line_item_id);
+                        return (
                         <tr key={i} className="border-t border-border/60">
-                          <td className="px-3 py-1.5 text-muted">{rli.rfq_line_item_id}</td>
+                          <td className="px-3 py-1.5 text-muted">
+                            {li ? (
+                              <>
+                                <span className="text-foreground">{li.line_number}</span>
+                                <span className="ml-1.5 font-mono">
+                                  {li.part_number || formatNSN(li.nsn) || ""}
+                                </span>
+                              </>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
                           <td className="px-3 py-1.5 text-foreground">{rli.unit_price ?? "—"}</td>
                           <td className="px-3 py-1.5 text-muted">{rli.quantity_available ?? "—"}</td>
                           <td className="px-3 py-1.5 text-muted">{rli.lead_time_days ?? "—"}</td>
                           <td className="px-3 py-1.5 text-muted">{rli.alternate_part_number || "—"}</td>
                           <td className="px-3 py-1.5 text-muted">{rli.is_no_bid ? "Yes" : "—"}</td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

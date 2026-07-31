@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { Badge } from "@/components/ui/Badge";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { rfqStatusLabel, type RfqListItem, type RfqContributor } from "@/lib/rfq/types";
 import { formatDateMmDdYyyy } from "@/lib/dates";
 
@@ -108,10 +109,10 @@ export default function RfqListPage() {
           </p>
         </div>
         <div className="flex items-center gap-4 whitespace-nowrap">
-          <Link href="/dashboard/rfq/batch" className="text-xs text-primary hover:underline">
+          <Link href="/rfq/batch" className="text-xs text-primary hover:underline">
             View batch →
           </Link>
-          <Link href="/dashboard/rfq/settings" className="text-xs text-primary hover:underline">
+          <Link href="/rfq/settings" className="text-xs text-primary hover:underline">
             Settings
           </Link>
         </div>
@@ -166,9 +167,23 @@ export default function RfqListPage() {
               {rfqs?.map((rfq) => (
                 <tr key={rfq.id} className="border-t border-border hover:bg-card-bg/40">
                   <td className="px-4 py-2">
-                    <Link href={`/dashboard/rfq/${rfq.id}`} className="text-primary hover:underline font-medium">
-                      {rfq.title}
-                    </Link>
+                    {/* Titles can be very long (vendor name + part). Cap the
+                        column and show the full value on hover; short titles
+                        skip the tooltip so row hover stays quiet. */}
+                    {rfq.title.length > 40 ? (
+                      <Tooltip content={rfq.title}>
+                        <Link
+                          href={`/rfq/${rfq.id}`}
+                          className="block max-w-[20rem] truncate text-primary hover:underline font-medium"
+                        >
+                          {rfq.title}
+                        </Link>
+                      </Tooltip>
+                    ) : (
+                      <Link href={`/rfq/${rfq.id}`} className="text-primary hover:underline font-medium">
+                        {rfq.title}
+                      </Link>
+                    )}
                   </td>
                   <td className="px-4 py-2 text-foreground">
                     {rfq.primary_vendor_name || rfq.primary_cage_code || "—"}

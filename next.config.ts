@@ -10,6 +10,23 @@ const nextConfig: NextConfig = {
   logging: {
     incomingRequests: false,
   },
+
+  async redirects() {
+    return [
+      // Buyer RFQ pages moved out of /dashboard (July 2026). Old links live
+      // on in sent emails, stored bell notifications, and bookmarks.
+      {
+        source: '/dashboard/rfq',
+        destination: '/rfq',
+        permanent: true,
+      },
+      {
+        source: '/dashboard/rfq/:path*',
+        destination: '/rfq/:path*',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

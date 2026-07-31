@@ -216,33 +216,67 @@ html {
 }
 
 /* ---------------------------------------------------------------------
-   Print — the one-pager "Print" button prints just the vendor/part record.
-   Everything outside the detail card is hidden via the visibility trick so
+   Print — a "Print" button on a record page prints just that record.
+   Everything outside `.print-root` is hidden via the visibility trick so
    we don't need to know every chrome selector (nav, sidebar, search form).
-   Reached only from the linear layout, where all sections are already
-   mounted, so the whole record prints.
+   Used by the library part/vendor detail cards (reached only from the
+   linear layout, where all sections are already mounted) and the RFQ
+   detail page.
    --------------------------------------------------------------------- */
+
+/* Print-only content (document headers, printed-on stamps) — see @media
+   print below, which reveals it. */
+.print-only {
+  display: none;
+}
+
 @media print {
+  /* Force the light palette. The dark theme's light-on-dark tokens print
+     as near-white text, because browsers drop background colors. */
+  :root[data-theme="dark"] {
+    --secondary: #1E293B;
+    --background: #FFFFFF;
+    --foreground: #1E293B;
+    --card-bg: #FFFFFF;
+    --card-foreground: #1E293B;
+    --muted: #475569;
+    --muted-light: #F8FAFC;
+    --border: #CBD5E1;
+    --success: #047857;
+    --warning: #B45309;
+    --error: #B91C1C;
+  }
+
   body * {
     visibility: hidden;
   }
-  .library-detail-print-root,
-  .library-detail-print-root * {
+  .print-root,
+  .print-root * {
     visibility: visible;
   }
-  .library-detail-print-root {
+  .print-root {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
     border: 0 !important;
     box-shadow: none !important;
+    /* Keep status-badge tints, so "Declined" still reads as declined. */
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
-  /* Hide the jump-rail + its toolbar buttons when printing. */
-  .library-detail-print-root .no-print {
+  /* Hide the jump-rail, toolbars and page actions when printing. */
+  .print-root .no-print {
     display: none !important;
   }
-  .library-detail-print-root section {
+  .print-root .print-only {
+    display: block;
+  }
+  /* Horizontal scrollers clip on paper — let wide tables flow instead. */
+  .print-root .overflow-x-auto {
+    overflow: visible !important;
+  }
+  .print-root section {
     break-inside: avoid;
   }
 }

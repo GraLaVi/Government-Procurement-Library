@@ -5,10 +5,12 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { DateField } from "@/components/ui/DateField";
 import { UOM_OPTIONS } from "@/lib/rfq/uom";
+import { PLACEHOLDER_LINE_DESCRIPTION } from "@/lib/rfq/types";
 import type {
   RfqManufacturerSelection,
   RfqLineInput,
   RfqSendResponse,
+  RfqSettings,
   VendorContactResolution,
 } from "@/lib/rfq/types";
 
@@ -94,6 +96,27 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
     setContactSel(Object.fromEntries(allVendors.map((v) => [v.cage_code, "custom"])));
 
     let cancelled = false;
+
+    // Pre-fill the due date from the customer's "Default response window
+    // (days)" setting. Functional set so a date the user has already typed
+    // (this fetch is async) is never overwritten; the field stays editable
+    // and clearable either way.
+    (async () => {
+      try {
+        const res = await fetch("/api/rfq/settings");
+        if (!res.ok) return;
+        const settings: RfqSettings = await res.json();
+        const days = settings.default_response_due_days;
+        if (cancelled || days == null) return;
+        const due = new Date();
+        due.setDate(due.getDate() + days);
+        const iso = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
+        setResponseDueDate((prev) => prev || iso);
+      } catch {
+        /* best-effort prefill */
+      }
+    })();
+
     (async () => {
       for (const v of allVendors) {
         try {
@@ -183,6 +206,7 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
       .map(({ sel, i }) => {
         const line = lines[i];
         const contact = contacts[sel.cage_code];
+        const effectiveNsn = sel.nsn ?? nsn;
         return {
           cage_code: sel.cage_code,
           vendor_name: sel.vendor_name,
@@ -193,9 +217,16 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
                 contact_email: contact?.contact_email?.trim() || null,
               }
             : {}),
-          nsn: sel.nsn ?? nsn,
+          part_id: sel.part_id,
+          nsn: effectiveNsn,
           part_number: sel.part_number,
-          description: sel.part_number ? null : "Requested item",
+          // The part's own description, so the vendor sees a readable item
+          // name next to the part number. The placeholder is only a last
+          // resort: a line with no nsn and no part number still needs a
+          // description to satisfy chk_rfq_line_item_identifier.
+          description:
+            sel.description?.trim() ||
+            (sel.part_number || effectiveNsn ? null : PLACEHOLDER_LINE_DESCRIPTION),
           quantity: parseFloat(line.quantity),
           unit_of_measure: line.unit_of_measure || null,
           need_by_date: line.need_by_date || null,

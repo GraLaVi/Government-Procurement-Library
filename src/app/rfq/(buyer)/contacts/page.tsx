@@ -138,7 +138,7 @@ export default function RfqContactsPage() {
             Your private contact book. The default contact for a vendor pre-fills when you send an RFQ. SAM.gov is used only as a fallback.
           </p>
         </div>
-        <Link href="/dashboard/rfq" className="text-xs text-primary hover:underline whitespace-nowrap">← All RFQs</Link>
+        <Link href="/rfq" className="text-xs text-primary hover:underline whitespace-nowrap">← All RFQs</Link>
       </div>
 
       {error && <div className="rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">{error}</div>}

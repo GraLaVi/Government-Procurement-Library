@@ -212,7 +212,7 @@ export default function RfqSettingsPage() {
       <nav className="mb-6">
         <ol className="flex items-center gap-2 text-sm">
           <li>
-            <Link href="/dashboard/rfq" className="text-muted hover:text-primary transition-colors">RFQs</Link>
+            <Link href="/rfq" className="text-muted hover:text-primary transition-colors">RFQs</Link>
           </li>
           <li className="text-muted">/</li>
           <li className="text-foreground font-medium">Settings</li>

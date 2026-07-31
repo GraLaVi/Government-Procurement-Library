@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { DateField } from "@/components/ui/DateField";
 import { formatDateMmDdYyyy } from "@/lib/dates";
+import { PLACEHOLDER_LINE_DESCRIPTION } from "@/lib/rfq/types";
 import type { PublicRfqView, ResponseLineInput } from "@/lib/rfq/types";
 
 interface LineForm {
@@ -289,8 +290,17 @@ export default function RfqRespondPage({ params }: { params: Promise<{ token: st
           return (
             <div key={li.id} className="rounded-xl border border-border p-4 space-y-3">
               <div className="flex items-baseline justify-between gap-2">
-                <div className="text-sm font-semibold text-foreground font-mono">
-                  {li.part_number || li.nsn || li.description || `Item ${li.line_number}`}
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-foreground font-mono">
+                    {li.part_number || li.nsn || li.description || `Item ${li.line_number}`}
+                  </div>
+                  {/* The readable item name, when the headline above is an
+                      identifier rather than the description itself. */}
+                  {(li.part_number || li.nsn) &&
+                    li.description &&
+                    li.description !== PLACEHOLDER_LINE_DESCRIPTION && (
+                      <div className="text-xs text-muted">{li.description}</div>
+                    )}
                 </div>
                 <div className="text-xs text-muted">
                   Qty {li.quantity}{li.unit_of_measure ? ` ${li.unit_of_measure}` : ""}

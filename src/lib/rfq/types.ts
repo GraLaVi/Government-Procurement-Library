@@ -1,11 +1,28 @@
 // RFQ module client types. Mirror src/rfq/schemas.py on the backend.
 
+/**
+ * Legacy filler for rfq_line_items.description.
+ *
+ * Lines need at least one of nsn/part_number/description
+ * (chk_rfq_line_item_identifier), and before the part description was carried
+ * through, every part-number-less line was stamped with this literal. It is
+ * still the last-resort filler for a line with no other identifier, and is
+ * recognised on read so it never shows up as if it were a real description.
+ */
+export const PLACEHOLDER_LINE_DESCRIPTION = "Requested item";
+
 /** A manufacturer row selected from the parts Manufacturers tab. */
 export interface RfqManufacturerSelection {
   cage_code: string;
   vendor_name: string | null;
   part_number: string | null;
   nsn: string | null;
+  /** parts.id of the part the row was selected from — carried through to
+   * rfq_line_items.part_id so a line links back to the catalog part. */
+  part_id: number | null;
+  /** parts.description — the human-readable item name vendors see on the
+   * respond page, alongside the part number. */
+  description: string | null;
 }
 
 /** One line of a quick-send / batch payload (one part for one vendor). */
