@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/Badge";
 import { rfqStatusLabel, type ReceivedRfqItem } from "@/lib/rfq/types";
 import { formatDateMmDdYyyy } from "@/lib/dates";
+import { TableCard } from "@/components/rfq/TableCard";
 
 function statusVariant(status: string): "default" | "success" | "warning" | "error" {
   switch (status) {
@@ -101,14 +102,15 @@ export default function RfqReceivedPage() {
         </div>
       )}
 
+      <TableCard>
       {loading ? (
         <div className="text-sm text-muted">Loading…</div>
       ) : items && items.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card-bg p-8 text-center">
+        <div className="p-8 text-center">
           <p className="text-sm text-muted">No RFQs yet.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="bg-card-bg/60 text-xs text-muted">
               <tr>
@@ -137,6 +139,7 @@ export default function RfqReceivedPage() {
           </table>
         </div>
       )}
+      </TableCard>
     </div>
   );
 }

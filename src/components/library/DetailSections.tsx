@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { PrintButton, toolbarButtonClass } from "@/components/ui/PrintButton";
 import type { ResultsLayout } from "@/lib/preferences/resultsLayout";
 
 export interface DetailSection {
@@ -195,8 +196,7 @@ export function DetailToolbar({
   onExportAll?: () => void;
   printPreparing?: boolean;
 }) {
-  const btn =
-    "inline-flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-card-bg text-card-foreground text-xs font-medium transition-colors hover:bg-muted-light hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-wait disabled:hover:bg-card-bg disabled:hover:border-border";
+  const btn = toolbarButtonClass;
 
   // Downloads land silently in the browser's Downloads folder, so flash a
   // "Downloaded" confirmation on the button for a couple of seconds — enough
@@ -218,18 +218,7 @@ export function DetailToolbar({
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={onPrint}
-        disabled={printPreparing}
-        className={btn}
-        title="Print this record"
-      >
-        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V4h12v5M6 18H5a2 2 0 01-2-2v-4a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2h-1M6 14h12v6H6z" />
-        </svg>
-        <span>{printPreparing ? "Preparing…" : "Print"}</span>
-      </button>
+      <PrintButton onClick={onPrint} preparing={printPreparing} />
       {onExportAll && (
         <button
           type="button"

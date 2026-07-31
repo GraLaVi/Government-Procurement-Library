@@ -7,6 +7,7 @@ import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { RfqVendorContactEditModal } from "@/components/rfq/RfqVendorContactEditModal";
+import { TableCard } from "@/components/rfq/TableCard";
 import type { VendorContact } from "@/lib/rfq/types";
 
 const inputClass =
@@ -145,7 +146,7 @@ export default function RfqContactsPage() {
       {toast && <div className="rounded-lg border border-success/30 bg-success/10 px-4 py-2.5 text-sm text-success">{toast}</div>}
 
       {/* Add new */}
-      <div className="rounded-xl border border-border p-4 space-y-3">
+      <div className="bg-card-bg rounded-lg border border-border p-4 space-y-3">
         <h2 className="text-sm font-semibold text-foreground">Add a contact</h2>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           <input className={inputClass} placeholder="CAGE *" value={adding.cage_code} onChange={(e) => setAdding({ ...adding, cage_code: e.target.value })} />
@@ -157,14 +158,15 @@ export default function RfqContactsPage() {
         <Button variant="primary" size="sm" onClick={add} disabled={busy}>Add contact</Button>
       </div>
 
+      <TableCard header={<h2 className="text-sm font-semibold text-foreground">Saved contacts</h2>}>
       {loading ? (
         <div className="text-sm text-muted">Loading…</div>
       ) : contacts.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card-bg p-8 text-center">
+        <div className="p-8 text-center">
           <p className="text-sm text-muted">No saved contacts yet. Add one above, or enter a contact when composing an RFQ.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="bg-card-bg/60 text-xs text-muted">
               <tr>
@@ -206,6 +208,7 @@ export default function RfqContactsPage() {
           </table>
         </div>
       )}
+      </TableCard>
 
       <RfqVendorContactEditModal
         isOpen={editingContact !== null}

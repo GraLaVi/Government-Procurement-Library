@@ -16,6 +16,8 @@ import {
 } from "@/lib/rfq/types";
 import { formatDateMmDdYyyy } from "@/lib/dates";
 import { formatNSN } from "@/lib/library/types";
+import { TableCard } from "@/components/rfq/TableCard";
+import { PrintButton } from "@/components/ui/PrintButton";
 
 function statusVariant(status: string): "default" | "success" | "warning" | "error" {
   switch (status) {
@@ -159,7 +161,7 @@ export default function RfqDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={statusVariant(rfq.status)} size="md">{rfqStatusLabel(rfq.status)}</Badge>
-            <Button variant="outline" size="sm" className="no-print" onClick={handlePrint} disabled={busy}>Print</Button>
+            <PrintButton className="no-print" onClick={handlePrint} title="Print this RFQ" />
             {isOpen && (
               <>
                 <Button variant="outline" size="sm" className="no-print" onClick={() => setConfirmAction("close")} disabled={busy}>Close</Button>
@@ -175,9 +177,8 @@ export default function RfqDetailPage() {
       )}
 
       {/* Recipients */}
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold text-foreground">Recipients</h2>
-        <div className="overflow-x-auto rounded-xl border border-border">
+      <TableCard as="section" header={<h2 className="text-sm font-semibold text-foreground">Recipients</h2>}>
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="bg-card-bg/60 text-xs text-muted">
               <tr>
@@ -204,12 +205,11 @@ export default function RfqDetailPage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </TableCard>
 
       {/* Line items */}
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold text-foreground">Requested items</h2>
-        <div className="overflow-x-auto rounded-xl border border-border">
+      <TableCard as="section" header={<h2 className="text-sm font-semibold text-foreground">Requested items</h2>}>
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="bg-card-bg/60 text-xs text-muted">
               <tr>
@@ -249,13 +249,17 @@ export default function RfqDetailPage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </TableCard>
 
       {/* Responses */}
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold text-foreground">
-          Quotes received ({responses.length})
-        </h2>
+      <TableCard
+        as="section"
+        header={
+          <h2 className="text-sm font-semibold text-foreground">
+            Quotes received ({responses.length})
+          </h2>
+        }
+      >
         {responses.length === 0 ? (
           <p className="text-sm text-muted">No quotes yet.</p>
         ) : (
@@ -320,7 +324,7 @@ export default function RfqDetailPage() {
             ))}
           </div>
         )}
-      </section>
+      </TableCard>
 
       <ConfirmDialog
         isOpen={confirmAction !== null}

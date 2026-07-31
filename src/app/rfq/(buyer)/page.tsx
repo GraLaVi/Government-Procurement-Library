@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { TableCard } from "@/components/rfq/TableCard";
 import { rfqStatusLabel, type RfqListItem, type RfqContributor } from "@/lib/rfq/types";
 import { formatDateMmDdYyyy } from "@/lib/dates";
 
@@ -118,22 +119,6 @@ export default function RfqListPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <label className="text-xs text-muted">Created by</label>
-        <select
-          className="px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm"
-          value={filterUser}
-          onChange={(e) => setFilterUser(e.target.value)}
-        >
-          <option value={ALL}>Everyone</option>
-          {contributors.map((c) => (
-            <option key={c.user_id} value={String(c.user_id)}>
-              {c.name}{user?.id === c.user_id ? " (me)" : ""} ({c.rfq_count})
-            </option>
-          ))}
-        </select>
-      </div>
-
       {error && (
         <div className="rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">
           {error}
@@ -141,16 +126,35 @@ export default function RfqListPage() {
         </div>
       )}
 
+      <TableCard
+        header={
+          <>
+            <label className="text-xs text-muted">Created by</label>
+            <select
+              className="px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm"
+              value={filterUser}
+              onChange={(e) => setFilterUser(e.target.value)}
+            >
+              <option value={ALL}>Everyone</option>
+              {contributors.map((c) => (
+                <option key={c.user_id} value={String(c.user_id)}>
+                  {c.name}{user?.id === c.user_id ? " (me)" : ""} ({c.rfq_count})
+                </option>
+              ))}
+            </select>
+          </>
+        }
+      >
       {loading ? (
         <div className="text-sm text-muted">Loading RFQs…</div>
       ) : rfqs && rfqs.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card-bg p-8 text-center">
+        <div className="p-8 text-center">
           <p className="text-sm text-muted">
             No RFQs yet. Open a part&apos;s <span className="font-medium">Manufacturers</span> tab, select vendors, and click <span className="font-medium">Create RFQ</span>.
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="bg-card-bg/60 text-xs text-muted">
               <tr>
@@ -205,6 +209,7 @@ export default function RfqListPage() {
           </table>
         </div>
       )}
+      </TableCard>
     </div>
   );
 }

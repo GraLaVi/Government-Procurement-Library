@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { Button } from "@/components/ui/Button";
 import { RfqBatchItemEditModal } from "@/components/rfq/RfqBatchItemEditModal";
+import { TableCard } from "@/components/rfq/TableCard";
 import type { BatchItem, BatchContributor, RfqSendResponse } from "@/lib/rfq/types";
 
 const ALL = "all";
@@ -173,40 +174,6 @@ export default function RfqBatchPage() {
         </Link>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <label className="text-xs text-muted">Added by</label>
-        <select
-          className="px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm"
-          value={filterUser}
-          onChange={(e) => {
-            setFilterUser(e.target.value);
-            setSelected(new Set());
-          }}
-        >
-          <option value={ALL}>Everyone</option>
-          {contributors.map((c) => (
-            <option key={c.user_id} value={String(c.user_id)}>
-              {c.name} ({c.item_count})
-            </option>
-          ))}
-        </select>
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled={busy || selected.size === 0} onClick={() => send("selected")}>
-            Send selected ({selected.size})
-          </Button>
-          <Button variant="primary" size="sm" disabled={busy || items.length === 0} onClick={() => send("all")}>
-            Send all
-          </Button>
-        </div>
-      </div>
-
-      {selected.size > 0 && (
-        <p className="text-xs text-muted">
-          Selected {selected.size} item{selected.size !== 1 ? "s" : ""} → {selectedVendors} vendor
-          {selectedVendors !== 1 ? "s" : ""} → {selectedVendors} RFQ{selectedVendors !== 1 ? "s" : ""}.
-        </p>
-      )}
-
       {error && (
         <div className="rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">{error}</div>
       )}
@@ -214,16 +181,53 @@ export default function RfqBatchPage() {
         <div className="rounded-lg border border-success/30 bg-success/10 px-4 py-2.5 text-sm text-success">{toast}</div>
       )}
 
+      <TableCard
+        header={
+          <>
+            <label className="text-xs text-muted">Added by</label>
+            <select
+              className="px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm"
+              value={filterUser}
+              onChange={(e) => {
+                setFilterUser(e.target.value);
+                setSelected(new Set());
+              }}
+            >
+              <option value={ALL}>Everyone</option>
+              {contributors.map((c) => (
+                <option key={c.user_id} value={String(c.user_id)}>
+                  {c.name} ({c.item_count})
+                </option>
+              ))}
+            </select>
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={busy || selected.size === 0} onClick={() => send("selected")}>
+                Send selected ({selected.size})
+              </Button>
+              <Button variant="primary" size="sm" disabled={busy || items.length === 0} onClick={() => send("all")}>
+                Send all
+              </Button>
+            </div>
+          </>
+        }
+      >
+      {selected.size > 0 && (
+        <p className="text-xs text-muted mb-3">
+          Selected {selected.size} item{selected.size !== 1 ? "s" : ""} → {selectedVendors} vendor
+          {selectedVendors !== 1 ? "s" : ""} → {selectedVendors} RFQ{selectedVendors !== 1 ? "s" : ""}.
+        </p>
+      )}
+
       {loading ? (
         <div className="text-sm text-muted">Loading batch…</div>
       ) : items.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card-bg p-8 text-center">
+        <div className="p-8 text-center">
           <p className="text-sm text-muted">
             No staged items. Add some from a part&apos;s <span className="font-medium">Manufacturers</span> tab via <span className="font-medium">Create RFQ → Save to batch</span>.
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead className="bg-card-bg/60 text-xs text-muted">
               <tr>
@@ -296,6 +300,7 @@ export default function RfqBatchPage() {
           </table>
         </div>
       )}
+      </TableCard>
 
       <RfqBatchItemEditModal
         isOpen={editingItem !== null}
