@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { AUTH_CONFIG } from '@/lib/auth/config';
+import { ACCOUNT_INACTIVE_CODE, ACCOUNT_INACTIVE_MESSAGE, AUTH_CONFIG } from '@/lib/auth/config';
 import { setAccessCookie, clearAuthCookies } from '@/lib/auth/cookies';
 
 async function refreshAccessToken(cookieStore: Awaited<ReturnType<typeof cookies>>): Promise<string | null> {
@@ -82,6 +82,16 @@ export async function GET(_request: NextRequest) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      // Company account deactivated: clear the session so the user is
+      // signed out on this page load instead of seeing errors while
+      // appearing logged in.
+      if (errorData.detail === ACCOUNT_INACTIVE_CODE) {
+        await clearAuthCookies(cookieStore);
+        return NextResponse.json(
+          { error: ACCOUNT_INACTIVE_MESSAGE },
+          { status: 401 }
+        );
+      }
       return NextResponse.json(
         { error: errorData.detail || 'Failed to fetch user' },
         { status: response.status }

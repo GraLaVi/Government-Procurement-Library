@@ -1,3 +1,16 @@
+/**
+ * Backend HTTPException detail emitted when the user's COMPANY account
+ * (customers.customer_status) is inactive/suspended. Mirrors
+ * ACCOUNT_INACTIVE_CODE in the FastAPI auth service — the proxies match on
+ * it to clear the session instead of surfacing a generic 403.
+ */
+export const ACCOUNT_INACTIVE_CODE = 'account_inactive';
+
+/** User-facing message shown when a session ends because the company
+ * account was deactivated. */
+export const ACCOUNT_INACTIVE_MESSAGE =
+  'This company account has been deactivated. Please contact support.';
+
 export const AUTH_CONFIG = {
   API_BASE_URL: process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://10.116.0.2:8000/api/v1',
   COOKIE_NAMES: {

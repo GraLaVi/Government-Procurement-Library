@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AUTH_CONFIG } from '@/lib/auth/config';
+import { cookies } from 'next/headers';
+import { ACCOUNT_INACTIVE_CODE, ACCOUNT_INACTIVE_MESSAGE, AUTH_CONFIG } from '@/lib/auth/config';
+import { clearAuthCookies } from '@/lib/auth/cookies';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
 
 /**
@@ -103,6 +105,15 @@ export async function backendProxy(
       const detail = (data as { detail?: string; error?: string }).detail
         || (data as { error?: string }).error
         || 'Request failed';
+      // The company account was deactivated mid-session: end the session
+      // now rather than surfacing 403s on every action. Clearing the
+      // cookies makes the very next auth check fail, which logs the user
+      // out; the 401 + message covers the request that discovered it.
+      if (detail === ACCOUNT_INACTIVE_CODE) {
+        const cookieStore = await cookies();
+        await clearAuthCookies(cookieStore);
+        return NextResponse.json({ error: ACCOUNT_INACTIVE_MESSAGE }, { status: 401 });
+      }
       return NextResponse.json({ error: detail }, { status: response.status });
     }
     return NextResponse.json(data);
