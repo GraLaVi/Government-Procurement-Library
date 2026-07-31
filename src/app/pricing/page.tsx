@@ -910,8 +910,11 @@ function PricingPageContent() {
           a standalone checkout here — it only makes sense alongside a paid
           tier subscription. <h2> instead of <h3> because the pricing page's
           heading hierarchy starts at <h1> (landing nests under an <h2>,
-          hence <h3> there — same content otherwise). */}
-      <div className="mt-6 grid md:grid-cols-2 gap-6">
+          hence <h3> there — same content otherwise). When RFQ billing is
+          disabled the plan drops out entirely, so the row collapses to a
+          single column and Data Reports goes full width instead of sitting
+          in a half-empty two-column row. */}
+      <div className={`mt-6 grid gap-6 ${rfqPlan ? "md:grid-cols-2" : "grid-cols-1"}`}>
         {rfqPlan && (
           <div className="rounded-2xl border border-border bg-muted-light/40 dark:bg-card-bg p-6 lg:p-8 flex flex-col">
             <div className="flex items-center gap-3">

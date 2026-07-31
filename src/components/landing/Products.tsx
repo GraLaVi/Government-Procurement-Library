@@ -114,20 +114,20 @@ const products: Array<{
 
 export function Products() {
   // Split the products into the four subscription tiers (rendered as a
-  // 4-up grid: Free / Basic / Advanced / Maximum) and two non-tier offers,
-  // each its own full-width horizontal panel below: the RFQ add-on (stacks
-  // alongside a paid tier, not a tier itself — see /pricing, which mirrors
-  // this split) and the bespoke Data Reports engagement. Keeping the
-  // layouts visually distinct signals these aren't subscription tiers and
-  // avoids the "single-card row looks lonely" problem you get from folding
-  // either into the tier grid.
-  // Maximum is temporarily hidden from the landing page (kept in `products`
-  // and still fully live on /pricing) — resurface by dropping the tier
-  // !== "Maximum" clause below.
+  // 4-up grid: Free / Basic / Advanced / Maximum) and the non-tier offers
+  // rendered as panels below: the RFQ add-on (stacks alongside a paid
+  // tier, not a tier itself — see /pricing, which mirrors this split) and
+  // the bespoke Data Reports engagement. Keeping the layouts visually
+  // distinct signals these aren't subscription tiers and avoids the
+  // "single-card row looks lonely" problem you get from folding either
+  // into the tier grid.
+  // Maximum and the RFQ add-on are temporarily hidden from the landing
+  // page (both kept in `products` and still fully live on /pricing) —
+  // resurface by dropping the tier !== "Maximum" clause below and
+  // rendering `rfqProduct` again in the panel grid.
   const tierProducts = products.filter(
     (p) => p.family !== "Data Reports" && p.family !== "Request for Quote" && p.tier !== "Maximum",
   );
-  const rfqProduct = products.find((p) => p.family === "Request for Quote");
   const customReportsProduct = products.find((p) => p.family === "Data Reports");
 
   // Large-screen column count tracks how many tier cards are actually
@@ -233,15 +233,13 @@ export function Products() {
           })}
         </div>
 
-        {/* RFQ add-on + Data Reports — side by side, one per non-tier
-            offer. Different shape from the tier grid on purpose (subdued
-            background) to signal "and here's what stacks alongside / beyond
-            the tiers above" without reading as a second row of the same
-            CTA repeated. RFQ first since it's a real purchasable add-on;
-            Data Reports second since it's the bespoke "nothing above fits?
-            talk to us" path. */}
-        <div className="mt-6 grid md:grid-cols-2 gap-6">
-          {rfqProduct && <NonTierPanel product={rfqProduct} />}
+        {/* Non-tier offers. Different shape from the tier grid on purpose
+            (subdued background) to signal "and here's what stacks alongside
+            / beyond the tiers above" without reading as a second row of the
+            same CTA repeated. With the RFQ add-on hidden, Data Reports —
+            the bespoke "nothing above fits? talk to us" path — takes the
+            full width rather than leaving a half-empty row. */}
+        <div className="mt-6 grid grid-cols-1 gap-6">
           {customReportsProduct && <NonTierPanel product={customReportsProduct} />}
         </div>
 
