@@ -957,6 +957,18 @@ function SubscriptionCard({
   const rawName = sub.product_name || sub.product_group_name || "Plan";
   const trialActive = sub.status === "trialing" && sub.trial_end && new Date(sub.trial_end) > new Date();
   const isTerminal = sub.status === "canceled" || sub.status === "incomplete_expired";
+  // The date a pending cancellation takes effect. Stripe's cancel_at equals the
+  // period end, which during a trial it reports only as trial_end — and rows
+  // that never saw a period-bearing webhook payload have no window at all, so
+  // fall back rather than render an empty value next to "Cancels on".
+  const cancelDate = sub.current_period_end || sub.trial_end;
+  // Stripe stamps `canceled_at` when a cancellation is *scheduled*, not when
+  // service ends: scheduling a period-end cancel on Aug 1 for a plan that runs
+  // to Aug 31 sets canceled_at=Aug 1 while the sub is still active. So show
+  // "Cancels on" only while the cancel is pending, and "Ended" only once the
+  // subscription has actually terminated — never both.
+  const pendingCancel = sub.cancel_at_period_end && !isTerminal;
+  const endedOn = sub.canceled_at || cancelDate;
   // Match by the robust plan_kind+plan_id identity when available, else by
   // name (older payloads may lack plan_kind/plan_id).
   const matchingPlan = plans.find((p) => {
@@ -1043,17 +1055,19 @@ function SubscriptionCard({
           </>
         )}
 
-        {sub.cancel_at_period_end && (
+        {pendingCancel && (
           <>
             <dt className="text-muted">Cancels on</dt>
-            <dd className="text-warning font-medium">{formatDate(sub.current_period_end)}</dd>
+            <dd className="text-warning font-medium">
+              {cancelDate ? formatDate(cancelDate) : "End of current period"}
+            </dd>
           </>
         )}
 
-        {sub.canceled_at && (
+        {isTerminal && endedOn && (
           <>
-            <dt className="text-muted">Canceled</dt>
-            <dd className="text-card-foreground font-medium">{formatDate(sub.canceled_at)}</dd>
+            <dt className="text-muted">Ended</dt>
+            <dd className="text-card-foreground font-medium">{formatDate(endedOn)}</dd>
           </>
         )}
       </dl>
@@ -1757,6 +1771,9 @@ function CancelModal({
 }) {
   const [atPeriodEnd, setAtPeriodEnd] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Same fallback as SubscriptionCard: trialing subs carry the period end only
+  // as trial_end, and a row with no window at all must not render "until —".
+  const periodEnd = sub.current_period_end || sub.trial_end;
 
   const save = async () => {
     setSaving(true);
@@ -1793,7 +1810,7 @@ function CancelModal({
           <div>
             <div className="text-sm font-medium text-card-foreground">At end of current period</div>
             <div className="text-xs text-muted mt-0.5">
-              Keep your paid features until {formatDate(sub.current_period_end)}, then move to Free automatically.
+              Keep your paid features until {periodEnd ? formatDate(periodEnd) : "the end of your current period"}, then move to Free automatically.
             </div>
           </div>
         </label>
