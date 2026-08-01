@@ -103,8 +103,14 @@ export function Navbar() {
         : "text-card-foreground hover:text-foreground"
     }`;
 
+  // The Help Center itself is public, but Code Definitions sits behind the
+  // Library gate — drop it for signed-out visitors so the menu has no dead ends.
+  const visibleHelpItems = helpItems.filter(
+    (item) => item.href !== "/library/code-definitions" || (!isLoading && isAuthenticated)
+  );
+
   const libraryGroupActive = isGroupActive(librarySearchItems, pathname);
-  const helpGroupActive = isGroupActive(helpItems, pathname);
+  const helpGroupActive = isGroupActive(visibleHelpItems, pathname);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -199,53 +205,51 @@ export function Navbar() {
                 Analytics
               </Link>
             )}
-            {/* Help Dropdown - Only for authenticated users */}
-            {!isLoading && isAuthenticated && (
-              <div className="relative" ref={helpDropdownRef}>
-                <button
-                  onClick={() => setIsHelpDropdownOpen(!isHelpDropdownOpen)}
-                  className={`flex items-center gap-1 ${topLinkClass(helpGroupActive)}`}
+            {/* Help Dropdown - shown to everyone; the Help Center is public */}
+            <div className="relative" ref={helpDropdownRef}>
+              <button
+                onClick={() => setIsHelpDropdownOpen(!isHelpDropdownOpen)}
+                className={`flex items-center gap-1 ${topLinkClass(helpGroupActive)}`}
+              >
+                Help
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 ${isHelpDropdownOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
                 >
-                  Help
-                  <svg
-                    className={`w-4 h-4 transition-transform duration-200 ${isHelpDropdownOpen ? "rotate-180" : ""}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {isHelpDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-card-bg rounded-lg shadow-xl border border-border py-2 z-[9999]">
-                    {helpItems.map((item) =>
-                      "external" in item && item.external ? (
-                        <a
-                          key={item.href}
-                          href={item.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={dropdownItemClass(false)}
-                          onClick={() => setIsHelpDropdownOpen(false)}
-                        >
-                          {item.label}
-                        </a>
-                      ) : (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={dropdownItemClass(isLinkActive(item.href, pathname))}
-                          onClick={() => setIsHelpDropdownOpen(false)}
-                        >
-                          {item.label}
-                        </Link>
-                      )
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {isHelpDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-48 bg-card-bg rounded-lg shadow-xl border border-border py-2 z-[9999]">
+                  {visibleHelpItems.map((item) =>
+                    "external" in item && item.external ? (
+                      <a
+                        key={item.href}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={dropdownItemClass(false)}
+                        onClick={() => setIsHelpDropdownOpen(false)}
+                      >
+                        {item.label}
+                      </a>
+                    ) : (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={dropdownItemClass(isLinkActive(item.href, pathname))}
+                        onClick={() => setIsHelpDropdownOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Desktop CTA */}
@@ -361,59 +365,57 @@ export function Navbar() {
                   Analytics
                 </Link>
               )}
-              {/* Mobile Help - Only for authenticated users */}
-              {!isLoading && isAuthenticated && (
-                <div>
-                  <button
-                    onClick={() => setIsMobileHelpOpen(!isMobileHelpOpen)}
-                    className={`flex items-center justify-between w-full ${mobileLinkClass(helpGroupActive)}`}
+              {/* Mobile Help - shown to everyone; the Help Center is public */}
+              <div>
+                <button
+                  onClick={() => setIsMobileHelpOpen(!isMobileHelpOpen)}
+                  className={`flex items-center justify-between w-full ${mobileLinkClass(helpGroupActive)}`}
+                >
+                  <span>Help</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${isMobileHelpOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
                   >
-                    <span>Help</span>
-                    <svg
-                      className={`w-4 h-4 transition-transform duration-200 ${isMobileHelpOpen ? "rotate-180" : ""}`}
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {isMobileHelpOpen && (
-                    <div className="pl-4 mt-2 space-y-2 border-l-2 border-border">
-                      {helpItems.map((item) =>
-                        "external" in item && item.external ? (
-                          <a
-                            key={item.href}
-                            href={item.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={mobileDropdownItemClass(false)}
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              setIsMobileHelpOpen(false);
-                            }}
-                          >
-                            {item.label}
-                          </a>
-                        ) : (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            className={mobileDropdownItemClass(isLinkActive(item.href, pathname))}
-                            onClick={() => {
-                              setIsMenuOpen(false);
-                              setIsMobileHelpOpen(false);
-                            }}
-                          >
-                            {item.label}
-                          </Link>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isMobileHelpOpen && (
+                  <div className="pl-4 mt-2 space-y-2 border-l-2 border-border">
+                    {visibleHelpItems.map((item) =>
+                      "external" in item && item.external ? (
+                        <a
+                          key={item.href}
+                          href={item.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={mobileDropdownItemClass(false)}
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsMobileHelpOpen(false);
+                          }}
+                        >
+                          {item.label}
+                        </a>
+                      ) : (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={mobileDropdownItemClass(isLinkActive(item.href, pathname))}
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsMobileHelpOpen(false);
+                          }}
+                        >
+                          {item.label}
+                        </Link>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="flex flex-col gap-3 pt-4 border-t border-border">
                 {!isLoading && isAuthenticated ? (
                   <>
