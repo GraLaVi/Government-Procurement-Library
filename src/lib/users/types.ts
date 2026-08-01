@@ -3,6 +3,15 @@
 // Base role types (admin, user, read_only are permission roles)
 export type PermissionRole = 'admin' | 'user' | 'read_only';
 
+// Mirrors the CHECK constraint on customer_users.deactivated_reason
+// (migration 036). 'seat_cap' is the only system-driven value — those are the
+// users an upgrade can offer to restore; the rest were switched off on purpose.
+export type DeactivationReason =
+  | 'admin_internal'    // GPH support, via the admin dashboard
+  | 'admin_customer'    // the customer's own admin, via this portal
+  | 'seat_cap'          // automatic: over the plan's user limit
+  | 'account_closed';   // whole account closed
+
 // Extended user type with all fields from the API
 export interface ManagedUser {
   id: number;
@@ -13,6 +22,11 @@ export interface ManagedUser {
   job_title: string | null;
   roles: string[];  // Array of roles from customer_user_roles table
   is_active: boolean;
+  // Why is_active is false, and when. NULL on an active user — and also on
+  // anyone deactivated before migration 036, where the reason is genuinely
+  // unknown. Never treat a null reason as "active": is_active is the only gate.
+  deactivated_reason: DeactivationReason | null;
+  deactivated_at: string | null;
   email_verified: boolean;
   email_verified_at: string | null;
   must_change_password: boolean;

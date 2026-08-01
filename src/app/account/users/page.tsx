@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { ManagedUser, CreateUserRequest, UpdateUserRequest, AssignableItem } from "@/lib/users/types";
+import { ManagedUser, CreateUserRequest, UpdateUserRequest, AssignableItem, DeactivationReason } from "@/lib/users/types";
+import { SeatCapSuspensionAlert } from "@/components/dashboard/SeatCapSuspensionAlert";
+import { useSeatCapSuspensions } from "@/lib/hooks/useSeatCapSuspensions";
 import { resolveOrgTier } from "@/lib/library/tier";
 
 // Available permission roles that can be assigned. The "read_only"
@@ -27,6 +29,39 @@ const formatRoleName = (role: string): string => {
     user: "User",
   };
   return roleLabels[role] || role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+// Short label for why a user is inactive. Returns null when the reason is
+// unknown — which is legitimate: users deactivated before migration 036 have
+// no reason recorded, and inventing one would be worse than staying quiet.
+const deactivationLabel = (reason: DeactivationReason | null): string | null => {
+  switch (reason) {
+    case "seat_cap":
+      return "Plan limit";
+    case "admin_customer":
+      return "Disabled by admin";
+    case "admin_internal":
+      return "Disabled by support";
+    case "account_closed":
+      return "Account closed";
+    default:
+      return null;
+  }
+};
+
+const deactivationTitle = (reason: DeactivationReason | null): string | undefined => {
+  switch (reason) {
+    case "seat_cap":
+      return "Deactivated automatically — your plan includes fewer users than you had active. Add seats to restore access.";
+    case "admin_customer":
+      return "Deactivated by an administrator in your organization.";
+    case "admin_internal":
+      return "Deactivated by GPH support.";
+    case "account_closed":
+      return "Deactivated because the account was closed.";
+    default:
+      return undefined;
+  }
 };
 
 type ConfirmAction = "delete" | "deactivate" | "activate" | "reset-password" | null;
@@ -86,6 +121,14 @@ export default function UsersPage() {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [confirmUser, setConfirmUser] = useState<ManagedUser | null>(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  // Users the system suspended for exceeding the plan limit. Fetched
+  // independently of the table because the table hides inactive users unless
+  // the toggle is on — and these need to be actionable either way.
+  const {
+    suspended: seatCapSuspended,
+    reload: reloadSeatCapSuspended,
+  } = useSeatCapSuspensions(true);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   // Temporary password display
   const [tempPassword, setTempPassword] = useState<string | null>(null);
@@ -315,12 +358,53 @@ export default function UsersPage() {
       // all change the active count).
       await fetchUsers();
       fetchUserCap();
+      // Activating a plan-limit suspension clears it; deleting or deactivating
+      // frees a seat that changes what's restorable.
+      reloadSeatCapSuspended();
     } catch {
       setError("An unexpected error occurred");
     } finally {
       setIsActionLoading(false);
       setConfirmAction(null);
       setConfirmUser(null);
+    }
+  };
+
+  /**
+   * Reactivate every user the plan limit suspended.
+   *
+   * Only offered when there are enough free seats for all of them — if there
+   * aren't, choosing who comes back is the admin's call, not ours, and the
+   * table's per-user Activate action is the right tool. The backend enforces
+   * the cap regardless (409), so a race with another admin surfaces as a real
+   * error rather than a silent partial restore.
+   */
+  const handleRestoreAll = async () => {
+    if (!seatCapSuspended?.length) return;
+    setIsRestoring(true);
+    setError(null);
+    const failed: string[] = [];
+    try {
+      for (const u of seatCapSuspended) {
+        const response = await fetch(`/api/users/${u.id}/activate`, { method: "POST" });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          failed.push(`${u.email}: ${data.error || response.statusText}`);
+        }
+      }
+      if (failed.length === 0) {
+        const n = seatCapSuspended.length;
+        setSuccess(`Restored access for ${n} user${n === 1 ? "" : "s"}`);
+      } else {
+        setError(`Some users could not be restored — ${failed.join("; ")}`);
+      }
+      await fetchUsers();
+      fetchUserCap();
+      reloadSeatCapSuspended();
+    } catch {
+      setError("An unexpected error occurred while restoring users");
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -385,6 +469,17 @@ export default function UsersPage() {
 
   const hasSeatCap = userCap !== null && userCap.cap !== null;
   const atSeatCap = hasSeatCap && userCap!.used >= (userCap!.cap as number);
+  // Seats freed up by an upgrade or an added seat. Uncapped plans have no
+  // ceiling, so everything suspended can come back.
+  const availableSeats = hasSeatCap
+    ? Math.max(0, (userCap!.cap as number) - userCap!.used)
+    : Number.POSITIVE_INFINITY;
+  const restorableCount = seatCapSuspended?.length ?? 0;
+  // Derived from current state rather than from "did an upgrade just happen":
+  // free seats plus users the plan limit took away is the same situation
+  // however it arose, including an admin deleting a user to make room.
+  const canRestoreAll = restorableCount > 0 && availableSeats >= restorableCount;
+  const canRestoreSome = restorableCount > 0 && availableSeats > 0 && !canRestoreAll;
 
   return (
     <>
@@ -439,6 +534,19 @@ export default function UsersPage() {
                     )}
                   </div>
                 )}
+                {/* Sits under the seats pill, which is where "why is my seat
+                    count lower than my team" gets asked. `showStale` keeps a
+                    one-line note here permanently once the full banner has
+                    aged out — on the dashboard that same component goes silent
+                    instead, so a long-settled downgrade doesn't nag. */}
+                {/* Suppressed once seats are free: at that point the restore
+                    panel below is the useful message, and showing both would
+                    say "you lost access" and "you can get it back" at once. */}
+                {!canRestoreAll && !canRestoreSome && (
+                  <div className="mt-2">
+                    <SeatCapSuspensionAlert showStale />
+                  </div>
+                )}
               </div>
               <Button
                 variant="primary"
@@ -450,6 +558,58 @@ export default function UsersPage() {
                 Add User
               </Button>
             </div>
+
+            {/* Free seats + users the plan limit took away. Deliberately not
+                automatic: an upgrade never silently restores access, because
+                some of those people have since left the company and the admin
+                is the only one who knows. */}
+            {(canRestoreAll || canRestoreSome) && (
+              <div className="mb-6 p-4 bg-success/10 border border-success/20 rounded-lg flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-start gap-3 min-w-0">
+                  <svg className="w-5 h-5 text-success shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      {restorableCount} user{restorableCount === 1 ? "" : "s"} can be restored
+                    </p>
+                    <p className="text-sm text-muted mt-0.5">
+                      {canRestoreAll ? (
+                        <>
+                          You have room on your plan again. Restoring reactivates
+                          the {restorableCount === 1 ? "account" : "accounts"} paused
+                          when your user limit dropped.
+                        </>
+                      ) : (
+                        <>
+                          You have {availableSeats} free seat
+                          {availableSeats === 1 ? "" : "s"} but {restorableCount} paused
+                          user{restorableCount === 1 ? "" : "s"}. Turn on
+                          &ldquo;Include inactive users&rdquo; below and reactivate the
+                          ones you want, or add more seats.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                {canRestoreAll ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleRestoreAll}
+                    disabled={isRestoring}
+                  >
+                    {isRestoring
+                      ? "Restoring…"
+                      : `Restore ${restorableCount === 1 ? "user" : "all"}`}
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => router.push(capCtaHref)}>
+                    {capCtaLabel}
+                  </Button>
+                )}
+              </div>
+            )}
 
             {atSeatCap && (
               <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg flex items-center justify-between gap-3 flex-wrap">
@@ -623,6 +783,20 @@ export default function UsersPage() {
                       <Badge variant={u.is_active ? "success" : "warning"}>
                         {u.is_active ? "Active" : "Inactive"}
                       </Badge>
+                      {/* Why they're inactive, when we know. A plan-limit
+                          suspension is the system's doing and is undone by
+                          adding seats; the others were someone's decision.
+                          Rendered as a separate line rather than folded into
+                          the badge because Badge applies `capitalize`, which
+                          would mangle multi-word text. */}
+                      {!u.is_active && deactivationLabel(u.deactivated_reason) && (
+                        <div
+                          className="mt-1 text-xs text-muted"
+                          title={deactivationTitle(u.deactivated_reason)}
+                        >
+                          {deactivationLabel(u.deactivated_reason)}
+                        </div>
+                      )}
                     </td>
                     {rfqProduct && (
                       <td className="px-6 py-4">

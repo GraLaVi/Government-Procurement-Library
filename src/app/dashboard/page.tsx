@@ -16,6 +16,7 @@ import {
 import { QuickSearchLauncher } from "@/components/dashboard/QuickSearchLauncher";
 import { OnboardingChecklist } from "@/components/dashboard/OnboardingChecklist";
 import { PaymentMethodAlert } from "@/components/dashboard/PaymentMethodAlert";
+import { SeatCapSuspensionAlert } from "@/components/dashboard/SeatCapSuspensionAlert";
 import { RecentSearches } from "@/components/dashboard/RecentSearches";
 import { BidMatchingResultsCard } from "@/components/dashboard/BidMatchingResultsCard";
 
@@ -113,6 +114,7 @@ function BasicDashboard({ tier }: BasicDashboardProps) {
   return (
     <div className="space-y-6">
       <PaymentMethodAlert />
+      <SeatCapSuspensionAlert />
       <OnboardingChecklist />
       <QuickSearchLauncher />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -176,6 +178,7 @@ function FullDashboard() {
   return (
     <div className="space-y-6">
       <PaymentMethodAlert />
+      <SeatCapSuspensionAlert />
       <OnboardingChecklist />
       <QuickSearchLauncher />
 
