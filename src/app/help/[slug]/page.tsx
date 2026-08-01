@@ -13,6 +13,16 @@ interface Frontmatter {
   last_updated?: string;
 }
 
+// Articles use `<!-- ... -->` to park copy for features that aren't launched
+// yet (see the HIDDEN UNTIL ... markers in src/content/help/). react-markdown
+// already drops raw HTML, so those comments never render — but `content` is a
+// prop on a client component, so the markdown would otherwise ship verbatim in
+// the RSC payload and be readable from view-source. Strip the comments here,
+// on the server, so unreleased copy never reaches the browser at all.
+function stripHiddenComments(markdown: string): string {
+  return markdown.replace(/<!--[\s\S]*?-->/g, "");
+}
+
 async function loadDoc(
   slug: string,
 ): Promise<{ frontmatter: Frontmatter; content: string } | null> {
@@ -21,7 +31,10 @@ async function loadDoc(
   try {
     const raw = await fs.readFile(filePath, "utf8");
     const parsed = matter(raw);
-    return { frontmatter: parsed.data as Frontmatter, content: parsed.content };
+    return {
+      frontmatter: parsed.data as Frontmatter,
+      content: stripHiddenComments(parsed.content),
+    };
   } catch {
     return null;
   }

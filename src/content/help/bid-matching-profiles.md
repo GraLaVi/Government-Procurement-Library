@@ -76,6 +76,8 @@ To turn a deactivated profile back on, click **Activate**.
 
 ## Profile limits by plan
 
+<!-- HIDDEN UNTIL MAXIMUM LAUNCH: the note below should read "... Basic includes 5, Advanced includes 20, and Maximum includes 30\." -->
+
 *Note: profile limits vary by plan. Free includes 1 profile, Basic includes 5, and Advanced includes 20\. Each plan also caps the number of conditions per profile — the editor shows your limit as you build a profile. Every condition type is available on every plan. Deactivated profiles don't count against your limit.*
 
 ## What happens after you save

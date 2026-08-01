@@ -92,7 +92,9 @@ The Recent Solicitations tab shows active and recently closed solicitations for 
 
 Solicitations that have been changed show an amber **Amended** badge (with a **×N** count for multiple amendments); click it for a change timeline. SAM.gov rows that carry attachments show a documents button with the attachment count. To learn more about viewing a solicitation PDF or amendment history, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
 
-*Note: on the Free plan this tab shows a count of recent solicitations and an upgrade prompt rather than the full table. It isn't shown at all on Basic — the full table is available on Advanced and Maximum.*
+<!-- HIDDEN UNTIL MAXIMUM LAUNCH: the note below should end "— the full table is available on Advanced and Maximum." -->
+
+*Note: on the Free plan this tab shows a count of recent solicitations and an upgrade prompt rather than the full table. It isn't shown at all on Basic — the full table is available on Advanced.*
 
 ## Manufacturers tab
 
@@ -106,7 +108,9 @@ The Manufacturers tab lists every known manufacturer or supplier of the part, in
 
 This is the part's competitive intelligence at a glance — you can see exactly who else makes or supplies the part.
 
+<!-- HIDDEN UNTIL RFQ LAUNCH: restore the paragraph below
 If you have the RFQ add-on, this tab is also where you start a Request for Quote: select one or more vendors and click **Create RFQ** to send them a quote request. See [Sending RFQs to vendors](/help/requests-for-quote) for the full workflow.
+-->
 
 *Note: this tab is available starting on the Basic plan.*
 
@@ -152,7 +156,8 @@ For more detailed or custom exports, click the **Request a custom report →** l
 
 ## Related articles
 
+<!-- HIDDEN UNTIL RFQ LAUNCH: restore as the second list item — "- [Sending RFQs to Vendors](/help/requests-for-quote) — Request quotes from a part's manufacturers" -->
+
 - [Researching Vendors](/help/vendor-research) — Vendor profiles and competitive intelligence  
-- [Sending RFQs to Vendors](/help/requests-for-quote) — Request quotes from a part's manufacturers  
 - [Setting Up Bid-Matching Profiles](/help/bid-matching-profiles) — Match incoming solicitations automatically  
 - [Plans and Pricing](/help/plans-and-pricing) — Compare feature access by plan

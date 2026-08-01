@@ -71,20 +71,27 @@ export const HELP_ARTICLES: HelpArticleMeta[] = [
       "Investigate any government contractor's awards, contracts, and active solicitations by CAGE code or name.",
     group: "platform",
   },
-  {
-    slug: "demand-intelligence",
-    title: "Reading Demand & Stock Data",
-    blurb:
-      "Use DLA's demand forecast and inventory signals on a part's Demand & Stock tab to decide what to bid on and how to price.",
-    group: "platform",
-  },
-  {
-    slug: "requests-for-quote",
-    title: "Sending RFQs to Vendors",
-    blurb:
-      "Send requests for quote to vendors from a part's Manufacturers tab and collect structured quotes.",
-    group: "platform",
-  },
+  // HIDDEN UNTIL MAXIMUM LAUNCH: Maximum-only feature, not ready to deploy.
+  // Uncomment to relist; src/content/help/demand-intelligence.md is unchanged
+  // on disk and the article renders as-is once this entry is restored.
+  // {
+  //   slug: "demand-intelligence",
+  //   title: "Reading Demand & Stock Data",
+  //   blurb:
+  //     "Use DLA's demand forecast and inventory signals on a part's Demand & Stock tab to decide what to bid on and how to price.",
+  //   group: "platform",
+  // },
+  // HIDDEN UNTIL RFQ LAUNCH: RFQ add-on isn't ready to deploy. Uncomment to
+  // relist; src/content/help/requests-for-quote.md is unchanged on disk. Also
+  // restore the RFQ passages commented out in parts-search.md,
+  // notifications.md, and faq.md.
+  // {
+  //   slug: "requests-for-quote",
+  //   title: "Sending RFQs to Vendors",
+  //   blurb:
+  //     "Send requests for quote to vendors from a part's Manufacturers tab and collect structured quotes.",
+  //   group: "platform",
+  // },
   {
     slug: "solicitations-and-contracts",
     title: "Viewing Solicitations and Contracts",
