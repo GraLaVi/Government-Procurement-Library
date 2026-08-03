@@ -433,13 +433,13 @@ export function PartDetail({ part }: PartDetailProps) {
           // Fallback to hardcoded names - set these first as defaults
           const CODE_TYPE_NAMES_FALLBACK: Record<string, string> = {
             'AMC': 'Acquisition Method Code',
-            'IDS': 'Item Description Segment',
-            'PIC': 'Procurement Info Code',
+            'IDS': 'Product Item Description Indicator',
+            'PIC': 'Place of Inspection Code',
             'SLC': 'Shelf Life Code',
             'PMC': 'Preservation Method Codes',
             'CPMC': 'Contact Preservative Material Codes',
             'WMC': 'Wrapping Material Codes',
-            'CDMC': 'Critical Design Manufacturing Code',
+            'CDMC': 'Cushioning and Dunnage Material Codes',
             'TCDC': 'Thickness of Cushioning or Dunnage Codes',
             'UICC': 'Unit and Intermediate Container Codes',
             'OPIC': 'Optional Procedure Indicator Codes',

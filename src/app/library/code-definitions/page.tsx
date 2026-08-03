@@ -24,17 +24,20 @@ interface AllCodeDefinitionsResponse {
 }
 
 // Code type display names mapping
+// Fallback only - the API sends the authoritative name from
+// library_code_definitions.code_name. Keep these in sync with that table.
 const CODE_TYPE_NAMES: Record<string, string> = {
   'AMC': 'Acquisition Method Code',
-  'CDMC': 'Critical Design Manufacturing Code',
+  'CDMC': 'Cushioning and Dunnage Material Codes',
   'CPC': 'Cleaning Procedure Codes',
   'CPMC': 'Contact Preservative Material Codes',
-  'DDC': 'Distribution/Disposal Code',
-  'FLIS': 'Federal Logistics Info System codes',
-  'IDS': 'Item Description Segment',
+  'DDC': 'Document Data Code',
+  'FLIS': 'FLIS NSN Status Codes',
+  'FSC': 'Federal Supply Classification',
+  'IDS': 'Product Item Description Indicator',
   'OPIC': 'Optional Procedure Indicator Codes',
-  'PIC': 'Procurement Info Code',
-  'PKGC': 'Packaging Code',
+  'PIC': 'Place of Inspection Code',
+  'PKGC': 'DLA Packaging Class',
   'PMC': 'Preservation Method Codes',
   'QUPC': 'Quantity Per Unit Pack Codes',
   'RNCC': 'Reference Number Category Code',
@@ -112,8 +115,9 @@ function CodeDefinitionsPageContent() {
     }
   }, [targetCodeType, targetCodeValue, codeDefinitions]);
 
-  const getCodeTypeDisplayName = (codeType: string): string => {
-    return CODE_TYPE_NAMES[codeType] || codeType;
+  // Prefer the name the API returns; fall back to the local map when it sends none
+  const getCodeTypeDisplayName = (group: CodeDefinitionsByType): string => {
+    return group.code_name || CODE_TYPE_NAMES[group.code_type] || group.code_type;
   };
 
   const isTargetCode = (codeType: string, codeValue: string): boolean => {
@@ -149,8 +153,8 @@ function CodeDefinitionsPageContent() {
           {codeDefinitions.code_types.map((codeTypeGroup) => (
             <div key={codeTypeGroup.code_type} className="bg-card rounded-lg border border-border p-4">
               <h2 className="text-xl font-semibold text-foreground mb-3">
-                {getCodeTypeDisplayName(codeTypeGroup.code_type)}
-                {codeTypeGroup.code_type !== getCodeTypeDisplayName(codeTypeGroup.code_type) && (
+                {getCodeTypeDisplayName(codeTypeGroup)}
+                {codeTypeGroup.code_type !== getCodeTypeDisplayName(codeTypeGroup) && (
                   <span className="text-sm font-normal text-muted ml-2">
                     ({codeTypeGroup.code_type})
                   </span>
