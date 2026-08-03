@@ -25,6 +25,13 @@ const nextConfig: NextConfig = {
         destination: '/rfq/:path*',
         permanent: true,
       },
+      // The Documentation placeholder was replaced by the Help Center (June
+      // 2026). Kept as a redirect so old inbound links and bookmarks resolve.
+      {
+        source: '/documentation',
+        destination: '/help',
+        permanent: true,
+      },
     ];
   },
 };

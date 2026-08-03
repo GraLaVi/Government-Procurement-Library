@@ -36,6 +36,6 @@ export const AUTH_CONFIG = {
     LOGIN: '/login',
     ACCOUNT: '/account',
     CHANGE_PASSWORD: '/account/change-password',
-    PUBLIC: ['/', '/login', '/signup', '/pricing', '/about', '/contact', '/legal', '/support', '/help', '/documentation', '/forgot-password', '/reset-password', '/verify-email', '/rfq/respond'],
+    PUBLIC: ['/', '/login', '/signup', '/pricing', '/about', '/contact', '/legal', '/support', '/help', '/forgot-password', '/reset-password', '/verify-email', '/rfq/respond'],
   },
 } as const;
