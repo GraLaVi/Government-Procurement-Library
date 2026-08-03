@@ -13,7 +13,7 @@ const footerLinks = {
     { href: "/contact", label: "Contact" },
   ],
   Resources: [
-    { href: "/help", label: "Documentation" },
+    { href: "/help", label: "Help Center" },
     {
       href: "https://gphusa.atlassian.net/servicedesk/customer/portals",
       label: "Support",
