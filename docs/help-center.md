@@ -12,9 +12,11 @@ and how to add or change articles.
 - Content authored as markdown in `src/content/help/`, rendered with the same
   `react-markdown` + Tailwind `prose` stack used by the legal pages.
 
-Source content originated from the GPH help doc set (`docs/gph_documentation/`,
-authored in Google Docs). Those raw `.md` files are the upstream source; the
-files under `src/content/help/` are the normalized, deployed copies.
+Source content originated from the GPH help doc set authored in Google Docs. A
+raw export of that set used to live at `docs/gph_documentation/`; it was removed
+once it had gone stale relative to the shipped articles (recoverable from git
+history if ever needed). **`src/content/help/` is now the only source of truth
+for help content** — edit those files directly.
 
 ## File map
 
