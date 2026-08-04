@@ -82,15 +82,13 @@ The Recent Solicitations tab shows active and recently closed solicitations for 
 - **Solicitation \#** — The solicitation identifier. DLA solicitations with a PDF open it in a viewer; SAM.gov opportunities open on SAM.gov.  
 - **Purchase req** — The internal purchase requisition number  
 - **Status** — Solicitation status (open, closed, and so on)  
-- **Rating** — The solicitation's DPAS (Defense Priorities and Allocations System) rating, a government-assigned priority for defense and emergency orders. **DX** is the highest national-defense priority and **DO** is the standard priority; both take precedence over unrated commercial work. Most solicitations are unrated and show a dash.  
-- **Agency** — Source agency (DLA, DIBBS, or other)  
 - **Set-Aside** — The set-aside category, shown as a code badge; hover it for the full label  
 - **Qty** — Required quantity (with unit of measure)  
 - **Est. Value** — Estimated contract value  
 - **Buyer** — The contracting officer or buyer name  
 - **Buyer contact** — Email (with a copy button) or phone for the buyer, where available
 
-Solicitations that have been changed show an amber **Amended** badge (with a **×N** count for multiple amendments); click it for a change timeline. SAM.gov rows that carry attachments show a documents button with the attachment count. To learn more about viewing a solicitation PDF or amendment history, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
+Solicitations that have been changed show an amber **Amended** badge (with a **×N** count for multiple amendments); click it for a change timeline. SAM.gov rows that carry attachments show a documents button with the attachment count. Fast-award candidates carry a green **Fast Award** badge — these can be awarded before their close date, so quoting early matters; see [Solicitation type indicators](/help/solicitations-and-contracts#solicitation-type-indicators). To learn more about viewing a solicitation PDF or amendment history, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
 
 <!-- HIDDEN UNTIL MAXIMUM LAUNCH: the note below should end "— the full table is available on Advanced and Maximum." -->
 
@@ -148,7 +146,7 @@ On the Advanced plan, click the pin icon next to a recent search to save it. Pin
 
 ## Exporting data
 
-Several tabs include an **Export CSV** button that downloads the visible data to a spreadsheet — particularly useful for Procurement History, Recent Solicitations, and Manufacturers, where the tables can be large.
+Several tabs include an **Export CSV** button that downloads the table's data to a spreadsheet — particularly useful for Procurement History, Recent Solicitations, and Manufacturers, where the tables can be large. The export can include a few fields that aren't shown as on-screen columns; the Recent Solicitations export, for example, also carries the solicitation's DPAS rating, source agency, and solicitation type.
 
 For more detailed or custom exports, click the **Request a custom report →** link at the bottom of any data table.
 

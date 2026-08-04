@@ -26,7 +26,7 @@ New matches also appear in the in-app notification bell (🔔) at the top of the
 
 Each match row shows:
 
-- **Solicitation.** The solicitation number, with the source agency (DLA, DIBBS, or other) shown below. Solicitations that have changed carry a badge — see [Amended and updated solicitations](#amended-and-updated-solicitations) below.  
+- **Solicitation.** The solicitation number, with the source agency (DLA, DIBBS, or other) shown below. Solicitations that have changed carry a badge — see [Amended and updated solicitations](#amended-and-updated-solicitations) below. Fast-award candidates carry a green **Fast Award** badge, meaning the buy can be awarded before its close date — prioritize quoting these; see [Solicitation type indicators](/help/solicitations-and-contracts#solicitation-type-indicators).  
 - **Status.** The current state of the solicitation (most commonly **open**, meaning it's still accepting bids).  
 - **Close Date.** The deadline for submitting your bid. Use this to prioritize matches by urgency.  
 - **Profile.** Which of your profiles matched this solicitation. If you have multiple profiles, this tells you which one to credit — or to refine.  

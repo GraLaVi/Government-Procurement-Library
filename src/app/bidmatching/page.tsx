@@ -57,6 +57,12 @@ interface BidMatchResult {
   set_aside: string | null;
   set_aside_code?: string | null;
   set_aside_label?: string | null;
+  // DLA Solicitation Type Indicator: "F" (Fast Auto Evaluation), "P" (Auto
+  // Evaluation), "I" (Automated IDC). Null/absent means UNKNOWN, not "no" —
+  // never render a negative for it. Always null on SAM-source rows.
+  solicitation_type?: string | null;
+  // Label resolved from code_definitions (code_type='SOLICITATION_TYPE').
+  solicitation_type_label?: string | null;
   sam_url?: string | null;
   // Maximum-tier DLA demand signal (strongest across the opportunity's NIINs).
   demand_signal?: string | null;

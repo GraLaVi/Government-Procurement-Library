@@ -104,6 +104,12 @@ export interface VendorSolicitation {
   set_aside: string | null;
   set_aside_code?: string | null;
   set_aside_label?: string | null;
+  // DLA Solicitation Type Indicator: "F" (Fast Auto Evaluation), "P" (Auto
+  // Evaluation), "I" (Automated IDC). Null/absent means UNKNOWN, not "no" —
+  // never render a negative for it. Always null on SAM rows.
+  solicitation_type?: string | null;
+  // Label resolved from code_definitions (code_type='SOLICITATION_TYPE').
+  solicitation_type_label?: string | null;
   // Free-form rating value from solicitations.rating; null on SAM rows.
   rating?: string | null;
   // Part-level fields are null on SAM rows (an opportunity can span many parts).
@@ -567,6 +573,12 @@ export interface PartSolicitation {
   set_aside: string | null;
   set_aside_code?: string | null;
   set_aside_label?: string | null;
+  // DLA Solicitation Type Indicator: "F" (Fast Auto Evaluation), "P" (Auto
+  // Evaluation), "I" (Automated IDC). Null/absent means UNKNOWN, not "no" —
+  // never render a negative for it. Always null on SAM rows.
+  solicitation_type?: string | null;
+  // Label resolved from code_definitions (code_type='SOLICITATION_TYPE').
+  solicitation_type_label?: string | null;
   rating?: string | null;
   quantity: number | null;
   quantity_unit: string | null;

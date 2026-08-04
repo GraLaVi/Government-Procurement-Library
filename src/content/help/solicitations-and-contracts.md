@@ -40,6 +40,19 @@ When a solicitation has been revised since posting, an **Amended** badge appears
 
 Review amendments carefully. Amendments can change quantities, requirements, set-aside types, or close dates — acting on outdated information could mean preparing a non-conforming bid.
 
+## Solicitation type indicators
+
+DLA marks some solicitations for automated evaluation. Where GPH has that marking, it appears as a small badge next to the solicitation number:
+
+- **Fast Award** (green) — a fast-award candidate. Micro-purchase quotes on these can be awarded **before** the stated return date, so quoting early matters. Waiting until the deadline can cost you the award even though the solicitation is still technically open.  
+- **Automated IDC** — the buy results in an automated indefinite delivery contract (AIDC) rather than a single delivery order. Quotes on these typically must remain valid for 90 days or more.
+
+Hover either badge for the full explanation.
+
+**A missing badge does not mean "not a fast award."** GPH began recording this indicator recently, and it can only be applied retroactively to solicitations posted within a short window. Many solicitations — including plenty that are open right now — have no indicator recorded, so no badge appears. Read a badge as a positive signal when it's there, and its absence as *unknown* rather than *no*. Coverage of currently quotable solicitations improves over time as older, unmarked solicitations close.
+
+These badges appear wherever GPH lists solicitations: Bid-Matching results, the **Recent Solicitations** tab on a part record, and the **Open Solicitations** tab on a vendor profile.
+
 ## Where to find solicitations and contracts
 
 Doc icons and "Amended" badges appear consistently throughout GPH wherever solicitations or contracts are listed:

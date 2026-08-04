@@ -67,7 +67,7 @@ import { buildCsv, buildCombinedCsv, triggerDownload, todayIsoDate } from "@/lib
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
-import { DpasRatingTooltip } from "@/components/library/DpasRatingTooltip";
+import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
 
 // Module-scope CSV column specs for the part-detail tab exports. Kept
 // outside the component bodies so the parent-level export button
@@ -117,6 +117,9 @@ const SOLICITATIONS_CSV_COLUMNS: CsvColumn<PartSolicitation>[] = [
   { header: "Rating", value: (r) => r.rating ?? "" },
   { header: "Agency", value: (r) => r.agency_code ?? "" },
   { header: "Set-Aside", value: (r) => r.set_aside_label ?? r.set_aside ?? "" },
+  // Blank for untyped rows — an empty cell reads as "unknown", which is what a
+  // NULL solicitation_type means. Never emit a negative here.
+  { header: "Solicitation Type", value: (r) => r.solicitation_type_label ?? "" },
   { header: "Buyer Name", value: (r) => r.buyer_name ?? "" },
   { header: "Buyer Email", value: (r) => r.buyer_email ?? "" },
   { header: "Buyer Phone", value: (r) => r.buyer_phone ?? "" },
@@ -2125,6 +2128,13 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                   Amended{summary.amendment_count > 1 ? ` ×${summary.amendment_count}` : ""}
                 </button>
               )}
+              {/* DLA fast-award / AIDC indicator. Renders nothing unless the
+                  row carries a badged type, so untyped rows (the majority
+                  while backfill coverage climbs) are visually unchanged. */}
+              <SolicitationTypeBadge
+                code={sol.solicitation_type}
+                label={sol.solicitation_type_label}
+              />
             </span>
           );
         },
@@ -2161,21 +2171,9 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           );
         },
       },
-      {
-        id: "rating",
-        accessorKey: "rating",
-        header: "Rating",
-        cell: ({ row }) => <DpasRatingTooltip rating={row.original.rating} />,
-      },
-      {
-        id: "agency_code",
-        accessorKey: "agency_code",
-        header: "Agency",
-        cell: ({ row }) => (
-          <span className="text-xs font-medium text-foreground">{row.original.agency_code || "—"}</span>
-        ),
-        meta: { className: "hidden md:table-cell" },
-      },
+      // Rating (DPAS) and Agency are intentionally not columns here. Both still
+      // ride along on the API rows and in the CSV export — they're just not
+      // worth table width in this view.
       {
         id: "set_aside",
         accessorKey: "set_aside_label",

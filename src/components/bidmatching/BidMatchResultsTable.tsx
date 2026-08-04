@@ -5,6 +5,7 @@ import { SolicitationNumberLink } from "@/components/library/SolicitationNumberL
 import { MatchStrengthBadge } from "@/components/ui/MatchStrengthBadge";
 import { Modal } from "@/components/ui/Modal";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
+import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
 import { timeAgo } from "@/lib/amendments";
 
 interface MatchedCondition {
@@ -46,6 +47,12 @@ interface BidMatchResult {
   set_aside: string | null;
   set_aside_code?: string | null;
   set_aside_label?: string | null;
+  // DLA Solicitation Type Indicator: "F" (Fast Auto Evaluation), "P" (Auto
+  // Evaluation), "I" (Automated IDC). Null/absent means UNKNOWN, not "no" —
+  // never render a negative for it. Always null on SAM-source rows.
+  solicitation_type?: string | null;
+  // Label resolved from code_definitions (code_type='SOLICITATION_TYPE').
+  solicitation_type_label?: string | null;
   sam_url?: string | null;
   // Maximum-tier DLA demand signal — strongest across the opportunity's NIINs
   // ('on_backorder' | 'below_reorder_point' | 'recurring'). Null/absent when no
@@ -324,6 +331,14 @@ export function BidMatchResultsTable({
                         {/* DLA demand signal (Maximum tier) — strongest across
                             the opportunity's NIINs; informs the bid decision. */}
                         <DemandSignalChip signal={result.demand_signal} />
+                        {/* DLA fast-award / AIDC indicator, same component and
+                            rules as the parts/vendor solicitation tables:
+                            renders nothing unless the row carries a badged
+                            type, so untyped rows are visually unchanged. */}
+                        <SolicitationTypeBadge
+                          code={result.solicitation_type}
+                          label={result.solicitation_type_label}
+                        />
                       </div>
                       {result.agency_code && (
                         <div className="text-xs text-muted-foreground mt-0.5">{result.agency_code}</div>

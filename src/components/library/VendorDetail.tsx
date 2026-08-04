@@ -47,7 +47,7 @@ import { buildCsv, buildCombinedCsv, triggerDownload, todayIsoDate } from "@/lib
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
-import { DpasRatingTooltip } from "@/components/library/DpasRatingTooltip";
+import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
 
 // DoD PIID formatter: many SAM.gov solicitation numbers arrive without the
 // canonical dashes (e.g. "FA821326R3048"). When a value has no dashes AND matches
@@ -147,6 +147,9 @@ const VENDOR_SOLICITATIONS_CSV_COLUMNS: CsvColumn<VendorSolicitation>[] = [
   { header: "Unit Price", value: (r) => r.unit_price ?? "" },
   { header: "Estimated Value", value: (r) => r.estimated_value ?? "" },
   { header: "Set-Aside", value: (r) => r.set_aside_label ?? r.set_aside ?? "" },
+  // Blank for untyped rows — an empty cell reads as "unknown", which is what a
+  // NULL solicitation_type means. Never emit a negative here.
+  { header: "Solicitation Type", value: (r) => r.solicitation_type_label ?? "" },
 ];
 
 export type TabId = "demographics" | "contacts" | "awards" | "bookings" | "solicitations";
@@ -1635,16 +1638,20 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                   Amended{summary.amendment_count > 1 ? ` ×${summary.amendment_count}` : ""}
                 </button>
               )}
+              {/* DLA fast-award / AIDC indicator. Renders nothing unless the
+                  row carries a badged type, so untyped rows (the majority
+                  while backfill coverage climbs) are visually unchanged. */}
+              <SolicitationTypeBadge
+                code={sol.solicitation_type}
+                label={sol.solicitation_type_label}
+              />
             </span>
           );
         },
       },
-      {
-        id: "rating",
-        accessorKey: "rating",
-        header: "Rating",
-        cell: ({ row }) => <DpasRatingTooltip rating={row.original.rating} />,
-      },
+      // Rating (DPAS) is intentionally not a column here. It still rides along
+      // on the API rows and in the CSV export — it's just not worth table width
+      // in this view.
       {
         id: "nsn",
         accessorFn: (row) => row.fsc && row.niin ? `${row.fsc}-${row.niin}` : row.niin,
