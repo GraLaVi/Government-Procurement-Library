@@ -15,8 +15,10 @@ and how to add or change articles.
   (`src/lib/auth/config.ts`), which the prefix match extends to every
   `/help/<slug>`. Signed-out visitors get the marketing `<Navbar />`; signed-in
   users get the in-app `<Header />`. Keep it that way — the articles are
-  marketing surface as much as support material, and `/support` and
-  `/documentation` (both public) link straight into it.
+  marketing surface as much as support material, and the public `/support` page
+  links straight into it. `/documentation` is not in `PUBLIC` and does not need
+  to be: it is a `next.config.ts` redirect, and Next.js applies those before
+  middleware, so signed-out visitors land on `/help` either way.
 
 Source content originated from the GPH help doc set authored in Google Docs. A
 raw export of that set used to live at `docs/gph_documentation/`; it was removed
