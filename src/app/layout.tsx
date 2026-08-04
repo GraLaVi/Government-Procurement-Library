@@ -27,7 +27,7 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GPH - Federal Procurement Intelligence",
+  title: "GPH - Government Procurement Hub",
   description:
     "Research, track and win DLA, DIBBS, and SAM.gov bids. Search by NSN/NIIN, manufacturer part number, solicitation and award numbers, using our extensive intelligent library and real-time bid matching alerts.",
   keywords: [
