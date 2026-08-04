@@ -11,6 +11,12 @@ and how to add or change articles.
   generated).
 - Content authored as markdown in `src/content/help/`, rendered with the same
   `react-markdown` + Tailwind `prose` stack used by the legal pages.
+- **Public.** `/help` is in `AUTH_CONFIG.ROUTES.PUBLIC`
+  (`src/lib/auth/config.ts`), which the prefix match extends to every
+  `/help/<slug>`. Signed-out visitors get the marketing `<Navbar />`; signed-in
+  users get the in-app `<Header />`. Keep it that way — the articles are
+  marketing surface as much as support material, and `/support` and
+  `/documentation` (both public) link straight into it.
 
 Source content originated from the GPH help doc set authored in Google Docs. A
 raw export of that set used to live at `docs/gph_documentation/`; it was removed
@@ -82,9 +88,9 @@ overhaul.
 - **Footer** → "Documentation" links to `/help` (`src/components/layout/Footer.tsx`).
 - **Help dropdown** → "Help Center" is the first item, in both
   `src/components/layout/Navbar.tsx` (marketing nav) and
-  `src/components/layout/Header.tsx` (in-app nav), desktop + mobile. The Help
-  dropdown only renders for authenticated users; the footer link covers
-  logged-out visitors.
+  `src/components/layout/Header.tsx` (in-app nav), desktop + mobile. The Navbar
+  dropdown renders for everyone; its "Code Definitions" entry is filtered out
+  for signed-out visitors because that page is still auth-gated.
 - **`/documentation`** (old placeholder) now redirects to `/help` so existing
   inbound links don't 404.
 - **`/support`** is a real page linking the Help Center, FAQ, and contact.
