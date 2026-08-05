@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
@@ -18,6 +18,7 @@ import {
 import { formatDateMmDdYyyy } from "@/lib/dates";
 import { formatNSN } from "@/lib/library/types";
 import { TableCard } from "@/components/rfq/TableCard";
+import { PricingPopover } from "@/components/rfq/PricingPopover";
 import { PrintButton } from "@/components/ui/PrintButton";
 
 function statusVariant(status: string): "default" | "success" | "warning" | "error" {
@@ -33,6 +34,7 @@ function statusVariant(status: string): "default" | "success" | "warning" | "err
 }
 
 export default function RfqDetailPage() {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
   const rfqId = params?.id;
   const { isLoading: authLoading, hasAnyProductAccess } = useAuth();
@@ -46,6 +48,8 @@ export default function RfqDetailPage() {
   // Stamped when Print is clicked rather than during render — `new Date()` at
   // render time would mismatch between the server and client HTML.
   const [printedOn, setPrintedOn] = useState<string | null>(null);
+  // Prev/next navigation across the My RFQs list (same order as /rfq).
+  const [rfqIds, setRfqIds] = useState<number[]>([]);
   const [printRequested, setPrintRequested] = useState(false);
 
   const load = useCallback(async () => {
@@ -81,6 +85,19 @@ export default function RfqDetailPage() {
     () => new Map((rfq?.line_items ?? []).map((li) => [li.id, li])),
     [rfq],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/rfq");
+        if (!res.ok || cancelled) return;
+        const list: { id: number }[] = await res.json();
+        setRfqIds(list.map((r) => r.id));
+      } catch { /* nav arrows just stay hidden */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Open the print dialog once the print-only header has actually painted.
   useEffect(() => {
@@ -146,7 +163,30 @@ export default function RfqDetailPage() {
   return (
     <div className="print-root space-y-6">
       <div>
-        <Link href="/rfq" className="no-print text-xs text-primary hover:underline">← All RFQs</Link>
+        <div className="no-print flex items-center justify-between gap-3">
+          <Link href="/rfq" className="text-xs text-primary hover:underline">← All RFQs</Link>
+          {rfqIds.length > 1 && (() => {
+            const idx = rfqIds.indexOf(Number(rfqId));
+            const prevId = idx > 0 ? rfqIds[idx - 1] : null;
+            const nextId = idx >= 0 && idx < rfqIds.length - 1 ? rfqIds[idx + 1] : null;
+            const btn = "inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border text-xs text-card-foreground hover:border-primary/50 hover:text-primary disabled:opacity-40 disabled:hover:border-border disabled:hover:text-card-foreground";
+            return (
+              <div className="flex items-center gap-2">
+                {idx >= 0 && (
+                  <span className="text-xs text-muted">{idx + 1} of {rfqIds.length}</span>
+                )}
+                <button type="button" className={btn} disabled={!prevId}
+                  onClick={() => prevId && router.push(`/rfq/${prevId}`)} aria-label="Previous RFQ">
+                  ← Prev
+                </button>
+                <button type="button" className={btn} disabled={!nextId}
+                  onClick={() => nextId && router.push(`/rfq/${nextId}`)} aria-label="Next RFQ">
+                  Next →
+                </button>
+              </div>
+            );
+          })()}
+        </div>
         <div className="mt-2 flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{rfq.title}</h1>
@@ -316,12 +356,14 @@ export default function RfqDetailPage() {
                           <td className="px-3 py-1.5 text-muted">{rli.is_no_bid ? "Yes" : "—"}</td>
                           <td className="px-3 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                             {rli.price_to_gov != null ? (
-                              <span
-                                className="font-semibold text-foreground"
-                                title={`Markup ${rli.markup_percent ?? 0}% · shipping $${rli.shipping_amount ?? 0} · other $${rli.other_charges ?? 0}${rli.priced_at ? ` · priced ${formatDateMmDdYyyy(rli.priced_at)}` : ""}`}
-                              >
-                                ${rli.price_to_gov}
-                              </span>
+                              <PricingPopover
+                                priceToGov={rli.price_to_gov}
+                                vendorUnitPrice={rli.unit_price}
+                                markupPercent={rli.markup_percent ?? null}
+                                shippingAmount={rli.shipping_amount ?? null}
+                                otherCharges={rli.other_charges ?? null}
+                                pricedAt={rli.priced_at ?? null}
+                              />
                             ) : (
                               "—"
                             )}

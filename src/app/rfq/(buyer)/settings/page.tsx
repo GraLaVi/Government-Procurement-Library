@@ -119,6 +119,8 @@ export default function RfqSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Draft for the min-est-value field: committed on blur, not per keystroke.
+  const [minEstDraft, setMinEstDraft] = useState<string>("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,7 +133,11 @@ export default function RfqSettingsPage() {
       const data = await res.json();
       if (!res.ok) setError(data.error || "Failed to load settings.");
       else setSettings(data as RfqSettings);
-      if (meRes.ok) setMyPrefs((await meRes.json()) as RfqUserSettings);
+      if (meRes.ok) {
+        const me = (await meRes.json()) as RfqUserSettings;
+        setMyPrefs(me);
+        setMinEstDraft(me.worklist_min_est_value != null ? String(me.worklist_min_est_value) : "");
+      }
     } catch {
       setError("Network error.");
     } finally {
@@ -142,7 +148,10 @@ export default function RfqSettingsPage() {
   // Optimistically update one or more of the current user's notification prefs.
   const updateMyPrefs = async (patch: Partial<RfqUserSettings>) => {
     const prev = myPrefs;
-    setMyPrefs((p) => (p ? { ...p, ...patch } : p));
+    // The -1 clear sentinel must never render — show null optimistically.
+    const optimistic = { ...patch };
+    if (optimistic.worklist_min_est_value === -1) optimistic.worklist_min_est_value = null;
+    setMyPrefs((p) => (p ? { ...p, ...optimistic } : p));
     try {
       const res = await fetch("/api/rfq/settings/me", {
         method: "PATCH",
@@ -276,6 +285,35 @@ export default function RfqSettingsPage() {
                 onChange={(v) => updateMyPrefs({ bell_on_response: v })}
               />
             </div>
+
+            {isEnterprise && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-secondary mb-1">My Send RFQs queue</h3>
+                <p className="text-xs text-muted mb-3">Applies only to you.</p>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Hide solicitations with estimated value under ($)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  className="w-full max-w-[200px] px-3 py-2 rounded-md border border-border bg-card-bg text-card-foreground text-sm"
+                  value={minEstDraft}
+                  onChange={(e) => setMinEstDraft(e.target.value)}
+                  onBlur={() => {
+                    const parsed = minEstDraft ? parseFloat(minEstDraft) : null;
+                    if (parsed === (myPrefs.worklist_min_est_value ?? null)) return; // unchanged
+                    // -1 is the backend's clear sentinel (null in a PATCH
+                    // reads as "not provided").
+                    updateMyPrefs({ worklist_min_est_value: (parsed ?? -1) as number });
+                  }}
+                />
+                <p className="text-xs text-muted mt-1">
+                  Solicitations below this estimated value are hidden from your Send RFQs
+                  queue (rows with no estimate stay visible). Blank to show everything.
+                </p>
+              </div>
+            )}
 
             <div className="mt-6">
               <h3 className="text-sm font-semibold text-secondary mb-1">How the bell groups response alerts</h3>

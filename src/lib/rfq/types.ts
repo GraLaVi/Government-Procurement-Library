@@ -341,6 +341,9 @@ export interface RfqUserSettings {
   notify_on_response: boolean;
   bell_on_response: boolean;
   bell_granularity: "per_response" | "per_rfq" | "rolling";
+  /** Enterprise: hide Send RFQs rows with estimated value below this floor
+   * (null = no floor). Personal, not org-wide. */
+  worklist_min_est_value: number | null;
 }
 
 export interface BatchContributor {

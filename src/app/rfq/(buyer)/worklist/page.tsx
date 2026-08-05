@@ -30,6 +30,9 @@ import {
 const PAGE_SIZE = 50;
 const SCOPE_STORAGE_KEY = "rfq-worklist-scope";
 const STATUS_FILTER_STORAGE_KEY = "rfq-worklist-status-filter";
+const SOL_STATUS_STORAGE_KEY = "rfq-worklist-sol-status";
+const SOL_STATUS_OPTIONS = ["open", "awarded", "all"] as const;
+type SolStatusFilter = (typeof SOL_STATUS_OPTIONS)[number];
 
 type Scope = "mine" | "unassigned" | "all";
 type SortKey = "close_date" | "solicitation_number" | "sol_status" | "work_status" | "set_aside" | "assignee" | "estimated_value";
@@ -105,6 +108,7 @@ export default function RfqWorklistPage() {
   const [scope, setScope] = useState<Scope>("mine");
   const [scopeInitialized, setScopeInitialized] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [solStatus, setSolStatus] = useState<SolStatusFilter>("open");
   const [sortBy, setSortBy] = useState<SortKey>("close_date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
@@ -115,6 +119,7 @@ export default function RfqWorklistPage() {
 
   const [buyers, setBuyers] = useState<RfqBuyer[]>([]);
   const [settings, setSettings] = useState<RfqSettings | null>(null);
+  const [myMinEst, setMyMinEst] = useState<number | null>(null);
 
   // Row selection for the bulk bar.
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -180,6 +185,10 @@ export default function RfqWorklistPage() {
       }
       const storedFilter = localStorage.getItem(STATUS_FILTER_STORAGE_KEY);
       if (storedFilter && storedFilter in WORK_STATUS_LABELS) setStatusFilter(storedFilter);
+      const storedSol = localStorage.getItem(SOL_STATUS_STORAGE_KEY);
+      if (storedSol && (SOL_STATUS_OPTIONS as readonly string[]).includes(storedSol)) {
+        setSolStatus(storedSol as SolStatusFilter);
+      }
     } catch { /* ignore */ }
     setScopeInitialized(true);
   }, []);
@@ -188,10 +197,11 @@ export default function RfqWorklistPage() {
     try {
       localStorage.setItem(SCOPE_STORAGE_KEY, scope);
       localStorage.setItem(STATUS_FILTER_STORAGE_KEY, statusFilter);
+      localStorage.setItem(SOL_STATUS_STORAGE_KEY, solStatus);
     } catch { /* ignore */ }
-  }, [scope, statusFilter, scopeInitialized]);
+  }, [scope, statusFilter, solStatus, scopeInitialized]);
 
-  useEffect(() => { setPage(1); setSelected(new Set()); }, [scope, statusFilter, sortBy, sortDir]);
+  useEffect(() => { setPage(1); setSelected(new Set()); }, [scope, statusFilter, solStatus, sortBy, sortDir]);
 
   // Server-side sort (client-side would only sort the visible page).
   const toggleSort = (key: SortKey) => {
@@ -208,7 +218,7 @@ export default function RfqWorklistPage() {
     try {
       const params = new URLSearchParams({
         scope, page: String(page), page_size: String(PAGE_SIZE),
-        sort_by: sortBy, sort_dir: sortDir,
+        sort_by: sortBy, sort_dir: sortDir, sol_status: solStatus,
       });
       if (statusFilter) params.set("work_status", statusFilter);
       const res = await fetch(`/api/rfq/worklist?${params.toString()}`);
@@ -223,7 +233,7 @@ export default function RfqWorklistPage() {
     } finally {
       setLoading(false);
     }
-  }, [scope, statusFilter, page, sortBy, sortDir]);
+  }, [scope, statusFilter, solStatus, page, sortBy, sortDir]);
 
   useEffect(() => {
     if (scopeInitialized && !authLoading && hasEnterprise) load();
@@ -240,6 +250,13 @@ export default function RfqWorklistPage() {
       try {
         const res = await fetch("/api/rfq/settings");
         if (res.ok) setSettings((await res.json()) as RfqSettings);
+      } catch { /* soft */ }
+      try {
+        const res = await fetch("/api/rfq/settings/me");
+        if (res.ok) {
+          const me = await res.json();
+          setMyMinEst(me.worklist_min_est_value ?? null);
+        }
       } catch { /* soft */ }
     })();
   }, [authLoading, hasEnterprise]);
@@ -435,6 +452,17 @@ export default function RfqWorklistPage() {
           className="overflow-x-auto"
           header={
             <>
+              <label className="text-xs text-muted">Sol. status</label>
+              <select
+                className={inputClass}
+                value={solStatus}
+                onChange={(e) => setSolStatus(e.target.value as SolStatusFilter)}
+                aria-label="Filter by solicitation status"
+              >
+                <option value="open">Open</option>
+                <option value="awarded">Awarded</option>
+                <option value="all">All</option>
+              </select>
               <label className="text-xs text-muted">RFQ progress</label>
               <select
                 className={inputClass}
@@ -448,6 +476,14 @@ export default function RfqWorklistPage() {
                 ))}
               </select>
               <span className="ml-auto text-xs text-muted">
+                {myMinEst != null && (
+                  <span
+                    className="mr-3 text-amber-700"
+                    title="Your personal filter in RFQ Settings hides solicitations with an estimated value below this floor (rows with no estimate stay visible)."
+                  >
+                    Hiding under {myMinEst.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}
+                  </span>
+                )}
                 {data ? `${data.total.toLocaleString()} solicitation${data.total !== 1 ? "s" : ""}` : ""}
               </span>
             </>
