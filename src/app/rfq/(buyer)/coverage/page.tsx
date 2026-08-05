@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
+import { TableCard } from "@/components/rfq/TableCard";
 
 interface BuyerCoverageRow {
   user_id: number;
@@ -98,7 +99,7 @@ export default function RfqCoveragePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="w-full">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Coverage</h1>
         <p className="text-muted mt-1 text-sm">
@@ -155,7 +156,7 @@ export default function RfqCoveragePage() {
                 </Link>.
               </p>
             ) : (
-              <div className="bg-card-bg rounded-xl border border-border overflow-x-auto">
+              <TableCard className="overflow-x-auto !p-0">
                 <table className="w-full text-sm">
                   <thead className="bg-muted-light/50">
                     <tr className="border-b border-border text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -188,7 +189,7 @@ export default function RfqCoveragePage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </TableCard>
             )}
           </div>
         </>

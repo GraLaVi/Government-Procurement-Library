@@ -7,6 +7,7 @@ import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { RfqVendorContactEditModal } from "@/components/rfq/RfqVendorContactEditModal";
+import { TableCard } from "@/components/rfq/TableCard";
 import {
   MIN_SENDS_FOR_RESPONSIVENESS,
   type RfqVendor,
@@ -335,7 +336,7 @@ export default function RfqVendorsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="w-full">
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Private Vendors</h1>
@@ -475,7 +476,7 @@ export default function RfqVendorsPage() {
           <p className="text-xs text-muted mb-3">
             Last 12 months, across all RFQs your team has sent. Who answers, how often, and how fast.
           </p>
-          <div className="bg-card-bg rounded-xl border border-border overflow-x-auto">
+          <TableCard className="overflow-x-auto !p-0">
             <table className="w-full text-sm">
               <thead className="bg-muted-light/50">
                 <tr className="border-b border-border text-left text-xs font-medium text-muted uppercase tracking-wider">
@@ -513,7 +514,7 @@ export default function RfqVendorsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableCard>
         </div>
       )}
 

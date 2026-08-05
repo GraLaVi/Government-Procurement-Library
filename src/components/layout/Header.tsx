@@ -44,6 +44,9 @@ const enterpriseRfqItems = [
   { href: "/rfq/worklist", label: "Send RFQs" },
   { href: "/rfq/vendors", label: "Private Vendors" },
   { href: "/rfq/coverage", label: "Coverage" },
+  // Admin page, but listed for every Enterprise holder — non-admins get the
+  // page's own read-only "admins only" notice rather than a hidden feature.
+  { href: "/account/rfq-assignments", label: "Buyer Assignments" },
 ];
 
 // Match the current path against a nav target. Exact match or sub-path

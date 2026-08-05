@@ -14,11 +14,6 @@ interface SolicitationNumberLinkProps {
   solicitationNumber: string;
   className?: string;
   children?: React.ReactNode;
-  /** Optional per-part action cell (e.g. the Send RFQs page's Quote button).
-   * When set, an extra right-hand column renders it for each part row.
-   * Existing callers (bidmatching, analytics tables) pass nothing and are
-   * unchanged. */
-  renderRowAction?: (part: PartSearchResult) => React.ReactNode;
 }
 
 function buildSearchPageUrl(solicitationNumber: string): string {
@@ -33,7 +28,6 @@ export function SolicitationNumberLink({
   solicitationNumber,
   className,
   children,
-  renderRowAction,
 }: SolicitationNumberLinkProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -170,9 +164,6 @@ export function SolicitationNumberLink({
                       <th className="text-right px-4 py-2 text-xs font-medium text-muted uppercase tracking-wider">
                         Unit Price
                       </th>
-                      {renderRowAction && (
-                        <th className="text-right px-4 py-2 text-xs font-medium text-muted uppercase tracking-wider" aria-label="Actions" />
-                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -195,11 +186,6 @@ export function SolicitationNumberLink({
                         <td className="px-4 py-2 text-right text-foreground whitespace-nowrap font-mono tabular-nums">
                           {formatCurrency(p.unit_price)}
                         </td>
-                        {renderRowAction && (
-                          <td className="px-4 py-2 text-right whitespace-nowrap">
-                            {renderRowAction(p)}
-                          </td>
-                        )}
                       </tr>
                     ))}
                   </tbody>

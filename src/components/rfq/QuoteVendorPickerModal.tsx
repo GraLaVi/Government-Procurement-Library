@@ -22,7 +22,7 @@ import {
 interface QuoteVendorPickerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** The part row the buyer clicked Quote on (from the solicitation parts modal). */
+  /** The part row the buyer clicked Quote on (from the solicitation parts list). */
   part: PartSearchResult;
   /** Hand the picked vendors to the compose modal. */
   onContinue: (selections: RfqManufacturerSelection[]) => void;
@@ -30,22 +30,25 @@ interface QuoteVendorPickerModalProps {
 
 /**
  * Step between a solicitation part row and the RFQ compose modal: pick which
- * vendors to ask — the part's manufacturers (approved sources flagged) plus
- * the customer's private vendor book.
+ * vendors to ask — the customer's private vendor book first, then the part's
+ * manufacturers (approved sources flagged).
  *
- * SAM registration status is shown as CONTEXT ONLY and never gates
- * selection: buyers routinely quote vendors whose registration is lapsed and
- * will be renewed before award.
+ * Selection is PER ROW, not per CAGE: one company often lists several
+ * near-identical internal part numbers for an item, each its own
+ * manufacturer_parts row, and picking the correct one matters. Rows are keyed
+ * by list index ("mfr:<i>" / "pv:<id>") so duplicate CAGEs never collide.
+ *
+ * SAM registration status is CONTEXT ONLY and never gates selection.
  */
 export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: QuoteVendorPickerModalProps) {
   const [manufacturers, setManufacturers] = useState<PartManufacturer[]>([]);
   const [privateVendors, setPrivateVendors] = useState<RfqVendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Selection keys: "cage:<CAGE>" / "vendor:<id>".
+  // Row keys: "mfr:<index>" for manufacturer rows, "pv:<id>" for private vendors.
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  // Responsiveness by vendor key — "responded 4/5 · ~2d" at the moment the
-  // buyer chooses whom to ask. Suppressed below the minimum-sends floor.
+  // Responsiveness by vendor identity ("cage:X"/"vendor:N") — shown at the
+  // moment the buyer chooses whom to ask; suppressed below the sends floor.
   const [stats, setStats] = useState<Record<string, VendorResponsiveness>>({});
 
   useEffect(() => {
@@ -63,10 +66,13 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
         if (cancelled) return;
         if (mRes.ok) {
           const data: PartManufacturersResponse = await mRes.json();
-          // Approved sources first, then by CAGE — but everything selectable.
+          // Approved sources first, then by CAGE, then by part number for a
+          // stable order among a company's multiple listings.
           const sorted = [...data.manufacturers].sort((a, b) => {
             if (a.is_approved_source !== b.is_approved_source) return a.is_approved_source ? -1 : 1;
-            return a.cage_code.localeCompare(b.cage_code);
+            const byCage = a.cage_code.localeCompare(b.cage_code);
+            if (byCage !== 0) return byCage;
+            return (a.part_number || "").localeCompare(b.part_number || "");
           });
           setManufacturers(sorted);
         } else {
@@ -96,7 +102,9 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
     (async () => {
       try {
         const params = new URLSearchParams();
-        if (manufacturers.length) params.set("cage_codes", manufacturers.map((m) => m.cage_code).join(","));
+        if (manufacturers.length) {
+          params.set("cage_codes", [...new Set(manufacturers.map((m) => m.cage_code))].join(","));
+        }
         if (privateVendors.length) params.set("rfq_vendor_ids", privateVendors.map((v) => v.id).join(","));
         const res = await fetch(`/api/rfq/vendor-stats?${params.toString()}`);
         if (!res.ok || cancelled) return;
@@ -111,8 +119,8 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
     };
   }, [isOpen, manufacturers, privateVendors]);
 
-  const responsivenessBadge = (key: string) => {
-    const s = stats[key];
+  const responsivenessBadge = (identityKey: string) => {
+    const s = stats[identityKey];
     if (!s || s.rfqs_sent < MIN_SENDS_FOR_RESPONSIVENESS) return null;
     const label = `responded ${s.responded}/${s.rfqs_sent}${
       s.median_turnaround_days != null ? ` · ~${s.median_turnaround_days}d` : ""
@@ -142,19 +150,8 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
 
   const selections = useMemo((): RfqManufacturerSelection[] => {
     const out: RfqManufacturerSelection[] = [];
-    for (const m of manufacturers) {
-      if (!selected.has(`cage:${m.cage_code}`)) continue;
-      out.push({
-        cage_code: m.cage_code,
-        vendor_name: m.vendor_name,
-        part_number: m.part_number,
-        nsn: part.nsn || null,
-        part_id: part.id,
-        description: part.description,
-      });
-    }
     for (const v of privateVendors) {
-      if (!selected.has(`vendor:${v.id}`)) continue;
+      if (!selected.has(`pv:${v.id}`)) continue;
       out.push({
         cage_code: null,
         rfq_vendor_id: v.id,
@@ -165,13 +162,35 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
         description: part.description,
       });
     }
+    manufacturers.forEach((m, i) => {
+      if (!selected.has(`mfr:${i}`)) return;
+      out.push({
+        cage_code: m.cage_code,
+        vendor_name: m.vendor_name,
+        part_number: m.part_number,
+        nsn: part.nsn || null,
+        part_id: part.id,
+        description: part.description,
+      });
+    });
     return out;
   }, [manufacturers, privateVendors, selected, part]);
 
-  const samStatusLabel = (m: PartManufacturer): string | null => {
-    if (m.sam_status === "A") return null; // Active is the default; no chip noise.
-    if (!m.sam_status) return "SAM: unknown";
-    return `SAM: ${m.sam_status}`;
+  // "SAM: <state>" chip. Active is the default and renders nothing. A CAGE
+  // with no vendors row at all (no SAM registration data on file — common
+  // for historical/defunct manufacturers in the DLA catalog) reads
+  // "No SAM record" rather than the ambiguous "unknown".
+  const samStatusChip = (m: PartManufacturer) => {
+    if (m.sam_status === "A") return null;
+    const label = m.sam_status ? `SAM: ${m.sam_status}` : "No SAM record";
+    const explain = m.sam_status
+      ? `SAM.gov registration status code ${m.sam_status} (not Active). You can still send an RFQ — confirm registration before award.`
+      : "This CAGE has no SAM.gov registration on file — common for legacy or defunct manufacturers in the DLA catalog. You can still send an RFQ if you have a contact.";
+    return (
+      <span title={explain}>
+        <Badge variant="default" size="sm">{label}</Badge>
+      </span>
+    );
   };
 
   return (
@@ -179,7 +198,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
       isOpen={isOpen}
       onClose={onClose}
       title={`Request quotes — ${part.nsn || part.mfg_part_number || `part ${part.id}`}`}
-      size="lg"
+      size="4xl"
     >
       <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
         {part.description && <p className="text-sm text-muted">{part.description}</p>}
@@ -192,58 +211,6 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
           <>
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2">
-                Manufacturers ({manufacturers.length})
-              </h3>
-              {manufacturers.length === 0 ? (
-                <p className="text-xs text-muted italic">No manufacturers on file for this part.</p>
-              ) : (
-                <div className="rounded-lg border border-border divide-y divide-border">
-                  {manufacturers.map((m) => {
-                    const key = `cage:${m.cage_code}`;
-                    const sam = samStatusLabel(m);
-                    return (
-                      <label key={key} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted-light/40">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(key)}
-                          onChange={() => toggle(key)}
-                        />
-                        <span className="flex-1 min-w-0">
-                          <span className="text-sm text-card-foreground">
-                            {m.vendor_name || "Unknown vendor"}
-                          </span>
-                          <span className="ml-2 text-xs font-mono text-muted">CAGE {m.cage_code}</span>
-                          {m.part_number && (
-                            <span className="ml-2 text-xs font-mono text-muted">P/N {m.part_number}</span>
-                          )}
-                        </span>
-                        {m.is_approved_source && (
-                          <Badge variant="success" size="sm">Approved source</Badge>
-                        )}
-                        {responsivenessBadge(`cage:${m.cage_code}`)}
-                        {/* An active exclusion (debarment/suspension) warns
-                            LOUDLY but still doesn't block selection — the
-                            no-gate rule is absolute; the buyer decides. */}
-                        {m.is_excluded ? (
-                          <span
-                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300"
-                            title={EXCLUDED_VENDOR_WARNING}
-                          >
-                            ⚠ Excluded
-                          </span>
-                        ) : (
-                          /* Lapsed/unknown registration is mild context only. */
-                          sam && <Badge variant="default" size="sm">{sam}</Badge>
-                        )}
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-foreground mb-2">
                 My vendors ({privateVendors.length})
               </h3>
               {privateVendors.length === 0 ? (
@@ -253,7 +220,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
               ) : (
                 <div className="rounded-lg border border-border divide-y divide-border">
                   {privateVendors.map((v) => {
-                    const key = `vendor:${v.id}`;
+                    const key = `pv:${v.id}`;
                     return (
                       <label key={key} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted-light/40">
                         <input
@@ -276,6 +243,60 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
               )}
             </div>
 
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-2">
+                Manufacturers ({manufacturers.length})
+              </h3>
+              <p className="text-xs text-muted mb-2">
+                A company may appear once per part number — select the exact part
+                number(s) you want quoted.
+              </p>
+              {manufacturers.length === 0 ? (
+                <p className="text-xs text-muted italic">No manufacturers on file for this part.</p>
+              ) : (
+                <div className="rounded-lg border border-border divide-y divide-border">
+                  {manufacturers.map((m, i) => {
+                    const key = `mfr:${i}`;
+                    return (
+                      <label key={key} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted-light/40">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(key)}
+                          onChange={() => toggle(key)}
+                        />
+                        <span className="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
+                          <span className="text-sm text-card-foreground">
+                            {m.vendor_name || "Unknown vendor"}
+                          </span>
+                          <span className="text-xs font-mono text-muted">CAGE {m.cage_code}</span>
+                          {m.part_number && (
+                            <span className="text-xs font-mono font-semibold text-foreground">P/N {m.part_number}</span>
+                          )}
+                        </span>
+                        {m.is_approved_source && (
+                          <Badge variant="success" size="sm">Approved source</Badge>
+                        )}
+                        {responsivenessBadge(`cage:${m.cage_code}`)}
+                        {/* An active exclusion (debarment/suspension) warns
+                            LOUDLY but still doesn't block selection — the
+                            no-gate rule is absolute; the buyer decides. */}
+                        {m.is_excluded ? (
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300"
+                            title={EXCLUDED_VENDOR_WARNING}
+                          >
+                            ⚠ Excluded
+                          </span>
+                        ) : (
+                          samStatusChip(m)
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {error && (
               <div className="rounded-lg border border-error/30 bg-error/5 px-4 py-2.5 text-sm text-error">{error}</div>
             )}
@@ -285,7 +306,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
 
       <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
         <span className="text-xs text-muted">
-          {selected.size} vendor{selected.size !== 1 ? "s" : ""} selected — one RFQ is sent per vendor
+          {selected.size} selected — one RFQ per vendor; multiple part numbers for the same vendor become lines on one RFQ
         </span>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>

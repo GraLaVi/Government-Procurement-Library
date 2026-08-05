@@ -4,14 +4,19 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
-import { SolicitationNumberLink } from "@/components/library/SolicitationNumberLink";
 import { SolicitationRowBadges } from "@/components/library/SolicitationRowBadges";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import { QuoteVendorPickerModal } from "@/components/rfq/QuoteVendorPickerModal";
 import { QuoteComparisonModal } from "@/components/rfq/QuoteComparisonModal";
+import { TableCard } from "@/components/rfq/TableCard";
 import { Button } from "@/components/ui/Button";
-import type { PartSearchResult } from "@/lib/library/types";
+import {
+  formatCurrency,
+  formatPartIdentity,
+  type PartSearchResponse,
+  type PartSearchResult,
+} from "@/lib/library/types";
 import {
   WORK_STATUS_LABELS,
   type RfqBuyer,
@@ -100,6 +105,40 @@ export default function RfqWorklistPage() {
 
   // Quote comparison modal (opened from the "N RFQs" pill).
   const [quotesFor, setQuotesFor] = useState<RfqWorkItem | null>(null);
+
+  // Inline row expansion: the solicitation's parts (NSN, description,
+  // qty/unit, unit price, Quote) render in a dropdown under the row —
+  // mirrors the bid-matching page's matched-conditions expander.
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [partsBySol, setPartsBySol] = useState<Record<number, { loading: boolean; error: string | null; parts: PartSearchResult[] }>>({});
+
+  const toggleExpanded = (item: RfqWorkItem) => {
+    const id = item.solicitation_id;
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    // Lazy-fetch the parts on first expand; cached afterward.
+    if (partsBySol[id] || !item.solicitation_number) return;
+    setPartsBySol((prev) => ({ ...prev, [id]: { loading: true, error: null, parts: [] } }));
+    (async () => {
+      try {
+        const params = new URLSearchParams({ solicitation: item.solicitation_number as string, limit: "50", offset: "0" });
+        const res = await fetch(`/api/library/parts/search?${params.toString()}`);
+        const body = await res.json();
+        if (!res.ok) {
+          setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: body.error || "Failed to load parts.", parts: [] } }));
+          return;
+        }
+        const data = body as PartSearchResponse;
+        setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: null, parts: data.results } }));
+      } catch {
+        setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: "Network error loading parts.", parts: [] } }));
+      }
+    })();
+  };
 
   // Initial scope: an explicit ?scope= wins (coverage tiles and the
   // unassigned-backlog alert link here), else the persisted choice.
@@ -359,13 +398,14 @@ export default function RfqWorklistPage() {
             : "No matched solicitations. Bid-matching results feed this queue."}
         </div>
       ) : (
-        <div className="bg-card-bg rounded-xl border border-border overflow-x-auto">
+        <TableCard className="overflow-x-auto !p-0">
           <table className="w-full text-sm">
             <thead className="bg-muted-light/50">
               <tr className="border-b border-border text-left text-xs font-medium text-muted uppercase tracking-wider">
                 <th className="px-3 py-2.5 w-8">
                   <input type="checkbox" checked={allOnPageSelected} onChange={toggleAll} aria-label="Select all" />
                 </th>
+                <th className="px-2 py-2.5 w-8" aria-label="Expand" />
                 <th className="px-4 py-2.5">Solicitation</th>
                 <th className="px-4 py-2.5">Status</th>
                 <th className="px-4 py-2.5 whitespace-nowrap">Close date</th>
@@ -376,6 +416,8 @@ export default function RfqWorklistPage() {
             <tbody className="divide-y divide-border">
               {items.map((item) => {
                 const dtc = daysToClose(item.close_date);
+                const isOpen = expanded.has(item.solicitation_id);
+                const partsState = partsBySol[item.solicitation_id];
                 return (
                   <Fragment key={item.solicitation_id}>
                     <tr className="hover:bg-muted-light/40 transition-colors">
@@ -387,25 +429,36 @@ export default function RfqWorklistPage() {
                           aria-label={`Select ${item.solicitation_number}`}
                         />
                       </td>
+                      <td className="px-2 py-3 text-center">
+                        {/* Expand for the solicited parts — same affordance as
+                            the bid-matching page's matched-conditions arrow. */}
+                        <button
+                          type="button"
+                          onClick={() => toggleExpanded(item)}
+                          className="text-muted hover:text-foreground"
+                          aria-label={isOpen ? "Collapse parts" : "Show parts"}
+                        >
+                          <svg
+                            className={`w-4 h-4 transition-transform ${isOpen ? "rotate-90" : ""}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-1.5 font-medium">
-                          {item.solicitation_number ? (
-                            <SolicitationNumberLink
-                              solicitationNumber={item.solicitation_number}
-                              className="text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
-                              renderRowAction={(part) => (
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  onClick={() => setQuoteContext({ part, item })}
-                                >
-                                  Quote
-                                </Button>
-                              )}
-                            />
-                          ) : (
-                            <span className="text-foreground">-</span>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(item)}
+                            className="text-primary font-medium hover:underline cursor-pointer"
+                            title="Show the solicited parts"
+                          >
+                            {item.solicitation_number || "-"}
+                          </button>
                           <SolicitationRowBadges
                             hasAmendmentIndicator={item.has_amendment_indicator}
                             hasPostMatchAmendment={item.has_post_match_amendment}
@@ -467,12 +520,69 @@ export default function RfqWorklistPage() {
                         )}
                       </td>
                     </tr>
+                    {isOpen && (
+                      <tr className="bg-muted-light/30">
+                        <td colSpan={7} className="px-6 py-3">
+                          {!partsState || partsState.loading ? (
+                            <div className="flex items-center gap-2 py-2 text-xs text-muted">
+                              <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                              Loading parts…
+                            </div>
+                          ) : partsState.error ? (
+                            <p className="text-xs text-error py-1">{partsState.error}</p>
+                          ) : partsState.parts.length === 0 ? (
+                            <p className="text-xs text-muted italic py-1">No parts found for this solicitation.</p>
+                          ) : (
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="text-left text-xs font-medium text-muted uppercase tracking-wider border-b border-border">
+                                  <th className="px-3 py-1.5">NSN</th>
+                                  <th className="px-3 py-1.5">Description</th>
+                                  <th className="px-3 py-1.5 text-right whitespace-nowrap">Qty / Unit</th>
+                                  <th className="px-3 py-1.5 text-right">Unit Price</th>
+                                  <th className="px-3 py-1.5 text-right" aria-label="Actions" />
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/60">
+                                {partsState.parts.map((p) => (
+                                  <tr key={p.id}>
+                                    <td className="px-3 py-2 font-mono font-semibold text-foreground whitespace-nowrap">
+                                      {formatPartIdentity(p)}
+                                    </td>
+                                    <td className="px-3 py-2 text-foreground truncate max-w-[380px]" title={p.description || undefined}>
+                                      {p.description || "—"}
+                                    </td>
+                                    <td className="px-3 py-2 text-right whitespace-nowrap font-mono tabular-nums">
+                                      {p.quantity != null
+                                        ? `${p.quantity.toLocaleString()}${p.unit_of_issue ? `/${p.unit_of_issue}` : ""}`
+                                        : p.unit_of_issue || "—"}
+                                    </td>
+                                    <td className="px-3 py-2 text-right whitespace-nowrap font-mono tabular-nums">
+                                      {formatCurrency(p.unit_price)}
+                                    </td>
+                                    <td className="px-3 py-2 text-right">
+                                      <Button
+                                        variant="primary"
+                                        size="sm"
+                                        onClick={() => setQuoteContext({ part: p, item })}
+                                      >
+                                        Quote
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </td>
+                      </tr>
+                    )}
                   </Fragment>
                 );
               })}
             </tbody>
           </table>
-        </div>
+        </TableCard>
       )}
 
       {/* Pagination */}
