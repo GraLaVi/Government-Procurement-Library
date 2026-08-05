@@ -92,6 +92,15 @@ export const HELP_ARTICLES: HelpArticleMeta[] = [
   //     "Send requests for quote to vendors from a part's Manufacturers tab and collect structured quotes.",
   //   group: "platform",
   // },
+  // HIDDEN UNTIL RFQ ENTERPRISE LAUNCH: uncomment with the entry above when
+  // the add-ons ship; src/content/help/rfq-enterprise.md renders as-is.
+  // {
+  //   slug: "rfq-enterprise",
+  //   title: "The RFQ Enterprise Work Queue",
+  //   blurb:
+  //     "Disburse matched solicitations to buyers by CAGE, quote private vendors, and compare quotes side by side.",
+  //   group: "platform",
+  // },
   {
     slug: "solicitations-and-contracts",
     title: "Viewing Solicitations and Contracts",

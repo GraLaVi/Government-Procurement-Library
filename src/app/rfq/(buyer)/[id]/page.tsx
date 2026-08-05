@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
+import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -34,7 +35,7 @@ function statusVariant(status: string): "default" | "success" | "warning" | "err
 export default function RfqDetailPage() {
   const params = useParams<{ id: string }>();
   const rfqId = params?.id;
-  const { isLoading: authLoading, hasProductAccess } = useAuth();
+  const { isLoading: authLoading, hasAnyProductAccess } = useAuth();
 
   const [rfq, setRfq] = useState<RfqDetail | null>(null);
   const [responses, setResponses] = useState<RfqResponseDetail[]>([]);
@@ -71,8 +72,8 @@ export default function RfqDetailPage() {
   }, [rfqId]);
 
   useEffect(() => {
-    if (!authLoading && hasProductAccess("request_for_quote")) load();
-  }, [authLoading, hasProductAccess, load]);
+    if (!authLoading && hasAnyProductAccess(RFQ_SENDER_KEYS)) load();
+  }, [authLoading, hasAnyProductAccess, load]);
 
   // Quote lines reference an rfq_line_items.id; this resolves one back to the
   // requested line it answers.
@@ -118,7 +119,7 @@ export default function RfqDetailPage() {
 
   if (authLoading) return <div className="p-6 text-sm text-muted">Loading…</div>;
 
-  if (!hasProductAccess("request_for_quote")) {
+  if (!hasAnyProductAccess(RFQ_SENDER_KEYS)) {
     return (
       <AccessDeniedPage
         featureName="Request for Quotes"

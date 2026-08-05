@@ -70,7 +70,9 @@ export function RfqVendorContactEditModal({ isOpen, contact, onClose, onSaved }:
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit contact" size="md" preventClose={submitting}>
       <div className="space-y-4">
-        <div className="text-xs font-mono text-muted">CAGE {contact.cage_code}</div>
+        <div className="text-xs font-mono text-muted">
+          {contact.cage_code ? `CAGE ${contact.cage_code}` : "Private vendor contact"}
+        </div>
 
         <div>
           <label className="block text-xs font-medium text-muted mb-1">Name</label>

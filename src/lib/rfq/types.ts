@@ -13,7 +13,11 @@ export const PLACEHOLDER_LINE_DESCRIPTION = "Requested item";
 
 /** A manufacturer row selected from the parts Manufacturers tab. */
 export interface RfqManufacturerSelection {
-  cage_code: string;
+  /** CAGE vendor (Manufacturers tab). Exactly one of cage_code /
+   * rfq_vendor_id identifies the vendor. */
+  cage_code: string | null;
+  /** Private rfq_vendors row (Enterprise picker). */
+  rfq_vendor_id?: number | null;
   vendor_name: string | null;
   part_number: string | null;
   nsn: string | null;
@@ -25,9 +29,35 @@ export interface RfqManufacturerSelection {
   description: string | null;
 }
 
+/** Stable grouping key for a vendor identity: "cage:<CAGE>" for SAM/DLA
+ * vendors, "vendor:<id>" for private rfq_vendors rows. Mirrors the backend's
+ * VendorKey discriminator in src/rfq/service.py. */
+export function rfqVendorKey(ref: { cage_code?: string | null; rfq_vendor_id?: number | null }): string {
+  return ref.rfq_vendor_id != null ? `vendor:${ref.rfq_vendor_id}` : `cage:${ref.cage_code ?? ""}`;
+}
+
+/** A customer-private vendor (rfq_vendors — Enterprise). */
+export interface RfqVendor {
+  id: number;
+  vendor_code: string | null;
+  company_name: string;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  phone: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  contacts: VendorContact[];
+}
+
 /** One line of a quick-send / batch payload (one part for one vendor). */
 export interface RfqLineInput {
-  cage_code: string;
+  cage_code?: string | null;
+  rfq_vendor_id?: number | null;
   vendor_name?: string | null;
   source_part_number?: string | null;
   contact_name?: string | null;
@@ -41,6 +71,9 @@ export interface RfqLineInput {
   need_by_date?: string | null; // YYYY-MM-DD
   target_unit_price?: number | null;
   notes?: string | null;
+  /** Stamped when composed from the Send RFQs work queue. */
+  source_solicitation_id?: number | null;
+  source_sam_opportunity_id?: number | null;
 }
 
 export interface QuickSendRequest {
@@ -52,7 +85,8 @@ export interface QuickSendRequest {
 export interface RfqSendResultItem {
   rfq_id: number;
   recipient_id: number;
-  cage_code: string;
+  cage_code: string | null;
+  rfq_vendor_id?: number | null;
   vendor_name: string | null;
   line_item_count: number;
   contact_email: string | null;
@@ -74,7 +108,8 @@ export interface VendorContactSuggestion {
 export interface VendorContact {
   id: number;
   customer_id: number;
-  cage_code: string;
+  cage_code: string | null;
+  rfq_vendor_id?: number | null;
   contact_name: string | null;
   email: string;
   phone: string | null;
@@ -85,13 +120,15 @@ export interface VendorContact {
 }
 
 export interface VendorContactResolution {
-  cage_code: string;
+  cage_code: string | null;
+  rfq_vendor_id?: number | null;
   saved: VendorContact[];
   suggestion: VendorContactSuggestion | null;
 }
 
 export interface BatchItemInput {
-  cage_code: string;
+  cage_code?: string | null;
+  rfq_vendor_id?: number | null;
   vendor_name?: string | null;
   source_part_number?: string | null;
   part_id?: number | null;
@@ -111,7 +148,8 @@ export interface BatchItem {
   customer_id: number;
   added_by_user_id: number;
   added_by_name: string | null;
-  cage_code: string;
+  cage_code: string | null;
+  rfq_vendor_id?: number | null;
   vendor_name: string | null;
   source_part_number: string | null;
   part_id: number | null;
@@ -131,11 +169,156 @@ export interface BatchItem {
   resolved_contact_name: string | null;
 }
 
+// ============================================================================
+// Send RFQs work queue (Enterprise)
+// ============================================================================
+
+export type RfqWorkStatus =
+  | "unworked" | "rfq_sent" | "quotes_in" | "priced" | "bid" | "no_bid" | "passed";
+
+export const WORK_STATUS_LABELS: Record<RfqWorkStatus, string> = {
+  unworked: "Unworked",
+  rfq_sent: "RFQ Sent",
+  quotes_in: "Quotes In",
+  priced: "Priced",
+  bid: "Bid",
+  no_bid: "No Bid",
+  passed: "Passed",
+};
+
+export interface RfqWorkItem {
+  solicitation_id: number;
+  solicitation_number: string | null;
+  agency_code: string | null;
+  issue_date: string | null;
+  close_date: string | null;
+  status: string | null;
+  buyer_name: string | null;
+  set_aside: string | null;
+  set_aside_code: string | null;
+  set_aside_label: string | null;
+  solicitation_type: string | null;
+  solicitation_type_label: string | null;
+  has_pdf: boolean;
+  has_amendment_indicator: boolean;
+  has_post_match_amendment: boolean;
+  latest_post_match_amendment_at: string | null;
+  match_count: number;
+  last_matched_at: string | null;
+  rfq_count: number;
+  work_status: RfqWorkStatus;
+  assigned_user_id: number | null;
+  assigned_user_name: string | null;
+  derived_user_ids: number[];
+  derived_user_names: string[];
+  notes: string | null;
+}
+
+export interface RfqWorklistPage {
+  items: RfqWorkItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  unassigned_count: number;
+}
+
+export interface RfqBuyer {
+  user_id: number;
+  name: string;
+  email: string;
+  is_enterprise_buyer: boolean;
+}
+
+// ============================================================================
+// Vendor responsiveness (Enterprise)
+// ============================================================================
+
+/** Suppress the responsiveness badge below this many sends — a rate off one
+ * data point is noise. Mirrors vendor_stats.MIN_SENDS_FOR_DISPLAY. */
+export const MIN_SENDS_FOR_RESPONSIVENESS = 3;
+
+export interface VendorResponsiveness {
+  cage_code: string | null;
+  rfq_vendor_id: number | null;
+  vendor_name: string | null;
+  rfqs_sent: number;
+  responded: number;
+  declined: number;
+  unanswered: number;
+  response_rate: number;
+  decline_rate: number;
+  open_rate: number;
+  median_turnaround_days: number | null;
+  last_responded_at: string | null;
+  months: number;
+}
+
+// ============================================================================
+// Quote comparison (Enterprise)
+// ============================================================================
+
+export interface ComparisonQuote {
+  recipient_id: number;
+  rfq_id: number;
+  cage_code: string | null;
+  rfq_vendor_id: number | null;
+  vendor_name: string | null;
+  submitted_at: string;
+  quote_valid_until: string | null;
+  currency: string;
+  unit_price: number | null;
+  quantity_available: number | null;
+  lead_time_days: number | null;
+  manufacturer: string | null;
+  alternate_part_number: string | null;
+  is_no_bid: boolean;
+  notes: string | null;
+  is_best_price: boolean;
+  is_approved_source: boolean;
+  /** Alternate part quoted by a NON-approved source — DLA rejects this on
+   * AID-described items; never price it without an exception. */
+  alternate_not_approved: boolean;
+  quote_expired: boolean;
+}
+
+export interface NsnComparisonGroup {
+  nsn: string | null;
+  part_number: string | null;
+  description: string | null;
+  quantity: number | null;
+  unit_of_measure: string | null;
+  quotes: ComparisonQuote[];
+}
+
+export interface PendingVendor {
+  recipient_id: number;
+  vendor_name: string | null;
+  cage_code: string | null;
+  rfq_vendor_id: number | null;
+  status: string;
+}
+
+export interface QuoteComparisonResponse {
+  solicitation_id: number;
+  groups: NsnComparisonGroup[];
+  invited: number;
+  quoted: number;
+  declined: number;
+  pending: PendingVendor[];
+}
+
 export interface RfqSettings {
   auto_close_enabled: boolean;
   auto_close_grace_days: number;
   default_response_due_days: number | null;
   response_alert_audience: "creator_only" | "all_users";
+  // --- Enterprise ---
+  allow_user_vendor_book_edits: boolean;
+  default_quote_due_lead_days: number | null;
+  reminder_enabled: boolean;
+  reminder_max_count: number;
+  reminder_cooldown_hours: number;
+  unassigned_alert_threshold: number | null;
 }
 
 export interface RfqUserSettings {
@@ -188,7 +371,8 @@ export interface RfqLineItem {
 
 export interface RfqRecipient {
   id: number;
-  cage_code: string;
+  cage_code: string | null;
+  rfq_vendor_id?: number | null;
   vendor_name: string | null;
   contact_email: string | null;
   contact_name: string | null;
@@ -227,7 +411,8 @@ export interface RfqResponseLineItem {
 export interface RfqResponseDetail {
   id: number;
   recipient_id: number;
-  cage_code: string;
+  cage_code: string | null;
+  rfq_vendor_id?: number | null;
   vendor_name: string | null;
   status: string;
   quote_valid_until: string | null;
@@ -260,7 +445,7 @@ export interface PublicRfqView {
   response_due_date: string | null;
   recipient_status: string;
   vendor_name: string | null;
-  cage_code: string;
+  cage_code: string | null;
   contact_name: string | null;
   contact_email: string | null;
   already_responded: boolean;

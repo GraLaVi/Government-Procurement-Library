@@ -44,6 +44,7 @@ import {
   partKey,
   formatPartIdentity,
   isPartNumberOnly,
+  EXCLUDED_VENDOR_WARNING,
 } from "@/lib/library/types";
 import { DetailSections, DetailToolbar } from "@/components/library/DetailSections";
 import { Badge } from "@/components/ui/Badge";
@@ -59,6 +60,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
 import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import type { RfqManufacturerSelection } from "@/lib/rfq/types";
+import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { resolvePartsTier, tierMeets, type LibraryTier } from "@/lib/library/tier";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
 import { usePreferences } from "@/lib/hooks/usePreferences";
@@ -2464,9 +2466,10 @@ function manufacturerRowKey(m: PartManufacturer): string {
 }
 
 function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, totalCount, isLoading, error, onRetry }: ManufacturersPanelProps) {
-  // RFQ is a separate paid product; only surface the entry when the user holds it.
-  const { hasProductAccess } = useAuth();
-  const canSendRfq = hasProductAccess("request_for_quote");
+  // RFQ is a separate paid product (either tier — Enterprise is a superset
+  // of the base add-on); only surface the entry when the user holds one.
+  const { hasAnyProductAccess } = useAuth();
+  const canSendRfq = hasAnyProductAccess(RFQ_SENDER_KEYS);
 
   // Local selection state (the shared DataTable keeps its own selection
   // internal and doesn't surface it, so we track our own via a checkbox column).
@@ -2480,17 +2483,18 @@ function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, total
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Only vendors with an Active, non-expired SAM registration may receive an
-  // RFQ, so selection (including "select all") is scoped to eligible rows.
-  const eligibleKeys = useMemo(
-    () => new Set(manufacturers.filter((m) => m.is_active).map(manufacturerRowKey)),
+  // SAM registration status is CONTEXT ONLY and never gates selection —
+  // buyers routinely quote vendors whose registration is lapsed and will be
+  // renewed before award. (This matches the Enterprise vendor picker; the
+  // old behavior disabled inactive/expired vendors here.)
+  const allKeys = useMemo(
+    () => new Set(manufacturers.map(manufacturerRowKey)),
     [manufacturers]
   );
-  const allSelected = eligibleKeys.size > 0 && [...eligibleKeys].every((k) => selectedKeys.has(k));
+  const allSelected = allKeys.size > 0 && [...allKeys].every((k) => selectedKeys.has(k));
 
   const toggleRow = useCallback(
     (key: string) => {
-      if (!eligibleKeys.has(key)) return; // ineligible (inactive/expired) vendor
       setSelectedKeys((prev) => {
         const next = new Set(prev);
         if (next.has(key)) next.delete(key);
@@ -2498,12 +2502,12 @@ function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, total
         return next;
       });
     },
-    [eligibleKeys]
+    []
   );
 
   const toggleAll = useCallback(() => {
-    setSelectedKeys((prev) => (prev.size >= eligibleKeys.size ? new Set() : new Set(eligibleKeys)));
-  }, [eligibleKeys]);
+    setSelectedKeys((prev) => (prev.size >= allKeys.size ? new Set() : new Set(allKeys)));
+  }, [allKeys]);
 
   const selections: RfqManufacturerSelection[] = useMemo(
     () =>
@@ -2534,40 +2538,37 @@ function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, total
       ),
       cell: ({ row }) => {
         const key = manufacturerRowKey(row.original);
-        const eligible = row.original.is_active;
+        // SAM state is informational, never blocking. The tooltip is the
+        // only surfacing of registration state on this tab, so keep it for
+        // non-active vendors — reworded as context, not a refusal. An
+        // active EXCLUSION (debarment/suspension) gets a much stronger
+        // warning than a lapsed registration: no federal award can be made
+        // to an excluded vendor, so quoting one is almost always wasted.
         const statusLabel = formatSamStatus(row.original.sam_status);
         const expiry = row.original.registration_expiration_date;
         const isExpired =
           expiry !== null && new Date(expiry) < new Date(new Date().toDateString());
-        const disabledReason = eligible
-          ? ""
-          : !statusLabel
-            ? "No SAM.gov registration found for this CAGE code — RFQs can only be sent to actively registered vendors."
-            : statusLabel.toLowerCase() === "active"
-              // sam_status is 'A' but the vendor is still ineligible: the
-              // registration lapsed by date, or the vendor is excluded/debarred.
-              // Don't claim it's "active" — name the expiry when that's the cause.
-              ? isExpired
-                ? "Vendor's SAM.gov registration has expired — RFQs can only be sent to actively registered vendors."
-                : "Vendor's SAM.gov registration is not active — RFQs can only be sent to actively registered vendors."
-              : `Vendor's SAM.gov registration is ${statusLabel.toLowerCase()} — RFQs can only be sent to actively registered vendors.`;
-        return (
-          <Tooltip content={disabledReason}>
-            <input
-              type="checkbox"
-              aria-label={
-                eligible
-                  ? `Select ${row.original.cage_code}`
-                  : `${row.original.cage_code} is inactive and cannot be sent an RFQ`
-              }
-              checked={eligible && selectedKeys.has(key)}
-              disabled={!eligible}
-              onChange={() => toggleRow(key)}
-              onClick={(e) => e.stopPropagation()}
-              className={!eligible ? "opacity-40 cursor-not-allowed" : undefined}
-            />
-          </Tooltip>
+        const statusNote = row.original.is_excluded
+          ? EXCLUDED_VENDOR_WARNING
+          : row.original.is_active
+            ? ""
+            : !statusLabel
+              ? "No SAM.gov registration found for this CAGE code. You can still send an RFQ — confirm registration before award."
+              : statusLabel.toLowerCase() === "active"
+                ? isExpired
+                  ? "Vendor's SAM.gov registration has expired. You can still send an RFQ — confirm renewal before award."
+                  : "Vendor's SAM.gov registration is not active. You can still send an RFQ — confirm registration before award."
+                : `Vendor's SAM.gov registration is ${statusLabel.toLowerCase()}. You can still send an RFQ — confirm registration before award.`;
+        const checkbox = (
+          <input
+            type="checkbox"
+            aria-label={`Select ${row.original.cage_code}`}
+            checked={selectedKeys.has(key)}
+            onChange={() => toggleRow(key)}
+            onClick={(e) => e.stopPropagation()}
+          />
         );
+        return statusNote ? <Tooltip content={statusNote}>{checkbox}</Tooltip> : checkbox;
       },
     }),
     [allSelected, toggleAll, selectedKeys, toggleRow]
@@ -2596,8 +2597,17 @@ function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, total
         accessorKey: "vendor_name",
         header: "Vendor Name",
         cell: ({ row }) => (
-          <span className="text-xs font-medium text-foreground truncate max-w-[300px]">
-            {row.original.vendor_name || "—"}
+          <span className="inline-flex items-center gap-1.5 min-w-0">
+            <span className="text-xs font-medium text-foreground truncate max-w-[300px]">
+              {row.original.vendor_name || "—"}
+            </span>
+            {row.original.is_excluded && (
+              <Tooltip content={EXCLUDED_VENDOR_WARNING}>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shrink-0">
+                  ⚠ Excluded
+                </span>
+              </Tooltip>
+            )}
           </span>
         ),
       },

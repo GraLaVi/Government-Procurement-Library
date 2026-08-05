@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { DateField } from "@/components/ui/DateField";
 import { UOM_OPTIONS } from "@/lib/rfq/uom";
-import { PLACEHOLDER_LINE_DESCRIPTION } from "@/lib/rfq/types";
+import { PLACEHOLDER_LINE_DESCRIPTION, rfqVendorKey } from "@/lib/rfq/types";
 import type {
   RfqManufacturerSelection,
   RfqLineInput,
@@ -19,10 +19,16 @@ interface RfqComposeModalProps {
   onClose: () => void;
   /** NSN of the part the manufacturers were selected from. */
   nsn: string | null;
-  /** Selected manufacturer rows (vendor + part). */
+  /** Selected vendor rows (CAGE manufacturers and/or private vendors). */
   selections: RfqManufacturerSelection[];
   onSent?: (result: RfqSendResponse) => void;
   onStaged?: (count: number) => void;
+  /** Send RFQs work queue context: stamped onto every line so the RFQ traces
+   * back to its solicitation. */
+  sourceSolicitationId?: number | null;
+  /** Prefill for the response-due-date field (e.g. solicitation close date
+   * minus the customer's quote-due lead days). User-editable as always. */
+  defaultResponseDueDate?: string | null;
 }
 
 interface LineState {
@@ -49,36 +55,52 @@ const emptyLine: LineState = {
 const inputClass =
   "w-full px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm placeholder-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 
-export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onStaged }: RfqComposeModalProps) {
+export function RfqComposeModal({
+  isOpen,
+  onClose,
+  nsn,
+  selections,
+  onSent,
+  onStaged,
+  sourceSolicitationId,
+  defaultResponseDueDate,
+}: RfqComposeModalProps) {
+  // All per-vendor state is keyed by rfqVendorKey(sel): "cage:<CAGE>" for
+  // manufacturers, "vendor:<id>" for private vendors — never by raw
+  // cage_code, which is null for private vendors.
   const [lines, setLines] = useState<LineState[]>([]);
   const [responseDueDate, setResponseDueDate] = useState("");
   const [saveContacts, setSaveContacts] = useState(true);
   const [contacts, setContacts] = useState<Record<string, ContactState>>({});
   const [resolutions, setResolutions] = useState<Record<string, VendorContactResolution>>({});
-  const [contactSel, setContactSel] = useState<Record<string, string>>({}); // cage -> "saved:<id>" | "sam" | "custom"
+  const [contactSel, setContactSel] = useState<Record<string, string>>({}); // key -> "saved:<id>" | "sam" | "custom"
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Distinct vendors (cage_code) in the selection, preserving order.
+  // Distinct vendors in the selection, preserving order.
   const allVendors = useMemo(() => {
     const seen = new Set<string>();
     const out: RfqManufacturerSelection[] = [];
     for (const s of selections) {
-      if (!seen.has(s.cage_code)) {
-        seen.add(s.cage_code);
+      const key = rfqVendorKey(s);
+      if (!seen.has(key)) {
+        seen.add(key);
         out.push(s);
       }
     }
     return out;
   }, [selections]);
 
-  const vendors = useMemo(() => allVendors.filter((v) => !removed.has(v.cage_code)), [allVendors, removed]);
+  const vendors = useMemo(
+    () => allVendors.filter((v) => !removed.has(rfqVendorKey(v))),
+    [allVendors, removed]
+  );
 
   // True when at least one active vendor's contact is hand-typed rather than
   // picked from their saved/SAM.gov options — that contact has no other home
   // to live in, so it's always saved (no opt-out, no checkbox for it).
-  const anyCustomContact = vendors.some((v) => (contactSel[v.cage_code] || "custom") === "custom");
+  const anyCustomContact = vendors.some((v) => (contactSel[rfqVendorKey(v)] || "custom") === "custom");
   const effectiveSaveContacts = anyCustomContact || saveContacts;
 
   // Initialize line + contact state whenever the modal opens with a selection.
@@ -87,51 +109,59 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
     setLines(selections.map(() => ({ ...emptyLine })));
     setError(null);
     setSubmitting(false);
-    setResponseDueDate("");
+    setResponseDueDate(defaultResponseDueDate || "");
     setSaveContacts(true);
     setRemoved(new Set());
     setResolutions({});
 
-    setContacts(Object.fromEntries(allVendors.map((v) => [v.cage_code, { contact_name: "", contact_email: "" }])));
-    setContactSel(Object.fromEntries(allVendors.map((v) => [v.cage_code, "custom"])));
+    setContacts(Object.fromEntries(allVendors.map((v) => [rfqVendorKey(v), { contact_name: "", contact_email: "" }])));
+    setContactSel(Object.fromEntries(allVendors.map((v) => [rfqVendorKey(v), "custom"])));
 
     let cancelled = false;
 
     // Pre-fill the due date from the customer's "Default response window
-    // (days)" setting. Functional set so a date the user has already typed
-    // (this fetch is async) is never overwritten; the field stays editable
-    // and clearable either way.
-    (async () => {
-      try {
-        const res = await fetch("/api/rfq/settings");
-        if (!res.ok) return;
-        const settings: RfqSettings = await res.json();
-        const days = settings.default_response_due_days;
-        if (cancelled || days == null) return;
-        const due = new Date();
-        due.setDate(due.getDate() + days);
-        const iso = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
-        setResponseDueDate((prev) => prev || iso);
-      } catch {
-        /* best-effort prefill */
-      }
-    })();
+    // (days)" setting — unless the caller already supplied one (work-queue
+    // path derives it from the solicitation close date). Functional set so a
+    // date the user has already typed (this fetch is async) is never
+    // overwritten; the field stays editable and clearable either way.
+    if (!defaultResponseDueDate) {
+      (async () => {
+        try {
+          const res = await fetch("/api/rfq/settings");
+          if (!res.ok) return;
+          const settings: RfqSettings = await res.json();
+          const days = settings.default_response_due_days;
+          if (cancelled || days == null) return;
+          const due = new Date();
+          due.setDate(due.getDate() + days);
+          const iso = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
+          setResponseDueDate((prev) => prev || iso);
+        } catch {
+          /* best-effort prefill */
+        }
+      })();
+    }
 
     (async () => {
       for (const v of allVendors) {
+        const key = rfqVendorKey(v);
         try {
-          const res = await fetch(`/api/rfq/vendor-contact?cage_code=${encodeURIComponent(v.cage_code)}`);
+          const param =
+            v.rfq_vendor_id != null
+              ? `rfq_vendor_id=${v.rfq_vendor_id}`
+              : `cage_code=${encodeURIComponent(v.cage_code ?? "")}`;
+          const res = await fetch(`/api/rfq/vendor-contact?${param}`);
           if (!res.ok) continue;
           const data: VendorContactResolution = await res.json();
           if (cancelled) return;
-          setResolutions((prev) => ({ ...prev, [v.cage_code]: data }));
+          setResolutions((prev) => ({ ...prev, [key]: data }));
           const best = data.saved?.[0] || null;
           if (best) {
-            setContacts((prev) => ({ ...prev, [v.cage_code]: { contact_name: best.contact_name || "", contact_email: best.email } }));
-            setContactSel((prev) => ({ ...prev, [v.cage_code]: `saved:${best.id}` }));
+            setContacts((prev) => ({ ...prev, [key]: { contact_name: best.contact_name || "", contact_email: best.email } }));
+            setContactSel((prev) => ({ ...prev, [key]: `saved:${best.id}` }));
           } else if (data.suggestion?.email) {
-            setContacts((prev) => ({ ...prev, [v.cage_code]: { contact_name: data.suggestion?.contact_name || "", contact_email: data.suggestion?.email || "" } }));
-            setContactSel((prev) => ({ ...prev, [v.cage_code]: "sam" }));
+            setContacts((prev) => ({ ...prev, [key]: { contact_name: data.suggestion?.contact_name || "", contact_email: data.suggestion?.email || "" } }));
+            setContactSel((prev) => ({ ...prev, [key]: "sam" }));
           }
         } catch {
           /* best-effort prefill */
@@ -141,58 +171,61 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
     return () => {
       cancelled = true;
     };
-  }, [isOpen, selections, allVendors]);
+  }, [isOpen, selections, allVendors, defaultResponseDueDate]);
 
   const setLine = (idx: number, patch: Partial<LineState>) =>
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
 
-  const setContact = (cage: string, patch: Partial<ContactState>) =>
-    setContacts((prev) => ({ ...prev, [cage]: { ...prev[cage], ...patch } }));
+  const setContact = (key: string, patch: Partial<ContactState>) =>
+    setContacts((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
 
   // Apply a dropdown selection to the editable contact fields.
-  const onPickContact = (cage: string, value: string) => {
-    setContactSel((prev) => ({ ...prev, [cage]: value }));
-    const resolution = resolutions[cage];
+  const onPickContact = (key: string, value: string) => {
+    setContactSel((prev) => ({ ...prev, [key]: value }));
+    const resolution = resolutions[key];
     if (value === "sam" && resolution?.suggestion) {
-      setContact(cage, {
+      setContact(key, {
         contact_name: resolution.suggestion.contact_name || "",
         contact_email: resolution.suggestion.email || "",
       });
     } else if (value.startsWith("saved:")) {
       const id = Number(value.slice(6));
       const saved = resolution?.saved.find((s) => s.id === id);
-      if (saved) setContact(cage, { contact_name: saved.contact_name || "", contact_email: saved.email });
+      if (saved) setContact(key, { contact_name: saved.contact_name || "", contact_email: saved.email });
     } else if (value === "custom") {
-      setContact(cage, { contact_name: "", contact_email: "" });
+      setContact(key, { contact_name: "", contact_email: "" });
     }
   };
 
-  const sourceLabel = (cage: string): string => {
-    const sel = contactSel[cage] || "custom";
+  const sourceLabel = (key: string): string => {
+    const sel = contactSel[key] || "custom";
     if (sel === "sam") return "Suggested from SAM.gov — edit if this isn't the right person";
     if (sel.startsWith("saved:")) return "From your saved contacts";
     return "Custom contact";
   };
 
-  const removeVendor = (cage: string) => setRemoved((prev) => new Set(prev).add(cage));
+  const removeVendor = (key: string) => setRemoved((prev) => new Set(prev).add(key));
 
-  const activeSelections = () => selections.filter((s) => !removed.has(s.cage_code));
+  const activeSelections = () => selections.filter((s) => !removed.has(rfqVendorKey(s)));
+
+  const vendorDisplayName = (v: RfqManufacturerSelection): string =>
+    v.vendor_name || v.cage_code || "Unknown vendor";
 
   const validate = (requireContact: boolean): string | null => {
     const active = activeSelections();
     if (active.length === 0) return "Add at least one vendor to send to.";
     for (let i = 0; i < selections.length; i++) {
-      if (removed.has(selections[i].cage_code)) continue;
+      if (removed.has(rfqVendorKey(selections[i]))) continue;
       const q = parseFloat(lines[i]?.quantity ?? "");
       if (!q || q <= 0) {
-        return `Enter a quantity for "${selections[i].part_number || selections[i].nsn || nsn || selections[i].cage_code}".`;
+        return `Enter a quantity for "${selections[i].part_number || selections[i].nsn || nsn || vendorDisplayName(selections[i])}".`;
       }
     }
     if (requireContact) {
       for (const v of vendors) {
-        const c = contacts[v.cage_code];
+        const c = contacts[rfqVendorKey(v)];
         if (!c?.contact_email?.trim()) {
-          return `Enter a contact email for ${v.vendor_name || v.cage_code}.`;
+          return `Enter a contact email for ${vendorDisplayName(v)}.`;
         }
       }
     }
@@ -202,13 +235,14 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
   const buildItems = (withContact: boolean): RfqLineInput[] =>
     selections
       .map((sel, i) => ({ sel, i }))
-      .filter(({ sel }) => !removed.has(sel.cage_code))
+      .filter(({ sel }) => !removed.has(rfqVendorKey(sel)))
       .map(({ sel, i }) => {
         const line = lines[i];
-        const contact = contacts[sel.cage_code];
+        const contact = contacts[rfqVendorKey(sel)];
         const effectiveNsn = sel.nsn ?? nsn;
         return {
           cage_code: sel.cage_code,
+          rfq_vendor_id: sel.rfq_vendor_id ?? null,
           vendor_name: sel.vendor_name,
           source_part_number: sel.part_number,
           ...(withContact
@@ -233,6 +267,7 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
           target_unit_price: line.target_unit_price ? parseFloat(line.target_unit_price) : null,
           notes: line.notes || null,
           response_due_date: responseDueDate || null,
+          source_solicitation_id: sourceSolicitationId ?? null,
         };
       });
 
@@ -240,15 +275,19 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
     if (!saveContacts && !force) return;
     await Promise.all(
       vendors
-        .filter((v) => contacts[v.cage_code]?.contact_email?.trim() && contactSel[v.cage_code] === "custom")
+        .filter((v) => {
+          const key = rfqVendorKey(v);
+          return contacts[key]?.contact_email?.trim() && contactSel[key] === "custom";
+        })
         .map((v) =>
           fetch("/api/rfq/vendor-contacts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               cage_code: v.cage_code,
-              contact_name: contacts[v.cage_code]?.contact_name || null,
-              email: contacts[v.cage_code]?.contact_email?.trim(),
+              rfq_vendor_id: v.rfq_vendor_id ?? null,
+              contact_name: contacts[rfqVendorKey(v)]?.contact_name || null,
+              email: contacts[rfqVendorKey(v)]?.contact_email?.trim(),
               is_default: true,
             }),
           }).catch(() => null)
@@ -337,23 +376,28 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
         </div>
 
         {vendors.map((vendor) => {
+          const vendorKey = rfqVendorKey(vendor);
           const vendorLines = selections
             .map((sel, idx) => ({ sel, idx }))
-            .filter(({ sel }) => sel.cage_code === vendor.cage_code);
-          const contact = contacts[vendor.cage_code] || { contact_name: "", contact_email: "" };
-          const resolution = resolutions[vendor.cage_code];
+            .filter(({ sel }) => rfqVendorKey(sel) === vendorKey);
+          const contact = contacts[vendorKey] || { contact_name: "", contact_email: "" };
+          const resolution = resolutions[vendorKey];
           const hasOptions = (resolution?.saved?.length || 0) > 0 || !!resolution?.suggestion?.email;
           return (
-            <div key={vendor.cage_code} className="rounded-lg border border-border p-4 space-y-3">
+            <div key={vendorKey} className="rounded-lg border border-border p-4 space-y-3">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold text-foreground">
                   {vendor.vendor_name || "Unknown vendor"}
-                  <span className="ml-2 text-xs font-mono text-muted">CAGE {vendor.cage_code}</span>
+                  {vendor.cage_code ? (
+                    <span className="ml-2 text-xs font-mono text-muted">CAGE {vendor.cage_code}</span>
+                  ) : (
+                    <span className="ml-2 text-xs text-muted">Private vendor</span>
+                  )}
                 </h3>
                 {allVendors.length > 1 && (
                   <button
                     type="button"
-                    onClick={() => removeVendor(vendor.cage_code)}
+                    onClick={() => removeVendor(vendorKey)}
                     className="text-xs text-error hover:underline"
                   >
                     Remove
@@ -367,8 +411,8 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
                   <label className="block text-xs font-medium text-muted mb-1">Recipient</label>
                   <select
                     className={inputClass}
-                    value={contactSel[vendor.cage_code] || "custom"}
-                    onChange={(e) => onPickContact(vendor.cage_code, e.target.value)}
+                    value={contactSel[vendorKey] || "custom"}
+                    onChange={(e) => onPickContact(vendorKey, e.target.value)}
                   >
                     {resolution?.saved?.map((s) => (
                       <option key={s.id} value={`saved:${s.id}`}>
@@ -389,7 +433,7 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
                   <input
                     className={inputClass}
                     value={contact.contact_name}
-                    onChange={(e) => { setContact(vendor.cage_code, { contact_name: e.target.value }); setContactSel((p) => ({ ...p, [vendor.cage_code]: "custom" })); }}
+                    onChange={(e) => { setContact(vendorKey, { contact_name: e.target.value }); setContactSel((p) => ({ ...p, [vendorKey]: "custom" })); }}
                     placeholder="Optional"
                   />
                 </div>
@@ -399,12 +443,12 @@ export function RfqComposeModal({ isOpen, onClose, nsn, selections, onSent, onSt
                     type="email"
                     className={inputClass}
                     value={contact.contact_email}
-                    onChange={(e) => { setContact(vendor.cage_code, { contact_email: e.target.value }); setContactSel((p) => ({ ...p, [vendor.cage_code]: "custom" })); }}
+                    onChange={(e) => { setContact(vendorKey, { contact_email: e.target.value }); setContactSel((p) => ({ ...p, [vendorKey]: "custom" })); }}
                     placeholder="vendor@example.com"
                   />
                 </div>
               </div>
-              <p className="text-[11px] text-muted">{sourceLabel(vendor.cage_code)}</p>
+              <p className="text-[11px] text-muted">{sourceLabel(vendorKey)}</p>
 
               <div className="space-y-2">
                 {vendorLines.map(({ sel, idx }) => (

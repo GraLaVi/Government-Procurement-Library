@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
+import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
 import { RfqBatchItemEditModal } from "@/components/rfq/RfqBatchItemEditModal";
 import { TableCard } from "@/components/rfq/TableCard";
@@ -12,7 +13,7 @@ import type { BatchItem, BatchContributor, RfqSendResponse } from "@/lib/rfq/typ
 const ALL = "all";
 
 export default function RfqBatchPage() {
-  const { isLoading: authLoading, hasProductAccess, user } = useAuth();
+  const { isLoading: authLoading, hasAnyProductAccess, user } = useAuth();
 
   const [items, setItems] = useState<BatchItem[]>([]);
   const [contributors, setContributors] = useState<BatchContributor[]>([]);
@@ -64,8 +65,8 @@ export default function RfqBatchPage() {
   }, [filterUser]);
 
   useEffect(() => {
-    if (!authLoading && hasProductAccess("request_for_quote")) load();
-  }, [authLoading, hasProductAccess, load]);
+    if (!authLoading && hasAnyProductAccess(RFQ_SENDER_KEYS)) load();
+  }, [authLoading, hasAnyProductAccess, load]);
 
   const selectedItems = useMemo(() => items.filter((i) => selected.has(i.id)), [items, selected]);
   const selectedVendors = useMemo(
@@ -149,7 +150,7 @@ export default function RfqBatchPage() {
 
   if (authLoading) return <div className="p-6 text-sm text-muted">Loading…</div>;
 
-  if (!hasProductAccess("request_for_quote")) {
+  if (!hasAnyProductAccess(RFQ_SENDER_KEYS)) {
     return (
       <AccessDeniedPage
         featureName="Request for Quotes"

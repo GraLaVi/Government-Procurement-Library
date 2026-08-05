@@ -23,7 +23,9 @@ RFQ is an add-on. It's unlocked by the **RFQ product**, which is assigned per us
 
 You start every RFQ from a part. Open a part record, go to the **Manufacturers** tab, check the vendors you want to ask, and click **Create RFQ** (the button shows a count, e.g. **Create RFQ (3)**).
 
-Only vendors with an **active SAM.gov registration** can receive an RFQ. Vendors that are inactive, expired, or unregistered are shown but can't be selected, with a tooltip explaining why.
+Every listed manufacturer can be selected, regardless of SAM.gov registration state. Vendors whose registration is inactive, expired, or missing show a tooltip on the checkbox noting it — many vendors renew a lapsed registration before award, so a stale status shouldn't stop you from asking for a quote. Confirm the registration before relying on the vendor for an award.
+
+One case is different: a vendor with an **active SAM.gov exclusion** (debarment or suspension) shows a red **⚠ Excluded** badge. Federal awards cannot be made to excluded vendors, so a quote from one is unusable unless the exclusion is lifted — you can still select them, but check SAM.gov before spending time there.
 
 The **Create RFQ** window opens with everything pre-filled from the part. You don't write a title or cover message — GPH generates the RFQ title automatically. You set:
 

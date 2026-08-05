@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
+import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { RfqVendorContactEditModal } from "@/components/rfq/RfqVendorContactEditModal";
@@ -16,7 +17,7 @@ const inputClass =
 const emptyNew = { cage_code: "", contact_name: "", email: "", phone: "", title: "" };
 
 export default function RfqContactsPage() {
-  const { isLoading: authLoading, hasProductAccess } = useAuth();
+  const { isLoading: authLoading, hasAnyProductAccess } = useAuth();
   const [contacts, setContacts] = useState<VendorContact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +42,8 @@ export default function RfqContactsPage() {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && hasProductAccess("request_for_quote")) load();
-  }, [authLoading, hasProductAccess, load]);
+    if (!authLoading && hasAnyProductAccess(RFQ_SENDER_KEYS)) load();
+  }, [authLoading, hasAnyProductAccess, load]);
 
   useEffect(() => {
     if (!toast) return;
@@ -119,7 +120,7 @@ export default function RfqContactsPage() {
 
   if (authLoading) return <div className="p-6 text-sm text-muted">Loading…</div>;
 
-  if (!hasProductAccess("request_for_quote")) {
+  if (!hasAnyProductAccess(RFQ_SENDER_KEYS)) {
     return (
       <AccessDeniedPage
         featureName="Request for Quotes"

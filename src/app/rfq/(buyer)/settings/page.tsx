@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
+import { RFQ_ENTERPRISE_PRODUCT_KEY, RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
 import type { RfqSettings, RfqUserSettings } from "@/lib/rfq/types";
 
@@ -109,7 +110,9 @@ const AUDIENCE_OPTIONS: { value: RfqSettings["response_alert_audience"]; label: 
 ];
 
 export default function RfqSettingsPage() {
-  const { isLoading: authLoading, hasProductAccess } = useAuth();
+  const { user, isLoading: authLoading, hasAnyProductAccess } = useAuth();
+  const isAdmin = user?.roles?.includes("admin") ?? false;
+  const isEnterprise = hasAnyProductAccess([RFQ_ENTERPRISE_PRODUCT_KEY]);
   const [settings, setSettings] = useState<RfqSettings | null>(null);
   const [myPrefs, setMyPrefs] = useState<RfqUserSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -161,8 +164,8 @@ export default function RfqSettingsPage() {
   };
 
   useEffect(() => {
-    if (!authLoading && hasProductAccess("request_for_quote")) load();
-  }, [authLoading, hasProductAccess, load]);
+    if (!authLoading && hasAnyProductAccess(RFQ_SENDER_KEYS)) load();
+  }, [authLoading, hasAnyProductAccess, load]);
 
   useEffect(() => {
     if (!toast) return;
@@ -178,7 +181,13 @@ export default function RfqSettingsPage() {
       const res = await fetch("/api/rfq/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify({
+          ...settings,
+          // -1 is the backend's "clear" sentinel for the threshold (a JSON
+          // null in a PATCH reads as "not provided"). Non-admins send null so
+          // an existing threshold is never touched by their echo-back save.
+          unassigned_alert_threshold: isAdmin ? (settings.unassigned_alert_threshold ?? -1) : null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) setError(data.error || "Failed to save.");
@@ -195,7 +204,7 @@ export default function RfqSettingsPage() {
 
   if (authLoading) return <div className="p-6 text-sm text-muted">Loading…</div>;
 
-  if (!hasProductAccess("request_for_quote")) {
+  if (!hasAnyProductAccess(RFQ_SENDER_KEYS)) {
     return (
       <AccessDeniedPage
         featureName="Request for Quotes"
@@ -346,6 +355,110 @@ export default function RfqSettingsPage() {
                   <p className="text-xs text-muted mt-1">Pre-fills the due date on new RFQs. Blank for none.</p>
                 </div>
               </div>
+
+              {/* Enterprise settings — visible only with the Enterprise
+                  add-on. Admin-only fields render read-only for non-admins
+                  (the backend 403s changes to them either way). */}
+              {isEnterprise && (
+                <div className="border-t border-border pt-6 space-y-6">
+                  <div>
+                    <h3 className="text-sm font-semibold text-secondary mb-1">Enterprise</h3>
+                    <p className="text-xs text-muted">
+                      Work queue and vendor-book behavior.
+                      {!isAdmin && " Marked settings can only be changed by a customer admin."}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Vendor quote lead time (days before close)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="365"
+                      className="w-full max-w-[200px] px-3 py-2 rounded-md border border-border bg-card-bg text-card-foreground text-sm"
+                      value={settings.default_quote_due_lead_days ?? ""}
+                      onChange={(e) =>
+                        setSettings({ ...settings, default_quote_due_lead_days: e.target.value ? parseInt(e.target.value, 10) : null })
+                      }
+                    />
+                    <p className="text-xs text-muted mt-1">
+                      RFQs sent from the work queue default their vendor due date to the
+                      solicitation close date minus this many days — so quotes arrive with
+                      room to price and submit. Blank to use the plain response window.
+                    </p>
+                  </div>
+
+                  <ToggleRow
+                    label="Allow users to add and edit vendor contacts"
+                    description="When off, only admins can change the vendor book (contacts and private vendors). Admin-only setting."
+                    checked={settings.allow_user_vendor_book_edits}
+                    disabled={!isAdmin}
+                    onChange={(v) => setSettings({ ...settings, allow_user_vendor_book_edits: v })}
+                  />
+
+                  <ToggleRow
+                    label="Remind vendors who haven't responded"
+                    description="Automatic email nudges before the quote due date. Admin-only setting."
+                    checked={settings.reminder_enabled}
+                    disabled={!isAdmin}
+                    onChange={(v) => setSettings({ ...settings, reminder_enabled: v })}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Max reminders per vendor</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        disabled={!isAdmin || !settings.reminder_enabled}
+                        className="w-full px-3 py-2 rounded-md border border-border bg-card-bg text-card-foreground text-sm disabled:opacity-50"
+                        value={settings.reminder_max_count}
+                        onChange={(e) => setSettings({ ...settings, reminder_max_count: parseInt(e.target.value || "0", 10) })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Hours between reminders</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="720"
+                        disabled={!isAdmin || !settings.reminder_enabled}
+                        className="w-full px-3 py-2 rounded-md border border-border bg-card-bg text-card-foreground text-sm disabled:opacity-50"
+                        value={settings.reminder_cooldown_hours}
+                        onChange={(e) => setSettings({ ...settings, reminder_cooldown_hours: parseInt(e.target.value || "48", 10) })}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Alert admins when the unassigned pool exceeds
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10000"
+                      disabled={!isAdmin}
+                      className="w-full max-w-[200px] px-3 py-2 rounded-md border border-border bg-card-bg text-card-foreground text-sm disabled:opacity-50"
+                      value={settings.unassigned_alert_threshold ?? ""}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          // -1 is the backend's "clear" sentinel; the UI keeps null locally.
+                          unassigned_alert_threshold: e.target.value ? parseInt(e.target.value, 10) : null,
+                        })
+                      }
+                    />
+                    <p className="text-xs text-muted mt-1">
+                      Daily check: when this many matched solicitations route to nobody, admins get
+                      a bell (and email) alert. Blank to disable. Admin-only setting.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

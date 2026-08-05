@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { resolveLibraryTier } from "@/lib/library/tier";
 
 const librarySearchItems = [
@@ -29,12 +30,20 @@ const mainNavItems = [
   { href: "/bidmatching", label: "Bid-Matching" },
 ];
 
-const rfqItems = [
+const baseRfqItems = [
   { href: "/rfq", label: "My RFQs" },
   { href: "/rfq/batch", label: "Batch" },
   { href: "/rfq/contacts", label: "Vendor Contacts" },
   { href: "/rfq/settings", label: "Settings" },
   { href: "/rfq/received", label: "Received RFQs" },
+];
+
+// Enterprise-only entries, spliced in ahead of the base items for holders of
+// request_for_quote_enterprise (the work queue is their primary surface).
+const enterpriseRfqItems = [
+  { href: "/rfq/worklist", label: "Send RFQs" },
+  { href: "/rfq/vendors", label: "Private Vendors" },
+  { href: "/rfq/coverage", label: "Coverage" },
 ];
 
 // Match the current path against a nav target. Exact match or sub-path
@@ -69,6 +78,11 @@ export function Header({ showAccountLink = true }: HeaderProps) {
   // Analytics is Maximum-tier only — see /analytics's own gate, which uses
   // the same resolveLibraryTier() helper.
   const isMaximumTier = resolveLibraryTier(hasAnyProductAccess) === "maximum";
+  // Enterprise RFQ entries (work queue, private vendors) only for holders —
+  // unlike the base RFQ menu, these are not an upsell surface.
+  const rfqItems = hasAnyProductAccess([RFQ_ENTERPRISE_PRODUCT_KEY])
+    ? [...enterpriseRfqItems, ...baseRfqItems]
+    : baseRfqItems;
   const [isLibraryDropdownOpen, setIsLibraryDropdownOpen] = useState(false);
   const [isHelpDropdownOpen, setIsHelpDropdownOpen] = useState(false);
   const [isRfqDropdownOpen, setIsRfqDropdownOpen] = useState(false);

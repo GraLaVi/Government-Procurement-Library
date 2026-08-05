@@ -632,8 +632,22 @@ export interface PartManufacturer {
   is_approved_source: boolean;
   sam_status: string | null;
   registration_expiration_date: string | null;
+  /** SAM health summary (Active, unexpired, not excluded). Informational —
+   * never gates RFQ selection. */
   is_active: boolean;
+  /** Active SAM.gov exclusion (debarment/suspension): no federal award can
+   * be made to this vendor. Selectable, but warn LOUDLY. */
+  is_excluded: boolean;
 }
+
+/** The strong warning for vendors with an active SAM.gov exclusion, shared
+ * by every RFQ vendor picker so the wording never drifts. Exclusion =
+ * debarment or suspension: federal agencies cannot award to these vendors,
+ * so a quote from one is unusable unless the exclusion is lifted. */
+export const EXCLUDED_VENDOR_WARNING =
+  "EXCLUDED VENDOR: this vendor has an active SAM.gov exclusion (debarment or suspension). " +
+  "Federal awards cannot be made to excluded vendors — a quote from them is unusable unless " +
+  "the exclusion is lifted. Check SAM.gov before spending time here.";
 
 export interface PartManufacturersResponse {
   nsn: string;

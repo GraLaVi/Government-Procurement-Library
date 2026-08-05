@@ -5,8 +5,7 @@ import { SolicitationNumberLink } from "@/components/library/SolicitationNumberL
 import { MatchStrengthBadge } from "@/components/ui/MatchStrengthBadge";
 import { Modal } from "@/components/ui/Modal";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
-import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
-import { timeAgo } from "@/lib/amendments";
+import { SolicitationRowBadges } from "@/components/library/SolicitationRowBadges";
 
 interface MatchedCondition {
   condition_type: string;
@@ -297,47 +296,23 @@ export function BidMatchResultsTable({
                             SAM
                           </span>
                         )}
-                        {/* Pre-match amendment: this match was triggered by
-                            an existing amendment on the sol. */}
-                        {result.has_amendment_indicator && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAmendmentSolId(result.solicitation_id);
-                              setAmendmentSolNumber(result.solicitation_number);
-                            }}
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200"
-                            title="This solicitation was updated before this match was generated. Click to see what changed."
-                          >
-                            Amended
-                          </button>
-                        )}
-                        {/* Post-match amendment: sol changed AFTER the
-                            customer was notified. Distinct color so the
-                            two pills are visually separable. */}
-                        {result.has_post_match_amendment && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAmendmentSolId(result.solicitation_id);
-                              setAmendmentSolNumber(result.solicitation_number);
-                            }}
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-100 text-sky-800 hover:bg-sky-200 border border-sky-200"
-                            title={result.latest_post_match_amendment_at ? `This solicitation was updated after your match was generated. Latest change: ${new Date(result.latest_post_match_amendment_at).toLocaleString()}` : "This solicitation was updated after your match was generated."}
-                          >
-                            Updated{result.latest_post_match_amendment_at ? ` ${timeAgo(result.latest_post_match_amendment_at)}` : " since"}
-                          </button>
-                        )}
+                        {/* Amendment pills + fast-award badge, shared with the
+                            Send RFQs work queue (SolicitationRowBadges) so the
+                            two pages read identically. */}
+                        <SolicitationRowBadges
+                          hasAmendmentIndicator={result.has_amendment_indicator}
+                          hasPostMatchAmendment={result.has_post_match_amendment}
+                          latestPostMatchAmendmentAt={result.latest_post_match_amendment_at}
+                          onShowAmendments={() => {
+                            setAmendmentSolId(result.solicitation_id);
+                            setAmendmentSolNumber(result.solicitation_number);
+                          }}
+                          solicitationType={result.solicitation_type}
+                          solicitationTypeLabel={result.solicitation_type_label}
+                        />
                         {/* DLA demand signal (Maximum tier) — strongest across
                             the opportunity's NIINs; informs the bid decision. */}
-                        <DemandSignalChip signal={result.demand_signal} />
-                        {/* DLA fast-award / AIDC indicator, same component and
-                            rules as the parts/vendor solicitation tables:
-                            renders nothing unless the row carries a badged
-                            type, so untyped rows are visually unchanged. */}
-                        <SolicitationTypeBadge
-                          code={result.solicitation_type}
-                          label={result.solicitation_type_label}
+                        <DemandSignalChip signal={result.demand_signal}
                         />
                       </div>
                       {result.agency_code && (

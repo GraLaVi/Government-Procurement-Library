@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
+import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { TableCard } from "@/components/rfq/TableCard";
@@ -25,7 +26,7 @@ function statusVariant(status: string): "default" | "success" | "warning" | "err
 }
 
 export default function RfqListPage() {
-  const { isLoading: authLoading, hasProductAccess, user } = useAuth();
+  const { isLoading: authLoading, hasAnyProductAccess, user } = useAuth();
   const [rfqs, setRfqs] = useState<RfqListItem[] | null>(null);
   const [contributors, setContributors] = useState<RfqContributor[]>([]);
   const [filterUser, setFilterUser] = useState<string>(ALL);
@@ -75,16 +76,16 @@ export default function RfqListPage() {
   }, [filterUser]);
 
   useEffect(() => {
-    if (filterInitialized && hasProductAccess("request_for_quote")) {
+    if (filterInitialized && hasAnyProductAccess(RFQ_SENDER_KEYS)) {
       load();
     }
-  }, [filterInitialized, hasProductAccess, load]);
+  }, [filterInitialized, hasAnyProductAccess, load]);
 
   if (authLoading) {
     return <div className="p-6 text-sm text-muted">Loading…</div>;
   }
 
-  if (!hasProductAccess("request_for_quote")) {
+  if (!hasAnyProductAccess(RFQ_SENDER_KEYS)) {
     return (
       <AccessDeniedPage
         featureName="Request for Quotes"
