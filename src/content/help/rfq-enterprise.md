@@ -86,6 +86,14 @@ number** but isn't an approved source for the item, the quote is marked
 manufacturer CAGE and part number, so don't build your price on one without
 an approved exception.
 
+### Pricing your quote to the government
+
+From the comparison table, click **Price** on the winning quote line. Enter
+your markup percentage (pre-filled from your company default), shipping, and
+any other charges — GPH computes your per-unit price to the government
+(vendor price × markup, plus shipping and charges spread over the quantity)
+and shows the extended total. Saving marks the solicitation **Priced**.
+
 ## Private vendors
 
 **Vendor RFQs → Private Vendors** is your company's own vendor list — shops

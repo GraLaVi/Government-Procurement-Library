@@ -206,6 +206,10 @@ export interface RfqWorkItem {
   match_count: number;
   last_matched_at: string | null;
   rfq_count: number;
+  /** Sum of requested_quantity x part GAC over the solicitation's items —
+   * the app's standard "Estimated value" formula (gac, not unit_price).
+   * Display-only; not sortable (too costly across all candidates). */
+  estimated_value: number | null;
   work_status: RfqWorkStatus;
   assigned_user_id: number | null;
   assigned_user_name: string | null;
@@ -275,6 +279,13 @@ export interface ComparisonQuote {
   notes: string | null;
   is_best_price: boolean;
   is_approved_source: boolean;
+  /** Buyer cost build-up (markup/shipping/other -> price to government). */
+  response_line_id: number;
+  markup_percent: number | null;
+  shipping_amount: number | null;
+  other_charges: number | null;
+  price_to_gov: number | null;
+  priced_at: string | null;
   /** Alternate part quoted by a NON-approved source — DLA rejects this on
    * AID-described items; never price it without an exception. */
   alternate_not_approved: boolean;
@@ -315,6 +326,7 @@ export interface RfqSettings {
   // --- Enterprise ---
   allow_user_vendor_book_edits: boolean;
   default_quote_due_lead_days: number | null;
+  default_markup_percent: number | null;
   reminder_enabled: boolean;
   reminder_max_count: number;
   reminder_cooldown_hours: number;

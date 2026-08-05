@@ -459,6 +459,12 @@ export default function RfqWorklistPage() {
                 <SortHeader label="RFQ Progress" sortKey="work_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                 <SortHeader label="Close date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
                 <SortHeader label="Set-aside" sortKey="set_aside" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
+                <th
+                  className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wider whitespace-nowrap"
+                  title="Requested quantity x the part's GAC, summed over the solicitation's items — same formula as the parts Solicitations tab. Not sortable."
+                >
+                  Est. value
+                </th>
                 <SortHeader label="Assignee" sortKey="assignee" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
               </tr>
             </thead>
@@ -561,6 +567,11 @@ export default function RfqWorklistPage() {
                       <td className="px-4 py-3">
                         {item.set_aside_label || item.set_aside || "—"}
                       </td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums whitespace-nowrap">
+                        {item.estimated_value != null
+                          ? item.estimated_value.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
+                          : "—"}
+                      </td>
                       <td className="px-4 py-3">
                         {item.assigned_user_name ? (
                           <span className="text-foreground">{item.assigned_user_name}</span>
@@ -575,7 +586,7 @@ export default function RfqWorklistPage() {
                     </tr>
                     {isOpen && (
                       <tr className="bg-muted-light/30">
-                        <td colSpan={8} className="px-6 py-3">
+                        <td colSpan={9} className="px-6 py-3">
                           {!partsState || partsState.loading ? (
                             <div className="flex items-center gap-2 py-2 text-xs text-muted">
                               <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />

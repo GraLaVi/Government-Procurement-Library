@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Badge } from "@/components/ui/Badge";
-import type { QuoteComparisonResponse } from "@/lib/rfq/types";
+import { Button } from "@/components/ui/Button";
+import type { ComparisonQuote, QuoteComparisonResponse, RfqSettings } from "@/lib/rfq/types";
 
 interface QuoteComparisonModalProps {
   isOpen: boolean;
@@ -27,6 +28,89 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
   const [data, setData] = useState<QuoteComparisonResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Pricing editor: which quote line is open + its draft fields.
+  const [pricingFor, setPricingFor] = useState<number | null>(null);
+  const [draft, setDraft] = useState<{ markup: string; shipping: string; other: string }>({ markup: "", shipping: "", other: "" });
+  const [savingPrice, setSavingPrice] = useState(false);
+  const [defaultMarkup, setDefaultMarkup] = useState<number | null>(null);
+
+  // Org default markup % pre-fills the editor (soft-fail).
+  useEffect(() => {
+    if (!isOpen) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/rfq/settings");
+        if (res.ok) {
+          const st: RfqSettings = await res.json();
+          setDefaultMarkup(st.default_markup_percent ?? null);
+        }
+      } catch { /* soft */ }
+    })();
+  }, [isOpen]);
+
+  const openPricing = (q: ComparisonQuote) => {
+    setPricingFor(q.response_line_id);
+    setDraft({
+      markup: q.markup_percent != null ? String(q.markup_percent) : defaultMarkup != null ? String(defaultMarkup) : "",
+      shipping: q.shipping_amount != null ? String(q.shipping_amount) : "",
+      other: q.other_charges != null ? String(q.other_charges) : "",
+    });
+  };
+
+  const savePricing = async (q: ComparisonQuote, clear = false) => {
+    setSavingPrice(true);
+    setError(null);
+    try {
+      const body = clear
+        ? { markup_percent: null, shipping_amount: null, other_charges: null }
+        : {
+            markup_percent: draft.markup !== "" ? parseFloat(draft.markup) : 0,
+            shipping_amount: draft.shipping !== "" ? parseFloat(draft.shipping) : 0,
+            other_charges: draft.other !== "" ? parseFloat(draft.other) : 0,
+          };
+      const res = await fetch(`/api/rfq/quote-lines/${q.response_line_id}/pricing`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const out = await res.json();
+      if (!res.ok) {
+        setError(out.error || "Failed to save pricing.");
+        return;
+      }
+      // Patch the saved fields into local state — no refetch needed.
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              groups: prev.groups.map((g) => ({
+                ...g,
+                quotes: g.quotes.map((x) =>
+                  x.response_line_id === q.response_line_id
+                    ? { ...x, markup_percent: out.markup_percent, shipping_amount: out.shipping_amount, other_charges: out.other_charges, price_to_gov: out.price_to_gov, priced_at: out.priced_at }
+                    : x
+                ),
+              })),
+            }
+          : prev
+      );
+      setPricingFor(null);
+    } catch {
+      setError("Network error saving pricing.");
+    } finally {
+      setSavingPrice(false);
+    }
+  };
+
+  /** Live preview of the server formula: unit x (1+markup%) + (ship+other)/qty. */
+  const previewPrice = (q: ComparisonQuote, qty: number | null): number | null => {
+    if (q.unit_price == null || !qty) return null;
+    const markup = draft.markup !== "" ? parseFloat(draft.markup) : 0;
+    const ship = draft.shipping !== "" ? parseFloat(draft.shipping) : 0;
+    const other = draft.other !== "" ? parseFloat(draft.other) : 0;
+    if ([markup, ship, other].some((n) => Number.isNaN(n) || n < 0)) return null;
+    return Math.round((q.unit_price * (1 + markup / 100) + (ship + other) / qty) * 100) / 100;
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -110,13 +194,15 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                             <th className="px-4 py-2 text-right">Qty avail</th>
                             <th className="px-4 py-2 text-right">Lead time</th>
                             <th className="px-4 py-2">Valid until</th>
+                            <th className="px-4 py-2 text-right">Price to gov</th>
                             <th className="px-4 py-2">Notes</th>
+                            <th className="px-4 py-2 text-right" aria-label="Actions" />
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
                           {g.quotes.map((q) => (
+                            <Fragment key={q.recipient_id}>
                             <tr
-                              key={q.recipient_id}
                               className={
                                 q.is_no_bid
                                   ? "opacity-50"
@@ -165,10 +251,98 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                               <td className="px-4 py-2.5 whitespace-nowrap">
                                 {q.quote_valid_until || "—"}
                               </td>
+                              <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap">
+                                {q.price_to_gov != null ? (
+                                  <span
+                                    className="font-semibold text-foreground"
+                                    title={`Markup ${q.markup_percent ?? 0}% · shipping ${q.shipping_amount ?? 0} · other ${q.other_charges ?? 0}`}
+                                  >
+                                    {money(q.price_to_gov, q.currency)}
+                                  </span>
+                                ) : (
+                                  "—"
+                                )}
+                              </td>
                               <td className="px-4 py-2.5 text-xs text-muted max-w-[220px] truncate" title={q.notes || undefined}>
                                 {q.notes || "—"}
                               </td>
+                              <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                                {!q.is_no_bid && q.unit_price != null && (
+                                  <button
+                                    type="button"
+                                    className="text-xs text-primary hover:underline"
+                                    onClick={() => (pricingFor === q.response_line_id ? setPricingFor(null) : openPricing(q))}
+                                  >
+                                    {q.price_to_gov != null ? "Edit price" : "Price"}
+                                  </button>
+                                )}
+                              </td>
                             </tr>
+                            {pricingFor === q.response_line_id && (
+                              <tr className="bg-muted-light/40">
+                                <td colSpan={8} className="px-6 py-3">
+                                  <div className="flex flex-wrap items-end gap-3">
+                                    <div>
+                                      <label className="block text-[11px] text-muted mb-0.5">Markup %</label>
+                                      <input type="number" min="0" step="any"
+                                        className="w-24 px-2 py-1 rounded-md border border-border bg-card-bg text-sm"
+                                        value={draft.markup}
+                                        onChange={(e) => setDraft((d) => ({ ...d, markup: e.target.value }))} />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[11px] text-muted mb-0.5">Shipping $</label>
+                                      <input type="number" min="0" step="any"
+                                        className="w-28 px-2 py-1 rounded-md border border-border bg-card-bg text-sm"
+                                        value={draft.shipping}
+                                        onChange={(e) => setDraft((d) => ({ ...d, shipping: e.target.value }))} />
+                                    </div>
+                                    <div>
+                                      <label className="block text-[11px] text-muted mb-0.5">Other charges $</label>
+                                      <input type="number" min="0" step="any"
+                                        className="w-28 px-2 py-1 rounded-md border border-border bg-card-bg text-sm"
+                                        value={draft.other}
+                                        onChange={(e) => setDraft((d) => ({ ...d, other: e.target.value }))} />
+                                    </div>
+                                    <div className="text-sm">
+                                      <span className="text-muted text-xs">Unit price to government:</span>{" "}
+                                      <span className="font-mono font-semibold text-foreground">
+                                        {(() => {
+                                          const pv = previewPrice(q, g.quantity);
+                                          return pv != null ? money(pv, q.currency) : "—";
+                                        })()}
+                                      </span>
+                                      {g.quantity != null && (() => {
+                                        const pv = previewPrice(q, g.quantity);
+                                        return pv != null ? (
+                                          <span className="ml-2 text-xs text-muted">
+                                            × {g.quantity} = {money(Math.round(pv * g.quantity * 100) / 100, q.currency)}
+                                          </span>
+                                        ) : null;
+                                      })()}
+                                    </div>
+                                    <div className="ml-auto flex items-center gap-2">
+                                      {q.price_to_gov != null && (
+                                        <button type="button" className="text-xs text-error hover:underline"
+                                          disabled={savingPrice} onClick={() => savePricing(q, true)}>
+                                          Clear
+                                        </button>
+                                      )}
+                                      <Button variant="ghost" size="sm" disabled={savingPrice} onClick={() => setPricingFor(null)}>
+                                        Cancel
+                                      </Button>
+                                      <Button variant="primary" size="sm" disabled={savingPrice} onClick={() => savePricing(q)}>
+                                        {savingPrice ? "Saving…" : "Save price"}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <p className="mt-1.5 text-[11px] text-muted">
+                                    Price to government = vendor unit price × (1 + markup%) + (shipping + other) ÷ requested qty.
+                                    Saving marks the solicitation Priced.
+                                  </p>
+                                </td>
+                              </tr>
+                            )}
+                            </Fragment>
                           ))}
                         </tbody>
                       </table>

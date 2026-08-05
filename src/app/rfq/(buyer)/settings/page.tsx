@@ -390,6 +390,26 @@ export default function RfqSettingsPage() {
                     </p>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Default markup %
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      step="any"
+                      className="w-full max-w-[200px] px-3 py-2 rounded-md border border-border bg-card-bg text-card-foreground text-sm"
+                      value={settings.default_markup_percent ?? ""}
+                      onChange={(e) =>
+                        setSettings({ ...settings, default_markup_percent: e.target.value ? parseFloat(e.target.value) : null })
+                      }
+                    />
+                    <p className="text-xs text-muted mt-1">
+                      Pre-fills the markup field when pricing vendor quotes. Blank for none.
+                    </p>
+                  </div>
+
                   <ToggleRow
                     label="Allow users to add and edit vendor contacts"
                     description="When off, only admins can change the vendor book (contacts and private vendors). Admin-only setting."

@@ -2347,7 +2347,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
             sorting: true,
             multiSort: false,
             rowSelection: false,
-            copyRow: true,
+            copyRow: false,
             export: false,
             exportFormats: ["csv"],
             columnResize: false,

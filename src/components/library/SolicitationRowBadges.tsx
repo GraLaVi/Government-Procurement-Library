@@ -4,25 +4,23 @@ import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadg
 import { timeAgo } from "@/lib/amendments";
 
 /**
- * The solicitation's OWN status (DLA fact: open/awarded/closed…) as a thin
- * outlined read-only badge — deliberately distinct from filled interactive
- * pills (like the Send RFQs "RFQ Progress" dropdown) so read-only system
- * facts and editable state never look alike. Shared by the Send RFQs queue
- * and the bid-matching results table.
+ * The solicitation's OWN status (DLA fact: open/awarded/closed…) — the
+ * filled badge style the bid-matching page has always used (green open,
+ * blue awarded, red closed), shared so every table renders it identically.
  */
 export function SolStatusBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-muted">—</span>;
   const s = status.toLowerCase();
   const tone =
     s === "open"
-      ? "border-emerald-300 text-emerald-700"
+      ? "bg-green-100 text-green-800"
       : s === "awarded"
-      ? "border-sky-300 text-sky-700"
+      ? "bg-blue-100 text-blue-800"
       : s === "closed"
-      ? "border-rose-300 text-rose-700"
-      : "border-border text-muted";
+      ? "bg-red-100 text-red-800"
+      : "bg-gray-100 text-gray-800";
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs bg-transparent ${tone}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tone}`}>
       {status}
     </span>
   );
