@@ -5,7 +5,7 @@ import { SolicitationNumberLink } from "@/components/library/SolicitationNumberL
 import { MatchStrengthBadge } from "@/components/ui/MatchStrengthBadge";
 import { Modal } from "@/components/ui/Modal";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
-import { SolicitationRowBadges } from "@/components/library/SolicitationRowBadges";
+import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
 
 interface MatchedCondition {
   condition_type: string;
@@ -99,23 +99,6 @@ function formatDate(dateStr: string | null): string {
   if (!dateStr) return "-";
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
-function getStatusBadgeClass(status: string | null): string {
-  switch ((status || "").toLowerCase()) {
-    case "open":
-      return "bg-green-100 text-green-800";
-    case "awarded":
-      return "bg-blue-100 text-blue-800";
-    case "closed":
-      return "bg-red-100 text-red-800";
-    case "unavailable":
-    case "removed":
-    case "canceled":
-    case "cancelled":
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
 }
 
 function ConditionBadge({ condition }: { condition: MatchedCondition }) {
@@ -320,9 +303,7 @@ export function BidMatchResultsTable({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(result.status)}`}>
-                        {result.status || "-"}
-                      </span>
+                      <SolStatusBadge status={result.status} />
                     </td>
                     <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                       {formatDate(result.close_date)}

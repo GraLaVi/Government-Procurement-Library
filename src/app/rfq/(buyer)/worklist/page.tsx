@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
-import { SolicitationRowBadges } from "@/components/library/SolicitationRowBadges";
+import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import { QuoteVendorPickerModal } from "@/components/rfq/QuoteVendorPickerModal";
@@ -84,24 +84,6 @@ function SortHeader({
         <span className="text-[10px]">{active ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
       </button>
     </th>
-  );
-}
-
-// Solicitation's OWN status (DLA fact: open/awarded/closed...) — a thin
-// outlined read-only badge, visually distinct from the filled editable
-// RFQ Progress pill so it's clear which one is the buyer's to change.
-function SolStatusBadge({ status }: { status: string | null }) {
-  if (!status) return <span className="text-muted">—</span>;
-  const tone =
-    status.toLowerCase() === "open"
-      ? "border-emerald-300 text-emerald-700"
-      : status.toLowerCase() === "awarded"
-      ? "border-sky-300 text-sky-700"
-      : "border-border text-muted";
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs bg-transparent ${tone}`}>
-      {status}
-    </span>
   );
 }
 

@@ -3,6 +3,31 @@
 import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
 import { timeAgo } from "@/lib/amendments";
 
+/**
+ * The solicitation's OWN status (DLA fact: open/awarded/closed…) as a thin
+ * outlined read-only badge — deliberately distinct from filled interactive
+ * pills (like the Send RFQs "RFQ Progress" dropdown) so read-only system
+ * facts and editable state never look alike. Shared by the Send RFQs queue
+ * and the bid-matching results table.
+ */
+export function SolStatusBadge({ status }: { status: string | null }) {
+  if (!status) return <span className="text-muted">—</span>;
+  const s = status.toLowerCase();
+  const tone =
+    s === "open"
+      ? "border-emerald-300 text-emerald-700"
+      : s === "awarded"
+      ? "border-sky-300 text-sky-700"
+      : s === "closed"
+      ? "border-rose-300 text-rose-700"
+      : "border-border text-muted";
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs bg-transparent ${tone}`}>
+      {status}
+    </span>
+  );
+}
+
 interface SolicitationRowBadgesProps {
   /** Pre-match amendment: the row's match was triggered by an existing
    * amendment on the solicitation. */

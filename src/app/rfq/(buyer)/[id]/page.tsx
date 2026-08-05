@@ -162,13 +162,13 @@ export default function RfqDetailPage() {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={statusVariant(rfq.status)} size="md">{rfqStatusLabel(rfq.status)}</Badge>
-            <PrintButton className="no-print" onClick={handlePrint} title="Print this RFQ" />
             {isOpen && (
               <>
                 <Button variant="outline" size="sm" className="no-print" onClick={() => setConfirmAction("close")} disabled={busy}>Close</Button>
                 <Button variant="ghost" size="sm" className="no-print" onClick={() => setConfirmAction("cancel")} disabled={busy}>Cancel</Button>
               </>
             )}
+            <PrintButton className="no-print" onClick={handlePrint} title="Print this RFQ" />
           </div>
         </div>
       </div>
@@ -250,17 +250,13 @@ export default function RfqDetailPage() {
             </tbody>
           </table>
         </div>
-      </TableCard>
-
-      {/* Responses */}
-      <TableCard
-        as="section"
-        header={
-          <h2 className="text-sm font-semibold text-foreground">
+        {/* Quotes live in the same card as the request: they answer these
+            exact lines, and the side-by-side read (asked vs. answered) is
+            the whole point of the page. */}
+        <div className="mt-6 pt-4 border-t border-border">
+          <h2 className="text-sm font-semibold text-foreground mb-3">
             Quotes received ({responses.length})
           </h2>
-        }
-      >
         {responses.length === 0 ? (
           <p className="text-sm text-muted">No quotes yet.</p>
         ) : (
@@ -325,6 +321,7 @@ export default function RfqDetailPage() {
             ))}
           </div>
         )}
+        </div>
       </TableCard>
 
       <ConfirmDialog
