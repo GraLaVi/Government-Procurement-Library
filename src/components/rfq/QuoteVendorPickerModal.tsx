@@ -233,6 +233,15 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
                           {v.vendor_code && (
                             <span className="ml-2 text-xs font-mono text-muted">{v.vendor_code}</span>
                           )}
+                          {/* The vendor-book note — buyers keep quoting
+                              instructions here ("call before emailing",
+                              "quotes Mil-spec only"), so it belongs at the
+                              moment of choosing whom to ask. */}
+                          {v.notes && (
+                            <span className="block text-xs text-muted italic whitespace-pre-wrap mt-0.5">
+                              {v.notes}
+                            </span>
+                          )}
                         </span>
                         {responsivenessBadge(`vendor:${v.id}`)}
                         <Badge variant="info" size="sm">Private</Badge>

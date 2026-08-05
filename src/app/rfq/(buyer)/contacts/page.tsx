@@ -171,7 +171,7 @@ export default function RfqContactsPage() {
           <table className="w-full text-sm">
             <thead className="bg-card-bg/60 text-xs text-muted">
               <tr>
-                <th className="px-3 py-2 text-left font-medium">CAGE</th>
+                <th className="px-3 py-2 text-left font-medium">CAGE / ID</th>
                 <th className="px-3 py-2 text-left font-medium">Name</th>
                 <th className="px-3 py-2 text-left font-medium">Email</th>
                 <th className="px-3 py-2 text-left font-medium">Phone</th>
@@ -183,7 +183,17 @@ export default function RfqContactsPage() {
             <tbody>
               {contacts.map((c) => (
                 <tr key={c.id} className="border-t border-border">
-                  <td className="px-3 py-2 font-mono text-xs text-foreground">{c.cage_code}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-foreground">
+                    {/* CAGE vendors show their CAGE; private-vendor contacts
+                        show the vendor's own identifier (which may itself be
+                        a CAGE), with the company name on hover. */}
+                    {c.cage_code || (
+                      <span title={c.vendor_company_name || undefined}>
+                        {c.vendor_code || "—"}
+                        <span className="ml-1 font-sans text-muted">(private)</span>
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-foreground">{c.contact_name || "—"}</td>
                   <td className="px-3 py-2 text-foreground">{c.email}</td>
                   <td className="px-3 py-2 text-foreground">{c.phone || "—"}</td>

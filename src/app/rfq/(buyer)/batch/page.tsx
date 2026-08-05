@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { RfqBatchItemEditModal } from "@/components/rfq/RfqBatchItemEditModal";
 import { TableCard } from "@/components/rfq/TableCard";
 import type { BatchItem, BatchContributor, RfqSendResponse } from "@/lib/rfq/types";
+import { rfqVendorKey } from "@/lib/rfq/types";
 
 const ALL = "all";
 
@@ -70,7 +71,7 @@ export default function RfqBatchPage() {
 
   const selectedItems = useMemo(() => items.filter((i) => selected.has(i.id)), [items, selected]);
   const selectedVendors = useMemo(
-    () => new Set(selectedItems.map((i) => i.cage_code)).size,
+    () => new Set(selectedItems.map((i) => rfqVendorKey(i))).size,
     [selectedItems]
   );
   const allSelected = items.length > 0 && items.every((i) => selected.has(i.id));
@@ -251,7 +252,11 @@ export default function RfqBatchPage() {
                   </td>
                   <td className="px-3 py-2 text-foreground">
                     {it.vendor_name || it.cage_code}{" "}
-                    <span className="font-mono text-xs text-muted">({it.cage_code})</span>
+                    {it.cage_code ? (
+                      <span className="font-mono text-xs text-muted">({it.cage_code})</span>
+                    ) : (
+                      <span className="text-xs text-muted">(private)</span>
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     {it.resolved_contact_email ? (

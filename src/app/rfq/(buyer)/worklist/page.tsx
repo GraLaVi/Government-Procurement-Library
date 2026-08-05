@@ -31,7 +31,7 @@ const PAGE_SIZE = 50;
 const SCOPE_STORAGE_KEY = "rfq-worklist-scope";
 const STATUS_FILTER_STORAGE_KEY = "rfq-worklist-status-filter";
 const SOL_STATUS_STORAGE_KEY = "rfq-worklist-sol-status";
-const SOL_STATUS_OPTIONS = ["open", "awarded", "all"] as const;
+const SOL_STATUS_OPTIONS = ["open", "awarded", "closed", "cancelled", "removed", "unavailable", "all"] as const;
 type SolStatusFilter = (typeof SOL_STATUS_OPTIONS)[number];
 
 type Scope = "mine" | "unassigned" | "all";
@@ -458,9 +458,14 @@ export default function RfqWorklistPage() {
                 value={solStatus}
                 onChange={(e) => setSolStatus(e.target.value as SolStatusFilter)}
                 aria-label="Filter by solicitation status"
+                title="Picking a status other than Open also includes solicitations past their close date — closed, cancelled, and awarded ones almost always are."
               >
                 <option value="open">Open</option>
                 <option value="awarded">Awarded</option>
+                <option value="closed">Closed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="removed">Removed</option>
+                <option value="unavailable">Unavailable</option>
                 <option value="all">All</option>
               </select>
               <label className="text-xs text-muted">RFQ progress</label>

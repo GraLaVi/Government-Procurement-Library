@@ -163,8 +163,13 @@ export default function RfqDetailPage() {
   return (
     <div className="print-root space-y-6">
       <div>
-        <div className="no-print flex items-center gap-3">
-          <Link href="/rfq" className="text-xs text-primary hover:underline">← All RFQs</Link>
+        <div className="no-print flex items-center gap-2">
+          <Link
+            href="/rfq"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border text-xs text-card-foreground hover:border-primary/50 hover:text-primary"
+          >
+            ← All RFQs
+          </Link>
           {rfqIds.length > 1 && (() => {
             const idx = rfqIds.indexOf(Number(rfqId));
             const prevId = idx > 0 ? rfqIds[idx - 1] : null;

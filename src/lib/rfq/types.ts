@@ -110,6 +110,10 @@ export interface VendorContact {
   customer_id: number;
   cage_code: string | null;
   rfq_vendor_id?: number | null;
+  /** Private-vendor contacts: the vendor's own identifier (often a CAGE,
+   * sometimes UEI/DUNS/in-house) and company name. */
+  vendor_code?: string | null;
+  vendor_company_name?: string | null;
   contact_name: string | null;
   email: string;
   phone: string | null;
