@@ -270,6 +270,9 @@ export default function RfqDetailPage() {
                   <div className="flex items-center gap-2 text-xs text-muted">
                     {resp.total_price != null && <span>Total ${resp.total_price}</span>}
                     {resp.lead_time_days != null && <span>· {resp.lead_time_days}d lead</span>}
+                    {resp.line_items.some((l) => l.price_to_gov != null) && (
+                      <Badge variant="success" size="sm">Priced</Badge>
+                    )}
                     <Badge variant={statusVariant(resp.status)} size="sm">{rfqStatusLabel(resp.status)}</Badge>
                   </div>
                 </div>
@@ -283,6 +286,7 @@ export default function RfqDetailPage() {
                         <th className="px-3 py-1.5 text-left font-medium">Lead</th>
                         <th className="px-3 py-1.5 text-left font-medium">Alt part</th>
                         <th className="px-3 py-1.5 text-left font-medium">No bid</th>
+                        <th className="px-3 py-1.5 text-right font-medium">Your price to gov</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -310,6 +314,18 @@ export default function RfqDetailPage() {
                           <td className="px-3 py-1.5 text-muted">{rli.lead_time_days ?? "—"}</td>
                           <td className="px-3 py-1.5 text-muted">{rli.alternate_part_number || "—"}</td>
                           <td className="px-3 py-1.5 text-muted">{rli.is_no_bid ? "Yes" : "—"}</td>
+                          <td className="px-3 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                            {rli.price_to_gov != null ? (
+                              <span
+                                className="font-semibold text-foreground"
+                                title={`Markup ${rli.markup_percent ?? 0}% · shipping $${rli.shipping_amount ?? 0} · other $${rli.other_charges ?? 0}${rli.priced_at ? ` · priced ${formatDateMmDdYyyy(rli.priced_at)}` : ""}`}
+                              >
+                                ${rli.price_to_gov}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
                         </tr>
                         );
                       })}

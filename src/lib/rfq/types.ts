@@ -206,6 +206,8 @@ export interface RfqWorkItem {
   match_count: number;
   last_matched_at: string | null;
   rfq_count: number;
+  /** Vendor quotes received back across those RFQs. */
+  quote_count: number;
   /** Sum of requested_quantity x part GAC over the solicitation's items —
    * the app's standard "Estimated value" formula (gac, not unit_price). */
   estimated_value: number | null;
@@ -275,7 +277,10 @@ export interface ComparisonQuote {
   manufacturer: string | null;
   alternate_part_number: string | null;
   is_no_bid: boolean;
+  /** Per-line vendor note. */
   notes: string | null;
+  /** The vendor's overall message on their quote — usually where they write. */
+  response_notes: string | null;
   is_best_price: boolean;
   is_approved_source: boolean;
   /** Buyer cost build-up (markup/shipping/other -> price to government). */
@@ -417,6 +422,12 @@ export interface RfqResponseLineItem {
   alternate_part_number: string | null;
   is_no_bid: boolean;
   notes: string | null;
+  /** Buyer pricing from the Enterprise comparison view. */
+  markup_percent?: number | null;
+  shipping_amount?: number | null;
+  other_charges?: number | null;
+  price_to_gov?: number | null;
+  priced_at?: string | null;
 }
 
 export interface RfqResponseDetail {

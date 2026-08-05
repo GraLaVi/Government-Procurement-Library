@@ -29,6 +29,7 @@ import {
 
 const PAGE_SIZE = 50;
 const SCOPE_STORAGE_KEY = "rfq-worklist-scope";
+const STATUS_FILTER_STORAGE_KEY = "rfq-worklist-status-filter";
 
 type Scope = "mine" | "unassigned" | "all";
 type SortKey = "close_date" | "solicitation_number" | "sol_status" | "work_status" | "set_aside" | "assignee" | "estimated_value";
@@ -177,13 +178,18 @@ export default function RfqWorklistPage() {
         const stored = localStorage.getItem(SCOPE_STORAGE_KEY);
         if (stored === "mine" || stored === "unassigned" || stored === "all") setScope(stored);
       }
+      const storedFilter = localStorage.getItem(STATUS_FILTER_STORAGE_KEY);
+      if (storedFilter && storedFilter in WORK_STATUS_LABELS) setStatusFilter(storedFilter);
     } catch { /* ignore */ }
     setScopeInitialized(true);
   }, []);
   useEffect(() => {
     if (!scopeInitialized) return;
-    try { localStorage.setItem(SCOPE_STORAGE_KEY, scope); } catch { /* ignore */ }
-  }, [scope, scopeInitialized]);
+    try {
+      localStorage.setItem(SCOPE_STORAGE_KEY, scope);
+      localStorage.setItem(STATUS_FILTER_STORAGE_KEY, statusFilter);
+    } catch { /* ignore */ }
+  }, [scope, statusFilter, scopeInitialized]);
 
   useEffect(() => { setPage(1); setSelected(new Set()); }, [scope, statusFilter, sortBy, sortDir]);
 
@@ -524,10 +530,10 @@ export default function RfqWorklistPage() {
                             <button
                               type="button"
                               onClick={() => setQuotesFor(item)}
-                              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 cursor-pointer"
-                              title={`${item.rfq_count} RFQ${item.rfq_count !== 1 ? "s" : ""} sent from this solicitation — click to compare quotes`}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border border-primary/40 text-primary hover:bg-primary/10 cursor-pointer"
+                              title={`${item.rfq_count} RFQ${item.rfq_count !== 1 ? "s" : ""} sent · ${item.quote_count} quote${item.quote_count !== 1 ? "s" : ""} received — open the side-by-side comparison`}
                             >
-                              {item.rfq_count} RFQ{item.rfq_count !== 1 ? "s" : ""} · quotes
+                              View quotes ({item.quote_count})
                             </button>
                           )}
                         </div>

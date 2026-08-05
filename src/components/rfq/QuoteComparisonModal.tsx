@@ -195,7 +195,6 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                             <th className="px-4 py-2 text-right">Lead time</th>
                             <th className="px-4 py-2">Valid until</th>
                             <th className="px-4 py-2 text-right">Price to gov</th>
-                            <th className="px-4 py-2">Notes</th>
                             <th className="px-4 py-2 text-right" aria-label="Actions" />
                           </tr>
                         </thead>
@@ -263,9 +262,6 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                                   "—"
                                 )}
                               </td>
-                              <td className="px-4 py-2.5 text-xs text-muted max-w-[220px] truncate" title={q.notes || undefined}>
-                                {q.notes || "—"}
-                              </td>
                               <td className="px-4 py-2.5 text-right whitespace-nowrap">
                                 {!q.is_no_bid && q.unit_price != null && (
                                   <button
@@ -278,9 +274,29 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                                 )}
                               </td>
                             </tr>
+                            {(q.notes || q.response_notes) && (
+                              <tr className={q.is_no_bid ? "opacity-50" : q.is_best_price ? "bg-emerald-50/60" : undefined}>
+                                <td colSpan={7} className="px-6 pb-2.5 pt-0 text-xs text-muted">
+                                  {/* Full-width, untruncated — the vendor's message is
+                                      decision context, not an afterthought. */}
+                                  {q.response_notes && (
+                                    <div>
+                                      <span className="font-medium text-card-foreground">Vendor message:</span>{" "}
+                                      <span className="whitespace-pre-wrap">{q.response_notes}</span>
+                                    </div>
+                                  )}
+                                  {q.notes && (
+                                    <div className={q.response_notes ? "mt-0.5" : undefined}>
+                                      <span className="font-medium text-card-foreground">Line note:</span>{" "}
+                                      <span className="whitespace-pre-wrap">{q.notes}</span>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            )}
                             {pricingFor === q.response_line_id && (
                               <tr className="bg-muted-light/40">
-                                <td colSpan={8} className="px-6 py-3">
+                                <td colSpan={7} className="px-6 py-3">
                                   <div className="flex flex-wrap items-end gap-3">
                                     <div>
                                       <label className="block text-[11px] text-muted mb-0.5">Markup %</label>
