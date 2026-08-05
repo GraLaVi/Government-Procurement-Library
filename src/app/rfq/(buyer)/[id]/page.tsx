@@ -163,7 +163,7 @@ export default function RfqDetailPage() {
   return (
     <div className="print-root space-y-6">
       <div>
-        <div className="no-print flex items-center justify-between gap-3">
+        <div className="no-print flex items-center gap-3">
           <Link href="/rfq" className="text-xs text-primary hover:underline">← All RFQs</Link>
           {rfqIds.length > 1 && (() => {
             const idx = rfqIds.indexOf(Number(rfqId));
@@ -172,9 +172,6 @@ export default function RfqDetailPage() {
             const btn = "inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border text-xs text-card-foreground hover:border-primary/50 hover:text-primary disabled:opacity-40 disabled:hover:border-border disabled:hover:text-card-foreground";
             return (
               <div className="flex items-center gap-2">
-                {idx >= 0 && (
-                  <span className="text-xs text-muted">{idx + 1} of {rfqIds.length}</span>
-                )}
                 <button type="button" className={btn} disabled={!prevId}
                   onClick={() => prevId && router.push(`/rfq/${prevId}`)} aria-label="Previous RFQ">
                   ← Prev
@@ -183,6 +180,9 @@ export default function RfqDetailPage() {
                   onClick={() => nextId && router.push(`/rfq/${nextId}`)} aria-label="Next RFQ">
                   Next →
                 </button>
+                {idx >= 0 && (
+                  <span className="text-xs text-muted">{idx + 1} of {rfqIds.length}</span>
+                )}
               </div>
             );
           })()}
