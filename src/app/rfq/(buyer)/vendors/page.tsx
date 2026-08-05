@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
@@ -89,6 +89,16 @@ export default function RfqVendorsPage() {
 
   // Per-vendor "add contact" drafts.
   const [contactDrafts, setContactDrafts] = useState<Record<number, { name: string; email: string }>>({});
+  // Expanded table rows (contacts + address + inline edit form live there).
+  const [expandedVendors, setExpandedVendors] = useState<Set<number>>(new Set());
+
+  const toggleVendor = (id: number) =>
+    setExpandedVendors((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const [editingContact, setEditingContact] = useState<VendorContact | null>(null);
 
   // Responsiveness over every vendor the customer has sent to (CAGE and
@@ -376,95 +386,148 @@ export default function RfqVendorsPage() {
           No private vendors yet. Add the suppliers you work with outside SAM.gov.
         </div>
       ) : (
-        <div className="space-y-4 mt-4">
-          {vendors.map((v) => (
-            <div key={v.id} className={`bg-card-bg rounded-xl border border-border p-5 ${!v.is_active ? "opacity-60" : ""}`}>
-              {editingVendorId === v.id ? (
-                vendorForm(`Edit ${v.company_name}`, () => { setEditingVendorId(null); setForm(emptyVendor); })
-              ) : (
-                <>
-                  <div className="flex items-baseline justify-between gap-3 flex-wrap">
-                    <div>
-                      <span className="text-sm font-semibold text-card-foreground">{v.company_name}</span>
-                      {v.vendor_code && <span className="ml-2 text-xs font-mono text-muted">{v.vendor_code}</span>}
-                      {!v.is_active && <Badge variant="default" size="sm" className="ml-2">Deactivated</Badge>}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      {v.is_active ? (
-                        <>
-                          <button type="button" className="text-primary hover:underline"
-                            onClick={() => { setForm(vendorToForm(v)); setEditingVendorId(v.id); setAddingOpen(false); }}>
-                            Edit
-                          </button>
-                          <button type="button" className="text-error hover:underline" onClick={() => removeVendor(v)}>
-                            Delete
-                          </button>
-                        </>
-                      ) : (
-                        <button type="button" className="text-primary hover:underline" onClick={() => reactivateVendor(v)}>
-                          Reactivate
+        <TableCard className="overflow-x-auto mt-4">
+          <table className="w-full text-sm">
+            <thead className="bg-muted-light/50">
+              <tr className="border-b border-border text-left text-xs font-medium text-muted uppercase tracking-wider">
+                <th className="px-2 py-2.5 w-8" aria-label="Expand" />
+                <th className="px-4 py-2.5">Company</th>
+                <th className="px-4 py-2.5">Identifier</th>
+                <th className="px-4 py-2.5">Contacts</th>
+                <th className="px-4 py-2.5">Phone</th>
+                <th className="px-4 py-2.5">Location</th>
+                <th className="px-4 py-2.5 text-right" aria-label="Actions" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {vendors.map((v) => {
+                const isOpen = expandedVendors.has(v.id);
+                const defaultContact = v.contacts.find((c) => c.is_default) || v.contacts[0] || null;
+                const location = [v.city, v.state].filter(Boolean).join(", ");
+                return (
+                  <Fragment key={v.id}>
+                    <tr className={`hover:bg-muted-light/40 transition-colors ${!v.is_active ? "opacity-60" : ""}`}>
+                      <td className="px-2 py-2.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => toggleVendor(v.id)}
+                          className="text-muted hover:text-foreground"
+                          aria-label={isOpen ? "Collapse" : "Expand"}
+                        >
+                          <svg className={`w-4 h-4 transition-transform ${isOpen ? "rotate-90" : ""}`}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
                         </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {(v.address_line1 || v.city || v.phone) && (
-                    <div className="mt-1 text-xs text-muted">
-                      {[v.address_line1, v.address_line2, [v.city, v.state, v.postal_code].filter(Boolean).join(" "), v.country]
-                        .filter(Boolean)
-                        .join(", ")}
-                      {v.phone && <span className="ml-2">· {v.phone}</span>}
-                    </div>
-                  )}
-                  {v.notes && <div className="mt-1 text-xs text-muted italic">{v.notes}</div>}
-
-                  {/* Contacts */}
-                  <div className="mt-3 border-t border-border/60 pt-3">
-                    <div className="text-xs font-medium text-muted uppercase tracking-wider mb-2">Contacts</div>
-                    {v.contacts.length === 0 ? (
-                      <p className="text-xs text-muted italic mb-2">
-                        No contacts — add one so RFQs to this vendor have somewhere to go.
-                      </p>
-                    ) : (
-                      <ul className="space-y-1 mb-2">
-                        {v.contacts.map((c) => (
-                          <li key={c.id} className="flex items-center gap-2 text-sm">
-                            <span className="text-card-foreground">
-                              {c.contact_name ? `${c.contact_name} — ` : ""}{c.email}
-                            </span>
-                            {c.is_default && <Badge variant="info" size="sm">default</Badge>}
-                            <button type="button" className="text-xs text-primary hover:underline" onClick={() => setEditingContact(c)}>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <button type="button" onClick={() => toggleVendor(v.id)}
+                          className="text-sm font-medium text-card-foreground hover:text-primary text-left">
+                          {v.company_name}
+                        </button>
+                        {!v.is_active && <Badge variant="default" size="sm" className="ml-2">Deactivated</Badge>}
+                      </td>
+                      <td className="px-4 py-2.5 font-mono text-xs text-muted">{v.vendor_code || "—"}</td>
+                      <td className="px-4 py-2.5 text-xs">
+                        {v.contacts.length === 0 ? (
+                          <span className="text-amber-700 font-medium">none</span>
+                        ) : (
+                          <span className="text-card-foreground">
+                            {defaultContact?.email}
+                            {v.contacts.length > 1 && (
+                              <span className="text-muted"> +{v.contacts.length - 1} more</span>
+                            )}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-muted whitespace-nowrap">{v.phone || "—"}</td>
+                      <td className="px-4 py-2.5 text-xs text-muted">{location || "—"}</td>
+                      <td className="px-4 py-2.5 text-right whitespace-nowrap text-xs">
+                        {v.is_active ? (
+                          <>
+                            <button type="button" className="text-primary hover:underline"
+                              onClick={() => { setForm(vendorToForm(v)); setEditingVendorId(v.id); setAddingOpen(false); setExpandedVendors((prev) => new Set(prev).add(v.id)); }}>
                               Edit
                             </button>
-                            <button type="button" className="text-xs text-error hover:underline" onClick={() => deleteContact(c)}>
-                              Remove
+                            <button type="button" className="ml-3 text-error hover:underline" onClick={() => removeVendor(v)}>
+                              Delete
                             </button>
-                          </li>
-                        ))}
-                      </ul>
+                          </>
+                        ) : (
+                          <button type="button" className="text-primary hover:underline" onClick={() => reactivateVendor(v)}>
+                            Reactivate
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="bg-muted-light/30">
+                        <td colSpan={7} className="px-6 py-4">
+                          {editingVendorId === v.id ? (
+                            vendorForm(`Edit ${v.company_name}`, () => { setEditingVendorId(null); setForm(emptyVendor); })
+                          ) : (
+                            <div className="space-y-3">
+                              {(v.address_line1 || v.city || v.notes) && (
+                                <div className="text-xs text-muted">
+                                  {[v.address_line1, v.address_line2, [v.city, v.state, v.postal_code].filter(Boolean).join(" "), v.country]
+                                    .filter(Boolean)
+                                    .join(", ")}
+                                  {v.notes && <div className="mt-1 italic">{v.notes}</div>}
+                                </div>
+                              )}
+
+                              <div>
+                                <div className="text-xs font-medium text-muted uppercase tracking-wider mb-2">Contacts</div>
+                                {v.contacts.length === 0 ? (
+                                  <p className="text-xs text-muted italic mb-2">
+                                    No contacts — add one so RFQs to this vendor have somewhere to go.
+                                  </p>
+                                ) : (
+                                  <ul className="space-y-1 mb-2">
+                                    {v.contacts.map((c) => (
+                                      <li key={c.id} className="flex items-center gap-2 text-sm">
+                                        <span className="text-card-foreground">
+                                          {c.contact_name ? `${c.contact_name} — ` : ""}{c.email}
+                                        </span>
+                                        {c.is_default && <Badge variant="info" size="sm">default</Badge>}
+                                        <button type="button" className="text-xs text-primary hover:underline" onClick={() => setEditingContact(c)}>
+                                          Edit
+                                        </button>
+                                        <button type="button" className="text-xs text-error hover:underline" onClick={() => deleteContact(c)}>
+                                          Remove
+                                        </button>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                                {v.is_active && (
+                                  <form
+                                    className="flex items-center gap-2 max-w-md"
+                                    onSubmit={(e) => { e.preventDefault(); addContact(v); }}
+                                  >
+                                    <input className={inputClass} placeholder="Name (optional)"
+                                      value={contactDrafts[v.id]?.name || ""}
+                                      onChange={(e) => setContactDrafts((prev) => ({ ...prev, [v.id]: { name: e.target.value, email: prev[v.id]?.email || "" } }))} />
+                                    <input className={inputClass} type="email" placeholder="email@vendor.com"
+                                      value={contactDrafts[v.id]?.email || ""}
+                                      onChange={(e) => setContactDrafts((prev) => ({ ...prev, [v.id]: { name: prev[v.id]?.name || "", email: e.target.value } }))} />
+                                    <Button type="submit" variant="outline" size="sm" disabled={busy || !(contactDrafts[v.id]?.email || "").trim()}>
+                                      Add
+                                    </Button>
+                                  </form>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
                     )}
-                    {v.is_active && (
-                      <form
-                        className="flex items-center gap-2 max-w-md"
-                        onSubmit={(e) => { e.preventDefault(); addContact(v); }}
-                      >
-                        <input className={inputClass} placeholder="Name (optional)"
-                          value={contactDrafts[v.id]?.name || ""}
-                          onChange={(e) => setContactDrafts((prev) => ({ ...prev, [v.id]: { name: e.target.value, email: prev[v.id]?.email || "" } }))} />
-                        <input className={inputClass} type="email" placeholder="email@vendor.com"
-                          value={contactDrafts[v.id]?.email || ""}
-                          onChange={(e) => setContactDrafts((prev) => ({ ...prev, [v.id]: { name: prev[v.id]?.name || "", email: e.target.value } }))} />
-                        <Button type="submit" variant="outline" size="sm" disabled={busy || !(contactDrafts[v.id]?.email || "").trim()}>
-                          Add
-                        </Button>
-                      </form>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </TableCard>
       )}
 
       {/* Vendor responsiveness — every vendor ever sent to (CAGE + private),

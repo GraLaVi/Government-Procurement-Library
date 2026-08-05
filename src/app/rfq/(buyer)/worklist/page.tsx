@@ -31,6 +31,7 @@ const PAGE_SIZE = 50;
 const SCOPE_STORAGE_KEY = "rfq-worklist-scope";
 
 type Scope = "mine" | "unassigned" | "all";
+type SortKey = "close_date" | "solicitation_number" | "sol_status" | "work_status" | "set_aside" | "assignee";
 
 const inputClass =
   "px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
@@ -63,6 +64,47 @@ function dueDateFromClose(closeIso: string | null, leadDays: number | null): str
   return `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
 }
 
+function SortHeader({
+  label, sortKey, sortBy, sortDir, onSort, className = "",
+}: {
+  label: string; sortKey: SortKey; sortBy: SortKey; sortDir: "asc" | "desc";
+  onSort: (k: SortKey) => void; className?: string;
+}) {
+  const active = sortBy === sortKey;
+  return (
+    <th className={`px-4 py-2.5 ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider text-xs font-medium ${
+          active ? "text-foreground" : "text-muted hover:text-foreground"
+        }`}
+      >
+        {label}
+        <span className="text-[10px]">{active ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
+      </button>
+    </th>
+  );
+}
+
+// Solicitation's OWN status (DLA fact: open/awarded/closed...) — a thin
+// outlined read-only badge, visually distinct from the filled editable
+// RFQ Progress pill so it's clear which one is the buyer's to change.
+function SolStatusBadge({ status }: { status: string | null }) {
+  if (!status) return <span className="text-muted">—</span>;
+  const tone =
+    status.toLowerCase() === "open"
+      ? "border-emerald-300 text-emerald-700"
+      : status.toLowerCase() === "awarded"
+      ? "border-sky-300 text-sky-700"
+      : "border-border text-muted";
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs bg-transparent ${tone}`}>
+      {status}
+    </span>
+  );
+}
+
 const statusPillClass: Record<RfqWorkStatus, string> = {
   unworked: "bg-muted/10 text-muted",
   rfq_sent: "bg-sky-100 text-sky-800",
@@ -80,6 +122,8 @@ export default function RfqWorklistPage() {
   const [scope, setScope] = useState<Scope>("mine");
   const [scopeInitialized, setScopeInitialized] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [sortBy, setSortBy] = useState<SortKey>("close_date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<RfqWorklistPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -159,13 +203,25 @@ export default function RfqWorklistPage() {
     try { localStorage.setItem(SCOPE_STORAGE_KEY, scope); } catch { /* ignore */ }
   }, [scope, scopeInitialized]);
 
-  useEffect(() => { setPage(1); setSelected(new Set()); }, [scope, statusFilter]);
+  useEffect(() => { setPage(1); setSelected(new Set()); }, [scope, statusFilter, sortBy, sortDir]);
+
+  // Server-side sort (client-side would only sort the visible page).
+  const toggleSort = (key: SortKey) => {
+    if (sortBy === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortBy(key);
+      setSortDir("asc");
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ scope, page: String(page), page_size: String(PAGE_SIZE) });
+      const params = new URLSearchParams({
+        scope, page: String(page), page_size: String(PAGE_SIZE),
+        sort_by: sortBy, sort_dir: sortDir,
+      });
       if (statusFilter) params.set("work_status", statusFilter);
       const res = await fetch(`/api/rfq/worklist?${params.toString()}`);
       const body = await res.json();
@@ -179,7 +235,7 @@ export default function RfqWorklistPage() {
     } finally {
       setLoading(false);
     }
-  }, [scope, statusFilter, page]);
+  }, [scope, statusFilter, page, sortBy, sortDir]);
 
   useEffect(() => {
     if (scopeInitialized && !authLoading && hasEnterprise) load();
@@ -314,17 +370,6 @@ export default function RfqWorklistPage() {
             Quote to request vendor pricing.
           </p>
         </div>
-        <select
-          className={inputClass}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          aria-label="Filter by work status"
-        >
-          <option value="">All statuses</option>
-          {(Object.keys(WORK_STATUS_LABELS) as RfqWorkStatus[]).map((s) => (
-            <option key={s} value={s}>{WORK_STATUS_LABELS[s]}</option>
-          ))}
-        </select>
       </div>
 
       {/* Scope tabs */}
@@ -398,19 +443,41 @@ export default function RfqWorklistPage() {
             : "No matched solicitations. Bid-matching results feed this queue."}
         </div>
       ) : (
-        <TableCard className="overflow-x-auto !p-0">
+        <TableCard
+          className="overflow-x-auto"
+          header={
+            <>
+              <label className="text-xs text-muted">RFQ progress</label>
+              <select
+                className={inputClass}
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                aria-label="Filter by RFQ progress"
+              >
+                <option value="">All</option>
+                {(Object.keys(WORK_STATUS_LABELS) as RfqWorkStatus[]).map((st) => (
+                  <option key={st} value={st}>{WORK_STATUS_LABELS[st]}</option>
+                ))}
+              </select>
+              <span className="ml-auto text-xs text-muted">
+                {data ? `${data.total.toLocaleString()} solicitation${data.total !== 1 ? "s" : ""}` : ""}
+              </span>
+            </>
+          }
+        >
           <table className="w-full text-sm">
             <thead className="bg-muted-light/50">
-              <tr className="border-b border-border text-left text-xs font-medium text-muted uppercase tracking-wider">
+              <tr className="border-b border-border text-left">
                 <th className="px-3 py-2.5 w-8">
                   <input type="checkbox" checked={allOnPageSelected} onChange={toggleAll} aria-label="Select all" />
                 </th>
                 <th className="px-2 py-2.5 w-8" aria-label="Expand" />
-                <th className="px-4 py-2.5">Solicitation</th>
-                <th className="px-4 py-2.5">Status</th>
-                <th className="px-4 py-2.5 whitespace-nowrap">Close date</th>
-                <th className="px-4 py-2.5">Set-aside</th>
-                <th className="px-4 py-2.5">Assignee</th>
+                <SortHeader label="Solicitation" sortKey="solicitation_number" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
+                <SortHeader label="Sol. Status" sortKey="sol_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
+                <SortHeader label="RFQ Progress" sortKey="work_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
+                <SortHeader label="Close date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
+                <SortHeader label="Set-aside" sortKey="set_aside" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
+                <SortHeader label="Assignee" sortKey="assignee" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -485,9 +552,13 @@ export default function RfqWorklistPage() {
                           <div className="text-xs text-muted mt-0.5">{item.agency_code}</div>
                         )}
                       </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <SolStatusBadge status={item.status} />
+                      </td>
                       <td className="px-4 py-3">
                         <select
                           className={`rounded-full text-xs font-medium px-2 py-1 border-0 cursor-pointer ${statusPillClass[item.work_status]}`}
+                          title="Your RFQ progress on this solicitation. RFQ Sent and Quotes In advance automatically; set the rest as you work."
                           value={item.work_status}
                           onChange={(e) => patchStatus(item, e.target.value as RfqWorkStatus)}
                           aria-label="Work status"
@@ -522,7 +593,7 @@ export default function RfqWorklistPage() {
                     </tr>
                     {isOpen && (
                       <tr className="bg-muted-light/30">
-                        <td colSpan={7} className="px-6 py-3">
+                        <td colSpan={8} className="px-6 py-3">
                           {!partsState || partsState.loading ? (
                             <div className="flex items-center gap-2 py-2 text-xs text-muted">
                               <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />

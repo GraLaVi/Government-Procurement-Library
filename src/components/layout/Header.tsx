@@ -30,23 +30,20 @@ const mainNavItems = [
   { href: "/bidmatching", label: "Bid-Matching" },
 ];
 
-const baseRfqItems = [
+// One ordered menu; `enterprise: true` entries only render for holders of
+// request_for_quote_enterprise. The Assignments page is admin-only but listed
+// for every Enterprise holder — non-admins get the page's own admins-only
+// notice rather than a hidden feature.
+const rfqMenuSpec = [
   { href: "/rfq", label: "My RFQs" },
+  { href: "/rfq/worklist", label: "Send RFQs", enterprise: true },
   { href: "/rfq/batch", label: "Batch" },
   { href: "/rfq/contacts", label: "Vendor Contacts" },
-  { href: "/rfq/settings", label: "Settings" },
+  { href: "/rfq/vendors", label: "Private Vendors", enterprise: true },
+  { href: "/account/rfq-assignments", label: "Assignments", enterprise: true },
   { href: "/rfq/received", label: "Received RFQs" },
-];
-
-// Enterprise-only entries, spliced in ahead of the base items for holders of
-// request_for_quote_enterprise (the work queue is their primary surface).
-const enterpriseRfqItems = [
-  { href: "/rfq/worklist", label: "Send RFQs" },
-  { href: "/rfq/vendors", label: "Private Vendors" },
-  { href: "/rfq/coverage", label: "Coverage" },
-  // Admin page, but listed for every Enterprise holder — non-admins get the
-  // page's own read-only "admins only" notice rather than a hidden feature.
-  { href: "/account/rfq-assignments", label: "Buyer Assignments" },
+  { href: "/rfq/coverage", label: "Coverage", enterprise: true },
+  { href: "/rfq/settings", label: "Settings" },
 ];
 
 // Match the current path against a nav target. Exact match or sub-path
@@ -81,11 +78,10 @@ export function Header({ showAccountLink = true }: HeaderProps) {
   // Analytics is Maximum-tier only — see /analytics's own gate, which uses
   // the same resolveLibraryTier() helper.
   const isMaximumTier = resolveLibraryTier(hasAnyProductAccess) === "maximum";
-  // Enterprise RFQ entries (work queue, private vendors) only for holders —
-  // unlike the base RFQ menu, these are not an upsell surface.
-  const rfqItems = hasAnyProductAccess([RFQ_ENTERPRISE_PRODUCT_KEY])
-    ? [...enterpriseRfqItems, ...baseRfqItems]
-    : baseRfqItems;
+  // Enterprise RFQ entries only for holders — unlike the base RFQ menu,
+  // these are not an upsell surface.
+  const isRfqEnterprise = hasAnyProductAccess([RFQ_ENTERPRISE_PRODUCT_KEY]);
+  const rfqItems = rfqMenuSpec.filter((i) => !i.enterprise || isRfqEnterprise);
   const [isLibraryDropdownOpen, setIsLibraryDropdownOpen] = useState(false);
   const [isHelpDropdownOpen, setIsHelpDropdownOpen] = useState(false);
   const [isRfqDropdownOpen, setIsRfqDropdownOpen] = useState(false);
