@@ -31,7 +31,7 @@ const PAGE_SIZE = 50;
 const SCOPE_STORAGE_KEY = "rfq-worklist-scope";
 
 type Scope = "mine" | "unassigned" | "all";
-type SortKey = "close_date" | "solicitation_number" | "sol_status" | "work_status" | "set_aside" | "assignee";
+type SortKey = "close_date" | "solicitation_number" | "sol_status" | "work_status" | "set_aside" | "assignee" | "estimated_value";
 
 const inputClass =
   "px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
@@ -459,12 +459,7 @@ export default function RfqWorklistPage() {
                 <SortHeader label="RFQ Progress" sortKey="work_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                 <SortHeader label="Close date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
                 <SortHeader label="Set-aside" sortKey="set_aside" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
-                <th
-                  className="px-4 py-2.5 text-right text-xs font-medium text-muted uppercase tracking-wider whitespace-nowrap"
-                  title="Requested quantity x the part's GAC, summed over the solicitation's items — same formula as the parts Solicitations tab. Not sortable."
-                >
-                  Est. value
-                </th>
+                <SortHeader label="Est. value" sortKey="estimated_value" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
                 <SortHeader label="Assignee" sortKey="assignee" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
               </tr>
             </thead>

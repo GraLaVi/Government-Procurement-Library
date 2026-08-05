@@ -207,8 +207,7 @@ export interface RfqWorkItem {
   last_matched_at: string | null;
   rfq_count: number;
   /** Sum of requested_quantity x part GAC over the solicitation's items —
-   * the app's standard "Estimated value" formula (gac, not unit_price).
-   * Display-only; not sortable (too costly across all candidates). */
+   * the app's standard "Estimated value" formula (gac, not unit_price). */
   estimated_value: number | null;
   work_status: RfqWorkStatus;
   assigned_user_id: number | null;
