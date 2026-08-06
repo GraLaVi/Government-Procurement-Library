@@ -2390,14 +2390,14 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
           isOpen={true}
           onClose={() => setContractModal(null)}
           title={`Contract ${contractModal.contract_number ?? ""}`.trim()}
-          size="md"
+          size="lg"
         >
           <div className="flex flex-col gap-6">
             <section>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 Awardee
               </h3>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm border border-border rounded-md p-3">
                 <dt className="text-muted-foreground">Vendor</dt>
                 <dd className="font-medium text-foreground">
                   {contractModal.awardee_name || "—"}
@@ -2410,7 +2410,7 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 Award
               </h3>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm border border-border rounded-md p-3">
                 <dt className="text-muted-foreground">Award date</dt>
                 <dd className="text-foreground">{formatContractDate(contractModal.award_date) || "—"}</dd>
                 <dt className="text-muted-foreground">Quantity</dt>
