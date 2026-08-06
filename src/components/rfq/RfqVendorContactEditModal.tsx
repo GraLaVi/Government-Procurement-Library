@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import type { VendorContact } from "@/lib/rfq/types";
@@ -15,26 +15,27 @@ interface RfqVendorContactEditModalProps {
 const inputClass =
   "w-full px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm placeholder-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 
+/**
+ * Thin wrapper: unmounts the form when closed and remounts per contact
+ * (key), so the form initializes from props in useState — no reset effect
+ * (react-hooks/set-state-in-effect).
+ */
 export function RfqVendorContactEditModal({ isOpen, contact, onClose, onSaved }: RfqVendorContactEditModalProps) {
-  const [contactName, setContactName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [title, setTitle] = useState("");
+  if (!isOpen || !contact) return null;
+  return <ContactEditForm key={contact.id} contact={contact} onClose={onClose} onSaved={onSaved} />;
+}
+
+function ContactEditForm({ contact, onClose, onSaved }: {
+  contact: VendorContact; onClose: () => void; onSaved: (updated: VendorContact) => void;
+}) {
+  const [contactName, setContactName] = useState(contact.contact_name || "");
+  const [email, setEmail] = useState(contact.email || "");
+  const [phone, setPhone] = useState(contact.phone || "");
+  const [title, setTitle] = useState(contact.title || "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isOpen || !contact) return;
-    setContactName(contact.contact_name || "");
-    setEmail(contact.email || "");
-    setPhone(contact.phone || "");
-    setTitle(contact.title || "");
-    setError(null);
-    setSubmitting(false);
-  }, [isOpen, contact]);
-
   const handleSave = async () => {
-    if (!contact) return;
     if (!email.trim()) {
       setError("Email is required.");
       return;
@@ -65,10 +66,8 @@ export function RfqVendorContactEditModal({ isOpen, contact, onClose, onSaved }:
     }
   };
 
-  if (!contact) return null;
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit contact" size="md" preventClose={submitting}>
+    <Modal isOpen={true} onClose={onClose} title="Edit contact" size="md" preventClose={submitting}>
       <div className="space-y-4">
         <div className="text-xs font-mono text-muted">
           {contact.cage_code ? `CAGE ${contact.cage_code}` : "Private vendor contact"}

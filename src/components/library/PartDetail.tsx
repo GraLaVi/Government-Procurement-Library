@@ -61,7 +61,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import type { RfqManufacturerSelection } from "@/lib/rfq/types";
 import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
-import { resolvePartsTier, tierMeets, type LibraryTier } from "@/lib/library/tier";
+import { resolvePartsTier, tierMeets } from "@/lib/library/tier";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
 import { usePreferences } from "@/lib/hooks/usePreferences";
 import { resolveResultsLayout } from "@/lib/preferences/resultsLayout";
@@ -70,6 +70,68 @@ import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
 import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
+
+// Map UI tabId -> audit `view` name (matches FastAPI _VALID_TAB_VIEWS)
+const TAB_VIEW_MAP: Record<string, string> = {
+  overview: 'detail',
+  procurement: 'procurement_history',
+  solicitations: 'solicitations',
+  manufacturers: 'manufacturers',
+  technical: 'technical_characteristics',
+  enduse: 'end_use_description',
+  packaging: 'packaging',
+  procurementitemdesc: 'procurement_item_description',
+};
+
+/**
+ * Buyer contact cell with copy-email feedback. A real component (not an
+ * inline closure in the column def) because it holds state — hooks may not
+ * be called inside a cell renderer (react-hooks/rules-of-hooks).
+ */
+function BuyerContactCell({ buyerEmail, phone }: { buyerEmail?: string | null; phone?: string | null }) {
+  const email = buyerEmail?.toLowerCase();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyEmail = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (email) {
+      navigator.clipboard.writeText(email);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  if (!email && !phone) return <span className="text-muted">—</span>;
+
+  return (
+    <div className="flex items-center gap-2 group">
+      {phone && <span className="text-xs font-medium text-foreground whitespace-nowrap">{phone}</span>}
+      {email && (
+        <button
+          type="button"
+          onClick={handleCopyEmail}
+          className={`inline-flex items-center gap-1 p-1 rounded transition-colors ${
+            copied ? "text-success bg-success/10" : "text-primary hover:bg-primary/10"
+          }`}
+          title={copied ? "Email copied!" : `Copy email: ${email}`}
+        >
+          {copied ? (
+            <>
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-[10px] font-bold">Copied!</span>
+            </>
+          ) : (
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+            </svg>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
 
 // Module-scope CSV column specs for the part-detail tab exports. Kept
 // outside the component bodies so the parent-level export button
@@ -211,69 +273,57 @@ function CodeTooltip({ code, title, content, codeType, children }: CodeTooltipPr
 
   // Use state for hover-based tooltip
   const [showTooltip, setShowTooltip] = useState(false);
-  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
   const triggerRef = useRef<HTMLSpanElement>(null);
-  const tooltipRef = useRef<HTMLSpanElement>(null);
 
-  // Calculate tooltip position based on available space (using fixed positioning to avoid overflow clipping)
-  useEffect(() => {
-    if (showTooltip && triggerRef.current && tooltipRef.current) {
-      const triggerRect = triggerRef.current.getBoundingClientRect();
-      const tooltipRect = tooltipRef.current.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const tooltipWidth = tooltipRect.width || 288; // w-72 = 18rem = 288px
-      const tooltipHeight = tooltipRect.height || 200;
-      const spacing = 8; // mb-2 = 0.5rem = 8px
-      
-      // Calculate space on left and right
-      const spaceOnLeft = triggerRect.left;
-      const spaceOnRight = viewportWidth - triggerRect.right;
-      const spaceOnTop = triggerRect.top;
-      const spaceOnBottom = viewportHeight - triggerRect.bottom;
-      
-      // Calculate horizontal position
-      let left: number;
-      if (spaceOnLeft < tooltipWidth && spaceOnRight >= tooltipWidth) {
-        // Not enough space on left, use right alignment
-        left = triggerRect.right - tooltipWidth;
-      } else if (spaceOnRight < tooltipWidth && spaceOnLeft >= tooltipWidth) {
-        // Not enough space on right, use left alignment
-        left = triggerRect.left;
-      } else if (spaceOnLeft >= tooltipWidth / 2 && spaceOnRight >= tooltipWidth / 2) {
-        // Center the tooltip
-        left = triggerRect.left + (triggerRect.width / 2) - (tooltipWidth / 2);
-      } else {
-        // Default to left if we can't determine, but ensure it doesn't overflow
-        left = spaceOnRight > spaceOnLeft 
-          ? Math.max(8, triggerRect.right - tooltipWidth) // Right align with margin
-          : Math.min(triggerRect.left, viewportWidth - tooltipWidth - 8); // Left align with margin
-      }
-      
-      // Ensure tooltip doesn't go off-screen horizontally
-      left = Math.max(8, Math.min(left, viewportWidth - tooltipWidth - 8));
-      
-      // Calculate vertical position - prefer above, fallback to below if not enough space
-      let top: number;
-      if (spaceOnTop >= tooltipHeight + spacing) {
-        // Show above the trigger
-        top = triggerRect.top - tooltipHeight - spacing;
-      } else if (spaceOnBottom >= tooltipHeight + spacing) {
-        // Show below the trigger
-        top = triggerRect.bottom + spacing;
-      } else {
-        // Not enough space above or below, show above but adjust to fit
-        top = Math.max(8, triggerRect.top - tooltipHeight - spacing);
-      }
-      
-      setTooltipStyle({
-        position: 'fixed',
-        left: `${left}px`,
-        top: `${top}px`,
-        zIndex: 9999,
-      });
+  // Position the tooltip when it mounts: measure trigger + tooltip,
+  // prefer above/centered, clamp to the viewport, and write the fixed
+  // coordinates straight onto the node. A callback ref runs at commit
+  // (before paint), so there is no flash and no state round-trip.
+  const positionTooltip = useCallback((node: HTMLSpanElement | null) => {
+    if (!node || !triggerRef.current) return;
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const tooltipRect = node.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const tooltipWidth = tooltipRect.width || 288; // w-72 = 18rem = 288px
+    const tooltipHeight = tooltipRect.height || 200;
+    const spacing = 8; // mb-2 = 0.5rem = 8px
+
+    const spaceOnLeft = triggerRect.left;
+    const spaceOnRight = viewportWidth - triggerRect.right;
+    const spaceOnTop = triggerRect.top;
+    const spaceOnBottom = viewportHeight - triggerRect.bottom;
+
+    // Horizontal: prefer centered, fall back toward the roomier side.
+    let left: number;
+    if (spaceOnLeft < tooltipWidth && spaceOnRight >= tooltipWidth) {
+      left = triggerRect.right - tooltipWidth;
+    } else if (spaceOnRight < tooltipWidth && spaceOnLeft >= tooltipWidth) {
+      left = triggerRect.left;
+    } else if (spaceOnLeft >= tooltipWidth / 2 && spaceOnRight >= tooltipWidth / 2) {
+      left = triggerRect.left + (triggerRect.width / 2) - (tooltipWidth / 2);
+    } else {
+      left = spaceOnRight > spaceOnLeft
+        ? Math.max(8, triggerRect.right - tooltipWidth)
+        : Math.min(triggerRect.left, viewportWidth - tooltipWidth - 8);
     }
-  }, [showTooltip]);
+    left = Math.max(8, Math.min(left, viewportWidth - tooltipWidth - 8));
+
+    // Vertical: prefer above, fall back below, else clamp above.
+    let top: number;
+    if (spaceOnTop >= tooltipHeight + spacing) {
+      top = triggerRect.top - tooltipHeight - spacing;
+    } else if (spaceOnBottom >= tooltipHeight + spacing) {
+      top = triggerRect.bottom + spacing;
+    } else {
+      top = Math.max(8, triggerRect.top - tooltipHeight - spacing);
+    }
+
+    node.style.position = "fixed";
+    node.style.left = `${left}px`;
+    node.style.top = `${top}px`;
+    node.style.zIndex = "9999";
+  }, []);
 
   // If no tooltip content at all, just return children without styling
   if (!tooltipText) {
@@ -306,9 +356,8 @@ function CodeTooltip({ code, title, content, codeType, children }: CodeTooltipPr
       {codeElement}
       {/* Custom tooltip on hover - show if we have content */}
       {showTooltip && tooltipText && (
-        <span 
-          ref={tooltipRef}
-          style={tooltipStyle}
+        <span
+          ref={positionTooltip}
           className="fixed w-72 max-w-[90vw] text-xs rounded shadow-lg pointer-events-auto whitespace-normal break-words overflow-hidden bg-card-bg border border-border text-foreground"
           onMouseEnter={() => setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
@@ -455,7 +504,9 @@ export function PartDetail({ part }: PartDetailProps) {
           // Initialize with fallback names
           Object.assign(typeNames, CODE_TYPE_NAMES_FALLBACK);
           
-          data.code_types.forEach((codeType: any) => {
+          type ApiCodeDef = { code_value?: string | number | null; description: string };
+          type ApiCodeType = { code_type: string; code_name?: string | null; codes: ApiCodeDef[] };
+          data.code_types.forEach((codeType: ApiCodeType) => {
             // Store code type name (e.g., "AMC" -> "Acquisition Method Code")
             // Use code_name from API if available, otherwise keep fallback
             if (codeType.code_name) {
@@ -463,7 +514,7 @@ export function PartDetail({ part }: PartDetailProps) {
             }
             // If no code_name from API, the fallback name is already set
             
-            codeType.codes.forEach((code: any) => {
+            codeType.codes.forEach((code: ApiCodeDef) => {
               // Create keys like "AMC:20", "SLC:1", etc. for easy lookup
               // code.code_value is already extracted (without type prefix) by backend
               const codeValue = String(code.code_value || '').trim();
@@ -755,18 +806,6 @@ export function PartDetail({ part }: PartDetailProps) {
 
     return () => { cancelled = true; };
   }, [partReqKey]);
-
-  // Map UI tabId -> audit `view` name (matches FastAPI _VALID_TAB_VIEWS)
-  const TAB_VIEW_MAP: Record<string, string> = {
-    overview: 'detail',
-    procurement: 'procurement_history',
-    solicitations: 'solicitations',
-    manufacturers: 'manufacturers',
-    technical: 'technical_characteristics',
-    enduse: 'end_use_description',
-    packaging: 'packaging',
-    procurementitemdesc: 'procurement_item_description',
-  };
 
   // Handle tab change with lazy loading
   const handleTabChange = useCallback((tabId: string) => {
@@ -1078,7 +1117,7 @@ export function PartDetail({ part }: PartDetailProps) {
     if (tierMeets(tier, "basic")) jobs.push(fetchProcurementItemDescription());
     await Promise.all(jobs);
   }, [
-    tier, isFreeOnly,
+    tier,
     fetchProcurementHistory, fetchSolicitations, fetchManufacturers, fetchDemand,
     fetchTechnicalCharacteristics, fetchEndUseDescriptions, fetchPackaging,
     fetchProcurementItemDescription,
@@ -1798,7 +1837,7 @@ interface ProcurementPanelProps {
   onRetry: () => void;
 }
 
-function ProcurementPanel({ records, totalCount, isLoading, error, onRetry }: ProcurementPanelProps) {
+function ProcurementPanel({ records, isLoading, error, onRetry }: ProcurementPanelProps) {
   const [pdfModal, setPdfModal] = useState<{ id: number; contract: string } | null>(null);
   const pdfUrl = pdfModal ? `/api/library/awards/${pdfModal.id}/pdf` : null;
 
@@ -2007,7 +2046,7 @@ interface SolicitationsPanelProps {
   onViewDemand?: () => void;
 }
 
-function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRetry, demand, onEnsureDemand, onViewDemand }: SolicitationsPanelProps) {
+function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, onEnsureDemand, onViewDemand }: SolicitationsPanelProps) {
   // Pull demand context once when this tab mounts so the strip can render
   // alongside the opportunities without the user opening the Demand tab.
   useEffect(() => {
@@ -2248,51 +2287,9 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
         id: "buyer_contact",
         accessorKey: "buyer_contact",
         header: "Buyer contact",
-        cell: ({ row }) => {
-          const email = row.original.buyer_email?.toLowerCase();
-          const phone = row.original.buyer_phone;
-          const [copied, setCopied] = useState(false);
-
-          const handleCopyEmail = (e: React.MouseEvent) => {
-            e.stopPropagation();
-            if (email) {
-              navigator.clipboard.writeText(email);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            }
-          };
-
-          if (!email && !phone) return <span className="text-muted">—</span>;
-
-          return (
-            <div className="flex items-center gap-2 group">
-              {phone && <span className="text-xs font-medium text-foreground whitespace-nowrap">{phone}</span>}
-              {email && (
-                <button
-                  type="button"
-                  onClick={handleCopyEmail}
-                  className={`inline-flex items-center gap-1 p-1 rounded transition-colors ${
-                    copied ? "text-success bg-success/10" : "text-primary hover:bg-primary/10"
-                  }`}
-                  title={copied ? "Email copied!" : `Copy email: ${email}`}
-                >
-                  {copied ? (
-                    <>
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="text-[10px] font-bold">Copied!</span>
-                    </>
-                  ) : (
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                    </svg>
-                  )}
-                </button>
-              )}
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <BuyerContactCell buyerEmail={row.original.buyer_email} phone={row.original.buyer_phone} />
+        ),
         meta: { className: "hidden lg:table-cell" },
       },
     ],
@@ -2791,7 +2788,7 @@ interface TechnicalCharacteristicsPanelProps {
   onRetry: () => void;
 }
 
-function TechnicalCharacteristicsPanel({ characteristics, totalCount, isLoading, error, onRetry }: TechnicalCharacteristicsPanelProps) {
+function TechnicalCharacteristicsPanel({ characteristics, isLoading, error, onRetry }: TechnicalCharacteristicsPanelProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -2846,7 +2843,7 @@ interface EndUseDescriptionPanelProps {
   onRetry: () => void;
 }
 
-function EndUseDescriptionPanel({ descriptions, totalCount, isLoading, error, onRetry }: EndUseDescriptionPanelProps) {
+function EndUseDescriptionPanel({ descriptions, isLoading, error, onRetry }: EndUseDescriptionPanelProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">

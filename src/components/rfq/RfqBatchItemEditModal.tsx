@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { DateField } from "@/components/ui/DateField";
@@ -17,30 +17,29 @@ interface RfqBatchItemEditModalProps {
 const inputClass =
   "w-full px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm placeholder-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 
+/**
+ * Thin wrapper: unmounts the form when closed and remounts per item (key),
+ * so the form initializes from props in useState — no reset effect
+ * (react-hooks/set-state-in-effect).
+ */
 export function RfqBatchItemEditModal({ isOpen, item, onClose, onSaved }: RfqBatchItemEditModalProps) {
-  const [quantity, setQuantity] = useState("");
-  const [unitOfMeasure, setUnitOfMeasure] = useState("EA");
-  const [needByDate, setNeedByDate] = useState("");
-  const [targetUnitPrice, setTargetUnitPrice] = useState("");
-  const [notes, setNotes] = useState("");
-  const [responseDueDate, setResponseDueDate] = useState("");
+  if (!isOpen || !item) return null;
+  return <BatchItemEditForm key={item.id} item={item} onClose={onClose} onSaved={onSaved} />;
+}
+
+function BatchItemEditForm({ item, onClose, onSaved }: {
+  item: BatchItem; onClose: () => void; onSaved: (updated: BatchItem) => void;
+}) {
+  const [quantity, setQuantity] = useState(item.quantity != null ? String(item.quantity) : "");
+  const [unitOfMeasure, setUnitOfMeasure] = useState(item.unit_of_measure || "EA");
+  const [needByDate, setNeedByDate] = useState(item.need_by_date || "");
+  const [targetUnitPrice, setTargetUnitPrice] = useState(item.target_unit_price != null ? String(item.target_unit_price) : "");
+  const [notes, setNotes] = useState(item.notes || "");
+  const [responseDueDate, setResponseDueDate] = useState(item.response_due_date || "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isOpen || !item) return;
-    setQuantity(item.quantity != null ? String(item.quantity) : "");
-    setUnitOfMeasure(item.unit_of_measure || "EA");
-    setNeedByDate(item.need_by_date || "");
-    setTargetUnitPrice(item.target_unit_price != null ? String(item.target_unit_price) : "");
-    setNotes(item.notes || "");
-    setResponseDueDate(item.response_due_date || "");
-    setError(null);
-    setSubmitting(false);
-  }, [isOpen, item]);
-
   const handleSave = async () => {
-    if (!item) return;
     const q = parseFloat(quantity);
     if (!q || q <= 0) {
       setError("Enter a quantity greater than 0.");
@@ -75,10 +74,8 @@ export function RfqBatchItemEditModal({ isOpen, item, onClose, onSaved }: RfqBat
     }
   };
 
-  if (!item) return null;
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit batch item" size="lg" preventClose={submitting}>
+    <Modal isOpen={true} onClose={onClose} title="Edit batch item" size="lg" preventClose={submitting}>
       <div className="space-y-4">
         <div>
           <div className="text-sm font-semibold text-foreground">

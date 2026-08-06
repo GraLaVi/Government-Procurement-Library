@@ -55,8 +55,32 @@ const emptyLine: LineState = {
 const inputClass =
   "w-full px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm placeholder-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 
-export function RfqComposeModal({
-  isOpen,
+/** Distinct vendors in a selection, preserving order. */
+function dedupeVendors(selections: RfqManufacturerSelection[]): RfqManufacturerSelection[] {
+  const seen = new Set<string>();
+  const out: RfqManufacturerSelection[] = [];
+  for (const s of selections) {
+    const key = rfqVendorKey(s);
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push(s);
+    }
+  }
+  return out;
+}
+
+/**
+ * Thin wrapper: the form unmounts when closed, so every open starts from
+ * fresh useState initializers — no reset effect
+ * (react-hooks/set-state-in-effect). The remaining effect only runs the
+ * async contact/settings prefills.
+ */
+export function RfqComposeModal({ isOpen, ...formProps }: RfqComposeModalProps) {
+  if (!isOpen) return null;
+  return <ComposeForm {...formProps} />;
+}
+
+function ComposeForm({
   onClose,
   nsn,
   selections,
@@ -64,33 +88,25 @@ export function RfqComposeModal({
   onStaged,
   sourceSolicitationId,
   defaultResponseDueDate,
-}: RfqComposeModalProps) {
+}: Omit<RfqComposeModalProps, "isOpen">) {
   // All per-vendor state is keyed by rfqVendorKey(sel): "cage:<CAGE>" for
   // manufacturers, "vendor:<id>" for private vendors — never by raw
   // cage_code, which is null for private vendors.
-  const [lines, setLines] = useState<LineState[]>([]);
-  const [responseDueDate, setResponseDueDate] = useState("");
+  const [lines, setLines] = useState<LineState[]>(() => selections.map(() => ({ ...emptyLine })));
+  const [responseDueDate, setResponseDueDate] = useState(defaultResponseDueDate || "");
   const [saveContacts, setSaveContacts] = useState(true);
-  const [contacts, setContacts] = useState<Record<string, ContactState>>({});
+  const [contacts, setContacts] = useState<Record<string, ContactState>>(() =>
+    Object.fromEntries(dedupeVendors(selections).map((v) => [rfqVendorKey(v), { contact_name: "", contact_email: "" }]))
+  );
   const [resolutions, setResolutions] = useState<Record<string, VendorContactResolution>>({});
-  const [contactSel, setContactSel] = useState<Record<string, string>>({}); // key -> "saved:<id>" | "sam" | "custom"
+  const [contactSel, setContactSel] = useState<Record<string, string>>(() =>
+    Object.fromEntries(dedupeVendors(selections).map((v) => [rfqVendorKey(v), "custom"]))
+  ); // key -> "saved:<id>" | "sam" | "custom"
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Distinct vendors in the selection, preserving order.
-  const allVendors = useMemo(() => {
-    const seen = new Set<string>();
-    const out: RfqManufacturerSelection[] = [];
-    for (const s of selections) {
-      const key = rfqVendorKey(s);
-      if (!seen.has(key)) {
-        seen.add(key);
-        out.push(s);
-      }
-    }
-    return out;
-  }, [selections]);
+  const allVendors = useMemo(() => dedupeVendors(selections), [selections]);
 
   const vendors = useMemo(
     () => allVendors.filter((v) => !removed.has(rfqVendorKey(v))),
@@ -103,20 +119,9 @@ export function RfqComposeModal({
   const anyCustomContact = vendors.some((v) => (contactSel[rfqVendorKey(v)] || "custom") === "custom");
   const effectiveSaveContacts = anyCustomContact || saveContacts;
 
-  // Initialize line + contact state whenever the modal opens with a selection.
+  // Async prefills, once per open (mounted == open). Line/contact state
+  // initializes in useState above.
   useEffect(() => {
-    if (!isOpen) return;
-    setLines(selections.map(() => ({ ...emptyLine })));
-    setError(null);
-    setSubmitting(false);
-    setResponseDueDate(defaultResponseDueDate || "");
-    setSaveContacts(true);
-    setRemoved(new Set());
-    setResolutions({});
-
-    setContacts(Object.fromEntries(allVendors.map((v) => [rfqVendorKey(v), { contact_name: "", contact_email: "" }])));
-    setContactSel(Object.fromEntries(allVendors.map((v) => [rfqVendorKey(v), "custom"])));
-
     let cancelled = false;
 
     // Pre-fill the due date from the customer's "Default response window
@@ -171,7 +176,7 @@ export function RfqComposeModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, selections, allVendors, defaultResponseDueDate]);
+  }, [allVendors, defaultResponseDueDate]);
 
   const setLine = (idx: number, patch: Partial<LineState>) =>
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
@@ -362,7 +367,7 @@ export function RfqComposeModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create RFQ" size="full" preventClose={submitting}>
+    <Modal isOpen={true} onClose={onClose} title="Create RFQ" size="full" preventClose={submitting}>
       <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
         <p className="text-sm text-muted">
           {activeSelections().length} item{activeSelections().length !== 1 ? "s" : ""} ·{" "}
