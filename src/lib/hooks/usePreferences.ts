@@ -15,15 +15,19 @@ export function usePreferences() {
         credentials: 'include',
       });
 
-      // Handle 401 gracefully - user is not authenticated, just clear preferences
-      if (response.status === 401) {
-        setPreferences(null);
-        return;
-      }
-
+      // Preferences are optional UI state and this hook mounts on public
+      // pages too, so no response status is worth throwing over. 401/403 just
+      // means nobody is signed in; anything else is a real server-side problem
+      // worth surfacing, but the app still runs on defaults either way.
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to fetch preferences');
+        setPreferences(null);
+        if (response.status !== 401 && response.status !== 403) {
+          const data = await response.json().catch(() => ({}));
+          const message = data.error || `Failed to fetch preferences (${response.status})`;
+          setError(message);
+          console.warn(message);
+        }
+        return;
       }
 
       const data: UserPreferencesResponse = await response.json();

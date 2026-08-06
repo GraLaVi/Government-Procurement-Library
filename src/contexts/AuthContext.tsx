@@ -85,9 +85,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Fetch current user on mount
+  // Fetch current user on mount.
+  //
+  // Wrapped in an async IIFE rather than called directly: react-hooks'
+  // set-state-in-effect flags any effect-body call that reaches a setState,
+  // without modelling the await inside refreshUser. Nothing here runs
+  // synchronously — refreshUser's first statement is `await fetch(...)` — so
+  // the shape is what satisfies the rule, not a behaviour change.
   useEffect(() => {
-    refreshUser();
+    (async () => {
+      await refreshUser();
+    })();
   }, [refreshUser]);
 
   // Only redirect to login on initial page load when user is not authenticated
@@ -151,12 +159,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      // Error responses aren't always JSON — a 404 or a gateway error returns
+      // HTML. Parsing that throws, and the catch below would report a server
+      // problem as a connection problem, so tolerate a non-JSON body here and
+      // let the status decide.
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         return {
           success: false,
-          error: data.error || 'Login failed',
+          error: data.error || `Login failed (${response.status})`,
           retryAfter: data.retryAfter,
         };
       }
@@ -168,7 +180,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         success: true,
         mustChangePassword: data.mustChangePassword,
       };
-    } catch (error) {
+    } catch {
+      // fetch() itself rejected — the request never got a response.
       return {
         success: false,
         error: 'Network error. Please check your connection.',
