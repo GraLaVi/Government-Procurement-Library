@@ -42,16 +42,33 @@ RFQ from an unassigned solicitation automatically makes it yours.
 An explicit assignment always beats the CAGE-derived rule, so coverage during
 vacations is one bulk re-assign away.
 
+When new matched solicitations land in your queue, you get a bell
+notification — and an email too if one of them is already closing soon.
+
 ## The Send RFQs page
 
 Three tabs — **My solicitations** (your default queue), **Unassigned**, and
 **All** — over every open matched solicitation. Each row shows the
 solicitation number with the same badges as bid-matching (amendments,
 fast-award type), your work status, the close date with days remaining,
-set-aside, and the assignee.
+set-aside, the **estimated value** (line quantities × the government
+acquisition cost — sortable, like every other column), and the assignee.
 
-Click a solicitation number to see its parts — NSN, description, quantity,
-and unit price — with a **Quote** button on each row.
+Two filters sit above the table: your **work status**, and the
+**solicitation status** — it defaults to open solicitations, but you can
+switch to awarded, closed, or cancelled ones (those views include
+solicitations already past close, which is usually why you're looking).
+
+If low-value solicitations aren't worth your time, set a personal
+**minimum estimated value** in RFQ Settings — rows below it disappear from
+your queue (rows with no estimate stay), and the page shows a "Hiding
+under…" note so the filter is never invisible.
+
+Click a solicitation number to see its quotable items — NSN, description,
+quantity, and unit price — with a **Quote** button on each row. Each NSN is
+a link that opens that part in Parts Search in a new tab. DIBBS "first
+article test" placeholder lines (GOVERNMENT/CONTRACTOR FIRST ARTICLE)
+aren't real purchasable items, so they don't appear here.
 
 ## Work status
 
@@ -63,11 +80,29 @@ team can see who's working what, and what's done.
 
 ## Requesting quotes
 
-The **Quote** button opens a vendor picker showing the part's manufacturers —
-approved sources first and flagged — alongside your private vendors. Vendors
-with a lapsed SAM registration are still selectable (the status is shown for
-context only). Vendors you've asked before show their track record:
-*responded 4/5 · ~2d*.
+The **Quote** button opens a vendor picker with two sources of vendors:
+
+- **Suggested from my vendors** — the private vendors that match *this*
+  part, chosen from your whole book (even thousands of vendors) using the
+  capabilities you've recorded and your quoting history. Each suggestion
+  says why it's there: *Exact NSN*, *Quoted before*, *CAGE 73808 (approved
+  source)*, *FSC 5325*, or a matching keyword. A search box below covers
+  the rest of your book for the exceptional case the matcher didn't
+  surface.
+- **Manufacturers** — the part's manufacturers, approved sources first and
+  flagged.
+
+Vendors you've asked before show their track record: *responded 4/5 · ~2d*.
+Vendors with a lapsed SAM registration are still selectable (the status is
+shown for context only).
+
+If the solicitation is set aside — small business, SDVOSB, and so on — each
+suggested vendor is checked against the socioeconomic statuses in your
+vendor book. A vendor whose statuses don't include the target shows a
+**Set-aside mismatch** warning and sorts to the bottom; one with no
+statuses on file shows **Set-aside unknown**. Neither blocks you from
+sending — but on a set-aside, a quote from a non-qualifying vendor may not
+be usable for your bid, so the warning is worth heeding.
 
 Pick your vendors and continue to the familiar RFQ window. The response due
 date is pre-filled from the solicitation's close date minus your configured
@@ -78,7 +113,9 @@ lead time, so quotes arrive with room to price and submit.
 Once RFQs are out, the row shows an **N RFQs · quotes** pill. Click it for a
 side-by-side comparison per item: unit price, quantity available, lead time,
 and validity for every vendor, with the best price highlighted and no-bids at
-the bottom. It also tells you who hasn't answered yet.
+the bottom. Notes a vendor wrote on a line appear under it, and the view
+tells you who hasn't answered yet. The same quotes and your pricing also
+show on the RFQ's own detail page.
 
 One flag deserves special attention: if a vendor quoted an **alternate part
 number** but isn't an approved source for the item, the quote is marked
@@ -100,12 +137,44 @@ and shows the extended total. Saving marks the solicitation **Priced**.
 you work with that may not be in SAM.gov at all. A vendor needs only a
 company name; the identifier field takes a CAGE, UEI, DUNS, or your own code.
 Add contacts to each vendor and they're used automatically when you send.
+Private-vendor contacts also appear in the shared **Vendor Contacts** page,
+labeled with the vendor's company and identifier so you always know who a
+contact belongs to.
+
+The page is searchable (name or identifier) and paginated, so it stays fast
+even with thousands of vendors.
+
+### Capabilities: teaching GPH who can supply what
+
+Each vendor carries **capabilities** — the data behind the "Suggested from
+my vendors" list in the quote picker. A vendor with no capabilities only
+surfaces through search or past quoting history, so the more you record,
+the better the suggestions:
+
+- **CAGE codes represented** — the manufacturers this vendor makes,
+  distributes, or resells for. The strongest signal: it connects the vendor
+  to every part those manufacturers appear on. This is *not* the vendor's
+  own identifier.
+- **NSNs / NIINs supplied** — exact catalog coverage.
+- **Supply classes** — 4-digit FSCs, or 2-digit groups to cover a whole
+  Federal Supply Group.
+- **Keywords** — matched against part descriptions ("o-ring", "hydraulic
+  hose") when nothing stronger hits.
+- **Socioeconomic statuses** — small business, SDVOSB, WOSB, and so on.
+  Used to warn about set-aside mismatches when you pick vendors (see
+  Requesting quotes above).
+
+The Capabilities column shows each vendor's coverage at a glance; expand
+the row for the full lists, or click the column (or **Capabilities** in the
+row actions) to edit. The editor accepts comma- or newline-separated paste,
+so tagging in bulk from a spreadsheet is quick.
 
 Deleting a vendor you've already sent RFQs to deactivates it instead, so your
 send history stays intact.
 
-Your admin controls whether non-admin users can edit the vendor book (both
-private vendors and the CAGE contact book) in **RFQ Settings**.
+Your admin controls whether non-admin users can edit the vendor book
+(private vendors, their capabilities, and the CAGE contact book) in
+**RFQ Settings**.
 
 ## Coverage
 
@@ -122,6 +191,9 @@ Enterprise adds a section to **Vendor RFQs → Settings**:
 
 - **Vendor quote lead time** — how many days before a solicitation closes
   vendor quotes should be due (drives the pre-filled due date).
+- **My Send RFQs queue** *(personal — applies only to you)* — hide
+  solicitations under an estimated value from your queue; leave blank to
+  show everything.
 - **Allow users to add and edit vendor contacts** *(admin)* — restrict the
   vendor book to admins.
 - **Vendor reminders** *(admin)* — whether non-responding vendors get

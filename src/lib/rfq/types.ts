@@ -52,6 +52,65 @@ export interface RfqVendor {
   is_active: boolean;
   created_at: string;
   contacts: VendorContact[];
+  /** At-a-glance capability summary — populated by the vendor-book listing
+   * only (null/absent elsewhere). */
+  capabilities?: RfqVendorCapabilitySummary | null;
+}
+
+export interface CapabilityListSummary {
+  total: number;
+  sample: string[];
+}
+
+export interface RfqVendorCapabilitySummary {
+  cages: CapabilityListSummary;
+  niins: CapabilityListSummary;
+  fscs: CapabilityListSummary;
+  keywords: CapabilityListSummary;
+  statuses: CapabilityListSummary;
+}
+
+/** Paged vendor-book listing — the book can hold thousands of vendors, so
+ * consumers search/paginate and never fetch the whole thing. */
+export interface RfqVendorPage {
+  vendors: RfqVendor[];
+  total: number;
+}
+
+/** A vendor's matching capabilities. Same shape for GET and PUT (PUT is
+ * replace-set per list); the API normalizes values. */
+export interface RfqVendorCapabilities {
+  cages: string[];
+  niins: string[];
+  fscs: string[];
+  keywords: string[];
+  statuses: string[];
+}
+
+export type VendorMatchTier =
+  | "niin" | "history" | "cage_approved" | "cage_known"
+  | "fsc" | "fsg" | "keyword";
+
+export interface VendorMatchReason {
+  tier: VendorMatchTier;
+  detail: string | null;
+}
+
+/** 'compatible' renders nothing; 'unknown' a neutral chip; 'incompatible'
+ * an amber warning — never a selection gate. Null when no solicitation
+ * set-aside was in play. */
+export type VendorSetAsideCompat = "compatible" | "unknown" | "incompatible" | null;
+
+export interface RfqSuggestedVendor {
+  vendor: RfqVendor;
+  match_reasons: VendorMatchReason[];
+  set_aside: VendorSetAsideCompat;
+}
+
+export interface RfqSuggestedVendorsResponse {
+  suggestions: RfqSuggestedVendor[];
+  /** More vendors matched than the cap — say "showing top N, search for more". */
+  truncated: boolean;
 }
 
 /** One line of a quick-send / batch payload (one part for one vendor). */

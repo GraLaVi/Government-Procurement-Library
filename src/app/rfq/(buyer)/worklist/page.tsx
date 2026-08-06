@@ -28,6 +28,19 @@ import {
 } from "@/lib/rfq/types";
 
 const PAGE_SIZE = 50;
+
+/**
+ * DIBBS represents First Article Test CLINs as placeholder part rows under
+ * pseudo-CAGE 0001S ("GOVERNMENT FIRST ARTIC" pn 00000052, "CONTRACTOR FIRST
+ * ARTIC" pn 00000053, plus a couple of description-less siblings). They have
+ * no NIIN/FSC/price — a testing requirement on the real line item, not a
+ * purchasable part — so they are never quotable and are hidden from the
+ * expanded parts list.
+ */
+const DIBBS_PLACEHOLDER_CAGE = "0001S";
+function isQuotableLine(p: PartSearchResult): boolean {
+  return !(p.mfg_cage === DIBBS_PLACEHOLDER_CAGE && !p.nsn?.trim());
+}
 const SCOPE_STORAGE_KEY = "rfq-worklist-scope";
 const STATUS_FILTER_STORAGE_KEY = "rfq-worklist-status-filter";
 const SOL_STATUS_STORAGE_KEY = "rfq-worklist-sol-status";
@@ -165,7 +178,7 @@ export default function RfqWorklistPage() {
           return;
         }
         const data = body as PartSearchResponse;
-        setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: null, parts: data.results } }));
+        setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: null, parts: data.results.filter(isQuotableLine) } }));
       } catch {
         setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: "Network error loading parts.", parts: [] } }));
       }
@@ -610,9 +623,7 @@ export default function RfqWorklistPage() {
                         {item.set_aside_label || item.set_aside || "—"}
                       </td>
                       <td className="px-4 py-3 text-right font-mono tabular-nums whitespace-nowrap">
-                        {item.estimated_value != null
-                          ? item.estimated_value.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
-                          : "—"}
+                        {formatCurrency(item.estimated_value)}
                       </td>
                       <td className="px-4 py-3">
                         {item.assigned_user_name ? (
@@ -637,7 +648,7 @@ export default function RfqWorklistPage() {
                           ) : partsState.error ? (
                             <p className="text-xs text-error py-1">{partsState.error}</p>
                           ) : partsState.parts.length === 0 ? (
-                            <p className="text-xs text-muted italic py-1">No parts found for this solicitation.</p>
+                            <p className="text-xs text-muted italic py-1">No quotable line items on this solicitation.</p>
                           ) : (
                             <table className="w-full text-sm">
                               <thead>
@@ -652,8 +663,34 @@ export default function RfqWorklistPage() {
                               <tbody className="divide-y divide-border/60">
                                 {partsState.parts.map((p) => (
                                   <tr key={p.id}>
-                                    <td className="px-3 py-2 font-mono font-semibold text-foreground whitespace-nowrap">
-                                      {formatPartIdentity(p)}
+                                    <td className="px-3 py-2 font-mono font-semibold whitespace-nowrap">
+                                      {p.nsn?.trim() ? (
+                                        <a
+                                          href={`/library/parts?search_type=nsn_niin&q=${encodeURIComponent(p.nsn)}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-primary hover:underline"
+                                          title="Open in Parts Search (new tab)"
+                                        >
+                                          {formatPartIdentity(p)}
+                                          <svg
+                                            className="w-3 h-3 shrink-0"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            strokeWidth={2}
+                                            aria-hidden="true"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                            />
+                                          </svg>
+                                        </a>
+                                      ) : (
+                                        <span className="text-foreground">{formatPartIdentity(p)}</span>
+                                      )}
                                     </td>
                                     <td className="px-3 py-2 text-foreground truncate max-w-[380px]" title={p.description || undefined}>
                                       {p.description || "—"}
@@ -733,6 +770,7 @@ export default function RfqWorklistPage() {
           isOpen={true}
           onClose={() => setQuoteContext(null)}
           part={quoteContext.part}
+          solicitationId={quoteContext.item.solicitation_id}
           onContinue={(selections) => setComposeSelections(selections)}
         />
       )}

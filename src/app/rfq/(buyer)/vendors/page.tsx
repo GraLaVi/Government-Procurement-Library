@@ -6,14 +6,19 @@ import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { RfqVendorCapabilitiesModal } from "@/components/rfq/RfqVendorCapabilitiesModal";
 import { RfqVendorContactEditModal } from "@/components/rfq/RfqVendorContactEditModal";
 import { TableCard } from "@/components/rfq/TableCard";
 import {
   MIN_SENDS_FOR_RESPONSIVENESS,
   type RfqVendor,
+  type RfqVendorCapabilities,
+  type RfqVendorPage,
   type VendorContact,
   type VendorResponsiveness,
 } from "@/lib/rfq/types";
+
+const PAGE_SIZE = 50;
 
 const inputClass =
   "w-full px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm placeholder-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
@@ -35,6 +40,24 @@ const emptyVendor: VendorFormState = {
   vendor_code: "", company_name: "", address_line1: "", address_line2: "",
   city: "", state: "", postal_code: "", country: "", phone: "", notes: "",
 };
+
+/** Compact one-line capability summary for the book's at-a-glance column.
+ * Counts, not values — lists can hold hundreds of entries; the expanded row
+ * shows the real lists. FSCs are the exception (few, short, and the most
+ * informative at a glance). */
+function capabilitySummary(v: RfqVendor): string | null {
+  const c = v.capabilities;
+  if (!c) return null;
+  const more = (s: { total: number; sample: string[] }) =>
+    s.total > s.sample.length ? ` +${s.total - s.sample.length}` : "";
+  const parts: string[] = [];
+  if (c.cages.total) parts.push(`${c.cages.total} CAGE${c.cages.total !== 1 ? "s" : ""}`);
+  if (c.niins.total) parts.push(`${c.niins.total} NSN${c.niins.total !== 1 ? "s" : ""}`);
+  if (c.fscs.total) parts.push(`FSC ${c.fscs.sample.join(", ")}${more(c.fscs)}`);
+  if (c.keywords.total) parts.push(`${c.keywords.total} keyword${c.keywords.total !== 1 ? "s" : ""}`);
+  if (c.statuses.total) parts.push(`${c.statuses.sample.join(", ")}${more(c.statuses)}`);
+  return parts.length ? parts.join(" · ") : null;
+}
 
 function vendorToForm(v: RfqVendor): VendorFormState {
   return {
@@ -76,7 +99,13 @@ export default function RfqVendorsPage() {
   const hasEnterprise = hasAnyProductAccess([RFQ_ENTERPRISE_PRODUCT_KEY]);
 
   const [vendors, setVendors] = useState<RfqVendor[]>([]);
+  const [total, setTotal] = useState(0);
   const [showInactive, setShowInactive] = useState(false);
+  // Server-side search + paging — the book can hold thousands of vendors.
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [capabilitiesVendor, setCapabilitiesVendor] = useState<RfqVendor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -92,13 +121,33 @@ export default function RfqVendorsPage() {
   // Expanded table rows (contacts + address + inline edit form live there).
   const [expandedVendors, setExpandedVendors] = useState<Set<number>>(new Set());
 
-  const toggleVendor = (id: number) =>
+  // Full capability lists per vendor, lazy-fetched on first expand (the
+  // column shows counts only; lists can hold hundreds of entries).
+  const [capsByVendor, setCapsByVendor] = useState<Record<number, { loading: boolean; caps: RfqVendorCapabilities | null }>>({});
+
+  const fetchCapabilities = useCallback(async (vendorId: number) => {
+    setCapsByVendor((prev) => ({ ...prev, [vendorId]: { loading: true, caps: null } }));
+    try {
+      const res = await fetch(`/api/rfq/vendors/${vendorId}/capabilities`);
+      const body = await res.json().catch(() => null);
+      setCapsByVendor((prev) => ({
+        ...prev,
+        [vendorId]: { loading: false, caps: res.ok ? (body as RfqVendorCapabilities) : null },
+      }));
+    } catch {
+      setCapsByVendor((prev) => ({ ...prev, [vendorId]: { loading: false, caps: null } }));
+    }
+  }, []);
+
+  const toggleVendor = (id: number) => {
     setExpandedVendors((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+    if (!expandedVendors.has(id) && !capsByVendor[id]) fetchCapabilities(id);
+  };
   const [editingContact, setEditingContact] = useState<VendorContact | null>(null);
 
   // Responsiveness over every vendor the customer has sent to (CAGE and
@@ -109,15 +158,38 @@ export default function RfqVendorsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/rfq/vendors${showInactive ? "?include_inactive=true" : ""}`);
+      const params = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        offset: String((page - 1) * PAGE_SIZE),
+      });
+      if (showInactive) params.set("include_inactive", "true");
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      const res = await fetch(`/api/rfq/vendors?${params.toString()}`);
       const data = await res.json();
-      if (!res.ok) setError(data.error || "Failed to load vendors.");
-      else setVendors(data as RfqVendor[]);
+      if (!res.ok) {
+        setError(data.error || "Failed to load vendors.");
+      } else {
+        const pageData = data as RfqVendorPage;
+        setVendors(pageData.vendors);
+        setTotal(pageData.total);
+      }
     } catch {
       setError("Network error.");
     } finally {
       setLoading(false);
     }
+  }, [showInactive, debouncedSearch, page]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
   }, [showInactive]);
 
   useEffect(() => {
@@ -356,6 +428,13 @@ export default function RfqVendorsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <input
+            className={`${inputClass} !w-56`}
+            type="search"
+            placeholder="Search name or identifier…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
           <label className="flex items-center gap-1.5 text-xs text-muted">
             <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
             Show deactivated
@@ -383,7 +462,9 @@ export default function RfqVendorsPage() {
         </div>
       ) : vendors.length === 0 && !addingOpen ? (
         <div className="text-center py-20 text-sm text-muted">
-          No private vendors yet. Add the suppliers you work with outside SAM.gov.
+          {debouncedSearch
+            ? `No vendors match "${debouncedSearch}".`
+            : "No private vendors yet. Add the suppliers you work with outside SAM.gov."}
         </div>
       ) : (
         <TableCard className="overflow-x-auto mt-4">
@@ -394,6 +475,7 @@ export default function RfqVendorsPage() {
                 <th className="px-4 py-2.5">Company</th>
                 <th className="px-4 py-2.5">Identifier</th>
                 <th className="px-4 py-2.5">Contacts</th>
+                <th className="px-4 py-2.5">Capabilities</th>
                 <th className="px-4 py-2.5">Phone</th>
                 <th className="px-4 py-2.5">Location</th>
                 <th className="px-4 py-2.5 text-right" aria-label="Actions" />
@@ -440,12 +522,32 @@ export default function RfqVendorsPage() {
                           </span>
                         )}
                       </td>
+                      <td className="px-4 py-2.5 text-xs max-w-[260px]">
+                        {(() => {
+                          const summary = capabilitySummary(v);
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setCapabilitiesVendor(v)}
+                              className={`text-left hover:underline ${summary ? "text-card-foreground" : "text-muted italic"}`}
+                              title={summary ? `${summary} — click to edit` : "No capabilities yet — click to add. Capabilities drive the suggested-vendor list when sending RFQs."}
+                            >
+                              <span className="line-clamp-2">{summary || "none — add"}</span>
+                            </button>
+                          );
+                        })()}
+                      </td>
                       <td className="px-4 py-2.5 text-xs text-muted whitespace-nowrap">{v.phone || "—"}</td>
                       <td className="px-4 py-2.5 text-xs text-muted">{location || "—"}</td>
                       <td className="px-4 py-2.5 text-right whitespace-nowrap text-xs">
                         {v.is_active ? (
                           <>
                             <button type="button" className="text-primary hover:underline"
+                              onClick={() => setCapabilitiesVendor(v)}
+                              title="What this vendor can supply — drives the suggested list when sending RFQs">
+                              Capabilities
+                            </button>
+                            <button type="button" className="ml-3 text-primary hover:underline"
                               onClick={() => { setForm(vendorToForm(v)); setEditingVendorId(v.id); setAddingOpen(false); setExpandedVendors((prev) => new Set(prev).add(v.id)); }}>
                               Edit
                             </button>
@@ -462,7 +564,7 @@ export default function RfqVendorsPage() {
                     </tr>
                     {isOpen && (
                       <tr className="bg-muted-light/30">
-                        <td colSpan={7} className="px-6 py-4">
+                        <td colSpan={8} className="px-6 py-4">
                           {editingVendorId === v.id ? (
                             vendorForm(`Edit ${v.company_name}`, () => { setEditingVendorId(null); setForm(emptyVendor); })
                           ) : (
@@ -477,6 +579,58 @@ export default function RfqVendorsPage() {
                               )}
 
                               <div>
+                                <div className="text-xs font-medium text-muted uppercase tracking-wider mb-2">Capabilities</div>
+                                {(() => {
+                                  const state = capsByVendor[v.id];
+                                  if (!state || state.loading) {
+                                    return <p className="text-xs text-muted mb-2">Loading…</p>;
+                                  }
+                                  const caps = state.caps;
+                                  const groups: { label: string; values: string[] }[] = caps
+                                    ? [
+                                        { label: "CAGEs represented", values: caps.cages },
+                                        { label: "NSNs / NIINs", values: caps.niins },
+                                        { label: "Supply classes", values: caps.fscs },
+                                        { label: "Keywords", values: caps.keywords },
+                                        { label: "Statuses", values: caps.statuses },
+                                      ].filter((g) => g.values.length > 0)
+                                    : [];
+                                  const MAX_CHIPS = 40;
+                                  return (
+                                    <div className="space-y-1.5 mb-3">
+                                      {groups.length === 0 && (
+                                        <p className="text-xs text-muted italic">
+                                          None yet — capabilities drive the suggested-vendor list when sending RFQs.
+                                        </p>
+                                      )}
+                                      {groups.map((g) => (
+                                        <div key={g.label} className="flex items-baseline gap-2 text-xs">
+                                          <span className="text-muted whitespace-nowrap">{g.label}:</span>
+                                          <span className="flex flex-wrap gap-1">
+                                            {g.values.slice(0, MAX_CHIPS).map((val) => (
+                                              <span key={val} className="inline-flex px-1.5 py-0.5 rounded bg-muted/10 text-card-foreground font-mono">
+                                                {val}
+                                              </span>
+                                            ))}
+                                            {g.values.length > MAX_CHIPS && (
+                                              <span className="text-muted">+{g.values.length - MAX_CHIPS} more</span>
+                                            )}
+                                          </span>
+                                        </div>
+                                      ))}
+                                      {v.is_active && (
+                                        <button
+                                          type="button"
+                                          className="text-xs text-primary hover:underline"
+                                          onClick={() => setCapabilitiesVendor(v)}
+                                        >
+                                          Edit capabilities
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+
                                 <div className="text-xs font-medium text-muted uppercase tracking-wider mb-2">Contacts</div>
                                 {v.contacts.length === 0 ? (
                                   <p className="text-xs text-muted italic mb-2">
@@ -528,6 +682,23 @@ export default function RfqVendorsPage() {
             </tbody>
           </table>
         </TableCard>
+      )}
+
+      {!loading && total > PAGE_SIZE && (
+        <div className="mt-4 flex items-center justify-between text-sm">
+          <span className="text-muted">
+            {total.toLocaleString()} vendor{total !== 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </Button>
+            <span className="text-muted">Page {page} of {Math.max(1, Math.ceil(total / PAGE_SIZE))}</span>
+            <Button variant="outline" size="sm" disabled={page >= Math.ceil(total / PAGE_SIZE)} onClick={() => setPage((p) => p + 1)}>
+              Next
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Vendor responsiveness — every vendor ever sent to (CAGE + private),
@@ -586,6 +757,20 @@ export default function RfqVendorsPage() {
         contact={editingContact}
         onClose={() => setEditingContact(null)}
         onSaved={() => { setEditingContact(null); setToast("Contact updated."); load(); }}
+      />
+
+      <RfqVendorCapabilitiesModal
+        isOpen={capabilitiesVendor !== null}
+        vendor={capabilitiesVendor}
+        onClose={() => setCapabilitiesVendor(null)}
+        onSaved={(message) => {
+          const savedId = capabilitiesVendor?.id;
+          setCapabilitiesVendor(null);
+          setToast(message);
+          load();
+          // Refresh the expanded-row lists too, if that vendor is open.
+          if (savedId != null) fetchCapabilities(savedId);
+        }}
       />
     </div>
   );

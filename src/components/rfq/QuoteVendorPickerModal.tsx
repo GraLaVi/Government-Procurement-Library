@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -15,7 +15,11 @@ import {
   MIN_SENDS_FOR_RESPONSIVENESS,
   rfqVendorKey,
   type RfqManufacturerSelection,
+  type RfqSuggestedVendor,
+  type RfqSuggestedVendorsResponse,
   type RfqVendor,
+  type RfqVendorPage,
+  type VendorMatchReason,
   type VendorResponsiveness,
 } from "@/lib/rfq/types";
 
@@ -24,14 +28,29 @@ interface QuoteVendorPickerModalProps {
   onClose: () => void;
   /** The part row the buyer clicked Quote on (from the solicitation parts list). */
   part: PartSearchResult;
+  /** When quoting from a solicitation row, enables set-aside compatibility
+   * badges on suggested vendors (badges only — never a gate). */
+  solicitationId?: number | null;
   /** Hand the picked vendors to the compose modal. */
   onContinue: (selections: RfqManufacturerSelection[]) => void;
 }
 
+/** Human chip text for a match reason. */
+function matchReasonLabel(r: VendorMatchReason): string {
+  switch (r.tier) {
+    case "niin": return "Exact NSN";
+    case "history": return "Quoted before";
+    case "keyword": return `"${r.detail}"`;
+    default: return r.detail || r.tier;
+  }
+}
+
 /**
  * Step between a solicitation part row and the RFQ compose modal: pick which
- * vendors to ask — the customer's private vendor book first, then the part's
- * manufacturers (approved sources flagged).
+ * vendors to ask — vendors SUGGESTED from the customer's private book
+ * (capability/history matched server-side; the book can hold thousands, so
+ * the full list is never fetched), a search box over the whole book, then
+ * the part's manufacturers (approved sources flagged).
  *
  * Selection is PER ROW, not per CAGE: one company often lists several
  * near-identical internal part numbers for an item, each its own
@@ -40,9 +59,10 @@ interface QuoteVendorPickerModalProps {
  *
  * SAM registration status is CONTEXT ONLY and never gates selection.
  */
-export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: QuoteVendorPickerModalProps) {
+export function QuoteVendorPickerModal({ isOpen, onClose, part, solicitationId, onContinue }: QuoteVendorPickerModalProps) {
   const [manufacturers, setManufacturers] = useState<PartManufacturer[]>([]);
-  const [privateVendors, setPrivateVendors] = useState<RfqVendor[]>([]);
+  const [suggested, setSuggested] = useState<RfqSuggestedVendor[]>([]);
+  const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Row keys: "mfr:<index>" for manufacturer rows, "pv:<id>" for private vendors.
@@ -51,17 +71,32 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
   // moment the buyer chooses whom to ask; suppressed below the sends floor.
   const [stats, setStats] = useState<Record<string, VendorResponsiveness>>({});
 
+  // Typeahead over the full vendor book — the only path to vendors the
+  // matcher didn't surface.
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<RfqVendor[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Every private vendor this modal has displayed, by id — selections made
+  // from search must survive the search box being cleared.
+  const seenVendors = useRef<Map<number, RfqVendor>>(new Map());
+
   useEffect(() => {
     if (!isOpen) return;
     setSelected(new Set());
     setError(null);
     setLoading(true);
+    setSearch("");
+    setSearchResults([]);
+    seenVendors.current = new Map();
     let cancelled = false;
     (async () => {
       try {
-        const [mRes, vRes] = await Promise.all([
+        const suggestedParams = new URLSearchParams({ part_id: String(part.id) });
+        if (solicitationId != null) suggestedParams.set("solicitation_id", String(solicitationId));
+        const [mRes, sRes] = await Promise.all([
           fetch(`/api/library/parts/${encodeURIComponent(partKey(part))}/manufacturers`),
-          fetch("/api/rfq/vendors"),
+          fetch(`/api/rfq/vendors/suggested?${suggestedParams.toString()}`),
         ]);
         if (cancelled) return;
         if (mRes.ok) {
@@ -78,12 +113,16 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
         } else {
           setManufacturers([]);
         }
-        if (vRes.ok) {
-          setPrivateVendors((await vRes.json()) as RfqVendor[]);
+        if (sRes.ok) {
+          const data = (await sRes.json()) as RfqSuggestedVendorsResponse;
+          setSuggested(data.suggestions);
+          setTruncated(data.truncated);
+          for (const s of data.suggestions) seenVendors.current.set(s.vendor.id, s.vendor);
         } else {
-          setPrivateVendors([]);
+          setSuggested([]);
+          setTruncated(false);
         }
-        if (!mRes.ok && !vRes.ok) setError("Failed to load vendors.");
+        if (!mRes.ok && !sRes.ok) setError("Failed to load vendors.");
       } catch {
         if (!cancelled) setError("Network error loading vendors.");
       } finally {
@@ -93,11 +132,44 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
     return () => {
       cancelled = true;
     };
-  }, [isOpen, part]);
+  }, [isOpen, part, solicitationId]);
 
-  // Best-effort responsiveness fetch for the listed vendors, after they load.
+  // Debounced book search.
   useEffect(() => {
-    if (!isOpen || (manufacturers.length === 0 && privateVendors.length === 0)) return;
+    if (!isOpen) return;
+    const needle = search.trim();
+    if (needle.length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/rfq/vendors?search=${encodeURIComponent(needle)}&limit=20`);
+        if (!res.ok || cancelled) return;
+        const page = (await res.json()) as RfqVendorPage;
+        if (cancelled) return;
+        setSearchResults(page.vendors);
+        for (const v of page.vendors) seenVendors.current.set(v.id, v);
+      } catch {
+        /* search is best-effort */
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [isOpen, search]);
+
+  // Best-effort responsiveness fetch — ONLY for displayed vendors (the
+  // suggested page is capped, so this URL stays short even with a
+  // thousands-strong book).
+  useEffect(() => {
+    if (!isOpen || (manufacturers.length === 0 && suggested.length === 0)) return;
     let cancelled = false;
     (async () => {
       try {
@@ -105,7 +177,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
         if (manufacturers.length) {
           params.set("cage_codes", [...new Set(manufacturers.map((m) => m.cage_code))].join(","));
         }
-        if (privateVendors.length) params.set("rfq_vendor_ids", privateVendors.map((v) => v.id).join(","));
+        if (suggested.length) params.set("rfq_vendor_ids", suggested.map((s) => s.vendor.id).join(","));
         const res = await fetch(`/api/rfq/vendor-stats?${params.toString()}`);
         if (!res.ok || cancelled) return;
         const rows: VendorResponsiveness[] = await res.json();
@@ -117,7 +189,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
     return () => {
       cancelled = true;
     };
-  }, [isOpen, manufacturers, privateVendors]);
+  }, [isOpen, manufacturers, suggested]);
 
   const responsivenessBadge = (identityKey: string) => {
     const s = stats[identityKey];
@@ -148,10 +220,100 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
       return next;
     });
 
+  // Search section rows: current hits not already shown as suggested, plus
+  // vendors selected from an earlier search that would otherwise vanish
+  // when the search box changes or clears.
+  const searchDisplayVendors = useMemo((): RfqVendor[] => {
+    const suggestedIds = new Set(suggested.map((s) => s.vendor.id));
+    const shown: RfqVendor[] = searchResults.filter((v) => !suggestedIds.has(v.id));
+    const shownIds = new Set(shown.map((v) => v.id));
+    for (const key of selected) {
+      if (!key.startsWith("pv:")) continue;
+      const id = Number(key.slice(3));
+      if (suggestedIds.has(id) || shownIds.has(id)) continue;
+      const v = seenVendors.current.get(id);
+      if (v) shown.push(v);
+    }
+    return shown;
+  }, [suggested, searchResults, selected]);
+
+  const setAsideChip = (compat: RfqSuggestedVendor["set_aside"]) => {
+    if (compat === "incompatible") {
+      return (
+        <span
+          className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-300"
+          title="This solicitation is set aside for a socioeconomic status this vendor's profile doesn't list. You can still request a quote, but an award may not be possible — verify the vendor's status."
+        >
+          Set-aside mismatch
+        </span>
+      );
+    }
+    if (compat === "unknown") {
+      return (
+        <span
+          className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted/10 text-muted"
+          title="This solicitation is set aside, and this vendor has no socioeconomic statuses on file — add them under Private Vendors → Capabilities."
+        >
+          Set-aside unknown
+        </span>
+      );
+    }
+    return null;
+  };
+
+  const privateVendorRow = (
+    v: RfqVendor,
+    matchReasons: VendorMatchReason[] | null,
+    setAside: RfqSuggestedVendor["set_aside"],
+  ) => {
+    const key = `pv:${v.id}`;
+    return (
+      <label key={key} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted-light/40">
+        <input
+          type="checkbox"
+          checked={selected.has(key)}
+          onChange={() => toggle(key)}
+        />
+        <span className="flex-1 min-w-0">
+          <span className="text-sm text-card-foreground">{v.company_name}</span>
+          {v.vendor_code && (
+            <span className="ml-2 text-xs font-mono text-muted">{v.vendor_code}</span>
+          )}
+          {matchReasons && matchReasons.length > 0 && (
+            <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+              {matchReasons.map((r, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary"
+                  title={r.tier === "history" ? "Your team has sent this vendor an RFQ for this item before" : undefined}
+                >
+                  {matchReasonLabel(r)}
+                </span>
+              ))}
+            </span>
+          )}
+          {/* The vendor-book note — buyers keep quoting instructions here
+              ("call before emailing", "quotes Mil-spec only"), so it
+              belongs at the moment of choosing whom to ask. */}
+          {v.notes && (
+            <span className="block text-xs text-muted italic whitespace-pre-wrap mt-0.5">
+              {v.notes}
+            </span>
+          )}
+        </span>
+        {setAsideChip(setAside)}
+        {responsivenessBadge(`vendor:${v.id}`)}
+        <Badge variant="info" size="sm">Private</Badge>
+      </label>
+    );
+  };
+
   const selections = useMemo((): RfqManufacturerSelection[] => {
     const out: RfqManufacturerSelection[] = [];
-    for (const v of privateVendors) {
-      if (!selected.has(`pv:${v.id}`)) continue;
+    for (const key of selected) {
+      if (!key.startsWith("pv:")) continue;
+      const v = seenVendors.current.get(Number(key.slice(3)));
+      if (!v) continue;
       out.push({
         cage_code: null,
         rfq_vendor_id: v.id,
@@ -174,7 +336,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
       });
     });
     return out;
-  }, [manufacturers, privateVendors, selected, part]);
+  }, [manufacturers, selected, part]);
 
   // "SAM: <state>" chip. Active is the default and renders nothing. A CAGE
   // with no vendors row at all (no SAM registration data on file — common
@@ -211,45 +373,42 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, onContinue }: Qu
           <>
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-2">
-                My vendors ({privateVendors.length})
+                Suggested from my vendors ({suggested.length}{truncated ? "+" : ""})
               </h3>
-              {privateVendors.length === 0 ? (
+              {truncated && (
+                <p className="text-xs text-muted mb-2">
+                  Showing the top {suggested.length} matches — search below for more.
+                </p>
+              )}
+              {suggested.length === 0 ? (
                 <p className="text-xs text-muted italic">
-                  No private vendors yet — add them under Vendor RFQs → Private Vendors.
+                  No suggested vendors for this part — search your vendor book
+                  below, or add capabilities under Vendor RFQs → Private Vendors.
                 </p>
               ) : (
                 <div className="rounded-lg border border-border divide-y divide-border">
-                  {privateVendors.map((v) => {
-                    const key = `pv:${v.id}`;
-                    return (
-                      <label key={key} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted-light/40">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(key)}
-                          onChange={() => toggle(key)}
-                        />
-                        <span className="flex-1 min-w-0">
-                          <span className="text-sm text-card-foreground">{v.company_name}</span>
-                          {v.vendor_code && (
-                            <span className="ml-2 text-xs font-mono text-muted">{v.vendor_code}</span>
-                          )}
-                          {/* The vendor-book note — buyers keep quoting
-                              instructions here ("call before emailing",
-                              "quotes Mil-spec only"), so it belongs at the
-                              moment of choosing whom to ask. */}
-                          {v.notes && (
-                            <span className="block text-xs text-muted italic whitespace-pre-wrap mt-0.5">
-                              {v.notes}
-                            </span>
-                          )}
-                        </span>
-                        {responsivenessBadge(`vendor:${v.id}`)}
-                        <Badge variant="info" size="sm">Private</Badge>
-                      </label>
-                    );
-                  })}
+                  {suggested.map((s) => privateVendorRow(s.vendor, s.match_reasons, s.set_aside))}
                 </div>
               )}
+
+              <div className="mt-3">
+                <input
+                  type="search"
+                  className="w-full px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm placeholder-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                  placeholder="Search all my vendors by name or identifier…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {searching && <p className="text-xs text-muted mt-1.5">Searching…</p>}
+                {!searching && search.trim().length >= 2 && searchResults.length === 0 && (
+                  <p className="text-xs text-muted italic mt-1.5">No vendors match &quot;{search.trim()}&quot;.</p>
+                )}
+                {searchDisplayVendors.length > 0 && (
+                  <div className="mt-2 rounded-lg border border-border divide-y divide-border">
+                    {searchDisplayVendors.map((v) => privateVendorRow(v, null, null))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>
