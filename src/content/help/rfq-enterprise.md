@@ -50,9 +50,12 @@ notification — and an email too if one of them is already closing soon.
 Three tabs — **My solicitations** (your default queue), **Unassigned**, and
 **All** — over every open matched solicitation. Each row shows the
 solicitation number with the same badges as bid-matching (amendments,
-fast-award type), your work status, the close date with days remaining,
-set-aside, the **estimated value** (line quantities × the government
-acquisition cost — sortable, like every other column), and the assignee.
+fast-award type), the **purchase requisition number**, your work status,
+the close date with days remaining, set-aside, the **estimated value**
+(line quantities × the government acquisition cost — sortable, like every
+other column), and the assignee. When the solicitation's PDF is on file, a
+document icon next to the number opens it right there — same viewer as
+Parts Search.
 
 Two filters sit above the table: your **work status**, and the
 **solicitation status** — it defaults to open solicitations, but you can

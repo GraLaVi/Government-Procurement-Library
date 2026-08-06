@@ -157,34 +157,34 @@ export default function RfqCoveragePage() {
               </p>
             ) : (
               <TableCard className="overflow-x-auto !p-0">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted-light/50">
-                    <tr className="border-b border-border text-left text-xs font-medium text-muted uppercase tracking-wider">
-                      <th className="px-4 py-2.5">Buyer</th>
-                      <th className="px-4 py-2.5 text-right" title="Unclaimed solicitations deriving to this buyer via CAGE ownership">In queue (derived)</th>
-                      <th className="px-4 py-2.5 text-right">Unworked</th>
-                      <th className="px-4 py-2.5 text-right">RFQ sent</th>
-                      <th className="px-4 py-2.5 text-right">Quotes in</th>
-                      <th className="px-4 py-2.5 text-right">Priced</th>
-                      <th className="px-4 py-2.5 text-right">Bid</th>
-                      <th className="px-4 py-2.5 text-right">No bid</th>
-                      <th className="px-4 py-2.5 text-right">Passed</th>
-                      <th className="px-4 py-2.5 text-right">Total</th>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border bg-primary/10 text-left text-[10px] font-semibold text-muted uppercase tracking-wide">
+                      <th className="px-3 py-2">Buyer</th>
+                      <th className="px-3 py-2 text-right" title="Unclaimed solicitations deriving to this buyer via CAGE ownership">In queue (derived)</th>
+                      <th className="px-3 py-2 text-right">Unworked</th>
+                      <th className="px-3 py-2 text-right">RFQ sent</th>
+                      <th className="px-3 py-2 text-right">Quotes in</th>
+                      <th className="px-3 py-2 text-right">Priced</th>
+                      <th className="px-3 py-2 text-right">Bid</th>
+                      <th className="px-3 py-2 text-right">No bid</th>
+                      <th className="px-3 py-2 text-right">Passed</th>
+                      <th className="px-3 py-2 text-right">Total</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {data.by_buyer.map((b) => (
                       <tr key={b.user_id}>
-                        <td className="px-4 py-2.5 text-card-foreground">{b.name}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums">{b.derived_unclaimed}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums">{b.unworked}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums">{b.rfq_sent}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums">{b.quotes_in}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums">{b.priced}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums">{b.bid}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums">{b.no_bid}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums">{b.passed}</td>
-                        <td className="px-4 py-2.5 text-right font-mono tabular-nums font-semibold">{b.total}</td>
+                        <td className="px-3 py-2 text-card-foreground">{b.name}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.derived_unclaimed}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.unworked}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.rfq_sent}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.quotes_in}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.priced}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.bid}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.no_bid}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.passed}</td>
+                        <td className="px-3 py-2 text-right font-mono tabular-nums font-semibold">{b.total}</td>
                       </tr>
                     ))}
                   </tbody>

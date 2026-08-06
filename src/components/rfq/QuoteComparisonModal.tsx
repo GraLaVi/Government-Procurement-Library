@@ -186,16 +186,16 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                     <p className="px-4 py-3 text-xs text-muted italic">No quotes back for this item yet.</p>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full text-xs">
                         <thead>
-                          <tr className="text-left text-xs font-medium text-muted uppercase tracking-wider border-b border-border">
-                            <th className="px-4 py-2">Vendor</th>
-                            <th className="px-4 py-2 text-right">Unit price</th>
-                            <th className="px-4 py-2 text-right">Qty avail</th>
-                            <th className="px-4 py-2 text-right">Lead time</th>
-                            <th className="px-4 py-2">Valid until</th>
-                            <th className="px-4 py-2 text-right">Price to gov</th>
-                            <th className="px-4 py-2 text-right" aria-label="Actions" />
+                          <tr className="text-left text-[10px] font-semibold text-muted uppercase tracking-wide border-b border-border">
+                            <th className="px-3 py-2">Vendor</th>
+                            <th className="px-3 py-2 text-right">Unit price</th>
+                            <th className="px-3 py-2 text-right">Qty avail</th>
+                            <th className="px-3 py-2 text-right">Lead time</th>
+                            <th className="px-3 py-2">Valid until</th>
+                            <th className="px-3 py-2 text-right">Price to gov</th>
+                            <th className="px-3 py-2 text-right" aria-label="Actions" />
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -210,7 +210,7 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                                   : undefined
                               }
                             >
-                              <td className="px-4 py-2.5">
+                              <td className="px-3 py-2">
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                   <span className="text-card-foreground">{q.vendor_name || q.cage_code || "Vendor"}</span>
                                   {q.cage_code && (
@@ -238,19 +238,19 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                                   <div className="text-[11px] text-muted">Mfr: {q.manufacturer}</div>
                                 )}
                               </td>
-                              <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap">
+                              <td className="px-3 py-2 text-right font-mono tabular-nums whitespace-nowrap">
                                 {q.is_no_bid ? "No bid" : money(q.unit_price, q.currency)}
                               </td>
-                              <td className="px-4 py-2.5 text-right font-mono tabular-nums">
+                              <td className="px-3 py-2 text-right font-mono tabular-nums">
                                 {q.quantity_available ?? "—"}
                               </td>
-                              <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                              <td className="px-3 py-2 text-right whitespace-nowrap">
                                 {q.lead_time_days != null ? `${q.lead_time_days}d` : "—"}
                               </td>
-                              <td className="px-4 py-2.5 whitespace-nowrap">
+                              <td className="px-3 py-2 whitespace-nowrap">
                                 {q.quote_valid_until || "—"}
                               </td>
-                              <td className="px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap">
+                              <td className="px-3 py-2 text-right font-mono tabular-nums whitespace-nowrap">
                                 {q.price_to_gov != null ? (
                                   <span
                                     className="font-semibold text-foreground"
@@ -262,7 +262,7 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                                   "—"
                                 )}
                               </td>
-                              <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                              <td className="px-3 py-2 text-right whitespace-nowrap">
                                 {!q.is_no_bid && q.unit_price != null && (
                                   <button
                                     type="button"

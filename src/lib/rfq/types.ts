@@ -263,6 +263,9 @@ export interface RfqWorkItem {
   solicitation_type: string | null;
   solicitation_type_label: string | null;
   has_pdf: boolean;
+  /** Distinct purchase-requisition numbers across the solicitation's line
+   * items, sorted. Usually one. */
+  pr_numbers: string[];
   has_amendment_indicator: boolean;
   has_post_match_amendment: boolean;
   latest_post_match_amendment_at: string | null;

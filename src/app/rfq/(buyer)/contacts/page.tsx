@@ -168,7 +168,7 @@ export default function RfqContactsPage() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs">
             <thead className="bg-card-bg/60 text-xs text-muted">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">CAGE / ID</th>

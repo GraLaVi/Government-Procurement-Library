@@ -9,8 +9,9 @@ import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimeli
 import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import { QuoteVendorPickerModal } from "@/components/rfq/QuoteVendorPickerModal";
 import { QuoteComparisonModal } from "@/components/rfq/QuoteComparisonModal";
-import { TableCard } from "@/components/rfq/TableCard";
+import { SortHeader, TableCard, rowHoverClass, tableHeadRowClass, tdClass, thClass } from "@/components/rfq/TableCard";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import {
   formatCurrency,
   formatPartIdentity,
@@ -81,29 +82,6 @@ function dueDateFromClose(closeIso: string | null, leadDays: number | null): str
   return `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
 }
 
-function SortHeader({
-  label, sortKey, sortBy, sortDir, onSort, className = "",
-}: {
-  label: string; sortKey: SortKey; sortBy: SortKey; sortDir: "asc" | "desc";
-  onSort: (k: SortKey) => void; className?: string;
-}) {
-  const active = sortBy === sortKey;
-  return (
-    <th className={`px-4 py-2.5 ${className}`}>
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wider text-xs font-medium ${
-          active ? "text-foreground" : "text-muted hover:text-foreground"
-        }`}
-      >
-        {label}
-        <span className="text-[10px]">{active ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
-      </button>
-    </th>
-  );
-}
-
 const statusPillClass: Record<RfqWorkStatus, string> = {
   unworked: "bg-muted/10 text-muted",
   rfq_sent: "bg-sky-100 text-sky-800",
@@ -142,6 +120,11 @@ export default function RfqWorklistPage() {
   // Amendment timeline modal.
   const [amendmentSolId, setAmendmentSolId] = useState<number | null>(null);
   const [amendmentSolNumber, setAmendmentSolNumber] = useState<string | null>(null);
+
+  // Solicitation PDF viewer — same modal shape as the parts-search
+  // Solicitations tab (has_pdf gates the glyph; the file streams from the
+  // library endpoint).
+  const [pdfFor, setPdfFor] = useState<{ id: number; number: string | null } | null>(null);
 
   // Quote flow: part picked from the solicitation modal -> vendor picker ->
   // compose modal.
@@ -507,14 +490,15 @@ export default function RfqWorklistPage() {
             </>
           }
         >
-          <table className="w-full text-sm">
-            <thead className="bg-muted-light/50">
-              <tr className="border-b border-border text-left">
-                <th className="px-3 py-2.5 w-8">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className={tableHeadRowClass}>
+                <th className="px-3 py-2 w-8">
                   <input type="checkbox" checked={allOnPageSelected} onChange={toggleAll} aria-label="Select all" />
                 </th>
-                <th className="px-2 py-2.5 w-8" aria-label="Expand" />
+                <th className="px-2 py-2 w-8" aria-label="Expand" />
                 <SortHeader label="Solicitation" sortKey="solicitation_number" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
+                <th className={`${thClass} whitespace-nowrap`}>PR #</th>
                 <SortHeader label="Sol. Status" sortKey="sol_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                 <SortHeader label="RFQ Progress" sortKey="work_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                 <SortHeader label="Close date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
@@ -530,8 +514,8 @@ export default function RfqWorklistPage() {
                 const partsState = partsBySol[item.solicitation_id];
                 return (
                   <Fragment key={item.solicitation_id}>
-                    <tr className="hover:bg-muted-light/40 transition-colors">
-                      <td className="px-3 py-3">
+                    <tr className={rowHoverClass}>
+                      <td className="px-3 py-2">
                         <input
                           type="checkbox"
                           checked={selected.has(item.solicitation_id)}
@@ -559,7 +543,7 @@ export default function RfqWorklistPage() {
                           </svg>
                         </button>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className={tdClass}>
                         <div className="flex flex-wrap items-center gap-1.5 font-medium">
                           <button
                             type="button"
@@ -569,6 +553,22 @@ export default function RfqWorklistPage() {
                           >
                             {item.solicitation_number || "-"}
                           </button>
+                          {item.has_pdf && (
+                            // The number itself expands the row, so the PDF
+                            // opens from a separate document glyph — same
+                            // viewer as the parts-search Solicitations tab.
+                            <button
+                              type="button"
+                              onClick={() => setPdfFor({ id: item.solicitation_id, number: item.solicitation_number })}
+                              className="text-primary/70 hover:text-primary cursor-pointer"
+                              title={`Open solicitation ${item.solicitation_number} (PDF)`}
+                              aria-label={`Open solicitation ${item.solicitation_number} (PDF)`}
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                              </svg>
+                            </button>
+                          )}
                           <SolicitationRowBadges
                             hasAmendmentIndicator={item.has_amendment_indicator}
                             hasPostMatchAmendment={item.has_post_match_amendment}
@@ -595,10 +595,22 @@ export default function RfqWorklistPage() {
                           <div className="text-xs text-muted mt-0.5">{item.agency_code}</div>
                         )}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className={`${tdClass} font-mono whitespace-nowrap`}>
+                        {item.pr_numbers.length === 0 ? (
+                          <span className="text-muted">—</span>
+                        ) : (
+                          <span title={item.pr_numbers.length > 1 ? item.pr_numbers.join(", ") : undefined}>
+                            {item.pr_numbers[0]}
+                            {item.pr_numbers.length > 1 && (
+                              <span className="text-muted"> +{item.pr_numbers.length - 1}</span>
+                            )}
+                          </span>
+                        )}
+                      </td>
+                      <td className={`${tdClass} whitespace-nowrap`}>
                         <SolStatusBadge status={item.status} />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className={tdClass}>
                         <select
                           className={`rounded-full text-xs font-medium px-2 py-1 border-0 cursor-pointer ${statusPillClass[item.work_status]}`}
                           title="Your RFQ progress on this solicitation. RFQ Sent and Quotes In advance automatically; set the rest as you work."
@@ -611,7 +623,7 @@ export default function RfqWorklistPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className={`${tdClass} whitespace-nowrap`}>
                         <span className={dtc != null && dtc <= 3 ? "text-error font-semibold" : "text-foreground"}>
                           {formatDate(item.close_date)}
                         </span>
@@ -619,13 +631,13 @@ export default function RfqWorklistPage() {
                           <div className="text-[11px] text-muted">{dtc === 0 ? "closes today" : `${dtc}d left`}</div>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className={tdClass}>
                         {item.set_aside_label || item.set_aside || "—"}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono tabular-nums whitespace-nowrap">
+                      <td className={`${tdClass} text-right font-mono tabular-nums whitespace-nowrap`}>
                         {formatCurrency(item.estimated_value)}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className={tdClass}>
                         {item.assigned_user_name ? (
                           <span className="text-foreground">{item.assigned_user_name}</span>
                         ) : item.derived_user_names.length > 0 ? (
@@ -639,7 +651,7 @@ export default function RfqWorklistPage() {
                     </tr>
                     {isOpen && (
                       <tr className="bg-muted-light/30">
-                        <td colSpan={9} className="px-6 py-3">
+                        <td colSpan={10} className="px-6 py-3">
                           {!partsState || partsState.loading ? (
                             <div className="flex items-center gap-2 py-2 text-xs text-muted">
                               <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -650,9 +662,9 @@ export default function RfqWorklistPage() {
                           ) : partsState.parts.length === 0 ? (
                             <p className="text-xs text-muted italic py-1">No quotable line items on this solicitation.</p>
                           ) : (
-                            <table className="w-full text-sm">
+                            <table className="w-full text-xs">
                               <thead>
-                                <tr className="text-left text-xs font-medium text-muted uppercase tracking-wider border-b border-border">
+                                <tr className="text-left text-[10px] font-semibold text-muted uppercase tracking-wide border-b border-border">
                                   <th className="px-3 py-1.5">NSN</th>
                                   <th className="px-3 py-1.5">Description</th>
                                   <th className="px-3 py-1.5 text-right whitespace-nowrap">Qty / Unit</th>
@@ -753,6 +765,31 @@ export default function RfqWorklistPage() {
           solicitationId={quotesFor.solicitation_id}
           solicitationNumber={quotesFor.solicitation_number}
         />
+      )}
+
+      {pdfFor && (
+        <Modal
+          isOpen={true}
+          onClose={() => setPdfFor(null)}
+          title={`Solicitation ${pdfFor.number ?? ""}`}
+          size="full"
+        >
+          <div className="flex flex-col gap-2">
+            <a
+              href={`/api/library/solicitations/${pdfFor.id}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline"
+            >
+              Open in new tab
+            </a>
+            <iframe
+              src={`/api/library/solicitations/${pdfFor.id}/pdf`}
+              title={`Solicitation ${pdfFor.number ?? ""}`}
+              className="w-full border border-border rounded min-h-[70vh]"
+            />
+          </div>
+        </Modal>
       )}
 
       <AmendmentTimelineModal

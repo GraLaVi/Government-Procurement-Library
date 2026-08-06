@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { RfqVendorCapabilitiesModal } from "@/components/rfq/RfqVendorCapabilitiesModal";
 import { RfqVendorContactEditModal } from "@/components/rfq/RfqVendorContactEditModal";
-import { TableCard } from "@/components/rfq/TableCard";
+import { TableCard, tableHeadRowClass } from "@/components/rfq/TableCard";
 import {
   MIN_SENDS_FOR_RESPONSIVENESS,
   type RfqVendor,
@@ -468,17 +468,17 @@ export default function RfqVendorsPage() {
         </div>
       ) : (
         <TableCard className="overflow-x-auto mt-4">
-          <table className="w-full text-sm">
-            <thead className="bg-muted-light/50">
-              <tr className="border-b border-border text-left text-xs font-medium text-muted uppercase tracking-wider">
-                <th className="px-2 py-2.5 w-8" aria-label="Expand" />
-                <th className="px-4 py-2.5">Company</th>
-                <th className="px-4 py-2.5">Identifier</th>
-                <th className="px-4 py-2.5">Contacts</th>
-                <th className="px-4 py-2.5">Capabilities</th>
-                <th className="px-4 py-2.5">Phone</th>
-                <th className="px-4 py-2.5">Location</th>
-                <th className="px-4 py-2.5 text-right" aria-label="Actions" />
+          <table className="w-full text-xs">
+            <thead>
+              <tr className={`${tableHeadRowClass} text-[10px] font-semibold uppercase tracking-wide text-muted`}>
+                <th className="px-2 py-2 w-8" aria-label="Expand" />
+                <th className="px-3 py-2">Company</th>
+                <th className="px-3 py-2">Identifier</th>
+                <th className="px-3 py-2">Contacts</th>
+                <th className="px-3 py-2">Capabilities</th>
+                <th className="px-3 py-2">Phone</th>
+                <th className="px-3 py-2">Location</th>
+                <th className="px-3 py-2 text-right" aria-label="Actions" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -488,8 +488,8 @@ export default function RfqVendorsPage() {
                 const location = [v.city, v.state].filter(Boolean).join(", ");
                 return (
                   <Fragment key={v.id}>
-                    <tr className={`hover:bg-muted-light/40 transition-colors ${!v.is_active ? "opacity-60" : ""}`}>
-                      <td className="px-2 py-2.5 text-center">
+                    <tr className={`hover:bg-primary/8 transition-colors ${!v.is_active ? "opacity-60" : ""}`}>
+                      <td className="px-2 py-2 text-center">
                         <button
                           type="button"
                           onClick={() => toggleVendor(v.id)}
@@ -502,15 +502,15 @@ export default function RfqVendorsPage() {
                           </svg>
                         </button>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-3 py-2">
                         <button type="button" onClick={() => toggleVendor(v.id)}
                           className="text-sm font-medium text-card-foreground hover:text-primary text-left">
                           {v.company_name}
                         </button>
                         {!v.is_active && <Badge variant="default" size="sm" className="ml-2">Deactivated</Badge>}
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-muted">{v.vendor_code || "—"}</td>
-                      <td className="px-4 py-2.5 text-xs">
+                      <td className="px-3 py-2 font-mono text-xs text-muted">{v.vendor_code || "—"}</td>
+                      <td className="px-3 py-2 text-xs">
                         {v.contacts.length === 0 ? (
                           <span className="text-amber-700 font-medium">none</span>
                         ) : (
@@ -522,7 +522,7 @@ export default function RfqVendorsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-xs max-w-[260px]">
+                      <td className="px-3 py-2 text-xs max-w-[260px]">
                         {(() => {
                           const summary = capabilitySummary(v);
                           return (
@@ -537,9 +537,9 @@ export default function RfqVendorsPage() {
                           );
                         })()}
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-muted whitespace-nowrap">{v.phone || "—"}</td>
-                      <td className="px-4 py-2.5 text-xs text-muted">{location || "—"}</td>
-                      <td className="px-4 py-2.5 text-right whitespace-nowrap text-xs">
+                      <td className="px-3 py-2 text-xs text-muted whitespace-nowrap">{v.phone || "—"}</td>
+                      <td className="px-3 py-2 text-xs text-muted">{location || "—"}</td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap text-xs">
                         {v.is_active ? (
                           <>
                             <button type="button" className="text-primary hover:underline"
@@ -711,22 +711,22 @@ export default function RfqVendorsPage() {
             Last 12 months, across all RFQs your team has sent. Who answers, how often, and how fast.
           </p>
           <TableCard className="overflow-x-auto !p-0">
-            <table className="w-full text-sm">
-              <thead className="bg-muted-light/50">
-                <tr className="border-b border-border text-left text-xs font-medium text-muted uppercase tracking-wider">
-                  <th className="px-4 py-2.5">Vendor</th>
-                  <th className="px-4 py-2.5 text-right">RFQs sent</th>
-                  <th className="px-4 py-2.5 text-right">Responded</th>
-                  <th className="px-4 py-2.5 text-right">Declined</th>
-                  <th className="px-4 py-2.5 text-right">No answer</th>
-                  <th className="px-4 py-2.5 text-right">Response rate</th>
-                  <th className="px-4 py-2.5 text-right">Median turnaround</th>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className={`${tableHeadRowClass} text-[10px] font-semibold uppercase tracking-wide text-muted`}>
+                  <th className="px-3 py-2">Vendor</th>
+                  <th className="px-3 py-2 text-right">RFQs sent</th>
+                  <th className="px-3 py-2 text-right">Responded</th>
+                  <th className="px-3 py-2 text-right">Declined</th>
+                  <th className="px-3 py-2 text-right">No answer</th>
+                  <th className="px-3 py-2 text-right">Response rate</th>
+                  <th className="px-3 py-2 text-right">Median turnaround</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {stats.map((s, i) => (
                   <tr key={i} className={s.rfqs_sent < MIN_SENDS_FOR_RESPONSIVENESS ? "opacity-60" : undefined}>
-                    <td className="px-4 py-2.5">
+                    <td className="px-3 py-2">
                       <span className="text-card-foreground">{s.vendor_name || s.cage_code || "Vendor"}</span>
                       {s.cage_code && <span className="ml-2 text-[11px] font-mono text-muted">CAGE {s.cage_code}</span>}
                       {s.rfq_vendor_id != null && <Badge variant="info" size="sm" className="ml-2">Private</Badge>}
@@ -734,14 +734,14 @@ export default function RfqVendorsPage() {
                         <span className="ml-2 text-[11px] text-muted italic">low sample</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono tabular-nums">{s.rfqs_sent}</td>
-                    <td className="px-4 py-2.5 text-right font-mono tabular-nums">{s.responded}</td>
-                    <td className="px-4 py-2.5 text-right font-mono tabular-nums">{s.declined}</td>
-                    <td className="px-4 py-2.5 text-right font-mono tabular-nums">{s.unanswered}</td>
-                    <td className="px-4 py-2.5 text-right font-mono tabular-nums">
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">{s.rfqs_sent}</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">{s.responded}</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">{s.declined}</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">{s.unanswered}</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">
                       {Math.round(s.response_rate * 100)}%
                     </td>
-                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                    <td className="px-3 py-2 text-right whitespace-nowrap">
                       {s.median_turnaround_days != null ? `${s.median_turnaround_days}d` : "—"}
                     </td>
                   </tr>

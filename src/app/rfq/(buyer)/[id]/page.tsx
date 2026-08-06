@@ -225,13 +225,13 @@ export default function RfqDetailPage() {
       {/* Recipients */}
       <TableCard as="section" header={<h2 className="text-sm font-semibold text-foreground">Recipients</h2>}>
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs">
             <thead className="bg-card-bg/60 text-xs text-muted">
               <tr>
-                <th className="px-4 py-2 text-left font-medium">Vendor</th>
-                <th className="px-4 py-2 text-left font-medium">Contact</th>
-                <th className="px-4 py-2 text-left font-medium">Status</th>
-                <th className="px-4 py-2 text-left font-medium">Reminders</th>
+                <th className="px-3 py-2 text-left font-medium">Vendor</th>
+                <th className="px-3 py-2 text-left font-medium">Contact</th>
+                <th className="px-3 py-2 text-left font-medium">Status</th>
+                <th className="px-3 py-2 text-left font-medium">Reminders</th>
               </tr>
             </thead>
             <tbody>
@@ -256,16 +256,16 @@ export default function RfqDetailPage() {
       {/* Line items */}
       <TableCard as="section" header={<h2 className="text-sm font-semibold text-foreground">Requested items</h2>}>
         <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs">
             <thead className="bg-card-bg/60 text-xs text-muted">
               <tr>
-                <th className="px-4 py-2 text-left font-medium">#</th>
-                <th className="px-4 py-2 text-left font-medium">Part number</th>
-                <th className="px-4 py-2 text-left font-medium">NSN</th>
-                <th className="px-4 py-2 text-left font-medium">Qty</th>
-                <th className="px-4 py-2 text-left font-medium">Need by</th>
-                <th className="px-4 py-2 text-left font-medium">Target $/unit</th>
-                <th className="px-4 py-2 text-left font-medium">Notes</th>
+                <th className="px-3 py-2 text-left font-medium">#</th>
+                <th className="px-3 py-2 text-left font-medium">Part number</th>
+                <th className="px-3 py-2 text-left font-medium">NSN</th>
+                <th className="px-3 py-2 text-left font-medium">Qty</th>
+                <th className="px-3 py-2 text-left font-medium">Need by</th>
+                <th className="px-3 py-2 text-left font-medium">Target $/unit</th>
+                <th className="px-3 py-2 text-left font-medium">Notes</th>
               </tr>
             </thead>
             <tbody>

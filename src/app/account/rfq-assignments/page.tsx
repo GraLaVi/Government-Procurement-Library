@@ -240,12 +240,12 @@ export default function RfqAssignmentsPage() {
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted-light/50">
-                  <tr className="border-b border-border text-left text-xs font-medium text-muted uppercase tracking-wider">
-                    <th className="px-4 py-2.5">CAGE</th>
-                    <th className="px-4 py-2.5">Vendor</th>
-                    <th className="px-4 py-2.5">Buyers</th>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border bg-primary/10 text-left text-[10px] font-semibold text-muted uppercase tracking-wide">
+                    <th className="px-3 py-2">CAGE</th>
+                    <th className="px-3 py-2">Vendor</th>
+                    <th className="px-3 py-2">Buyers</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -257,13 +257,13 @@ export default function RfqAssignmentsPage() {
                     );
                     return (
                       <tr key={r.cage_code} className={unowned ? "bg-amber-50/50" : undefined}>
-                        <td className="px-4 py-2.5 font-mono font-semibold text-foreground whitespace-nowrap">
+                        <td className="px-3 py-2 font-mono font-semibold text-foreground whitespace-nowrap">
                           {r.cage_code}
                         </td>
-                        <td className="px-4 py-2.5 text-card-foreground">
+                        <td className="px-3 py-2 text-card-foreground">
                           {r.vendor_name || <span className="text-muted italic">—</span>}
                         </td>
-                        <td className="px-4 py-2.5">
+                        <td className="px-3 py-2">
                           <div className="flex flex-wrap items-center gap-1.5">
                             {r.buyers.map((b) => (
                               <span
