@@ -44,7 +44,7 @@ Finish with one of:
 
 The **Batch** page (**Vendor RFQs › Batch**) is a staging area shared across your whole team. Add items to it with **Create RFQ → Save to batch** from any part, then send them together later. This is handy when you're assembling a large request over time or across several parts.
 
-On the batch page you can filter by **Added by** (yourself, a teammate, or everyone), edit a line's quantity inline, and remove items. When you're ready, use **Send selected** or **Send all** — GPH groups the staged items into **one RFQ per vendor**, exactly like an immediate send.
+On the batch page you can filter by **Added by** (yourself, a teammate, or everyone), edit a line's quantity inline, and remove items. When you're ready, use **Send selected** or **Send all** — GPH groups the staged items into **one RFQ per vendor**, exactly like an immediate send. (Items staged from the RFQ Enterprise work queue also keep track of which solicitation they came from: they send as one RFQ per vendor *per solicitation*, and the quotes flow back into that solicitation's comparison view.)
 
 ## Tracking your RFQs
 

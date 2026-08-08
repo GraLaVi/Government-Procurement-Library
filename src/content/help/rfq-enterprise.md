@@ -18,6 +18,7 @@ Vendors**, and **Coverage**, plus **RFQ Buyer Assignments** under My Account.
 ## In this article
 
 - [How solicitations reach a buyer](#how-solicitations-reach-a-buyer)
+- [Taking ownership of a solicitation](#taking-ownership-of-a-solicitation)
 - [The Send RFQs page](#the-send-rfqs-page)
 - [Work status](#work-status)
 - [Requesting quotes](#requesting-quotes)
@@ -44,6 +45,28 @@ vacations is one bulk re-assign away.
 
 When new matched solicitations land in your queue, you get a bell
 notification — and an email too if one of them is already closing soon.
+
+## Taking ownership of a solicitation
+
+Because a CAGE can belong to several buyers, the same solicitation can appear
+in more than one person's **My solicitations** view. To keep two buyers from
+working it at once, any solicitation without a named assignee can be
+**claimed**:
+
+- **Claim it explicitly** with the **Claim** button in the Assignee column.
+  The moment you claim, the solicitation leaves every other buyer's default
+  queue and shows your name — with a "(you)" marker in your own view. If a
+  teammate claims it a moment before you, you'll see who got it instead.
+- **Claiming also happens automatically when work starts**: clicking
+  **Quote** on an unowned solicitation makes it yours right away, and so
+  does saving items from it to the batch cart or sending an RFQ. If you
+  start quoting a solicitation someone else already owns, a heads-up names
+  them before you invest any time.
+
+Claims protect against *accidental* double work, not against deliberate
+reassignment — anyone can still re-assign rows with **Assign to buyer**.
+If some of the selected rows already belong to another buyer, GPH asks
+before taking them over.
 
 ## The Send RFQs page
 
@@ -110,6 +133,14 @@ be usable for your bid, so the warning is worth heeding.
 Pick your vendors and continue to the familiar RFQ window. The response due
 date is pre-filled from the solicitation's close date minus your configured
 lead time, so quotes arrive with room to price and submit.
+
+### Work in progress you can see
+
+Items saved to the batch cart from a solicitation show an amber
+**In cart (N)** badge on its row — hover it to see who staged them. It means
+a teammate has started on the solicitation even though no RFQ has gone out
+yet; the badge clears when the batch is sent. Together with claiming, this
+makes in-flight work visible before the status ever changes.
 
 ## Comparing quotes
 
