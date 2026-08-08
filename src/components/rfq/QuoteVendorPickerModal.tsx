@@ -362,7 +362,10 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, solicitationId, 
       title={`Request quotes — ${part.nsn || part.mfg_part_number || `part ${part.id}`}`}
       size="4xl"
     >
-      <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+      {/* -mx-1 px-1: the scroll container clips horizontally too, and the
+          search input sits flush with its left edge — without this inset the
+          input's focus border/ring is clipped on the left. */}
+      <div className="space-y-4 max-h-[65vh] overflow-y-auto -mx-1 px-1">
         {part.description && <p className="text-sm text-muted">{part.description}</p>}
 
         {loading ? (

@@ -368,7 +368,9 @@ function ComposeForm({
 
   return (
     <Modal isOpen={true} onClose={onClose} title="Create RFQ" size="full" preventClose={submitting}>
-      <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+      {/* -mx-1 px-1: same as QuoteVendorPickerModal — keeps flush-left inputs'
+          focus border/ring from being clipped by the scroll container. */}
+      <div className="space-y-5 max-h-[70vh] overflow-y-auto -mx-1 px-1">
         <p className="text-sm text-muted">
           {activeSelections().length} item{activeSelections().length !== 1 ? "s" : ""} ·{" "}
           {vendors.length} vendor{vendors.length !== 1 ? "s" : ""}.
