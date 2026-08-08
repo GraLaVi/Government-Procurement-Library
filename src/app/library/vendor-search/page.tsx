@@ -8,7 +8,7 @@ import { VendorResultsList } from "@/components/library/VendorResultsList";
 import { VendorDetail } from "@/components/library/VendorDetail";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RecentSearchesChips } from "@/components/library/RecentSearchesChips";
-import { resolveVendorTier } from "@/lib/library/tier";
+import { resolveVendorTier, tierMeets } from "@/lib/library/tier";
 import { useRecentActions, useLastAction } from "@/lib/hooks/useRecentActions";
 import {
   VendorSearchType,
@@ -36,7 +36,7 @@ function VendorSearchPageContent() {
 
   // Recent actions hook
   const tier = resolveVendorTier(hasAnyProductAccess);
-  const canPin = tier === "advanced";
+  const canPin = tierMeets(tier, "advanced");
   const { actions: recentActions, addAction, deleteAction, setPinned, isLoading: isLoadingActions } = useRecentActions('vendor_search');
   const { lastAction } = useLastAction('vendor_search');
 

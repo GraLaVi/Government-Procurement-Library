@@ -557,7 +557,7 @@ export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: Vendor
   const effectiveLayout = expandForPrint ? "linear" : layout;
 
   const toolbar =
-    tier === "advanced" ? (
+    tierMeets(tier, "advanced") ? (
       <DetailToolbar
         onPrint={handlePrint}
         onExportAll={layout === "linear" ? handleExportAll : undefined}

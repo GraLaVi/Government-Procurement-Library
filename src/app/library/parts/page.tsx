@@ -8,7 +8,7 @@ import { PartsResultsList } from "@/components/library/PartsResultsList";
 import { PartDetail } from "@/components/library/PartDetail";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RecentSearchesChips } from "@/components/library/RecentSearchesChips";
-import { resolvePartsTier } from "@/lib/library/tier";
+import { resolvePartsTier, tierMeets } from "@/lib/library/tier";
 import { useRecentActions, useLastAction } from "@/lib/hooks/useRecentActions";
 import {
   PartsSearchType,
@@ -33,7 +33,7 @@ export default function PartsSearchPage() {
 function PartsSearchPageContent() {
   const { isLoading: authLoading, hasAnyProductAccess } = useAuth();
   const tier = resolvePartsTier(hasAnyProductAccess);
-  const canPin = tier === "advanced";
+  const canPin = tierMeets(tier, "advanced");
 
   // Recent actions hook
   const { actions: recentActions, addAction, deleteAction, setPinned, isLoading: isLoadingActions } = useRecentActions('parts_search');
