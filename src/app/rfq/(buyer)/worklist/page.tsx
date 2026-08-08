@@ -705,18 +705,18 @@ export default function RfqWorklistPage() {
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-2">
-                            {item.derived_user_names.length > 0 ? (
+                            {/* The lone amber Claim button IS the unassigned
+                                signal — no label next to it. */}
+                            {item.derived_user_names.length > 0 && (
                               <span className="text-muted" title="Derived from CAGE assignment — no explicit assignee yet">
                                 {item.derived_user_names.join(", ")}
                               </span>
-                            ) : (
-                              <span className="text-amber-700 text-xs font-medium">Unassigned</span>
                             )}
                             <button
                               type="button"
                               onClick={() => claim(item)}
-                              className="px-1.5 py-0.5 rounded border border-primary/40 text-primary text-[11px] font-medium hover:bg-primary/10 cursor-pointer"
-                              title="Take ownership — removes it from other buyers' queues"
+                              className="px-1.5 py-0.5 rounded border border-amber-500/60 text-amber-700 text-[11px] font-medium hover:bg-amber-500/10 cursor-pointer"
+                              title="Nobody owns this yet — claim it to remove it from other buyers' queues"
                             >
                               Claim
                             </button>
