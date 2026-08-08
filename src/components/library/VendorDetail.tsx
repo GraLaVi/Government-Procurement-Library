@@ -1159,7 +1159,7 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
             sorting: true,
             multiSort: false,
             rowSelection: false,
-            copyRow: true,
+            copyRow: false,
             // DataTable's built-in export is disabled — the tab strip
             // hosts our tier-aware ExportCsvButton instead.
             export: false,
@@ -1389,7 +1389,7 @@ function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPa
             sorting: true,
             multiSort: false,
             rowSelection: false,
-            copyRow: true,
+            copyRow: false,
             // DataTable's built-in export is disabled — the tab strip
             // hosts our tier-aware ExportCsvButton instead.
             export: false,
@@ -1838,7 +1838,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
             sorting: true,
             multiSort: false,
             rowSelection: false,
-            copyRow: true,
+            copyRow: false,
             // DataTable's built-in export is disabled — the tab strip
             // hosts our tier-aware ExportCsvButton instead.
             export: false,

@@ -94,7 +94,10 @@ export const dataTableConfig: DataTableConfig = {
     sorting: true,
     multiSort: false,
     rowSelection: false,
-    copyRow: true,
+    // Off everywhere by design — the per-row copy icon was removed from the
+    // parts/vendor search tabs (Aug 2026). The render path and clipboard
+    // util remain for tables that opt back in.
+    copyRow: false,
     export: true,
     exportFormats: ["csv"],
     columnResize: false,
