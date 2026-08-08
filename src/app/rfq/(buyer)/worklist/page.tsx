@@ -25,6 +25,7 @@ import {
   type RfqSettings,
   type RfqWorkItem,
   type RfqWorkStatus,
+  type RfqWorklistClaimResponse,
   type RfqWorklistPage,
 } from "@/lib/rfq/types";
 
@@ -93,7 +94,7 @@ const statusPillClass: Record<RfqWorkStatus, string> = {
 };
 
 export default function RfqWorklistPage() {
-  const { isLoading: authLoading, hasAnyProductAccess } = useAuth();
+  const { isLoading: authLoading, hasAnyProductAccess, user } = useAuth();
   const hasEnterprise = hasAnyProductAccess([RFQ_ENTERPRISE_PRODUCT_KEY]);
 
   const [scope, setScope] = useState<Scope>("mine");
@@ -277,34 +278,82 @@ export default function RfqWorklistPage() {
       return next;
     });
 
+  const postBulkAssign = async (override: boolean): Promise<{ changed: number; skipped: number } | null> => {
+    const res = await fetch("/api/rfq/worklist/assign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        solicitation_ids: Array.from(selected),
+        assigned_user_id: bulkAssignee ? Number(bulkAssignee) : null,
+        override,
+      }),
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      setError(body.error || "Failed to assign.");
+      return null;
+    }
+    return body as { changed: number; skipped: number };
+  };
+
   const bulkAssign = async () => {
     if (selected.size === 0) return;
     setBulkBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/rfq/worklist/assign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          solicitation_ids: Array.from(selected),
-          assigned_user_id: bulkAssignee ? Number(bulkAssignee) : null,
-        }),
-      });
-      const body = await res.json();
-      if (!res.ok) {
-        setError(body.error || "Failed to assign.");
-        return;
+      // Rows another buyer holds are skipped server-side; taking them over is
+      // a deliberate second step with the current owner situation spelled out.
+      let body = await postBulkAssign(false);
+      if (!body) return;
+      let changed = body.changed;
+      if (body.skipped > 0) {
+        const ok = window.confirm(
+          `${body.skipped} solicitation${body.skipped !== 1 ? "s are" : " is"} already assigned to another buyer. Reassign ${body.skipped !== 1 ? "them" : "it"} too?`
+        );
+        if (ok) {
+          body = await postBulkAssign(true);
+          if (!body) return;
+          changed += body.changed;
+        }
       }
       const target = bulkAssignee
         ? buyers.find((b) => b.user_id === Number(bulkAssignee))?.name || "buyer"
         : "nobody (unassigned)";
-      setToast(`Assigned ${body.changed} solicitation${body.changed !== 1 ? "s" : ""} to ${target}.`);
+      setToast(`Assigned ${changed} solicitation${changed !== 1 ? "s" : ""} to ${target}.`);
       setSelected(new Set());
       load();
     } catch {
       setError("Network error assigning.");
     } finally {
       setBulkBusy(false);
+    }
+  };
+
+  // Race-safe self-assignment. The endpoint always answers 200: claimed=false
+  // with a name means another buyer got (or already had) it. silent suppresses
+  // the success toast (used when claiming as a side effect of starting work);
+  // the "already claimed" heads-up always shows.
+  const claim = async (item: RfqWorkItem, opts?: { silent?: boolean }) => {
+    try {
+      const res = await fetch(`/api/rfq/worklist/${item.solicitation_id}/claim`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ takeover: false }),
+      });
+      const body = (await res.json()) as RfqWorklistClaimResponse & { error?: string };
+      if (!res.ok) {
+        if (!opts?.silent) setError(body.error || "Failed to claim.");
+        return;
+      }
+      const label = item.solicitation_number || "this solicitation";
+      if (body.claimed || body.already_yours) {
+        if (!opts?.silent) setToast(`Claimed ${label} — it's yours now.`);
+      } else if (body.assigned_user_name) {
+        setToast(`${body.assigned_user_name} is already working on ${label}.`);
+      }
+      load();
+    } catch {
+      if (!opts?.silent) setError("Network error claiming.");
     }
   };
 
@@ -590,6 +639,15 @@ export default function RfqWorklistPage() {
                               View quotes ({item.quote_count})
                             </button>
                           )}
+                          {item.staged_count > 0 && (
+                            <a
+                              href="/rfq/batch"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border border-amber-500/50 text-amber-700 hover:bg-amber-500/10"
+                              title={`${item.staged_count} item${item.staged_count !== 1 ? "s" : ""} staged in the batch cart${item.staged_by_names.length > 0 ? ` by ${item.staged_by_names.join(", ")}` : ""} — RFQs not sent yet`}
+                            >
+                              In cart ({item.staged_count})
+                            </a>
+                          )}
                         </div>
                         {item.agency_code && (
                           <div className="text-xs text-muted mt-0.5">{item.agency_code}</div>
@@ -639,13 +697,30 @@ export default function RfqWorklistPage() {
                       </td>
                       <td className={tdClass}>
                         {item.assigned_user_name ? (
-                          <span className="text-foreground">{item.assigned_user_name}</span>
-                        ) : item.derived_user_names.length > 0 ? (
-                          <span className="text-muted" title="Derived from CAGE assignment — no explicit assignee yet">
-                            {item.derived_user_names.join(", ")}
+                          <span className="text-foreground">
+                            {item.assigned_user_name}
+                            {user && item.assigned_user_id === user.id && (
+                              <span className="text-muted"> (you)</span>
+                            )}
                           </span>
                         ) : (
-                          <span className="text-amber-700 text-xs font-medium">Unassigned</span>
+                          <span className="inline-flex items-center gap-2">
+                            {item.derived_user_names.length > 0 ? (
+                              <span className="text-muted" title="Derived from CAGE assignment — no explicit assignee yet">
+                                {item.derived_user_names.join(", ")}
+                              </span>
+                            ) : (
+                              <span className="text-amber-700 text-xs font-medium">Unassigned</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => claim(item)}
+                              className="px-1.5 py-0.5 rounded border border-primary/40 text-primary text-[11px] font-medium hover:bg-primary/10 cursor-pointer"
+                              title="Take ownership — removes it from other buyers' queues"
+                            >
+                              Claim
+                            </button>
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -719,7 +794,18 @@ export default function RfqWorklistPage() {
                                       <Button
                                         variant="primary"
                                         size="sm"
-                                        onClick={() => setQuoteContext({ part: p, item })}
+                                        onClick={() => {
+                                          setQuoteContext({ part: p, item });
+                                          // Starting a quote is starting the work:
+                                          // claim an unowned solicitation right away
+                                          // (not at send), and warn when another
+                                          // buyer already holds it.
+                                          if (item.assigned_user_id == null) {
+                                            claim(item, { silent: true });
+                                          } else if (user && item.assigned_user_id !== user.id) {
+                                            setToast(`Heads up: ${item.assigned_user_name || "another buyer"} is already working on this solicitation.`);
+                                          }
+                                        }}
                                       >
                                         Quote
                                       </Button>
@@ -832,6 +918,8 @@ export default function RfqWorklistPage() {
             setToast(`Staged ${count} item${count !== 1 ? "s" : ""} to the batch cart.`);
             setComposeSelections(null);
             setQuoteContext(null);
+            // Staging claims the solicitation and lights the "In cart" badge.
+            load();
           }}
         />
       )}

@@ -225,6 +225,9 @@ export interface BatchItem {
   target_unit_price: number | null;
   notes: string | null;
   response_due_date: string | null;
+  /** Solicitation this row was staged from (Send RFQs work queue), carried
+   * onto the RFQ at batch send. Null for items staged outside the queue. */
+  source_solicitation_id: number | null;
   created_at: string;
   /** The email/name this item would be sent to right now (saved vendor
    * contact, falling back to a SAM.gov suggestion) — null if none on file. */
@@ -282,7 +285,21 @@ export interface RfqWorkItem {
   assigned_user_name: string | null;
   derived_user_ids: number[];
   derived_user_names: string[];
+  /** In-flight work: batch-cart rows staged from this solicitation but not
+   * sent yet, and who staged them. */
+  staged_count: number;
+  staged_by_names: string[];
   notes: string | null;
+}
+
+/** POST /api/rfq/worklist/[id]/claim — always 200; claimed=false with another
+ * assigned_user means that buyer holds the row. */
+export interface RfqWorklistClaimResponse {
+  solicitation_id: number;
+  claimed: boolean;
+  already_yours: boolean;
+  assigned_user_id: number | null;
+  assigned_user_name: string | null;
 }
 
 export interface RfqWorklistPage {
