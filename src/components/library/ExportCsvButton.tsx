@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { LibraryTier } from "@/lib/library/tier";
+import { tierMeets, type LibraryTier } from "@/lib/library/tier";
 import {
   buildCsv,
   todayIsoDate,
@@ -72,7 +72,7 @@ function CheckIcon() {
 /**
  * CSV-export button for the parts-library tables.
  *
- * - Advanced tier: enabled button; click builds CSV from `rows` +
+ * - Advanced tier and above: enabled button; click builds CSV from `rows` +
  *   `columns` and triggers a download. Filename gets a `-YYYY-MM-DD`
  *   suffix so repeat exports don't collide on disk.
  * - Basic / Free tier: button is rendered as a styled link to `/pricing`
@@ -106,11 +106,11 @@ export function ExportCsvButton<T>({
 
   if (tier === null) return null;
 
-  const isAdvanced = tier === "advanced";
-  const disabledForData = isAdvanced && rows.length === 0;
+  const canExport = tierMeets(tier, "advanced");
+  const disabledForData = canExport && rows.length === 0;
 
   const handleExport = () => {
-    if (!isAdvanced || rows.length === 0) return;
+    if (!canExport || rows.length === 0) return;
     onExport?.();
     const csv = buildCsv(rows, columns);
     triggerDownload(csv, `${filename}-${todayIsoDate()}.csv`);
@@ -151,7 +151,7 @@ export function ExportCsvButton<T>({
   // for rendering <CustomReportLink /> separately if they still want the
   // upsell hint nearby (e.g. below the table).
   if (compact) {
-    return isAdvanced ? (
+    return canExport ? (
       advancedButton
     ) : (
       <Link
@@ -171,7 +171,7 @@ export function ExportCsvButton<T>({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      {isAdvanced ? (
+      {canExport ? (
         advancedButton
       ) : (
         // Disabled state for Basic/Free. The wrapper <Link> makes the
