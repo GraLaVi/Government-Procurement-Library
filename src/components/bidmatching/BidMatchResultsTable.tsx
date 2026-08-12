@@ -20,6 +20,13 @@ interface MatchedCondition {
   match_label?: string | null;
 }
 
+interface BidMatchAward {
+  contract_number: string;
+  contract_date: string;
+  quantity?: number | null;
+  unit_price?: number | null;
+}
+
 interface BidMatchResult {
   result_id: number;
   run_id: string;
@@ -70,6 +77,14 @@ interface BidMatchResult {
   mfg_cage?: string | null;
   mfg_part_number?: string | null;
   part_description?: string | null;
+  // Customer-scoped "come back to this" flag — shared by every user on the
+  // account, not per-user.
+  interested?: boolean;
+  // Prior awards to the customer's own CAGE for the row's primary part.
+  // win_count is 0 rather than null when there is no history.
+  win_count?: number;
+  last_won_on?: string | null;
+  recent_awards?: BidMatchAward[];
   quantity?: number | null;
   unit_of_issue?: string | null;
   line_item_count?: number;
@@ -106,7 +121,57 @@ function DemandSignalChip({ signal }: { signal?: string | null }) {
 }
 
 /** Columns the server can sort on. "" = the default newest-first ordering. */
-export type BidSortKey = "" | "solicitation" | "quantity" | "estimated_value" | "close_date";
+export type BidSortKey = "" | "interested" | "solicitation" | "quantity" | "estimated_value" | "close_date";
+
+/**
+ * A win older than this still shows, but greyed: the award is still true, its
+ * unit price is no longer a usable guide once material costs have moved on.
+ */
+const WIN_RECENCY_YEARS = 5;
+
+function isRecentWin(lastWonOn: string | null | undefined): boolean {
+  if (!lastWonOn) return false;
+  const [y, m, d] = lastWonOn.split("-").map(Number);
+  const cutoff = new Date();
+  cutoff.setFullYear(cutoff.getFullYear() - WIN_RECENCY_YEARS);
+  return new Date(y, (m || 1) - 1, d || 1) >= cutoff;
+}
+
+/**
+ * "You have won this part before" — prior awards to the customer's own CAGE
+ * for the part shown on the row. The count is on the badge; the unit price
+ * history, which is what actually prices the next bid, is in the tooltip.
+ */
+function WinHistoryBadge({ result }: { result: BidMatchResult }) {
+  if (!result.win_count) return null;
+  const recent = isRecentWin(result.last_won_on);
+  const awards = result.recent_awards ?? [];
+  const lastYear = result.last_won_on?.slice(0, 4);
+  const tooltip = [
+    `You have won this part ${result.win_count}×`,
+    ...awards.map((a) =>
+      [
+        a.contract_number,
+        a.contract_date,
+        a.quantity != null ? `${a.quantity.toLocaleString()} ea` : null,
+        a.unit_price != null ? formatCurrency(a.unit_price) : null,
+      ].filter(Boolean).join("  ·  ")
+    ),
+    ...(result.win_count > awards.length ? [`+${result.win_count - awards.length} older`] : []),
+  ].join("\n");
+  return (
+    <span
+      title={tooltip}
+      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 cursor-help ${
+        recent
+          ? "bg-amber-100 text-amber-800 border-amber-200"
+          : "text-muted border-border font-medium"
+      }`}
+    >
+      {recent ? `★ WON ${result.win_count}×` : `WON ${result.win_count}× · ${lastYear}`}
+    </span>
+  );
+}
 
 interface BidMatchResultsTableProps {
   results: BidMatchResult[];
@@ -118,6 +183,41 @@ interface BidMatchResultsTableProps {
   sortBy: BidSortKey;
   sortDir: "asc" | "desc";
   onSort: (key: BidSortKey) => void;
+  onToggleInterest: (result: BidMatchResult, interested: boolean) => void;
+}
+
+/**
+ * The "come back to this" star.
+ *
+ * A star, not a checkbox: a checkbox in a table reads as "select for a bulk
+ * action, then clear" (which is what the RFQ worklist's checkboxes do). This
+ * state is persistent and shared across the account, and a star says so.
+ */
+function InterestStar({
+  result, onToggle,
+}: {
+  result: BidMatchResult;
+  onToggle: (result: BidMatchResult, interested: boolean) => void;
+}) {
+  const on = Boolean(result.interested);
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(result, !on)}
+      aria-pressed={on}
+      title={
+        on
+          ? "Flagged — everyone on your account sees this. Click to remove."
+          : "Flag this solicitation to come back to it"
+      }
+      aria-label={on ? "Remove flag" : "Flag this solicitation"}
+      className={`text-sm leading-none cursor-pointer transition-colors ${
+        on ? "text-amber-500 hover:text-amber-600" : "text-muted/30 hover:text-amber-500"
+      }`}
+    >
+      {on ? "★" : "☆"}
+    </button>
+  );
 }
 
 /**
@@ -223,6 +323,7 @@ export function BidMatchResultsTable({
   sortBy,
   sortDir,
   onSort,
+  onToggleInterest,
 }: BidMatchResultsTableProps) {
   const totalPages = Math.ceil(total / pageSize);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -273,6 +374,7 @@ export function BidMatchResultsTable({
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-muted-light border-b border-border">
+              <SortTh label="★" sortKey="interested" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="w-8" />
               <th className="w-6 px-1.5 py-1.5" aria-label="Expand"></th>
               <SortTh label="Solicitation" sortKey="solicitation" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">NSN</th>
@@ -296,6 +398,9 @@ export function BidMatchResultsTable({
                   <tr
                     className="border-b border-border last:border-0 hover:bg-muted-light/50 transition-colors"
                   >
+                    <td className="px-1.5 py-1.5 text-center">
+                      <InterestStar result={result} onToggle={onToggleInterest} />
+                    </td>
                     <td className="px-1.5 py-1.5 text-center">
                       <button
                         type="button"
@@ -395,6 +500,7 @@ export function BidMatchResultsTable({
                     <td className="px-2.5 py-1.5 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <PartIdentityLink part={result} className="data-field font-medium" />
+                        <WinHistoryBadge result={result} />
                         {extraItems > 0 && (
                           <button
                             type="button"
@@ -461,7 +567,7 @@ export function BidMatchResultsTable({
                       {/* Set-aside has its own column now. This row carries the
                           full line-item list plus the match detail that used to
                           sit in the dropped Profile and Match columns. */}
-                      <td colSpan={11} className="px-3 py-3">
+                      <td colSpan={12} className="px-3 py-3">
                         <div className="space-y-4">
                           {/* Only worth listing when there's more than one — a
                               single line item is already shown in the NSN column,
