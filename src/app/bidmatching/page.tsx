@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
-import { BidMatchDatePanel, type DateSelection } from "@/components/bidmatching/BidMatchDatePanel";
+import { BidMatchDateMenu, type DateSelection } from "@/components/bidmatching/BidMatchDateMenu";
 import { BidMatchResultsTable } from "@/components/bidmatching/BidMatchResultsTable";
 
 interface IssueDateEntry {
@@ -66,6 +66,18 @@ interface BidMatchResult {
   sam_url?: string | null;
   // Maximum-tier DLA demand signal (strongest across the opportunity's NIINs).
   demand_signal?: string | null;
+  // Primary line item + solicitation-level estimated value. See
+  // BidMatchResultsTable for how these render.
+  nsn?: string | null;
+  niin?: string | null;
+  fsc?: string | null;
+  mfg_cage?: string | null;
+  mfg_part_number?: string | null;
+  part_description?: string | null;
+  quantity?: number | null;
+  unit_of_issue?: string | null;
+  line_item_count?: number;
+  estimated_value?: number | null;
 }
 
 interface ResultsResponse {
@@ -252,7 +264,7 @@ export default function BidMatchingPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Bid-Matching</h1>
-          <p className="mt-1 text-muted-foreground">
+          <p className="mt-1 text-muted">
             Solicitations matched to your bid-matching profiles.
           </p>
         </div>
@@ -280,13 +292,13 @@ export default function BidMatchingPage() {
         /* Empty state — branch on whether the user has any profile yet so the
            CTA points to the right next step (set one up vs. wait for the engine). */
         <div className="text-center py-16 bg-card-bg rounded-lg border border-border">
-          <svg className="mx-auto h-16 w-16 text-muted-foreground/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+          <svg className="mx-auto h-16 w-16 text-muted/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           {hasProfiles === false ? (
             <>
               <h2 className="mt-4 text-lg font-semibold text-foreground">No bid-matching profile yet</h2>
-              <p className="mt-2 text-muted-foreground max-w-md mx-auto">
+              <p className="mt-2 text-muted max-w-md mx-auto">
                 Create a profile to tell the bid-matching engine which solicitations
                 you care about — by NIIN, FSC, CAGE code, set-aside, and more.
               </p>
@@ -300,7 +312,7 @@ export default function BidMatchingPage() {
           ) : (
             <>
               <h2 className="mt-4 text-lg font-semibold text-foreground">No match history yet</h2>
-              <p className="mt-2 text-muted-foreground max-w-md mx-auto">
+              <p className="mt-2 text-muted max-w-md mx-auto">
                 Once the bid-matching engine finds solicitations that match your profiles, they will appear here.
                 Make sure you have active profiles configured in your account settings.
               </p>
@@ -314,64 +326,63 @@ export default function BidMatchingPage() {
           )}
         </div>
       ) : (
-        /* Two-column layout: date panel + results */
-        <div className="flex gap-6 items-start">
-          {/* Date panel */}
-          <div className="w-72 flex-shrink-0 bg-card-bg rounded-lg border border-border overflow-hidden">
-            <BidMatchDatePanel
+        /* Single-column layout. The run-date / posted-date tree lives in the
+           BidMatchDateMenu dropdown rather than a fixed left column, so the
+           results table gets the full page width. */
+        <div className="space-y-4">
+          {/* Command bar: date selection + filters on one line */}
+          <div className="flex flex-wrap items-center gap-3 bg-card-bg rounded-lg border border-border p-2">
+            <BidMatchDateMenu
               dateTree={dateTree}
               selectedRunDate={selectedRunDate}
               selectedIssueDate={selectedIssueDate}
               selectedSource={selectedSource}
               onSelect={handleDateSelect}
             />
+            <div className="w-px self-stretch bg-border" aria-hidden="true" />
+            <label className="inline-flex items-center gap-2 text-sm text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hardOnly}
+                onChange={(e) => setHardOnly(e.target.checked)}
+                className="rounded border-border"
+              />
+              Hard hits only
+            </label>
+            <div className="flex-1 min-w-[200px] max-w-md">
+              <input
+                type="text"
+                value={reasonInput}
+                onChange={(e) => setReasonInput(e.target.value)}
+                placeholder="Search match reason…"
+                className="w-full text-sm border border-border bg-card-bg text-foreground rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+            </div>
+            {(hardOnly || appliedReason) && (
+              <button
+                type="button"
+                onClick={() => { setHardOnly(false); setReasonInput(""); setAppliedReason(""); }}
+                className="text-xs text-muted hover:text-foreground"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
 
           {/* Results */}
-          <div className="flex-1 min-w-0 bg-card-bg rounded-lg border border-border p-4">
+          <div className="bg-card-bg rounded-lg border border-border p-4">
             {selectedRunDate && (selectedSource === "sam" || selectedIssueDate) ? (
-              <>
-                <div className="flex flex-wrap items-center gap-3 mb-4 pb-3 border-b border-border">
-                  <label className="inline-flex items-center gap-2 text-sm text-foreground cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={hardOnly}
-                      onChange={(e) => setHardOnly(e.target.checked)}
-                      className="rounded border-border"
-                    />
-                    Hard hits only
-                  </label>
-                  <div className="flex-1 min-w-[200px] max-w-md">
-                    <input
-                      type="text"
-                      value={reasonInput}
-                      onChange={(e) => setReasonInput(e.target.value)}
-                      placeholder="Search match reason…"
-                      className="w-full text-sm border border-border bg-card-bg text-foreground rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary focus:border-primary"
-                    />
-                  </div>
-                  {(hardOnly || appliedReason) && (
-                    <button
-                      type="button"
-                      onClick={() => { setHardOnly(false); setReasonInput(""); setAppliedReason(""); }}
-                      className="text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      Clear filters
-                    </button>
-                  )}
-                </div>
-                <BidMatchResultsTable
-                  results={results}
-                  isLoading={isLoadingResults}
-                  total={total}
-                  page={page}
-                  pageSize={PAGE_SIZE}
-                  onPageChange={handlePageChange}
-                />
-              </>
+              <BidMatchResultsTable
+                results={results}
+                isLoading={isLoadingResults}
+                total={total}
+                page={page}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+              />
             ) : (
               <div className="text-center py-16">
-                <p className="text-muted-foreground">Select a date from the panel to view results.</p>
+                <p className="text-muted">Select a date to view results.</p>
               </div>
             )}
           </div>
