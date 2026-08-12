@@ -269,7 +269,7 @@ function SetAsideCodeChipPicker({
           return (
             <span
               key={code}
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-accent/10 text-accent-foreground border border-accent/20"
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-accent/10 text-foreground border border-accent/20"
               title={def?.description ?? undefined}
             >
               {def?.label ?? code}

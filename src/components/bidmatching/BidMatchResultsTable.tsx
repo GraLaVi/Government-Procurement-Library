@@ -136,7 +136,12 @@ function ConditionBadge({ condition }: { condition: MatchedCondition }) {
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${
         negated
           ? "bg-red-50 text-red-700 border-red-200"
-          : "bg-accent/10 text-accent-foreground border-accent/20"
+          // text-foreground, not an accent tone: the surface is only a 10%
+          // accent tint, so teal-on-teal would fail contrast (~2.4:1 in light
+          // mode). It also preserves what this rendered before — the previous
+          // accent-foreground class was a no-op, globals.css defining no
+          // matching --color-* token, so the text fell back to foreground.
+          : "bg-accent/10 text-foreground border-accent/20"
       }`}
     >
       {negated && <span className="font-bold text-[10px]">NOT</span>}
