@@ -2208,7 +2208,9 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
               {award.contract_number}
             </button>
           ) : (
-            <span className="text-xs font-medium text-foreground">{row.original.status || "—"}</span>
+            // The API now hands back status all-lowercase; `capitalize` is
+            // presentation-only, so the raw value still sorts and exports as-is.
+            <span className="text-xs font-medium text-foreground capitalize">{row.original.status || "—"}</span>
           );
         },
       },
@@ -2394,36 +2396,36 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
         >
           <div className="flex flex-col gap-6">
             <section>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
                 Awardee
               </h3>
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm border border-border rounded-md p-3">
-                <dt className="text-muted-foreground">Vendor</dt>
+                <dt className="text-muted">Vendor</dt>
                 <dd className="font-medium text-foreground">
                   {contractModal.awardee_name || "—"}
                 </dd>
-                <dt className="text-muted-foreground">CAGE</dt>
+                <dt className="text-muted">CAGE</dt>
                 <dd className="font-mono text-foreground">{contractModal.awardee_cage || "—"}</dd>
               </dl>
             </section>
             <section>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-2">
                 Award
               </h3>
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm border border-border rounded-md p-3">
-                <dt className="text-muted-foreground">Award date</dt>
+                <dt className="text-muted">Award date</dt>
                 <dd className="text-foreground">{formatContractDate(contractModal.award_date) || "—"}</dd>
-                <dt className="text-muted-foreground">Quantity</dt>
+                <dt className="text-muted">Quantity</dt>
                 <dd className="text-foreground">
                   {contractModal.quantity != null
                     ? `${contractModal.quantity.toLocaleString()}${contractModal.unit_of_measure ? ` ${contractModal.unit_of_measure}` : ""}`
                     : "—"}
                 </dd>
-                <dt className="text-muted-foreground">Unit price</dt>
+                <dt className="text-muted">Unit price</dt>
                 <dd className="text-foreground">
                   {contractModal.unit_price != null ? formatCurrency(contractModal.unit_price) : "—"}
                 </dd>
-                <dt className="text-muted-foreground">Total value</dt>
+                <dt className="text-muted">Total value</dt>
                 <dd className="font-semibold text-foreground">
                   {contractModal.total_value != null ? formatCurrency(contractModal.total_value) : "—"}
                 </dd>
