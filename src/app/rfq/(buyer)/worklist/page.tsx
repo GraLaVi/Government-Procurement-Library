@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
@@ -46,6 +46,14 @@ function isQuotableLine(p: PartSearchResult): boolean {
 const SCOPE_STORAGE_KEY = "rfq-worklist-scope";
 const STATUS_FILTER_STORAGE_KEY = "rfq-worklist-status-filter";
 const SOL_STATUS_STORAGE_KEY = "rfq-worklist-sol-status";
+const AUTO_REFRESH_STORAGE_KEY = "rfq-worklist-auto-refresh";
+const REFRESH_MINUTES_STORAGE_KEY = "rfq-worklist-refresh-minutes";
+
+// The queue changes under the buyer as the matcher lands new solicitations and
+// teammates claim rows, so it re-polls on a cadence. Five minutes is the
+// default: fast enough that a claim race is rare, slow enough to stay cheap.
+const REFRESH_MINUTE_OPTIONS = [1, 2, 5, 10, 15, 30] as const;
+const DEFAULT_REFRESH_MINUTES = 5;
 const SOL_STATUS_OPTIONS = ["open", "awarded", "closed", "cancelled", "removed", "unavailable", "all"] as const;
 type SolStatusFilter = (typeof SOL_STATUS_OPTIONS)[number];
 
@@ -108,6 +116,10 @@ export default function RfqWorklistPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshMinutes, setRefreshMinutes] = useState<number>(DEFAULT_REFRESH_MINUTES);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
 
   const [buyers, setBuyers] = useState<RfqBuyer[]>([]);
   const [settings, setSettings] = useState<RfqSettings | null>(null);
@@ -186,6 +198,12 @@ export default function RfqWorklistPage() {
       if (storedSol && (SOL_STATUS_OPTIONS as readonly string[]).includes(storedSol)) {
         setSolStatus(storedSol as SolStatusFilter);
       }
+      const storedAuto = localStorage.getItem(AUTO_REFRESH_STORAGE_KEY);
+      if (storedAuto === "0") setAutoRefresh(false);
+      const storedMinutes = Number(localStorage.getItem(REFRESH_MINUTES_STORAGE_KEY));
+      if ((REFRESH_MINUTE_OPTIONS as readonly number[]).includes(storedMinutes)) {
+        setRefreshMinutes(storedMinutes);
+      }
     } catch { /* ignore */ }
     setScopeInitialized(true);
   }, []);
@@ -195,8 +213,10 @@ export default function RfqWorklistPage() {
       localStorage.setItem(SCOPE_STORAGE_KEY, scope);
       localStorage.setItem(STATUS_FILTER_STORAGE_KEY, statusFilter);
       localStorage.setItem(SOL_STATUS_STORAGE_KEY, solStatus);
+      localStorage.setItem(AUTO_REFRESH_STORAGE_KEY, autoRefresh ? "1" : "0");
+      localStorage.setItem(REFRESH_MINUTES_STORAGE_KEY, String(refreshMinutes));
     } catch { /* ignore */ }
-  }, [scope, statusFilter, solStatus, scopeInitialized]);
+  }, [scope, statusFilter, solStatus, autoRefresh, refreshMinutes, scopeInitialized]);
 
   useEffect(() => { setPage(1); setSelected(new Set()); }, [scope, statusFilter, solStatus, sortBy, sortDir]);
 
@@ -209,8 +229,10 @@ export default function RfqWorklistPage() {
     }
   };
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // silent skips the full-page spinner — an auto-refresh replaces the rows in
+  // place, leaving selection, expanded rows and scroll position alone.
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({
@@ -225,6 +247,7 @@ export default function RfqWorklistPage() {
         return;
       }
       setData(body as RfqWorklistPage);
+      setLastRefreshedAt(new Date());
     } catch {
       setError("Network error loading the work queue.");
     } finally {
@@ -235,6 +258,26 @@ export default function RfqWorklistPage() {
   useEffect(() => {
     if (scopeInitialized && !authLoading && hasEnterprise) load();
   }, [scopeInitialized, authLoading, hasEnterprise, load]);
+
+  // Held in a ref so opening/closing a modal doesn't restart the interval.
+  const suspendRefreshRef = useRef(false);
+  useEffect(() => {
+    suspendRefreshRef.current = Boolean(
+      quoteContext || composeSelections || quotesFor || pdfFor || amendmentSolId != null || bulkBusy
+    );
+  }, [quoteContext, composeSelections, quotesFor, pdfFor, amendmentSolId, bulkBusy]);
+
+  useEffect(() => {
+    if (!autoRefresh || !scopeInitialized || authLoading || !hasEnterprise) return;
+    const id = setInterval(() => {
+      // Skip the tick when the tab is in the background or the buyer is mid-
+      // task in a modal — re-rendering rows underneath an open dialog buys
+      // nothing and can yank a row out from under the flow.
+      if (document.visibilityState !== "visible" || suspendRefreshRef.current) return;
+      load({ silent: true });
+    }, refreshMinutes * 60_000);
+    return () => clearInterval(id);
+  }, [autoRefresh, refreshMinutes, scopeInitialized, authLoading, hasEnterprise, load]);
 
   // Buyers + settings once.
   useEffect(() => {
@@ -419,6 +462,64 @@ export default function RfqWorklistPage() {
             Matched solicitations as a work queue. Click a solicitation for its parts, then
             Quote to request vendor pricing.
           </p>
+        </div>
+
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-2">
+            {/* Toggle pill + compact interval, mirroring the admin
+                dashboard's /monitoring/tasks header: the dot pulses while the
+                timer is live, and the interval only shows when it can act. */}
+            <button
+              type="button"
+              onClick={() => setAutoRefresh((on) => !on)}
+              aria-pressed={autoRefresh}
+              className={`inline-flex items-center gap-2 px-3 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
+                autoRefresh
+                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                  : "bg-muted/10 text-muted hover:bg-muted/20"
+              }`}
+              title={
+                autoRefresh
+                  ? `Re-checking the queue every ${refreshMinutes} min so new matches and teammates' claims appear without a page reload.`
+                  : "Auto-refresh is off — the queue only updates when you hit Refresh."
+              }
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${autoRefresh ? "bg-emerald-500 animate-pulse" : "bg-muted/50"}`}
+                aria-hidden="true"
+              />
+              Auto-refresh: {autoRefresh ? "ON" : "OFF"}
+            </button>
+            {autoRefresh && (
+              <select
+                className="px-1.5 py-1 rounded border border-border bg-card-bg text-card-foreground text-xs focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                value={refreshMinutes}
+                onChange={(e) => setRefreshMinutes(Number(e.target.value))}
+                aria-label="Auto-refresh interval"
+                title="How often the queue re-checks for new matches and claims"
+              >
+                {REFRESH_MINUTE_OPTIONS.map((m) => (
+                  <option key={m} value={m}>{m}m</option>
+                ))}
+              </select>
+            )}
+            {/* Not <Button size="sm"> — its smallest size stands a head
+                taller than the toggle pill, and a className override loses to
+                the component's own padding in Tailwind's source order. */}
+            <button
+              type="button"
+              onClick={() => load()}
+              disabled={loading}
+              className="inline-flex items-center px-3 py-1 rounded border border-primary text-primary text-xs font-medium transition-colors hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              Refresh
+            </button>
+          </div>
+          <span className="text-[11px] text-muted h-4">
+            {lastRefreshedAt
+              ? `Updated ${lastRefreshedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+              : ""}
+          </span>
         </div>
       </div>
 
