@@ -400,7 +400,7 @@ export default function BidMatchingPage() {
                 onChange={(e) => setSearchField(e.target.value as SearchField)}
                 aria-label="Field to search"
                 title="Which field the search term applies to"
-                className="text-sm border border-border bg-muted-light text-foreground rounded-l-lg border-r-0 px-2 py-1.5 focus:ring-2 focus:ring-primary focus:border-primary cursor-pointer"
+                className="text-sm border border-border bg-muted-light text-foreground rounded-l-lg border-r-0 px-2 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 cursor-pointer"
               >
                 {SEARCH_FIELDS.map((f) => (
                   <option key={f.value} value={f.value}>{f.label}</option>
@@ -411,7 +411,7 @@ export default function BidMatchingPage() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder={SEARCH_FIELDS.find((f) => f.value === searchField)?.placeholder}
-                className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-r-lg px-3 py-1.5 focus:ring-2 focus:ring-primary focus:border-primary"
+                className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-r-lg px-3 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
               />
             </div>
             {(hardOnly || appliedSearch || sortBy) && (
