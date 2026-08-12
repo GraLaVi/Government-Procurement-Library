@@ -1,11 +1,13 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { SolicitationNumberLink } from "@/components/library/SolicitationNumberLink";
 import { MatchStrengthBadge } from "@/components/ui/MatchStrengthBadge";
 import { Modal } from "@/components/ui/Modal";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
+import { BidMatchLineItems } from "@/components/bidmatching/BidMatchLineItems";
+import { PartIdentityLink } from "@/components/bidmatching/PartIdentityLink";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
+import { formatCurrency } from "@/lib/library/types";
 
 interface MatchedCondition {
   condition_type: string;
@@ -57,6 +59,23 @@ interface BidMatchResult {
   // ('on_backorder' | 'below_reorder_point' | 'recurring'). Null/absent when no
   // signal or the customer lacks the Maximum parts tier.
   demand_signal?: string | null;
+
+  // Primary line item — the item that triggered the match where the worker
+  // recorded it, else the largest by quantity. A solicitation can carry more;
+  // line_item_count drives the "+N more" affordance and the expanded row
+  // lists them all.
+  nsn?: string | null;
+  niin?: string | null;
+  fsc?: string | null;
+  mfg_cage?: string | null;
+  mfg_part_number?: string | null;
+  part_description?: string | null;
+  quantity?: number | null;
+  unit_of_issue?: string | null;
+  line_item_count?: number;
+  // SUM(requested_quantity * parts.gac) over the solicitation's line items —
+  // GAC, not unit_price, matching the RFQ worklist's "Est. value".
+  estimated_value?: number | null;
 }
 
 // Small demand chip for the results table. Neutral, descriptive labels.
@@ -95,10 +114,13 @@ interface BidMatchResultsTableProps {
   onPageChange: (page: number) => void;
 }
 
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  // Tolerate a full timestamp as well as a bare YYYY-MM-DD so the date is read
+  // in local time rather than shifting a day across the UTC boundary.
+  const d = new Date(dateStr.split("T")[0] + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
 }
 
 function ConditionBadge({ condition }: { condition: MatchedCondition }) {
@@ -118,10 +140,10 @@ function ConditionBadge({ condition }: { condition: MatchedCondition }) {
       }`}
     >
       {negated && <span className="font-bold text-[10px]">NOT</span>}
-      <span className="font-semibold text-muted-foreground">{condition.condition_type}:</span>
+      <span className="font-semibold text-muted">{condition.condition_type}:</span>
       <span className={negated ? "line-through" : ""}>{displayValue}</span>
       {condition.match_operator && condition.match_operator !== "eq" && (
-        <span className="text-[10px] uppercase text-muted-foreground/70">({condition.match_operator})</span>
+        <span className="text-[10px] uppercase text-muted/70">({condition.match_operator})</span>
       )}
     </span>
   );
@@ -162,10 +184,10 @@ export function BidMatchResultsTable({
   if (results.length === 0) {
     return (
       <div className="text-center py-16">
-        <svg className="mx-auto h-12 w-12 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <svg className="mx-auto h-12 w-12 text-muted/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
         </svg>
-        <p className="mt-4 text-muted-foreground">No matches found for this date.</p>
+        <p className="mt-4 text-muted">No matches found for this date.</p>
       </div>
     );
   }
@@ -173,42 +195,49 @@ export function BidMatchResultsTable({
   return (
     <div>
       {/* Results count */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs text-muted">
           Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} of {total.toLocaleString()} matches
         </p>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
+        <table className="w-full text-xs">
           <thead>
             <tr className="bg-muted-light border-b border-border">
-              <th className="w-8 px-2 py-3" aria-label="Expand"></th>
-              <th className="text-left px-4 py-3 font-semibold text-foreground">Solicitation</th>
-              <th className="text-left px-4 py-3 font-semibold text-foreground">Status</th>
-              <th className="text-left px-4 py-3 font-semibold text-foreground">Close Date</th>
-              <th className="text-left px-4 py-3 font-semibold text-foreground">Profile</th>
-              <th className="text-left px-4 py-3 font-semibold text-foreground">Match</th>
+              <th className="w-6 px-1.5 py-1.5" aria-label="Expand"></th>
+              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">Solicitation</th>
+              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">NSN</th>
+              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">Description</th>
+              <th className="text-right px-2.5 py-1.5 font-semibold text-foreground whitespace-nowrap">Qty</th>
+              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">UOM</th>
+              <th className="text-right px-2.5 py-1.5 font-semibold text-foreground whitespace-nowrap">Est. Value</th>
+              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground whitespace-nowrap">Posted</th>
+              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground whitespace-nowrap">Close Date</th>
+              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">Set-Aside</th>
+              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">Status</th>
             </tr>
           </thead>
           <tbody>
             {results.map((result) => {
               const isOpen = expanded.has(result.result_id);
+              // Line items beyond the one shown inline.
+              const extraItems = Math.max(0, (result.line_item_count ?? 0) - 1);
               return (
                 <Fragment key={result.result_id}>
                   <tr
                     className="border-b border-border last:border-0 hover:bg-muted-light/50 transition-colors"
                   >
-                    <td className="px-2 py-3 text-center">
+                    <td className="px-1.5 py-1.5 text-center">
                       <button
                         type="button"
                         onClick={() => toggleExpanded(result.result_id)}
-                        className="text-muted-foreground hover:text-foreground"
+                        className="text-muted hover:text-foreground cursor-pointer"
                         aria-label={isOpen ? "Collapse" : "Expand"}
                       >
                         <svg
-                          className={`w-4 h-4 transition-transform ${isOpen ? "rotate-90" : ""}`}
+                          className={`w-3.5 h-3.5 transition-transform ${isOpen ? "rotate-90" : ""}`}
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -218,22 +247,14 @@ export function BidMatchResultsTable({
                         </svg>
                       </button>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2.5 py-1.5">
                       <div className="flex flex-wrap items-center gap-1.5 font-medium">
-                        {result.solicitation_number ? (
-                          // Both DIBBS and SAM open the same parts modal, which lists
-                          // the matching parts and links through to the solicitation on
-                          // our site. SAM opportunities are now resolvable by
-                          // solicitation number through the parts search API, so they
-                          // use the identical link/modal as DIBBS. (The original
-                          // SAM.gov posting is still reachable via the icon below.)
-                          <SolicitationNumberLink
-                            solicitationNumber={result.solicitation_number}
-                            className="text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
-                          />
-                        ) : (
-                          <span className="text-foreground">-</span>
-                        )}
+                        {/* Plain text — the drill-down lives on the NSN link now.
+                            whitespace-nowrap keeps the number on one line when the
+                            viewport narrows; the badges beside it still wrap. */}
+                        <span className="text-foreground whitespace-nowrap">
+                          {result.solicitation_number || "—"}
+                        </span>
                         {/* View the solicitation PDF in a modal, mirroring the
                             parts/vendor search lists. Only DIBBS sols with a
                             PDF on disk set has_pdf. */}
@@ -299,51 +320,100 @@ export function BidMatchResultsTable({
                         />
                       </div>
                       {result.agency_code && (
-                        <div className="text-xs text-muted-foreground mt-0.5">{result.agency_code}</div>
+                        <div className="text-[11px] text-muted leading-tight">{result.agency_code}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3">
-                      <SolStatusBadge status={result.status} />
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      {formatDate(result.close_date)}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {result.profile_name}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <div className="flex items-start gap-2">
-                        <MatchStrengthBadge strength={result.match_strength} />
-                        {result.match_reason ? (
-                          <span
-                            className="text-xs text-foreground truncate max-w-[280px]"
-                            title={result.match_reason}
+                    {/* Primary line item. "+N more" expands the row rather than
+                        opening a modal — the full list renders there. */}
+                    <td className="px-2.5 py-1.5 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <PartIdentityLink part={result} className="data-field font-medium" />
+                        {extraItems > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(result.result_id)}
+                            title={`${result.line_item_count} line items on this solicitation`}
+                            className="text-[10px] font-semibold text-muted hover:text-primary border border-border rounded px-1 py-0.5 cursor-pointer"
                           >
-                            {result.match_reason}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            {result.matched_conditions.length} condition
-                            {result.matched_conditions.length === 1 ? "" : "s"}
-                          </span>
+                            +{extraItems} more
+                          </button>
                         )}
                       </div>
+                    </td>
+                    <td className="px-2.5 py-1.5 text-foreground">
+                      {result.part_description ? (
+                        <span
+                          className="block max-w-[260px] truncate"
+                          title={result.part_description}
+                        >
+                          {result.part_description}
+                        </span>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-right text-muted data-field whitespace-nowrap">
+                      {result.quantity != null ? result.quantity.toLocaleString() : "—"}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-muted whitespace-nowrap">
+                      {result.unit_of_issue || "—"}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-right text-muted data-field whitespace-nowrap">
+                      {result.estimated_value != null ? formatCurrency(result.estimated_value) : "—"}
+                    </td>
+                    {/* Posted date. DIBBS rows carry it as issue_date; SAM rows
+                        as posted_date. Neither source populates both. */}
+                    <td className="px-2.5 py-1.5 text-muted whitespace-nowrap">
+                      {formatDate(result.posted_date ?? result.issue_date)}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-muted whitespace-nowrap">
+                      {formatDate(result.close_date)}
+                    </td>
+                    {/* Prefer the server-resolved label; fall back to the raw
+                        string so an unmapped code still shows something. */}
+                    <td className="px-2.5 py-1.5 text-muted">
+                      {result.set_aside_label || result.set_aside || "—"}
+                    </td>
+                    <td className="px-2.5 py-1.5">
+                      <SolStatusBadge status={result.status} />
                     </td>
                   </tr>
                   {isOpen && (
                     <tr className="border-b border-border last:border-0 bg-muted-light/30">
-                      <td colSpan={6} className="px-4 py-3">
-                        <div className="text-xs text-muted-foreground mb-2">Matched conditions</div>
-                        <div className="flex flex-wrap gap-1">
-                          {result.matched_conditions.map((cond, idx) => (
-                            <ConditionBadge key={idx} condition={cond} />
-                          ))}
-                        </div>
-                        {result.set_aside_label && (
-                          <div className="mt-3 text-xs text-muted-foreground">
-                            Set-aside: <span className="text-foreground">{result.set_aside_label}</span>
+                      {/* Set-aside has its own column now. This row carries the
+                          full line-item list plus the match detail that used to
+                          sit in the dropped Profile and Match columns. */}
+                      <td colSpan={11} className="px-3 py-3">
+                        <div className="space-y-4">
+                          {/* Only worth listing when there's more than one — a
+                              single line item is already shown in the NSN column,
+                              and skipping it avoids a pointless fetch. */}
+                          {extraItems > 0 && (
+                            <BidMatchLineItems
+                              solicitationNumber={result.solicitation_number}
+                              expectedCount={result.line_item_count ?? 0}
+                            />
+                          )}
+
+                          <div>
+                            <div className="text-xs text-muted mb-2">Why it matched</div>
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <MatchStrengthBadge strength={result.match_strength} />
+                              <span className="text-xs text-muted">
+                                Profile:{" "}
+                                <span className="text-foreground">{result.profile_name}</span>
+                              </span>
+                              {result.match_reason && (
+                                <span className="text-xs text-foreground">{result.match_reason}</span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {result.matched_conditions.map((cond, idx) => (
+                                <ConditionBadge key={idx} condition={cond} />
+                              ))}
+                            </div>
                           </div>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -399,7 +469,7 @@ export function BidMatchResultsTable({
           >
             Previous
           </button>
-          <span className="text-sm text-muted-foreground px-3">
+          <span className="text-sm text-muted px-3">
             Page {page} of {totalPages}
           </span>
           <button
