@@ -2094,13 +2094,17 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
                   // SAM rows link out to the public SAM.gov opportunity page. The
                   // trailing external-link glyph both marks the row as a SAM.gov
                   // opportunity (in lieu of a Source column / bulky badge) and
-                  // signals the link opens off-site.
+                  // signals the link opens off-site. draggable={false} so a drag
+                  // across the number selects the text instead of starting a
+                  // link-drag; select-text overrides the user-select: none that
+                  // Chrome and Safari put on <button>.
                   sol.sam_url ? (
                     <a
                       href={sol.sam_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
+                      draggable={false}
+                      className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer select-text"
                       onClick={(e) => e.stopPropagation()}
                       title={sol.notice_type ? `View on SAM.gov · ${sol.notice_type}` : "View on SAM.gov"}
                     >
@@ -2113,7 +2117,7 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
                     // No public URL — keep a compact muted marker so the SAM.gov
                     // source is still visible.
                     <Tooltip content={sol.notice_type ? `SAM.gov · ${sol.notice_type}` : "SAM.gov opportunity"}>
-                      <span className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-foreground">
+                      <span className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-foreground select-text">
                         {displayNumber}
                         <span className="text-[10px] font-medium uppercase tracking-wide text-muted">SAM.gov</span>
                       </span>
@@ -2132,7 +2136,7 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
                       e.stopPropagation();
                       setPdfModal({ id: sol.solicitation_id, number: sol.solicitation_number });
                     }}
-                    className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
+                    className="inline-flex items-center gap-1 text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer select-text"
                   >
                     {displayNumber}
                     <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -2142,7 +2146,7 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
                 ) : (
                   // No PDF — plain text (a solicitation-search link here would just
                   // reload the same view, so it's redundant).
-                  <span className="text-xs font-mono font-semibold text-foreground">
+                  <span className="text-xs font-mono font-semibold text-foreground select-text">
                     {displayNumber}
                   </span>
                 )

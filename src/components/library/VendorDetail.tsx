@@ -1561,7 +1561,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                   // modal with that text (plus a link out to SAM.gov).
                   <button
                     type="button"
-                    className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer text-left"
+                    className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer text-left select-text"
                     onClick={(e) => {
                       e.stopPropagation();
                       setSamDescModal({
@@ -1576,11 +1576,14 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                   </button>
                 ) : (
                   // No description — link straight out to the SAM.gov page.
+                  // draggable={false} so a drag across the number selects the
+                  // text instead of starting a link-drag.
                   <a
                     href={sol.sam_url ?? undefined}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary ${sol.sam_url ? "cursor-pointer" : "cursor-default no-underline"}`}
+                    draggable={false}
+                    className={`text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary select-text ${sol.sam_url ? "cursor-pointer" : "cursor-default no-underline"}`}
                     onClick={(e) => e.stopPropagation()}
                     title={sol.sam_url ? "View on SAM.gov" : undefined}
                   >
@@ -1588,7 +1591,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                   </a>
                 )
               ) : (
-                <span className="text-xs font-mono font-semibold">{sol.solicitation_number}</span>
+                <span className="text-xs font-mono font-semibold select-text">{sol.solicitation_number}</span>
               )}
               {isSam && (() => {
                 // Color-coded notice-type chip (green = biddable, amber = early
