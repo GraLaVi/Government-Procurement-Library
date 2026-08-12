@@ -87,6 +87,12 @@ interface BidMatchResult {
   unit_of_issue?: string | null;
   line_item_count?: number;
   estimated_value?: number | null;
+  // Customer-scoped "come back to this" flag, and prior awards to the
+  // customer's own CAGE for the row's primary part. See BidMatchResultsTable.
+  interested?: boolean;
+  win_count?: number;
+  last_won_on?: string | null;
+  recent_awards?: { contract_number: string; contract_date: string; quantity?: number | null; unit_price?: number | null }[];
 }
 
 interface ResultsResponse {
@@ -124,6 +130,7 @@ export default function BidMatchingPage() {
   // would only reorder the slice already on screen.
   const [sortBy, setSortBy] = useState<BidSortKey>("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [interestedOnly, setInterestedOnly] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setAppliedSearch(searchInput.trim()), 300);
@@ -134,7 +141,39 @@ export default function BidMatchingPage() {
     // Reset to page 1 whenever the filters or sort change so we don't land on
     // an empty out-of-range page after narrowing results.
     setPage(1);
-  }, [hardOnly, appliedSearch, searchField, sortBy, sortDir]);
+  }, [hardOnly, appliedSearch, searchField, sortBy, sortDir, interestedOnly]);
+
+  // Optimistic: the star flips immediately and reverts if the write fails.
+  // Flags are customer-scoped, so a teammate's flag can arrive on the next
+  // fetch — this only reconciles the row the user actually clicked.
+  const handleToggleInterest = useCallback(
+    async (result: BidMatchResult, interested: boolean) => {
+      const apply = (value: boolean) =>
+        setResults((prev) =>
+          prev.map((r) => (r.result_id === result.result_id ? { ...r, interested: value } : r))
+        );
+      apply(interested);
+      try {
+        const res = await fetch("/api/bid-matching/results/interest", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            solicitation_id: result.solicitation_id,
+            sam_opportunity_id: result.sam_opportunity_id ?? null,
+            interested,
+          }),
+        });
+        if (!res.ok) {
+          apply(!interested);
+          setError("Could not save the flag. Please try again.");
+        }
+      } catch {
+        apply(!interested);
+        setError("Could not save the flag. Please try again.");
+      }
+    },
+    [],
+  );
 
   // First click picks the direction that column is actually useful in: the
   // biggest quantity/value first, but the SOONEST close date (that's the
@@ -215,6 +254,7 @@ export default function BidMatchingPage() {
       field: SearchField,
       sort: BidSortKey,
       dir: "asc" | "desc",
+      onlyInterested: boolean,
     ) => {
       setIsLoadingResults(true);
       setError(null);
@@ -235,6 +275,7 @@ export default function BidMatchingPage() {
           params.set("sort_by", sort);
           params.set("sort_dir", dir);
         }
+        if (onlyInterested) params.set("interested_only", "true");
         const res = await fetch(`/api/bid-matching/results?${params}`);
         if (!res.ok) throw new Error("Failed to load match results");
         const data: ResultsResponse = await res.json();
@@ -256,11 +297,11 @@ export default function BidMatchingPage() {
     if (selectedSource === "dibbs" && !selectedIssueDate) return;
     fetchResults(
       selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly,
-      appliedSearch, searchField, sortBy, sortDir,
+      appliedSearch, searchField, sortBy, sortDir, interestedOnly,
     );
   }, [
     selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly,
-    appliedSearch, searchField, sortBy, sortDir, fetchResults,
+    appliedSearch, searchField, sortBy, sortDir, interestedOnly, fetchResults,
   ]);
 
   const handleDateSelect = (selection: DateSelection) => {
@@ -392,6 +433,22 @@ export default function BidMatchingPage() {
               />
               Hard hits only
             </label>
+            {/* Flags are shared across the account, so this is "what the team
+                marked", not "what I marked". */}
+            <button
+              type="button"
+              onClick={() => setInterestedOnly((v) => !v)}
+              aria-pressed={interestedOnly}
+              title="Show only solicitations your team flagged to come back to"
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm transition-colors cursor-pointer ${
+                interestedOnly
+                  ? "border-amber-400 bg-amber-50 text-amber-800"
+                  : "border-border text-muted hover:text-foreground"
+              }`}
+            >
+              <span className={interestedOnly ? "text-amber-500" : "text-muted/50"}>★</span>
+              Flagged only
+            </button>
             {/* Field selector + term, joined into one control so it reads as a
                 single search rather than two unrelated inputs. */}
             <div className="flex-1 min-w-[280px] max-w-lg flex">
@@ -400,7 +457,7 @@ export default function BidMatchingPage() {
                 onChange={(e) => setSearchField(e.target.value as SearchField)}
                 aria-label="Field to search"
                 title="Which field the search term applies to"
-                className="text-sm border border-border bg-muted-light text-foreground rounded-l-lg border-r-0 px-2 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 cursor-pointer"
+                className="text-sm border border-border bg-muted-light text-foreground rounded-l-lg border-r-0 px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
               >
                 {SEARCH_FIELDS.map((f) => (
                   <option key={f.value} value={f.value}>{f.label}</option>
@@ -411,10 +468,10 @@ export default function BidMatchingPage() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder={SEARCH_FIELDS.find((f) => f.value === searchField)?.placeholder}
-                className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-r-lg px-3 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-r-lg px-3 py-1.5 focus:outline-none focus:border-primary"
               />
             </div>
-            {(hardOnly || appliedSearch || sortBy) && (
+            {(hardOnly || appliedSearch || sortBy || interestedOnly) && (
               <button
                 type="button"
                 onClick={() => {
@@ -423,6 +480,7 @@ export default function BidMatchingPage() {
                   setAppliedSearch("");
                   setSortBy("");
                   setSortDir("desc");
+                  setInterestedOnly(false);
                 }}
                 className="text-xs text-muted hover:text-foreground cursor-pointer"
               >
@@ -444,6 +502,7 @@ export default function BidMatchingPage() {
                 sortBy={sortBy}
                 sortDir={sortDir}
                 onSort={handleSort}
+                onToggleInterest={handleToggleInterest}
               />
             ) : (
               <div className="text-center py-16">

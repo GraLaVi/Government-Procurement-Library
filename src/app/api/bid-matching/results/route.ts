@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
       params.set('search_field', searchField);
       params.set('search', search);
     }
+    if (searchParams.get('interested_only') === 'true') params.set('interested_only', 'true');
 
     const backendUrl = `${AUTH_CONFIG.API_BASE_URL}/bid-matching/results?${params.toString()}`;
 
