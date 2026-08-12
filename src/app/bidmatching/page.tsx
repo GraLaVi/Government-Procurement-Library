@@ -5,7 +5,16 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { BidMatchDateMenu, type DateSelection } from "@/components/bidmatching/BidMatchDateMenu";
-import { BidMatchResultsTable } from "@/components/bidmatching/BidMatchResultsTable";
+import { BidMatchResultsTable, type BidSortKey } from "@/components/bidmatching/BidMatchResultsTable";
+
+/** Fields the results search can target. Values match the API's search_field. */
+const SEARCH_FIELDS = [
+  { value: "reason", label: "Match reason", placeholder: "Search match reason…" },
+  { value: "description", label: "Description", placeholder: "Search item description…" },
+  { value: "nsn", label: "NSN / part #", placeholder: "Search NSN, NIIN or part #…" },
+  { value: "solicitation", label: "Solicitation #", placeholder: "Search solicitation #…" },
+] as const;
+type SearchField = (typeof SEARCH_FIELDS)[number]["value"];
 
 interface IssueDateEntry {
   issue_date: string;
@@ -105,21 +114,39 @@ export default function BidMatchingPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasProfiles, setHasProfiles] = useState<boolean | null>(null);
   const [hardOnly, setHardOnly] = useState(false);
-  // Debounced reason filter — pushes to `appliedReason` after typing pauses
-  // so we don't refetch on every keystroke.
-  const [reasonInput, setReasonInput] = useState("");
-  const [appliedReason, setAppliedReason] = useState("");
+  // Debounced search — pushes to `appliedSearch` after typing pauses so we
+  // don't refetch on every keystroke. The field selector says which column
+  // the term applies to; match reason is the historical default.
+  const [searchField, setSearchField] = useState<SearchField>("reason");
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  // Sorting is server-side: the page holds 50 of N rows, so sorting here
+  // would only reorder the slice already on screen.
+  const [sortBy, setSortBy] = useState<BidSortKey>("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
-    const t = setTimeout(() => setAppliedReason(reasonInput.trim()), 300);
+    const t = setTimeout(() => setAppliedSearch(searchInput.trim()), 300);
     return () => clearTimeout(t);
-  }, [reasonInput]);
+  }, [searchInput]);
 
   useEffect(() => {
-    // Reset to page 1 whenever the filters change so we don't land on
+    // Reset to page 1 whenever the filters or sort change so we don't land on
     // an empty out-of-range page after narrowing results.
     setPage(1);
-  }, [hardOnly, appliedReason]);
+  }, [hardOnly, appliedSearch, searchField, sortBy, sortDir]);
+
+  // First click picks the direction that column is actually useful in: the
+  // biggest quantity/value first, but the SOONEST close date (that's the
+  // urgent end) and solicitation numbers A-Z. Clicking again flips.
+  const handleSort = (key: BidSortKey) => {
+    if (key === sortBy) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir(key === "close_date" || key === "solicitation" ? "asc" : "desc");
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -184,7 +211,10 @@ export default function BidMatchingPage() {
       issueDate: string | null,
       pg: number,
       strength: boolean,
-      reason: string,
+      search: string,
+      field: SearchField,
+      sort: BidSortKey,
+      dir: "asc" | "desc",
     ) => {
       setIsLoadingResults(true);
       setError(null);
@@ -197,7 +227,14 @@ export default function BidMatchingPage() {
         });
         if (source === "dibbs" && issueDate) params.set("date", issueDate);
         if (strength) params.set("strength", "HARD");
-        if (reason) params.set("reason_search", reason);
+        if (search) {
+          params.set("search_field", field);
+          params.set("search", search);
+        }
+        if (sort) {
+          params.set("sort_by", sort);
+          params.set("sort_dir", dir);
+        }
         const res = await fetch(`/api/bid-matching/results?${params}`);
         if (!res.ok) throw new Error("Failed to load match results");
         const data: ResultsResponse = await res.json();
@@ -217,8 +254,14 @@ export default function BidMatchingPage() {
   useEffect(() => {
     if (!selectedRunDate) return;
     if (selectedSource === "dibbs" && !selectedIssueDate) return;
-    fetchResults(selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly, appliedReason);
-  }, [selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly, appliedReason, fetchResults]);
+    fetchResults(
+      selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly,
+      appliedSearch, searchField, sortBy, sortDir,
+    );
+  }, [
+    selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly,
+    appliedSearch, searchField, sortBy, sortDir, fetchResults,
+  ]);
 
   const handleDateSelect = (selection: DateSelection) => {
     setSelectedRunDate(selection.runDate);
@@ -349,20 +392,39 @@ export default function BidMatchingPage() {
               />
               Hard hits only
             </label>
-            <div className="flex-1 min-w-[200px] max-w-md">
+            {/* Field selector + term, joined into one control so it reads as a
+                single search rather than two unrelated inputs. */}
+            <div className="flex-1 min-w-[280px] max-w-lg flex">
+              <select
+                value={searchField}
+                onChange={(e) => setSearchField(e.target.value as SearchField)}
+                aria-label="Field to search"
+                title="Which field the search term applies to"
+                className="text-sm border border-border bg-muted-light text-foreground rounded-l-lg border-r-0 px-2 py-1.5 focus:ring-2 focus:ring-primary focus:border-primary cursor-pointer"
+              >
+                {SEARCH_FIELDS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
               <input
                 type="text"
-                value={reasonInput}
-                onChange={(e) => setReasonInput(e.target.value)}
-                placeholder="Search match reason…"
-                className="w-full text-sm border border-border bg-card-bg text-foreground rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-primary focus:border-primary"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={SEARCH_FIELDS.find((f) => f.value === searchField)?.placeholder}
+                className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-r-lg px-3 py-1.5 focus:ring-2 focus:ring-primary focus:border-primary"
               />
             </div>
-            {(hardOnly || appliedReason) && (
+            {(hardOnly || appliedSearch || sortBy) && (
               <button
                 type="button"
-                onClick={() => { setHardOnly(false); setReasonInput(""); setAppliedReason(""); }}
-                className="text-xs text-muted hover:text-foreground"
+                onClick={() => {
+                  setHardOnly(false);
+                  setSearchInput("");
+                  setAppliedSearch("");
+                  setSortBy("");
+                  setSortDir("desc");
+                }}
+                className="text-xs text-muted hover:text-foreground cursor-pointer"
               >
                 Clear filters
               </button>
@@ -379,6 +441,9 @@ export default function BidMatchingPage() {
                 page={page}
                 pageSize={PAGE_SIZE}
                 onPageChange={handlePageChange}
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSort={handleSort}
               />
             ) : (
               <div className="text-center py-16">

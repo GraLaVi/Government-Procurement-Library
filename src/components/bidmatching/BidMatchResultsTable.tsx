@@ -105,6 +105,9 @@ function DemandSignalChip({ signal }: { signal?: string | null }) {
   );
 }
 
+/** Columns the server can sort on. "" = the default newest-first ordering. */
+export type BidSortKey = "" | "solicitation" | "quantity" | "estimated_value" | "close_date";
+
 interface BidMatchResultsTableProps {
   results: BidMatchResult[];
   isLoading: boolean;
@@ -112,6 +115,62 @@ interface BidMatchResultsTableProps {
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  sortBy: BidSortKey;
+  sortDir: "asc" | "desc";
+  onSort: (key: BidSortKey) => void;
+}
+
+/**
+ * Sortable column header for this table.
+ *
+ * Deliberately not the RFQ SortHeader: that one carries the shared DataTable
+ * header styling (px-3 py-2, uppercase, muted), which would clash with the
+ * plain <th>s beside it here. Same chevron affordance, this table's type.
+ */
+function SortTh({
+  label, sortKey, sortBy, sortDir, onSort, align = "left", className = "",
+}: {
+  label: string;
+  sortKey: Exclude<BidSortKey, "">;
+  sortBy: BidSortKey;
+  sortDir: "asc" | "desc";
+  onSort: (k: BidSortKey) => void;
+  align?: "left" | "right";
+  className?: string;
+}) {
+  const active = sortBy === sortKey;
+  return (
+    // Written out in full — Tailwind scans for complete class names, so a
+    // `text-${align}` template would never be generated.
+    <th className={`${align === "right" ? "text-right" : "text-left"} px-2.5 py-1.5 font-semibold text-foreground ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        title={`Sort by ${label.toLowerCase()}`}
+        className={`inline-flex items-center gap-1 font-semibold cursor-pointer select-none ${
+          align === "right" ? "flex-row-reverse" : ""
+        } ${active ? "text-foreground" : "text-foreground/70 hover:text-foreground"}`}
+      >
+        {label}
+        {/* The inactive arrow stays faint rather than absent so the column
+            reads as sortable before it is clicked. */}
+        <svg
+          className={`w-3 h-3 shrink-0 ${active ? "text-primary" : "text-muted/40"}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d={active && sortDir === "asc" ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}
+          />
+        </svg>
+      </button>
+    </th>
+  );
 }
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -161,6 +220,9 @@ export function BidMatchResultsTable({
   page,
   pageSize,
   onPageChange,
+  sortBy,
+  sortDir,
+  onSort,
 }: BidMatchResultsTableProps) {
   const totalPages = Math.ceil(total / pageSize);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -212,14 +274,14 @@ export function BidMatchResultsTable({
           <thead>
             <tr className="bg-muted-light border-b border-border">
               <th className="w-6 px-1.5 py-1.5" aria-label="Expand"></th>
-              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">Solicitation</th>
+              <SortTh label="Solicitation" sortKey="solicitation" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">NSN</th>
               <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">Description</th>
-              <th className="text-right px-2.5 py-1.5 font-semibold text-foreground whitespace-nowrap">Qty</th>
+              <SortTh label="Qty" sortKey="quantity" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
               <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">UOM</th>
-              <th className="text-right px-2.5 py-1.5 font-semibold text-foreground whitespace-nowrap">Est. Value</th>
+              <SortTh label="Est. Value" sortKey="estimated_value" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
               <th className="text-left px-2.5 py-1.5 font-semibold text-foreground whitespace-nowrap">Posted</th>
-              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground whitespace-nowrap">Close Date</th>
+              <SortTh label="Close Date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
               <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">Set-Aside</th>
               <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">Status</th>
             </tr>
@@ -374,10 +436,21 @@ export function BidMatchResultsTable({
                     <td className="px-2.5 py-1.5 text-muted whitespace-nowrap">
                       {formatDate(result.close_date)}
                     </td>
-                    {/* Prefer the server-resolved label; fall back to the raw
-                        string so an unmapped code still shows something. */}
-                    <td className="px-2.5 py-1.5 text-muted">
-                      {result.set_aside_label || result.set_aside || "—"}
+                    {/* The short code carries the column; the readable label
+                        moves to the tooltip, matching the vendor Open
+                        Solicitations tab. Falls back to the label, then the raw
+                        string, so an unmapped row still shows something. */}
+                    <td className="px-2.5 py-1.5 text-muted whitespace-nowrap">
+                      {result.set_aside_code ? (
+                        <span
+                          className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-muted/15 text-foreground"
+                          title={result.set_aside_label || result.set_aside || undefined}
+                        >
+                          {result.set_aside_code}
+                        </span>
+                      ) : (
+                        result.set_aside_label || result.set_aside || "—"
+                      )}
                     </td>
                     <td className="px-2.5 py-1.5">
                       <SolStatusBadge status={result.status} />
