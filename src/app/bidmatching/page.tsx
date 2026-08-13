@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { BidMatchDateMenu, type DateSelection } from "@/components/bidmatching/BidMatchDateMenu";
 import { BidMatchResultsTable, type BidSortKey } from "@/components/bidmatching/BidMatchResultsTable";
+import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
 
 /** Fields the results search can target. Values match the API's search_field. */
 const SEARCH_FIELDS = [
@@ -72,6 +73,10 @@ interface BidMatchResult {
   solicitation_type?: string | null;
   // Label resolved from code_definitions (code_type='SOLICITATION_TYPE').
   solicitation_type_label?: string | null;
+  // Bid-qualification terms off the solicitation, rendered in the expanded
+  // row. Codes are unresolved — labels come from the page-level
+  // bid_term_definitions map. Always null on SAM-source rows.
+  bid_terms?: SolicitationBidTerms | null;
   sam_url?: string | null;
   // Maximum-tier DLA demand signal (strongest across the opportunity's NIINs).
   demand_signal?: string | null;
@@ -103,6 +108,10 @@ interface ResultsResponse {
   page: number;
   page_size: number;
   match_date: string;
+  // code_type -> code -> {label, description} for every code in
+  // results[].bid_terms. Page-level so the same ~110 DLA definitions aren't
+  // repeated on all 50 rows.
+  bid_term_definitions?: BidTermDefinitions;
 }
 
 const PAGE_SIZE = 50;
@@ -115,6 +124,9 @@ export default function BidMatchingPage() {
   const [selectedIssueDate, setSelectedIssueDate] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<"dibbs" | "sam">("dibbs");
   const [results, setResults] = useState<BidMatchResult[]>([]);
+  // Bid-term vocabulary for the expanded row, refreshed with each page of
+  // results. Near-static, so a stale-by-one-request copy is harmless.
+  const [bidTermDefinitions, setBidTermDefinitions] = useState<BidTermDefinitions>({});
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [isLoadingDates, setIsLoadingDates] = useState(true);
@@ -283,6 +295,12 @@ export default function BidMatchingPage() {
         const data: ResultsResponse = await res.json();
         setResults(data.results);
         setTotal(data.total);
+        // The SAM path returns an EMPTY map, not a missing one — SAM rows
+        // carry no bid terms. Keep whatever we already hold rather than
+        // blanking it, so switching back to a DIBBS date doesn't briefly
+        // render bare codes while the next response lands.
+        const defs = data.bid_term_definitions;
+        if (defs && Object.keys(defs).length > 0) setBidTermDefinitions(defs);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load match results");
         setResults([]);
@@ -511,6 +529,7 @@ export default function BidMatchingPage() {
             {selectedRunDate && (selectedSource === "sam" || selectedIssueDate) ? (
               <BidMatchResultsTable
                 results={results}
+                bidTermDefinitions={bidTermDefinitions}
                 isLoading={isLoadingResults}
                 total={total}
                 page={page}
