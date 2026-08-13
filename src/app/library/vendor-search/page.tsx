@@ -212,11 +212,15 @@ function VendorSearchPageContent() {
           if (oldest !== undefined) searchCache.current.delete(oldest);
         }
 
-        // Save to recent actions (fire-and-forget)
-        try {
-          await addAction({ query_type: type, query: query.trim() } as VendorSearchActionData);
-        } catch (err) {
-          console.error('Failed to save search to recent actions:', err);
+        // Save to recent actions — only when the search produced results.
+        // A zero-result search is not worth offering back to the user as a
+        // recent search or as the default form value on next visit.
+        if (searchResponse.results.length > 0) {
+          try {
+            await addAction({ query_type: type, query: query.trim() } as VendorSearchActionData);
+          } catch (err) {
+            console.error('Failed to save search to recent actions:', err);
+          }
         }
 
         if (searchResponse.results.length > 0) {
@@ -258,15 +262,18 @@ function VendorSearchPageContent() {
           if (oldest !== undefined) searchCache.current.delete(oldest);
         }
 
-        // Save search to recent actions
-        try {
-          const actionData: VendorSearchActionData = {
-            query_type: type,
-            query: query.trim(),
-          };
-          await addAction(actionData);
-        } catch (err) {
-          console.error('Failed to save search to recent actions:', err);
+        // Save search to recent actions — only when the search produced
+        // results (see the CAGE branch above).
+        if (searchResponse.results.length > 0) {
+          try {
+            const actionData: VendorSearchActionData = {
+              query_type: type,
+              query: query.trim(),
+            };
+            await addAction(actionData);
+          } catch (err) {
+            console.error('Failed to save search to recent actions:', err);
+          }
         }
 
         // Collapse search form after successful search with results
