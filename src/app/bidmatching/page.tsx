@@ -451,24 +451,39 @@ export default function BidMatchingPage() {
             </button>
             {/* Field selector + term, joined into one control so it reads as a
                 single search rather than two unrelated inputs. */}
-            <div className="flex-1 min-w-[280px] max-w-lg flex">
-              <select
-                value={searchField}
-                onChange={(e) => setSearchField(e.target.value as SearchField)}
-                aria-label="Field to search"
-                title="Which field the search term applies to"
-                className="text-sm border border-border bg-muted-light text-foreground rounded-l-lg border-r-0 px-2 py-1.5 focus:outline-none focus:border-primary cursor-pointer"
-              >
-                {SEARCH_FIELDS.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
+            {/* ONE border, on the wrapper — the select and input are
+                border-0, so there is no second edge to see at the seam or on
+                focus. The select also needs appearance-none: a native select
+                paints its own frame inside an author border, which is the
+                other half of the doubling. Its chevron is drawn back in. */}
+            <div className="flex-1 min-w-[280px] max-w-lg flex items-stretch rounded-lg border border-border overflow-hidden focus-within:border-primary">
+              <div className="relative flex items-stretch">
+                <select
+                  value={searchField}
+                  onChange={(e) => setSearchField(e.target.value as SearchField)}
+                  aria-label="Field to search"
+                  title="Which field the search term applies to"
+                  className="appearance-none border-0 bg-muted-light text-foreground text-sm pl-2.5 pr-7 py-1.5 focus:outline-none cursor-pointer"
+                >
+                  {SEARCH_FIELDS.map((f) => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+                <svg
+                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted"
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+              {/* The seam: a 1px element, not two adjacent borders. */}
+              <span className="w-px bg-border shrink-0" aria-hidden="true" />
               <input
                 type="text"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder={SEARCH_FIELDS.find((f) => f.value === searchField)?.placeholder}
-                className="flex-1 min-w-0 text-sm border border-border bg-card-bg text-foreground rounded-r-lg px-3 py-1.5 focus:outline-none focus:border-primary"
+                className="flex-1 min-w-0 border-0 bg-card-bg text-foreground text-sm px-3 py-1.5 focus:outline-none"
               />
             </div>
             {(hardOnly || appliedSearch || sortBy || interestedOnly) && (
