@@ -72,13 +72,34 @@ before taking them over.
 
 Three tabs — **My solicitations** (your default queue), **Unassigned**, and
 **All** — over every open matched solicitation. Each row shows the
-solicitation number with the same badges as bid-matching (amendments,
-fast-award type), the **purchase requisition number**, your work status,
-the close date with days remaining, set-aside, the **estimated value**
-(line quantities × the government acquisition cost — sortable, like every
-other column), and the assignee. When the solicitation's PDF is on file, a
-document icon next to the number opens it right there — same viewer as
-Parts Search.
+solicitation number and its badges, the **purchase requisition number**,
+your work status, the close date with days remaining, set-aside, the
+**estimated value** (line quantities × the government acquisition cost —
+sortable, like every other column), the solicitation status, and the
+assignee. When the solicitation's PDF is on file, a document icon next to
+the number opens it right there — same viewer as Parts Search.
+
+### The badges beside a solicitation number
+
+- **Amended** — the solicitation has changed. Click it for a timeline of
+  every recorded change, before and since it was matched to you.
+- **Fast Award** and the other DLA type indicators — see
+  [Solicitation type indicators](/help/solicitations-and-contracts#solicitation-type-indicators).
+- **FAT** — a contractor **First Article Test** is required: you must
+  produce initial sample units and have them approved before shipping full
+  production, which adds cost and lead time to the bid. Click for the
+  specifics and the FAR clause. This badge matters here because the
+  quotable-items list hides the placeholder line that carries the
+  requirement, so it would otherwise be invisible on this page.
+- **A trophy with a number** — you have previously been awarded contracts
+  for that many of this solicitation's parts. Click it to see which parts,
+  how many times, and the unit price you were awarded — usually the most
+  useful figure you have when pricing a new bid. It counts awards made to
+  your own CAGE; work delivered under a partner's CAGE is their award and
+  does not appear. When the most recent win is over five years old the
+  badge shows as an outline, since the price is old enough to mislead.
+- **View quotes** and **In cart** — work already in flight on the
+  solicitation. See [Work in progress you can see](#work-in-progress-you-can-see).
 
 Two filters sit above the table: your **work status**, and the
 **solicitation status** — it defaults to open solicitations, but you can

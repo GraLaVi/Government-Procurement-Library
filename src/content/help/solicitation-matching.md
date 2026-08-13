@@ -37,8 +37,8 @@ Each match row shows:
 
 Two badges can appear next to the NSN:
 
-- **FIRST ARTICLE** — the solicitation requires a contractor first article test. Click it for what that commits you to. See [First article requirements](#first-article-requirements).  
-- **★ WON n×** — you have won this part before. Click it for your award history, including what you charged. See [Parts you have won before](#parts-you-have-won-before).
+- **FAT** — the solicitation requires a contractor First Article Test. Click it for what that commits you to. See [First article requirements](#first-article-requirements).  
+- **A trophy with a number** — you have won this part before, that many times. Click it for your award history, including what you charged. See [Parts you have won before](#parts-you-have-won-before).
 
 **Which profile matched, and why,** now lives in the expanded row rather than its own columns. Click the arrow at the left of any row to see the profile name, the **Hard** or **Soft** badge, and the reason the match fired — for example *keyword 'carabiner' in description* — alongside the full line-item list.
 
@@ -56,9 +56,9 @@ Flags belong to your organization, not to you personally: everyone on your accou
 
 ## Parts you have won before
 
-When you have previously been awarded a contract for the part on a row, it carries a **★ WON n×** badge. Click it to see your award history for that part — contract number, date, quantity, and the unit price you were awarded, which is usually the most useful number on the page when you are deciding what to bid.
+When you have previously been awarded a contract for the part on a row, it carries a trophy badge with the number of times you have won it. Click it to see your award history for that part — contract number, date, quantity, and the unit price you were awarded, which is usually the most useful number on the page when you are deciding what to bid.
 
-Awards older than five years show the badge without its fill and with the year on the face. The award still counts; the price is old enough that material costs have likely moved, so treat it as history rather than a guide.
+When the most recent award is more than five years old the badge loses its fill and shows as an outline. The award still counts; the price is old enough that material costs have likely moved, so the popover names the year and tells you to treat it as history rather than a guide.
 
 The badge reflects awards made to your own CAGE code. Work delivered as a subcontractor under another company's CAGE is that company's award and does not appear.
 
@@ -66,7 +66,7 @@ The badge reflects awards made to your own CAGE code. Work delivered as a subcon
 
 Some solicitations require a **first article test**: before you may ship full production quantities, you must produce initial sample units and have them approved. It is ordered as a separate line on the solicitation, and it adds real cost and lead time to a bid.
 
-Rows carrying a contractor first article test show a **FIRST ARTICLE** badge next to the NSN. Click it for the specifics. Because the requirement is recorded as a placeholder line rather than a purchasable part, it is not counted in the row's item count and never shown as the row's NSN.
+Rows carrying one show a **FAT** badge next to the NSN — the abbreviation buyers use for First Article Test. Click it for the specifics, including the FAR clause the requirement falls under. Because the requirement is recorded as a placeholder line rather than a purchasable part, it is not counted in the row's item count and never shown as the row's NSN.
 
 ## Amended and updated solicitations
 
