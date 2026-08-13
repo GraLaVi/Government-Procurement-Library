@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MatchStrengthBadge } from "@/components/ui/MatchStrengthBadge";
 import { Modal } from "@/components/ui/Modal";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
@@ -143,33 +144,114 @@ function isRecentWin(lastWonOn: string | null | undefined): boolean {
  * history, which is what actually prices the next bid, is in the tooltip.
  */
 function WinHistoryBadge({ result }: { result: BidMatchResult }) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click or Escape, matching SamDocumentsButton.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        btnRef.current && !btnRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   if (!result.win_count) return null;
+
   const recent = isRecentWin(result.last_won_on);
   const awards = result.recent_awards ?? [];
+  const older = result.win_count - awards.length;
   const lastYear = result.last_won_on?.slice(0, 4);
-  const tooltip = [
-    `You have won this part ${result.win_count}×`,
-    ...awards.map((a) =>
-      [
-        a.contract_number,
-        a.contract_date,
-        a.quantity != null ? `${a.quantity.toLocaleString()} ea` : null,
-        a.unit_price != null ? formatCurrency(a.unit_price) : null,
-      ].filter(Boolean).join("  ·  ")
-    ),
-    ...(result.win_count > awards.length ? [`+${result.win_count - awards.length} older`] : []),
-  ].join("\n");
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = !open;
+    setOpen(next);
+    if (next) {
+      const rect = btnRef.current?.getBoundingClientRect();
+      // Portaled to <body> at fixed coords — the results table scrolls
+      // horizontally, and an in-flow panel would be clipped by its overflow.
+      if (rect) setCoords({ top: rect.bottom + 4, left: rect.left });
+    }
+  };
+
   return (
-    <span
-      title={tooltip}
-      className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 cursor-help ${
-        recent
-          ? "bg-amber-100 text-amber-800 border-amber-200"
-          : "text-muted border-border font-medium"
-      }`}
-    >
-      {recent ? `★ WON ${result.win_count}×` : `WON ${result.win_count}× · ${lastYear}`}
-    </span>
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        aria-label={`You have won this part ${result.win_count} times — show award history`}
+        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 cursor-pointer transition-colors ${
+          recent
+            ? "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200"
+            : "text-muted border-border font-medium hover:text-foreground"
+        }`}
+      >
+        {recent ? `★ WON ${result.win_count}×` : `WON ${result.win_count}× · ${lastYear}`}
+      </button>
+      {open && coords && createPortal(
+        <div
+          ref={panelRef}
+          style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 60 }}
+          className="w-80 rounded-md border border-border bg-background shadow-lg p-3"
+        >
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-muted mb-2">
+            Your award history · won {result.win_count}×
+          </div>
+          {awards.length === 0 ? (
+            <p className="text-xs text-muted">No contract detail available.</p>
+          ) : (
+            <table className="w-full text-xs">
+              <tbody>
+                {awards.map((a) => (
+                  <tr key={a.contract_number + a.contract_date} className="align-baseline">
+                    <td className="py-0.5 pr-2 data-field text-foreground whitespace-nowrap">
+                      {a.contract_number}
+                    </td>
+                    <td className="py-0.5 pr-2 text-muted whitespace-nowrap">
+                      {formatDate(a.contract_date)}
+                    </td>
+                    <td className="py-0.5 pr-2 text-right text-muted whitespace-nowrap">
+                      {a.quantity != null ? a.quantity.toLocaleString() : "—"}
+                    </td>
+                    {/* The number that actually prices the next bid. */}
+                    <td className="py-0.5 text-right font-semibold text-foreground whitespace-nowrap">
+                      {a.unit_price != null ? formatCurrency(a.unit_price) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {older > 0 && (
+            <p className="mt-2 text-[11px] text-muted">
+              +{older} older award{older === 1 ? "" : "s"} not shown
+            </p>
+          )}
+          {!recent && (
+            <p className="mt-2 text-[11px] text-muted">
+              Last won over {WIN_RECENCY_YEARS} years ago — treat the price as historical.
+            </p>
+          )}
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
 
