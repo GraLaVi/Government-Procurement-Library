@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { RowBadge } from "@/components/library/RowBadge";
 
 interface RfqBuyer {
   user_id: number;
@@ -215,7 +215,7 @@ export function RfqAssignmentsBuyerCardsView() {
                         className="ml-2 inline-block"
                         title="This user has no RFQ Enterprise seat — assigned solicitations won't appear for them until a seat is assigned on Manage Users."
                       >
-                        <Badge variant="warning" size="sm">No Enterprise seat</Badge>
+                        <RowBadge tone="amber">No Enterprise seat</RowBadge>
                       </span>
                     )}
                   </div>

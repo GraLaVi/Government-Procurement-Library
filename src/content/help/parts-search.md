@@ -88,7 +88,7 @@ The Recent Solicitations tab shows active and recently closed solicitations for 
 - **Buyer** — The contracting officer or buyer name  
 - **Buyer contact** — Email (with a copy button) or phone for the buyer, where available
 
-Solicitations that have been changed show an amber **Amended** badge (with a **×N** count for multiple amendments); click it for a change timeline. SAM.gov rows that carry attachments show a documents button with the attachment count. Fast-award candidates carry a green **Fast Award** badge — these can be awarded before their close date, so quoting early matters; see [Solicitation type indicators](/help/solicitations-and-contracts#solicitation-type-indicators). To learn more about viewing a solicitation PDF or amendment history, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
+Solicitations that have been changed show an amber **Amended** badge (with a **×N** count for multiple amendments); click it for a change timeline. SAM.gov rows that carry attachments show a documents button with the attachment count. Fast-award candidates carry a green **lightning bolt** — these can be awarded before their close date, so quoting early matters; see [Solicitation type indicators](/help/solicitations-and-contracts#solicitation-type-indicators). To learn more about viewing a solicitation PDF or amendment history, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
 
 <!-- HIDDEN UNTIL MAXIMUM LAUNCH: the note below should end "— the full table is available on Advanced and Maximum." -->
 

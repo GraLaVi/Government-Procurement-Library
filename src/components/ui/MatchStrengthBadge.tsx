@@ -1,4 +1,4 @@
-import { Badge } from "./Badge";
+import { RowBadge } from "@/components/library/RowBadge";
 
 interface Props {
   strength: "HARD" | "SOFT" | null | undefined;
@@ -12,14 +12,14 @@ export function MatchStrengthBadge({ strength, className = "" }: Props) {
   if (!strength) return null;
   if (strength === "HARD") {
     return (
-      <Badge variant="info" size="sm" className={className}>
+      <RowBadge tone="sky" className={className}>
         Hard
-      </Badge>
+      </RowBadge>
     );
   }
   return (
-    <Badge variant="default" size="sm" className={`border border-border bg-transparent ${className}`}>
+    <RowBadge tone="outline" className={className}>
       Soft
-    </Badge>
+    </RowBadge>
   );
 }

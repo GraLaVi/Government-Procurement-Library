@@ -83,7 +83,8 @@ the number opens it right there — same viewer as Parts Search.
 
 - **Amended** — the solicitation has changed. Click it for a timeline of
   every recorded change, before and since it was matched to you.
-- **Fast Award** and the other DLA type indicators — see
+- **A green lightning bolt** (fast award) and **IDC** — the DLA type
+  indicators. See
   [Solicitation type indicators](/help/solicitations-and-contracts#solicitation-type-indicators).
 - **FAT** — a contractor **First Article Test** is required: you must
   produce initial sample units and have them approved before shipping full

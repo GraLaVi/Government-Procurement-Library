@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Badge } from "@/components/ui/Badge";
+import { RowBadge } from "@/components/library/RowBadge";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useAuth } from "@/contexts/AuthContext";
@@ -516,20 +516,17 @@ export default function UsersPage() {
                 {(hasSeatCap || (rfqProduct && rfqSeatUsage)) && (
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {hasSeatCap && (
-                      <Badge variant={atSeatCap ? "warning" : "info"} size="sm">
+                      <RowBadge tone={atSeatCap ? "amber" : "sky"}>
                         {userCap!.used}/{userCap!.cap} seats
-                      </Badge>
+                      </RowBadge>
                     )}
                     {rfqProduct && rfqSeatUsage && (
                       rfqSeatUsage.cap === null || rfqSeatUsage.cap === 0 ? (
-                        <Badge variant="warning" size="sm">RFQ: no active subscription</Badge>
+                        <RowBadge tone="amber">RFQ: no active subscription</RowBadge>
                       ) : (
-                        <Badge
-                          variant={rfqSeatUsage.used >= rfqSeatUsage.cap ? "warning" : "info"}
-                          size="sm"
-                        >
+                        <RowBadge tone={rfqSeatUsage.used >= rfqSeatUsage.cap ? "amber" : "sky"}>
                           {rfqSeatUsage.used}/{rfqSeatUsage.cap} RFQ seats
-                        </Badge>
+                        </RowBadge>
                       )
                     )}
                   </div>
@@ -758,12 +755,12 @@ export default function UsersPage() {
                       <div className="flex flex-wrap gap-1">
                         {u.roles && u.roles.length > 0 ? (
                           u.roles.map((role) => (
-                            <Badge
+                            <RowBadge
                               key={role}
-                              variant={role === "admin" ? "info" : "default"}
+                              tone={role === "admin" ? "sky" : "neutral"}
                             >
                               {formatRoleName(role)}
-                            </Badge>
+                            </RowBadge>
                           ))
                         ) : (
                           <span className="text-sm text-muted">No roles</span>
@@ -774,15 +771,15 @@ export default function UsersPage() {
                       {/* Single org-wide tier per the locked pricing model.
                           Inactive users hold no seat, so they show no plan. */}
                       {u.is_active ? (
-                        <Badge variant={orgTier.variant}>{orgTier.label}</Badge>
+                        <RowBadge tone={orgTier.tone}>{orgTier.label}</RowBadge>
                       ) : (
                         <span className="text-sm text-muted">—</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <Badge variant={u.is_active ? "success" : "warning"}>
+                      <RowBadge tone={u.is_active ? "green" : "amber"}>
                         {u.is_active ? "Active" : "Inactive"}
-                      </Badge>
+                      </RowBadge>
                       {/* Why they're inactive, when we know. A plan-limit
                           suspension is the system's doing and is undone by
                           adding seats; the others were someone's decision.

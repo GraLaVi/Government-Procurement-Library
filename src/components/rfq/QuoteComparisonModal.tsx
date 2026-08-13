@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Badge } from "@/components/ui/Badge";
+import { RowBadge } from "@/components/library/RowBadge";
 import { Button } from "@/components/ui/Button";
 import type { ComparisonQuote, QuoteComparisonResponse, RfqSettings } from "@/lib/rfq/types";
 
@@ -216,10 +216,10 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                                   {q.cage_code && (
                                     <span className="text-[11px] font-mono text-muted">CAGE {q.cage_code}</span>
                                   )}
-                                  {q.rfq_vendor_id != null && <Badge variant="info" size="sm">Private</Badge>}
-                                  {q.is_approved_source && <Badge variant="success" size="sm">Approved source</Badge>}
-                                  {q.is_best_price && <Badge variant="success" size="sm">Best price</Badge>}
-                                  {q.quote_expired && <Badge variant="warning" size="sm">Expired</Badge>}
+                                  {q.rfq_vendor_id != null && <RowBadge tone="sky">Private</RowBadge>}
+                                  {q.is_approved_source && <RowBadge tone="green">Approved source</RowBadge>}
+                                  {q.is_best_price && <RowBadge tone="green">Best price</RowBadge>}
+                                  {q.quote_expired && <RowBadge tone="amber">Expired</RowBadge>}
                                 </div>
                                 {q.alternate_part_number && (
                                   <div className="mt-0.5 text-[11px]">

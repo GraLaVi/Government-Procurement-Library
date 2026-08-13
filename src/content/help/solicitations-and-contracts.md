@@ -44,10 +44,12 @@ Review amendments carefully. Amendments can change quantities, requirements, set
 
 DLA marks some solicitations for automated evaluation. Where GPH has that marking, it appears as a small badge next to the solicitation number:
 
-- **Fast Award** (green) — a fast-award candidate. Micro-purchase quotes on these can be awarded **before** the stated return date, so quoting early matters. Waiting until the deadline can cost you the award even though the solicitation is still technically open.  
-- **Automated IDC** — the buy results in an automated indefinite delivery contract (AIDC) rather than a single delivery order. Quotes on these typically must remain valid for 90 days or more.
+- **A green lightning bolt** — a fast-award candidate. Micro-purchase quotes on these can be awarded **before** the stated return date, so quoting early matters. Waiting until the deadline can cost you the award even though the solicitation is still technically open.  
+- **IDC** — the buy results in an automated indefinite delivery contract (AIDC) rather than a single delivery order. Quotes on these typically must remain valid for 90 days or more.
 
-Hover either badge for the full explanation.
+Hover either badge for the full explanation. Both are deliberately small: a
+solicitation row can carry six or more badges, so the ones that repeat on
+every matching row are kept to a glyph or a few letters.
 
 **A missing badge does not mean "not a fast award."** GPH began recording this indicator recently, and it can only be applied retroactively to solicitations posted within a short window. Many solicitations — including plenty that are open right now — have no indicator recorded, so no badge appears. Read a badge as a positive signal when it's there, and its absence as *unknown* rather than *no*. Coverage of currently quotable solicitations improves over time as older, unmarked solicitations close.
 
