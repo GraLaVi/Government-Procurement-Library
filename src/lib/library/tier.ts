@@ -1,3 +1,4 @@
+import type { RowBadgeTone } from "@/components/library/RowBadge";
 // Frontend tier resolution for library products.
 //
 // Mirrors the backend's get_*_search_tier helpers in
@@ -75,17 +76,16 @@ export function resolveLibraryTier(hasAnyProductAccess: HasAccess): LibraryTier 
 // Locked pricing: one tier per org (Free / Basic / Advanced), being the
 // highest library_search_* grant the org holds. Both /account/users and
 // /account/billing derive the badge from the org product list they fetch.
-export type TierBadgeVariant = "info" | "default" | "success" | "warning";
-export type OrgTierBadge = { label: string; variant: TierBadgeVariant };
+export type OrgTierBadge = { label: string; tone: RowBadgeTone };
 
 // Minimal shape shared by AssignableItem and AssignedProduct.
 type TierKeyed = { product_key?: string; group_key?: string };
 
-const ORG_TIER_BADGES: Record<string, { label: string; rank: number; variant: TierBadgeVariant }> = {
-  library_search_maximum: { label: "Maximum", rank: 4, variant: "success" },
-  library_search_advanced: { label: "Advanced", rank: 3, variant: "info" },
-  library_search_basic: { label: "Basic", rank: 2, variant: "default" },
-  library_search_free: { label: "Free", rank: 1, variant: "default" },
+const ORG_TIER_BADGES: Record<string, { label: string; rank: number; tone: RowBadgeTone }> = {
+  library_search_maximum: { label: "Maximum", rank: 4, tone: "green" },
+  library_search_advanced: { label: "Advanced", rank: 3, tone: "sky" },
+  library_search_basic: { label: "Basic", rank: 2, tone: "neutral" },
+  library_search_free: { label: "Free", rank: 1, tone: "neutral" },
 };
 
 // Highest tier across a list of org products. Every org holds Free at least.
@@ -95,11 +95,11 @@ export function resolveOrgTier(items: TierKeyed[]): OrgTierBadge {
   for (const it of items) {
     const t = ORG_TIER_BADGES[it.product_key ?? it.group_key ?? ""];
     if (t && t.rank > bestRank) {
-      best = { label: t.label, variant: t.variant };
+      best = { label: t.label, tone: t.tone };
       bestRank = t.rank;
     }
   }
-  return best ?? { label: "Free", variant: "default" };
+  return best ?? { label: "Free", tone: "neutral" };
 }
 
 // Single plan/product key -> tier badge. Returns null for unknown keys so the
@@ -107,5 +107,5 @@ export function resolveOrgTier(items: TierKeyed[]): OrgTierBadge {
 export function tierBadgeForKey(key: string | null | undefined): OrgTierBadge | null {
   if (!key) return null;
   const t = ORG_TIER_BADGES[key];
-  return t ? { label: t.label, variant: t.variant } : null;
+  return t ? { label: t.label, tone: t.tone } : null;
 }

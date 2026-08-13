@@ -11,10 +11,12 @@ import type { ReactNode } from "react";
  * five badges that looked like they came from five products. This is the one
  * shape they all use now: 10px semibold, 4px corners, always bordered.
  *
- * Deliberately NOT `@/components/ui/Badge` — that one is a rounded-full,
- * capitalized pill used in 34 places across account settings, quote modals
- * and RFQ detail, where this denser treatment would be wrong. Row badges and
- * general-purpose badges are two different jobs.
+ * This is now the only badge in the app. It replaced `ui/Badge`, a
+ * rounded-full pill that applied `capitalize` to its children — which
+ * title-cased any multi-word label passed to it, and which call sites worked
+ * around rather than fixed. Text here renders as authored; a caller wanting
+ * capitalization asks for it (see SolStatusBadge, whose API returns
+ * lower-cased status strings).
  */
 
 export type RowBadgeTone =

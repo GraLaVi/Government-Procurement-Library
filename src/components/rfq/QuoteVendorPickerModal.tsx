@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { RowBadge } from "@/components/library/RowBadge";
 import {
   EXCLUDED_VENDOR_WARNING,
   partKey,
@@ -303,7 +303,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, solicitationId, 
         </span>
         {setAsideChip(setAside)}
         {responsivenessBadge(`vendor:${v.id}`)}
-        <Badge variant="info" size="sm">Private</Badge>
+        <RowBadge tone="sky">Private</RowBadge>
       </label>
     );
   };
@@ -350,7 +350,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, solicitationId, 
       : "This CAGE has no SAM.gov registration on file — common for legacy or defunct manufacturers in the DLA catalog. You can still send an RFQ if you have a contact.";
     return (
       <span title={explain}>
-        <Badge variant="default" size="sm">{label}</Badge>
+        <RowBadge>{label}</RowBadge>
       </span>
     );
   };
@@ -445,7 +445,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, solicitationId, 
                           )}
                         </span>
                         {m.is_approved_source && (
-                          <Badge variant="success" size="sm">Approved source</Badge>
+                          <RowBadge tone="green">Approved source</RowBadge>
                         )}
                         {responsivenessBadge(`cage:${m.cage_code}`)}
                         {/* An active exclusion (debarment/suspension) warns

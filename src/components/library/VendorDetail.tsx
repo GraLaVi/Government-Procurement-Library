@@ -34,7 +34,6 @@ import {
   formatAwardDate,
 } from "@/lib/library/types";
 import { DetailSections, DetailToolbar } from "@/components/library/DetailSections";
-import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
@@ -584,15 +583,15 @@ export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: Vendor
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {vendor.sam_status && (
-              <Badge variant={formatSamStatus(vendor.sam_status) === "Active" ? "success" : "warning"} size="sm">
+              <RowBadge tone={formatSamStatus(vendor.sam_status) === "Active" ? "green" : "amber"}>
                 {formatSamStatus(vendor.sam_status)}
-              </Badge>
+              </RowBadge>
             )}
             {vendor.exclusion_status && (
-              <Badge variant="error" size="sm">Excluded</Badge>
+              <RowBadge tone="red">Excluded</RowBadge>
             )}
             {vendor.small_business && (
-              <Badge variant="info" size="sm">SB</Badge>
+              <RowBadge tone="sky">SB</RowBadge>
             )}
           </div>
         </div>
