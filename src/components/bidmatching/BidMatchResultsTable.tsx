@@ -78,6 +78,8 @@ interface BidMatchResult {
   mfg_cage?: string | null;
   mfg_part_number?: string | null;
   part_description?: string | null;
+  // Solicitation carries a contractor-tested First Article CLIN.
+  first_article?: boolean;
   // Customer-scoped "come back to this" flag — shared by every user on the
   // account, not per-user.
   interested?: boolean;
@@ -136,6 +138,27 @@ function isRecentWin(lastWonOn: string | null | undefined): boolean {
   const cutoff = new Date();
   cutoff.setFullYear(cutoff.getFullYear() - WIN_RECENCY_YEARS);
   return new Date(y, (m || 1) - 1, d || 1) >= cutoff;
+}
+
+/**
+ * First Article Test requirement on the solicitation.
+ *
+ * DIBBS carries this as a placeholder line item rather than a field, and the
+ * server now excludes those placeholders from the NSN column and the line-item
+ * count — so this badge is what tells the buyer the requirement is there at
+ * all. It is a cost-and-lead-time warning, not an achievement, so it reads as
+ * a caution chip rather than borrowing the win badge's amber.
+ */
+function FirstArticleBadge({ result }: { result: BidMatchResult }) {
+  if (!result.first_article) return null;
+  return (
+    <span
+      title="First Article required — a sample must be produced and approved before full production ships. Expect added cost and lead time."
+      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 bg-sky-50 text-sky-800 border-sky-200 cursor-help"
+    >
+      FIRST ARTICLE
+    </span>
+  );
 }
 
 /**
@@ -582,6 +605,7 @@ export function BidMatchResultsTable({
                     <td className="px-2.5 py-1.5 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <PartIdentityLink part={result} className="data-field font-medium" />
+                        <FirstArticleBadge result={result} />
                         <WinHistoryBadge result={result} />
                         {extraItems > 0 && (
                           <button

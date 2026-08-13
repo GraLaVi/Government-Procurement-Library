@@ -83,6 +83,8 @@ interface BidMatchResult {
   mfg_cage?: string | null;
   mfg_part_number?: string | null;
   part_description?: string | null;
+  // Solicitation carries a contractor-tested First Article CLIN.
+  first_article?: boolean;
   quantity?: number | null;
   unit_of_issue?: string | null;
   line_item_count?: number;
