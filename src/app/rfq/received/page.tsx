@@ -3,20 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Badge } from "@/components/ui/Badge";
-import { rfqStatusLabel, type ReceivedRfqItem } from "@/lib/rfq/types";
+import { RowBadge } from "@/components/library/RowBadge";
+import { rfqStatusLabel, rfqStatusTone, type ReceivedRfqItem } from "@/lib/rfq/types";
 import { formatDateMmDdYyyy } from "@/lib/dates";
 import { TableCard } from "@/components/rfq/TableCard";
-
-function statusVariant(status: string): "default" | "success" | "warning" | "error" {
-  switch (status) {
-    case "responded": return "success";
-    case "viewed": return "warning";
-    case "declined":
-    case "stale": return "error";
-    default: return "default";
-  }
-}
 
 export default function RfqReceivedPage() {
   const { isLoading: authLoading, isAuthenticated } = useAuth();
@@ -130,7 +120,7 @@ export default function RfqReceivedPage() {
                   </td>
                   <td className="px-4 py-2 text-foreground">{it.sender_company_name}</td>
                   <td className="px-4 py-2">
-                    <Badge variant={statusVariant(it.status)} size="sm">{rfqStatusLabel(it.status)}</Badge>
+                    <RowBadge tone={rfqStatusTone(it.status)}>{rfqStatusLabel(it.status)}</RowBadge>
                   </td>
                   <td className="px-4 py-2 text-muted">{formatDateMmDdYyyy(it.response_due_date)}</td>
                 </tr>

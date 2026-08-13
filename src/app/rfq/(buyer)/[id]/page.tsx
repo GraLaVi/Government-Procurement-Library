@@ -6,12 +6,12 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
-import { Badge } from "@/components/ui/Badge";
+import { RowBadge } from "@/components/library/RowBadge";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   PLACEHOLDER_LINE_DESCRIPTION,
-  rfqStatusLabel,
+  rfqStatusLabel, rfqStatusTone,
   type RfqDetail,
   type RfqResponseDetail,
 } from "@/lib/rfq/types";
@@ -20,18 +20,6 @@ import { formatNSN } from "@/lib/library/types";
 import { TableCard } from "@/components/rfq/TableCard";
 import { PricingPopover } from "@/components/rfq/PricingPopover";
 import { PrintButton } from "@/components/ui/PrintButton";
-
-function statusVariant(status: string): "default" | "success" | "warning" | "error" {
-  switch (status) {
-    case "responded":
-    case "submitted": return "success";
-    case "viewed": return "warning";
-    case "declined":
-    case "stale":
-    case "cancelled": return "error";
-    default: return "default";
-  }
-}
 
 export default function RfqDetailPage() {
   const router = useRouter();
@@ -206,7 +194,7 @@ export default function RfqDetailPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={statusVariant(rfq.status)} size="md">{rfqStatusLabel(rfq.status)}</Badge>
+            <RowBadge tone={rfqStatusTone(rfq.status)}>{rfqStatusLabel(rfq.status)}</RowBadge>
             {isOpen && (
               <>
                 <Button variant="outline" size="sm" className="no-print" onClick={() => setConfirmAction("close")} disabled={busy}>Close</Button>
@@ -243,7 +231,7 @@ export default function RfqDetailPage() {
                   </td>
                   <td className="px-4 py-2 text-muted">{r.contact_email || "—"}</td>
                   <td className="px-4 py-2">
-                    <Badge variant={statusVariant(r.status)} size="sm">{rfqStatusLabel(r.status)}</Badge>
+                    <RowBadge tone={rfqStatusTone(r.status)}>{rfqStatusLabel(r.status)}</RowBadge>
                   </td>
                   <td className="px-4 py-2 text-muted">{r.reminder_count}</td>
                 </tr>
@@ -316,9 +304,9 @@ export default function RfqDetailPage() {
                     {resp.total_price != null && <span>Total ${resp.total_price}</span>}
                     {resp.lead_time_days != null && <span>· {resp.lead_time_days}d lead</span>}
                     {resp.line_items.some((l) => l.price_to_gov != null) && (
-                      <Badge variant="success" size="sm">Priced</Badge>
+                      <RowBadge tone="green">Priced</RowBadge>
                     )}
-                    <Badge variant={statusVariant(resp.status)} size="sm">{rfqStatusLabel(resp.status)}</Badge>
+                    <RowBadge tone={rfqStatusTone(resp.status)}>{rfqStatusLabel(resp.status)}</RowBadge>
                   </div>
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-border/60">

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { RowBadge } from "@/components/library/RowBadge";
 import { RfqVendorCapabilitiesModal } from "@/components/rfq/RfqVendorCapabilitiesModal";
 import { RfqVendorContactEditModal } from "@/components/rfq/RfqVendorContactEditModal";
 import { TableCard, tableHeadRowClass } from "@/components/rfq/TableCard";
@@ -507,7 +507,7 @@ export default function RfqVendorsPage() {
                           className="text-sm font-medium text-card-foreground hover:text-primary text-left">
                           {v.company_name}
                         </button>
-                        {!v.is_active && <Badge variant="default" size="sm" className="ml-2">Deactivated</Badge>}
+                        {!v.is_active && <RowBadge className="ml-2">Deactivated</RowBadge>}
                       </td>
                       <td className="px-3 py-2 font-mono text-xs text-muted">{v.vendor_code || "—"}</td>
                       <td className="px-3 py-2 text-xs">
@@ -643,7 +643,7 @@ export default function RfqVendorsPage() {
                                         <span className="text-card-foreground">
                                           {c.contact_name ? `${c.contact_name} — ` : ""}{c.email}
                                         </span>
-                                        {c.is_default && <Badge variant="info" size="sm">default</Badge>}
+                                        {c.is_default && <RowBadge>default</RowBadge>}
                                         <button type="button" className="text-xs text-primary hover:underline" onClick={() => setEditingContact(c)}>
                                           Edit
                                         </button>
@@ -729,7 +729,7 @@ export default function RfqVendorsPage() {
                     <td className="px-3 py-2">
                       <span className="text-card-foreground">{s.vendor_name || s.cage_code || "Vendor"}</span>
                       {s.cage_code && <span className="ml-2 text-[11px] font-mono text-muted">CAGE {s.cage_code}</span>}
-                      {s.rfq_vendor_id != null && <Badge variant="info" size="sm" className="ml-2">Private</Badge>}
+                      {s.rfq_vendor_id != null && <RowBadge className="ml-2">Private</RowBadge>}
                       {s.rfqs_sent < MIN_SENDS_FOR_RESPONSIVENESS && (
                         <span className="ml-2 text-[11px] text-muted italic">low sample</span>
                       )}

@@ -1,3 +1,4 @@
+import type { RowBadgeTone } from "@/components/library/RowBadge";
 // RFQ module client types. Mirror src/rfq/schemas.py on the backend.
 
 /**
@@ -597,6 +598,28 @@ export interface ResponseLineInput {
   alternate_part_number?: string | null;
   is_no_bid: boolean;
   notes?: string | null;
+}
+
+/**
+ * Row-badge tone for an aggregate/recipient status.
+ *
+ * One definition for every RFQ surface. The list, received and detail pages
+ * each carried their own copy that disagreed at the edges — received never
+ * coloured `cancelled`, the list never coloured `submitted` — so a status
+ * could show red on one page and neutral on another. This is the union of
+ * all three, which is correct everywhere: a page that cannot produce a given
+ * status simply never asks for its tone.
+ */
+export function rfqStatusTone(status: string): RowBadgeTone {
+  switch (status) {
+    case 'responded':
+    case 'submitted': return 'green';
+    case 'viewed': return 'amber';
+    case 'declined':
+    case 'stale':
+    case 'cancelled': return 'red';
+    default: return 'neutral';
+  }
 }
 
 /** Human label for an aggregate/recipient status. */

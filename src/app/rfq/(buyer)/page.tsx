@@ -5,25 +5,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
-import { Badge } from "@/components/ui/Badge";
+import { RowBadge } from "@/components/library/RowBadge";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { TableCard } from "@/components/rfq/TableCard";
-import { rfqStatusLabel, type RfqListItem, type RfqContributor } from "@/lib/rfq/types";
+import { rfqStatusLabel, rfqStatusTone, type RfqListItem, type RfqContributor } from "@/lib/rfq/types";
 import { formatDateMmDdYyyy } from "@/lib/dates";
 
 const ALL = "all";
 const FILTER_KEY = "rfq_filter_user";
-
-function statusVariant(status: string): "default" | "success" | "warning" | "error" {
-  switch (status) {
-    case "responded": return "success";
-    case "viewed": return "warning";
-    case "declined":
-    case "stale":
-    case "cancelled": return "error";
-    default: return "default";
-  }
-}
 
 export default function RfqListPage() {
   const { isLoading: authLoading, hasAnyProductAccess, user } = useAuth();
@@ -195,9 +184,9 @@ export default function RfqListPage() {
                   </td>
                   <td className="px-4 py-2 text-muted">{rfq.created_by_name || "—"}</td>
                   <td className="px-4 py-2">
-                    <Badge variant={statusVariant(rfq.aggregate_status)} size="sm">
+                    <RowBadge tone={rfqStatusTone(rfq.aggregate_status)}>
                       {rfqStatusLabel(rfq.aggregate_status)}
-                    </Badge>
+                    </RowBadge>
                   </td>
                   <td className="px-4 py-2 text-muted">
                     {rfq.response_count}/{rfq.recipient_count}
