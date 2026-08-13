@@ -196,16 +196,20 @@ function PartsSearchPageContent() {
         if (oldest !== undefined) searchCache.current.delete(oldest);
       }
 
-      // Save search to recent actions
-      try {
-        const actionData: PartsSearchActionData = {
-          query_type: type,
-          query: query.trim(),
-        };
-        await addAction(actionData);
-      } catch (err) {
-        // Don't fail the search if saving to recent actions fails
-        console.error('Failed to save search to recent actions:', err);
+      // Save search to recent actions — only when it actually produced
+      // results. A zero-result search is not worth offering back to the user
+      // as a recent search or as the default form value on next visit.
+      if (searchResponse.results.length > 0) {
+        try {
+          const actionData: PartsSearchActionData = {
+            query_type: type,
+            query: query.trim(),
+          };
+          await addAction(actionData);
+        } catch (err) {
+          // Don't fail the search if saving to recent actions fails
+          console.error('Failed to save search to recent actions:', err);
+        }
       }
 
       // Collapse search form after successful search with results
