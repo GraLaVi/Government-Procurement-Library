@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
+import { rowBadgeClass, ROW_BADGE_BASE, type RowBadgeTone } from "@/components/library/RowBadge";
 import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
@@ -92,14 +93,16 @@ function dueDateFromClose(closeIso: string | null, leadDays: number | null): str
   return `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
 }
 
-const statusPillClass: Record<RfqWorkStatus, string> = {
-  unworked: "bg-muted/10 text-muted",
-  rfq_sent: "bg-sky-100 text-sky-800",
-  quotes_in: "bg-indigo-100 text-indigo-800",
-  priced: "bg-amber-100 text-amber-800",
-  bid: "bg-emerald-100 text-emerald-800",
-  no_bid: "bg-rose-100 text-rose-800",
-  passed: "bg-slate-200 text-slate-700",
+// The RFQ Progress control is a <select> wearing a row badge, so it takes its
+// colour from the same tone set every other pill in the row uses.
+const statusPillTone: Record<RfqWorkStatus, RowBadgeTone> = {
+  unworked: "neutral",
+  rfq_sent: "sky",
+  quotes_in: "indigo",
+  priced: "amber",
+  bid: "green",
+  no_bid: "red",
+  passed: "slate",
 };
 
 export default function RfqWorklistPage() {
@@ -756,7 +759,7 @@ export default function RfqWorklistPage() {
                             <button
                               type="button"
                               onClick={() => setQuotesFor(item)}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border border-primary/40 text-primary hover:bg-primary/10 cursor-pointer"
+                              className={`${ROW_BADGE_BASE} border-primary/40 text-primary hover:bg-primary/10 cursor-pointer transition-colors`}
                               title={`${item.rfq_count} RFQ${item.rfq_count !== 1 ? "s" : ""} sent · ${item.quote_count} quote${item.quote_count !== 1 ? "s" : ""} received — open the side-by-side comparison`}
                             >
                               View quotes ({item.quote_count})
@@ -765,7 +768,7 @@ export default function RfqWorklistPage() {
                           {item.staged_count > 0 && (
                             <a
                               href="/rfq/batch"
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border border-amber-500/50 text-amber-700 hover:bg-amber-500/10"
+                              className={`${ROW_BADGE_BASE} border-amber-500/50 text-amber-700 hover:bg-amber-500/10 transition-colors`}
                               title={`${item.staged_count} item${item.staged_count !== 1 ? "s" : ""} staged in the batch cart${item.staged_by_names.length > 0 ? ` by ${item.staged_by_names.join(", ")}` : ""} — RFQs not sent yet`}
                             >
                               In cart ({item.staged_count})
@@ -790,7 +793,7 @@ export default function RfqWorklistPage() {
                       </td>
                       <td className={tdClass}>
                         <select
-                          className={`rounded-full text-xs font-medium px-2 py-1 border-0 cursor-pointer ${statusPillClass[item.work_status]}`}
+                          className={rowBadgeClass(statusPillTone[item.work_status], { className: "cursor-pointer" })}
                           title="Your RFQ progress on this solicitation. RFQ Sent and Quotes In advance automatically; set the rest as you work."
                           value={item.work_status}
                           onChange={(e) => patchStatus(item, e.target.value as RfqWorkStatus)}

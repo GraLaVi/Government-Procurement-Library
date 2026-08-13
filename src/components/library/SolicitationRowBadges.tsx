@@ -1,6 +1,7 @@
 "use client";
 
 import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
+import { RowBadge, rowBadgeClass, type RowBadgeTone } from "@/components/library/RowBadge";
 import { timeAgo } from "@/lib/amendments";
 
 /**
@@ -11,19 +12,13 @@ import { timeAgo } from "@/lib/amendments";
 export function SolStatusBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-muted">—</span>;
   const s = status.toLowerCase();
-  const tone =
-    s === "open"
-      ? "bg-green-100 text-green-800"
-      : s === "awarded"
-      ? "bg-blue-100 text-blue-800"
-      : s === "closed"
-      ? "bg-red-100 text-red-800"
-      : "bg-gray-100 text-gray-800";
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tone}`}>
-      {status}
-    </span>
-  );
+  const tone: RowBadgeTone =
+    s === "open" ? "green"
+    : s === "awarded" ? "blue"
+    : s === "closed" ? "red"
+    : "slate";
+  // capitalize, because the API returns these lower-cased.
+  return <RowBadge tone={tone} className="capitalize">{status}</RowBadge>;
 }
 
 interface SolicitationRowBadgesProps {
@@ -56,10 +51,8 @@ export function SolicitationRowBadges({
   solicitationType,
   solicitationTypeLabel,
 }: SolicitationRowBadgesProps) {
-  const amendedClasses =
-    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200";
-  const updatedClasses =
-    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-100 text-sky-800 border border-sky-200";
+  const amendedClasses = rowBadgeClass("amber", { interactive: true });
+  const updatedClasses = rowBadgeClass("sky", { interactive: true });
   return (
     <>
       {hasAmendmentIndicator && (
@@ -67,13 +60,13 @@ export function SolicitationRowBadges({
           <button
             type="button"
             onClick={onShowAmendments}
-            className={`${amendedClasses} hover:bg-amber-200`}
+            className={amendedClasses}
             title="This solicitation was updated before this match was generated. Click to see what changed."
           >
             Amended
           </button>
         ) : (
-          <span className={amendedClasses} title="This solicitation was updated before this match was generated.">
+          <span className={rowBadgeClass("amber")} title="This solicitation was updated before this match was generated.">
             Amended
           </span>
         )
@@ -83,7 +76,7 @@ export function SolicitationRowBadges({
           <button
             type="button"
             onClick={onShowAmendments}
-            className={`${updatedClasses} hover:bg-sky-200`}
+            className={updatedClasses}
             title={
               latestPostMatchAmendmentAt
                 ? `This solicitation was updated after your match was generated. Latest change: ${new Date(latestPostMatchAmendmentAt).toLocaleString()}`
@@ -93,7 +86,7 @@ export function SolicitationRowBadges({
             Updated{latestPostMatchAmendmentAt ? ` ${timeAgo(latestPostMatchAmendmentAt)}` : " since"}
           </button>
         ) : (
-          <span className={updatedClasses}>
+          <span className={rowBadgeClass("sky")}>
             Updated{latestPostMatchAmendmentAt ? ` ${timeAgo(latestPostMatchAmendmentAt)}` : " since"}
           </span>
         )

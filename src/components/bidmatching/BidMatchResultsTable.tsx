@@ -7,6 +7,7 @@ import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimeli
 import { BidMatchLineItems } from "@/components/bidmatching/BidMatchLineItems";
 import { PartIdentityLink } from "@/components/bidmatching/PartIdentityLink";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
+import { RowBadge, rowBadgeClass, ROW_BADGE_BASE } from "@/components/library/RowBadge";
 import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
 import { formatCurrency } from "@/lib/library/types";
 
@@ -117,9 +118,7 @@ function DemandSignalChip({ signal }: { signal?: string | null }) {
   const c = DEMAND_SIGNAL_CHIP[signal];
   if (!c) return null;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-medium ${c.cls}`}>
-      {c.label}
-    </span>
+    <span className={`${ROW_BADGE_BASE} ${c.cls}`}>{c.label}</span>
   );
 }
 
@@ -419,7 +418,7 @@ export function BidMatchResultsTable({
                         )}
                         {result.source === "sam" && (
                           <span
-                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200"
+                            className={rowBadgeClass("indigo")}
                             title="Pure-SAM opportunity — no linked DIBBS solicitation"
                           >
                             SAM
@@ -507,12 +506,9 @@ export function BidMatchResultsTable({
                         string, so an unmapped row still shows something. */}
                     <td className="px-2.5 py-1.5 text-muted whitespace-nowrap">
                       {result.set_aside_code ? (
-                        <span
-                          className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold bg-muted/15 text-foreground"
-                          title={result.set_aside_label || result.set_aside || undefined}
-                        >
+                        <RowBadge title={result.set_aside_label || result.set_aside || undefined}>
                           {result.set_aside_code}
-                        </span>
+                        </RowBadge>
                       ) : (
                         result.set_aside_label || result.set_aside || "—"
                       )}

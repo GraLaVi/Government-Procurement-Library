@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/Badge";
+import { RowBadge } from "@/components/library/RowBadge";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useCodeDefinitions } from "@/lib/hooks/useCodeDefinitions";
 
@@ -37,6 +37,10 @@ import { useCodeDefinitions } from "@/lib/hooks/useCodeDefinitions";
 // stated return date, so it gets the only green (success) pill in the row.
 // 'I' (a different contract vehicle) is context, not urgency, so it stays
 // muted. Neither uses `info`, which the Set-Aside column already owns.
+// Compact stand-ins for the resolved labels, which are too long for a row
+// that now carries up to six badges.
+const SHORT_LABELS: Record<string, string> = { I: "IDC" };
+
 const BADGE_VARIANTS: Record<string, "success" | "default"> = {
   F: "success",
   I: "default",
@@ -67,10 +71,33 @@ export function SolicitationTypeBadge({ code, label }: SolicitationTypeBadgeProp
   // in flight with no server-side label) — stay silent rather than show "F".
   if (!text) return null;
 
+  // 'F' is the urgency signal, so it shows as a bolt alone — the row already
+  // carries several badges and this one needs the least width it can take.
+  // The label still reaches the user through the popover and the aria-label,
+  // so nothing is lost by dropping the words. Other coded types keep short
+  // text ('Automated IDC' -> 'IDC'), since no glyph reads as a contract
+  // vehicle.
   const badge = (
-    <Badge variant={variant} size="sm" className="shrink-0 whitespace-nowrap">
-      {text}
-    </Badge>
+    <RowBadge
+      tone={variant === "success" ? "green" : "neutral"}
+      className="whitespace-nowrap"
+    >
+      {normalized === "F" ? (
+        <>
+          <svg
+            className="w-3 h-3 shrink-0"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z" />
+          </svg>
+          <span className="sr-only">{text}</span>
+        </>
+      ) : (
+        SHORT_LABELS[normalized] ?? text
+      )}
+    </RowBadge>
   );
 
   // description is the customer-value copy ("...may be awarded prior to the

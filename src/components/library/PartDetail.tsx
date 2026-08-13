@@ -47,7 +47,6 @@ import {
   EXCLUDED_VENDOR_WARNING,
 } from "@/lib/library/types";
 import { DetailSections, DetailToolbar } from "@/components/library/DetailSections";
-import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { KPICard } from "@/components/analytics/KPICard";
 import { CHART_COLORS } from "@/components/analytics/ChartColors";
@@ -70,6 +69,7 @@ import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
 import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
+import { RowBadge } from "@/components/library/RowBadge";
 
 // Map UI tabId -> audit `view` name (matches FastAPI _VALID_TAB_VIEWS)
 const TAB_VIEW_MAP: Record<string, string> = {
@@ -2234,7 +2234,7 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
           if (!code) return <span className="text-muted">—</span>;
           return (
             <Tooltip content={label ?? code}>
-              <Badge variant="info" size="sm">{code}</Badge>
+              <RowBadge>{code}</RowBadge>
             </Tooltip>
           );
         },
@@ -2620,7 +2620,7 @@ function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, total
         header: "Source",
         cell: ({ row }) =>
           row.original.is_approved_source ? (
-            <Badge variant="success" size="sm">Approved</Badge>
+            <RowBadge tone="green">Approved</RowBadge>
           ) : (
             <span className="text-xs text-muted">—</span>
           ),
