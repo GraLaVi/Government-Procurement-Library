@@ -1,4 +1,5 @@
 import type { RowBadgeTone } from "@/components/library/RowBadge";
+import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
 // RFQ module client types. Mirror src/rfq/schemas.py on the backend.
 
 /**
@@ -266,6 +267,11 @@ export interface RfqWorkItem {
   set_aside_label: string | null;
   solicitation_type: string | null;
   solicitation_type_label: string | null;
+  /** Bid-qualification terms off the solicitation — approved-source and
+   *  quality gates, freight, inspection, plus the AIDC contract terms.
+   *  Rendered in the expanded row by BidTermsPanel. Codes are unresolved;
+   *  labels come from the page's bid_term_definitions map. */
+  bid_terms?: SolicitationBidTerms | null;
   has_pdf: boolean;
   /** Distinct purchase-requisition numbers across the solicitation's line
    * items, sorted. Usually one. */
@@ -326,6 +332,10 @@ export interface RfqWorklistPage {
   page: number;
   page_size: number;
   unassigned_count: number;
+  /** code_type -> code -> {label, description} for every code in
+   *  items[].bid_terms. Page-level, so the DLA definitions aren't repeated on
+   *  every row. */
+  bid_term_definitions?: BidTermDefinitions;
 }
 
 export interface RfqBuyer {

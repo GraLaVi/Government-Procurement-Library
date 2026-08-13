@@ -9,6 +9,8 @@ import { PartIdentityLink } from "@/components/bidmatching/PartIdentityLink";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
 import { RowBadge, rowBadgeClass, ROW_BADGE_BASE } from "@/components/library/RowBadge";
 import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
+import { BidTermsPanel } from "@/components/library/BidTermsPanel";
+import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
 import { formatCurrency } from "@/lib/library/types";
 
 interface MatchedCondition {
@@ -63,6 +65,12 @@ interface BidMatchResult {
   solicitation_type?: string | null;
   // Label resolved from code_definitions (code_type='SOLICITATION_TYPE').
   solicitation_type_label?: string | null;
+  // Bid-qualification terms off the joined solicitation — the approved-source
+  // and quality gates, freight, inspection, and the AIDC contract terms.
+  // Codes are unresolved; the page's bid_term_definitions map carries the
+  // labels. NULL when the solicitation states none, and always NULL on
+  // SAM-source rows. Rendered in the expanded row by BidTermsPanel.
+  bid_terms?: SolicitationBidTerms | null;
   sam_url?: string | null;
   // Maximum-tier DLA demand signal — strongest across the opportunity's NIINs
   // ('on_backorder' | 'below_reorder_point' | 'recurring'). Null/absent when no
@@ -127,6 +135,9 @@ export type BidSortKey = "" | "interested" | "solicitation" | "quantity" | "esti
 
 interface BidMatchResultsTableProps {
   results: BidMatchResult[];
+  // Vocabulary for the codes in results[].bid_terms, sent once per page
+  // rather than repeated on every row.
+  bidTermDefinitions?: BidTermDefinitions;
   isLoading: boolean;
   total: number;
   page: number;
@@ -267,6 +278,7 @@ function ConditionBadge({ condition }: { condition: MatchedCondition }) {
 
 export function BidMatchResultsTable({
   results,
+  bidTermDefinitions,
   isLoading,
   total,
   page,
@@ -524,6 +536,15 @@ export function BidMatchResultsTable({
                           sit in the dropped Profile and Match columns. */}
                       <td colSpan={12} className="px-3 py-3">
                         <div className="space-y-4">
+                          {/* Can I bid on this at all, and what does bidding
+                              cost me — ahead of the line items, because it
+                              decides whether the line items matter. Renders
+                              nothing when the solicitation states no terms. */}
+                          <BidTermsPanel
+                            terms={result.bid_terms}
+                            definitions={bidTermDefinitions}
+                          />
+
                           {/* Only worth listing when there's more than one — a
                               single line item is already shown in the NSN column,
                               and skipping it avoids a pointless fetch. */}

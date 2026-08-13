@@ -8,6 +8,7 @@ import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/Soli
 import { rowBadgeClass, ROW_BADGE_BASE, type RowBadgeTone } from "@/components/library/RowBadge";
 import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
+import { BidTermsPanel } from "@/components/library/BidTermsPanel";
 import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import { QuoteVendorPickerModal } from "@/components/rfq/QuoteVendorPickerModal";
 import { QuoteComparisonModal } from "@/components/rfq/QuoteComparisonModal";
@@ -853,6 +854,16 @@ export default function RfqWorklistPage() {
                     {isOpen && (
                       <tr className="bg-muted-light/30">
                         <td colSpan={10} className="px-6 py-3">
+                          <div className="space-y-4">
+                          {/* Whether this solicitation is biddable at all, and
+                              what bidding costs — above the parts, because it
+                              decides whether the parts are worth quoting.
+                              Renders nothing when no terms are stated. */}
+                          <BidTermsPanel
+                            terms={item.bid_terms}
+                            definitions={data?.bid_term_definitions}
+                          />
+
                           {!partsState || partsState.loading ? (
                             <div className="flex items-center gap-2 py-2 text-xs text-muted">
                               <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -941,6 +952,7 @@ export default function RfqWorklistPage() {
                               </tbody>
                             </table>
                           )}
+                          </div>
                         </td>
                       </tr>
                     )}
