@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
@@ -65,6 +66,13 @@ type SortKey = "close_date" | "solicitation_number" | "sol_status" | "work_statu
 
 const inputClass =
   "px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
+
+// The two table-header filters. Deliberately smaller than inputClass, which
+// the bulk-assign control keeps: that one appears beside a <Button> and has to
+// match its height, while these sit above the table all day and read better as
+// chrome than as inputs.
+const filterSelectClass =
+  "px-1.5 py-0.5 rounded border border-border bg-card-bg text-card-foreground text-xs cursor-pointer focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -603,34 +611,42 @@ export default function RfqWorklistPage() {
           className="overflow-x-auto"
           header={
             <>
-              <label className="text-xs text-muted">Sol. status</label>
-              <select
-                className={inputClass}
-                value={solStatus}
-                onChange={(e) => setSolStatus(e.target.value as SolStatusFilter)}
-                aria-label="Filter by solicitation status"
-                title="Picking a status other than Open also includes solicitations past their close date — closed, cancelled, and awarded ones almost always are."
-              >
-                <option value="open">Open</option>
-                <option value="awarded">Awarded</option>
-                <option value="closed">Closed</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="removed">Removed</option>
-                <option value="unavailable">Unavailable</option>
-                <option value="all">All</option>
-              </select>
-              <label className="text-xs text-muted">RFQ progress</label>
-              <select
-                className={inputClass}
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                aria-label="Filter by RFQ progress"
-              >
-                <option value="">All</option>
-                {(Object.keys(WORK_STATUS_LABELS) as RfqWorkStatus[]).map((st) => (
-                  <option key={st} value={st}>{WORK_STATUS_LABELS[st]}</option>
-                ))}
-              </select>
+              {/* Label and control are one <label> element rather than two
+                  siblings: the header's gap-3 was separating each caption from
+                  its own select as widely as it separated the two filters, so
+                  the pair never read as one control. Wrapping also gives the
+                  select a real accessible name, which the detached <label>
+                  (no htmlFor) never did. */}
+              <label className="inline-flex items-center gap-1.5 text-[11px] text-muted whitespace-nowrap">
+                Sol. status
+                <select
+                  className={filterSelectClass}
+                  value={solStatus}
+                  onChange={(e) => setSolStatus(e.target.value as SolStatusFilter)}
+                  title="Picking a status other than Open also includes solicitations past their close date — closed, cancelled, and awarded ones almost always are."
+                >
+                  <option value="open">Open</option>
+                  <option value="awarded">Awarded</option>
+                  <option value="closed">Closed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="removed">Removed</option>
+                  <option value="unavailable">Unavailable</option>
+                  <option value="all">All</option>
+                </select>
+              </label>
+              <label className="inline-flex items-center gap-1.5 text-[11px] text-muted whitespace-nowrap">
+                RFQ progress
+                <select
+                  className={filterSelectClass}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">All</option>
+                  {(Object.keys(WORK_STATUS_LABELS) as RfqWorkStatus[]).map((st) => (
+                    <option key={st} value={st}>{WORK_STATUS_LABELS[st]}</option>
+                  ))}
+                </select>
+              </label>
               <span className="ml-auto text-xs text-muted">
                 {myMinEst != null && (
                   <span
@@ -767,13 +783,13 @@ export default function RfqWorklistPage() {
                             </button>
                           )}
                           {item.staged_count > 0 && (
-                            <a
+                            <Link
                               href="/rfq/batch"
                               className={`${ROW_BADGE_BASE} border-amber-500/50 text-amber-700 hover:bg-amber-500/10 transition-colors`}
                               title={`${item.staged_count} item${item.staged_count !== 1 ? "s" : ""} staged in the batch cart${item.staged_by_names.length > 0 ? ` by ${item.staged_by_names.join(", ")}` : ""} — RFQs not sent yet`}
                             >
                               In cart ({item.staged_count})
-                            </a>
+                            </Link>
                           )}
                         </div>
                         {item.agency_code && (
