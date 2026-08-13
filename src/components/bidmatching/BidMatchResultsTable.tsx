@@ -141,38 +141,18 @@ function isRecentWin(lastWonOn: string | null | undefined): boolean {
 }
 
 /**
- * First Article Test requirement on the solicitation.
+ * Click-to-open popover anchored under its trigger, shared by the row badges.
  *
- * DIBBS carries this as a placeholder line item rather than a field, and the
- * server now excludes those placeholders from the NSN column and the line-item
- * count — so this badge is what tells the buyer the requirement is there at
- * all. It is a cost-and-lead-time warning, not an achievement, so it reads as
- * a caution chip rather than borrowing the win badge's amber.
+ * Portaled to <body> at fixed coordinates rather than positioned in flow: the
+ * results table scrolls horizontally, and its overflow would clip an in-flow
+ * panel. Mirrors the SamDocumentsButton interaction.
  */
-function FirstArticleBadge({ result }: { result: BidMatchResult }) {
-  if (!result.first_article) return null;
-  return (
-    <span
-      title="First Article required — a sample must be produced and approved before full production ships. Expect added cost and lead time."
-      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 bg-sky-50 text-sky-800 border-sky-200 cursor-help"
-    >
-      FIRST ARTICLE
-    </span>
-  );
-}
-
-/**
- * "You have won this part before" — prior awards to the customer's own CAGE
- * for the part shown on the row. The count is on the badge; the unit price
- * history, which is what actually prices the next bid, is in the tooltip.
- */
-function WinHistoryBadge({ result }: { result: BidMatchResult }) {
+function useAnchoredPopover() {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click or Escape, matching SamDocumentsButton.
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
@@ -192,24 +172,78 @@ function WinHistoryBadge({ result }: { result: BidMatchResult }) {
     };
   }, [open]);
 
-  if (!result.win_count) return null;
-
-  const recent = isRecentWin(result.last_won_on);
-  const awards = result.recent_awards ?? [];
-  const older = result.win_count - awards.length;
-  const lastYear = result.last_won_on?.slice(0, 4);
-
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     const next = !open;
     setOpen(next);
     if (next) {
       const rect = btnRef.current?.getBoundingClientRect();
-      // Portaled to <body> at fixed coords — the results table scrolls
-      // horizontally, and an in-flow panel would be clipped by its overflow.
       if (rect) setCoords({ top: rect.bottom + 4, left: rect.left });
     }
   };
+
+  return { open, coords, btnRef, panelRef, toggle };
+}
+
+/**
+ * First Article Test requirement on the solicitation.
+ *
+ * DIBBS carries this as a placeholder line item rather than a field, and the
+ * server now excludes those placeholders from the NSN column and the line-item
+ * count — so this badge is what tells the buyer the requirement is there at
+ * all. It is a cost-and-lead-time warning, not an achievement, so it reads as
+ * a caution chip rather than borrowing the win badge's amber.
+ */
+function FirstArticleBadge({ result }: { result: BidMatchResult }) {
+  const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
+
+  if (!result.first_article) return null;
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        aria-label="First Article required — what this means"
+        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100 cursor-pointer transition-colors"
+      >
+        FIRST ARTICLE
+      </button>
+      {open && coords && createPortal(
+        <div
+          ref={panelRef}
+          style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 60 }}
+          className="w-80 rounded-md border border-border bg-background shadow-lg p-3"
+        >
+          <p className="text-xs text-foreground leading-relaxed">
+            <span className="font-semibold">Contractor First Article Test:</span>{" "}
+            The bidder must test initial sample units and submit a formal report
+            under FAR 52.209-3 before full production delivery. Expect added cost
+            and lead time.
+          </p>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+/**
+ * "You have won this part before" — prior awards to the customer's own CAGE
+ * for the part shown on the row. The count is on the badge; the unit price
+ * history, which is what actually prices the next bid, is in the tooltip.
+ */
+function WinHistoryBadge({ result }: { result: BidMatchResult }) {
+  const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
+
+  if (!result.win_count) return null;
+
+  const recent = isRecentWin(result.last_won_on);
+  const awards = result.recent_awards ?? [];
+  const older = result.win_count - awards.length;
+  const lastYear = result.last_won_on?.slice(0, 4);
 
   return (
     <>
