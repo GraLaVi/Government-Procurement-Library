@@ -90,6 +90,16 @@ If low-value solicitations aren't worth your time, set a personal
 your queue (rows with no estimate stay), and the page shows a "Hiding
 under…" note so the filter is never invisible.
 
+The queue changes under you as the matcher lands new solicitations and
+teammates claim rows, so it re-checks itself on a timer. The
+**Auto-refresh** button in the top right turns that on and off, and the
+dropdown beside it sets how often — the timestamp underneath tells you
+when the queue was last updated. Refreshes are silent: rows are replaced
+in place, and your selection, expanded rows and scroll position stay put.
+Nothing refreshes while a dialog is open or while the tab is in the
+background, so a row can't move out from under you mid-task. **Refresh**
+re-checks immediately.
+
 Click a solicitation number to see its quotable items — NSN, description,
 quantity, and unit price — with a **Quote** button on each row. Each NSN is
 a link that opens that part in Parts Search in a new tab. DIBBS "first
