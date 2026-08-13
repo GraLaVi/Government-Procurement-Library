@@ -27,7 +27,7 @@ New matches also appear in the in-app notification bell (🔔) at the top of the
 Each match row shows:
 
 - **★.** Flag a solicitation to come back to it — see [Flagging solicitations to work later](#flagging-solicitations-to-work-later).  
-- **Solicitation.** The solicitation number, with the source agency (DLA, DIBBS, or other) shown below. Solicitations that have changed carry a badge — see [Amended and updated solicitations](#amended-and-updated-solicitations) below. Fast-award candidates carry a green **Fast Award** badge, meaning the buy can be awarded before its close date — prioritize quoting these; see [Solicitation type indicators](/help/solicitations-and-contracts#solicitation-type-indicators).  
+- **Solicitation.** The solicitation number, with the source agency (DLA, DIBBS, or other) shown below. Solicitations that have changed carry a badge — see [Amended and updated solicitations](#amended-and-updated-solicitations) below. Fast-award candidates carry a green **lightning bolt**, meaning the buy can be awarded before its close date — prioritize quoting these; see [Solicitation type indicators](/help/solicitations-and-contracts#solicitation-type-indicators).  
 - **NSN.** The line item that triggered the match, or the solicitation's largest line where nothing more specific was recorded. The NSN links into Parts Search in a new tab. When the solicitation carries more items, a **+N more** button expands the row to list them all.  
 - **Description, Qty, UOM.** The same line item's description, quantity, and unit of issue.  
 - **Est. Value.** Line quantities × the government acquisition cost, so the same solicitation reports the same figure here and in the Send RFQs queue.  
