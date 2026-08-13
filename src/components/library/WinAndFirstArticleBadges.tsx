@@ -118,9 +118,10 @@ export function FirstArticleBadge({ firstArticle }: { firstArticle?: boolean }) 
         onClick={toggle}
         aria-expanded={open}
         aria-label="First Article required — what this means"
+        title="First Article Test required"
         className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100 cursor-pointer transition-colors"
       >
-        FIRST ARTICLE
+        FAT
       </button>
       {open && coords && createPortal(
         <div
@@ -163,14 +164,10 @@ export function WinHistoryBadge({
   if (!count) return null;
 
   const recent = isRecentWin(lastWonOn);
-  const lastYear = lastWonOn?.slice(0, 4);
   // Both modes cap the list server-side, so both can under-report: part mode
   // hides older awards, solicitation mode hides further parts.
   const older = Math.max(0, (mode === "part" ? (totalWins ?? count) : count) - awards.length);
 
-  const label = mode === "solicitation"
-    ? (count === 1 ? "WON 1 PART" : `WON ${count} PARTS`)
-    : `WON ${count}×`;
 
   return (
     <>
@@ -190,7 +187,13 @@ export function WinHistoryBadge({
             : "text-muted border-border font-medium hover:text-foreground"
         }`}
       >
-        {recent ? `★ ${label}` : `${label} · ${lastYear}`}
+        {/* A trophy, not a star: on bid-matching the star already marks the
+            "come back to this" flag column, and one glyph must not mean two
+            unrelated things in the same row. */}
+        <svg className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 21h8m-4-4v4M6 4h12v4a6 6 0 01-12 0V4zM6 6H4a2 2 0 002 4M18 6h2a2 2 0 01-2 4" />
+        </svg>
+        {count}
       </button>
       {open && coords && createPortal(
         <div
@@ -244,7 +247,7 @@ export function WinHistoryBadge({
           )}
           {!recent && (
             <p className="mt-2 text-[11px] text-muted">
-              Last won over {WIN_RECENCY_YEARS} years ago — treat the price as historical.
+              Last won {lastWonOn?.slice(0, 4)} — over {WIN_RECENCY_YEARS} years ago, so treat the price as historical.
             </p>
           )}
         </div>,

@@ -650,11 +650,11 @@ export default function RfqWorklistPage() {
                 <th className="px-2 py-2 w-8" aria-label="Expand" />
                 <SortHeader label="Solicitation" sortKey="solicitation_number" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                 <th className={`${thClass} whitespace-nowrap`}>PR #</th>
-                <SortHeader label="Sol. Status" sortKey="sol_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                 <SortHeader label="RFQ Progress" sortKey="work_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                 <SortHeader label="Close date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
                 <SortHeader label="Set-aside" sortKey="set_aside" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                 <SortHeader label="Est. value" sortKey="estimated_value" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
+                <SortHeader label="Sol. Status" sortKey="sol_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                 <SortHeader label="Assignee" sortKey="assignee" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
               </tr>
             </thead>
@@ -720,10 +720,18 @@ export default function RfqWorklistPage() {
                               </svg>
                             </button>
                           )}
+                          {/* One "Amended" pill, not two. The separate
+                              "Updated <n>d ago" badge said much the same thing
+                              and made an already-crowded column unreadable.
+                              Folding the post-match signal in rather than
+                              dropping it keeps rows amended ONLY after the
+                              match from losing their badge entirely; the
+                              timeline behind the pill still shows every
+                              change, before and after. */}
                           <SolicitationRowBadges
-                            hasAmendmentIndicator={item.has_amendment_indicator}
-                            hasPostMatchAmendment={item.has_post_match_amendment}
-                            latestPostMatchAmendmentAt={item.latest_post_match_amendment_at}
+                            hasAmendmentIndicator={
+                              item.has_amendment_indicator || item.has_post_match_amendment
+                            }
                             onShowAmendments={() => {
                               setAmendmentSolId(item.solicitation_id);
                               setAmendmentSolNumber(item.solicitation_number);
@@ -780,9 +788,6 @@ export default function RfqWorklistPage() {
                           </span>
                         )}
                       </td>
-                      <td className={`${tdClass} whitespace-nowrap`}>
-                        <SolStatusBadge status={item.status} />
-                      </td>
                       <td className={tdClass}>
                         <select
                           className={`rounded-full text-xs font-medium px-2 py-1 border-0 cursor-pointer ${statusPillClass[item.work_status]}`}
@@ -809,6 +814,9 @@ export default function RfqWorklistPage() {
                       </td>
                       <td className={`${tdClass} text-right font-mono tabular-nums whitespace-nowrap`}>
                         {formatCurrency(item.estimated_value)}
+                      </td>
+                      <td className={`${tdClass} whitespace-nowrap`}>
+                        <SolStatusBadge status={item.status} />
                       </td>
                       <td className={tdClass}>
                         {item.assigned_user_name ? (
