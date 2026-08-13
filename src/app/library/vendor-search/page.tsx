@@ -18,6 +18,7 @@ import {
   VendorTabCounts,
   VendorCageSummaryResponse,
   buildSearchParams,
+  formatVendorTotal,
   getSearchTypeConfig,
 } from "@/lib/library/types";
 import { VendorSearchActionData, RecentActionEntry } from "@/lib/preferences/types";
@@ -44,6 +45,9 @@ function VendorSearchPageContent() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<VendorSearchResult[]>([]);
   const [totalResults, setTotalResults] = useState(0);
+  // The API caps its count at 100; this flags "there were more" so the counts
+  // render as "100+" rather than an exact 100.
+  const [totalCapped, setTotalCapped] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -69,7 +73,7 @@ function VendorSearchPageContent() {
   const searchFormRef = useRef<VendorSearchFormRef>(null);
 
   // Client-side search result cache (5-min TTL, max 50 entries)
-  const searchCache = useRef<Map<string, { results: VendorSearchResult[]; total: number; timestamp: number }>>(new Map());
+  const searchCache = useRef<Map<string, { results: VendorSearchResult[]; total: number; totalCapped: boolean; timestamp: number }>>(new Map());
 
   // Get URL search params
   const searchParams = useSearchParams();
@@ -153,6 +157,7 @@ function VendorSearchPageContent() {
     if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
       setSearchResults(cached.results);
       setTotalResults(cached.total);
+      setTotalCapped(cached.totalCapped);
       setHasSearched(true);
       setLastSearchType(type);
       setLastSearchQuery(query);
@@ -204,9 +209,10 @@ function VendorSearchPageContent() {
 
         setSearchResults(searchResponse.results);
         setTotalResults(searchResponse.total);
+        setTotalCapped(!!searchResponse.total_capped);
 
         // Cache search results
-        searchCache.current.set(cacheKey, { results: searchResponse.results, total: searchResponse.total, timestamp: Date.now() });
+        searchCache.current.set(cacheKey, { results: searchResponse.results, total: searchResponse.total, totalCapped: !!searchResponse.total_capped, timestamp: Date.now() });
         if (searchCache.current.size > 50) {
           const oldest = searchCache.current.keys().next().value;
           if (oldest !== undefined) searchCache.current.delete(oldest);
@@ -254,9 +260,10 @@ function VendorSearchPageContent() {
         const searchResponse = data as VendorSearchResponse;
         setSearchResults(searchResponse.results);
         setTotalResults(searchResponse.total);
+        setTotalCapped(!!searchResponse.total_capped);
 
         // Store in client-side cache
-        searchCache.current.set(cacheKey, { results: searchResponse.results, total: searchResponse.total, timestamp: Date.now() });
+        searchCache.current.set(cacheKey, { results: searchResponse.results, total: searchResponse.total, totalCapped: !!searchResponse.total_capped, timestamp: Date.now() });
         if (searchCache.current.size > 50) {
           const oldest = searchCache.current.keys().next().value;
           if (oldest !== undefined) searchCache.current.delete(oldest);
@@ -291,6 +298,7 @@ function VendorSearchPageContent() {
       setSearchError(error instanceof Error ? error.message : "An unexpected error occurred");
       setSearchResults([]);
       setTotalResults(0);
+      setTotalCapped(false);
     } finally {
       setIsSearching(false);
     }
@@ -386,7 +394,7 @@ function VendorSearchPageContent() {
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-muted">{getSearchLabel()}:</span>
                   <span className="font-medium text-foreground">{lastSearchQuery}</span>
-                  <span className="text-muted">({totalResults} result{totalResults !== 1 ? 's' : ''})</span>
+                  <span className="text-muted">({formatVendorTotal(totalResults, totalCapped)} result{totalResults !== 1 || totalCapped ? 's' : ''})</span>
                 </div>
               </div>
               <button
@@ -504,7 +512,7 @@ function VendorSearchPageContent() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
-                Back to results ({totalResults})
+                Back to results ({formatVendorTotal(totalResults, totalCapped)})
               </button>
 
               {/* Vendor Detail - Full Width */}
@@ -550,6 +558,7 @@ function VendorSearchPageContent() {
             <VendorResultsList
               results={searchResults}
               total={totalResults}
+              totalCapped={totalCapped}
               onSelect={handleSelectVendor}
               selectedCageCode={undefined}
               isLoading={isSearching}

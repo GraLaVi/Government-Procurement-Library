@@ -17,6 +17,10 @@ export interface VendorSearchResult {
 export interface VendorSearchResponse {
   results: VendorSearchResult[];
   total: number;
+  // True when more than `total` vendors matched and the backend stopped
+  // counting at its 100 cap — render the count as "100+". Optional so a
+  // frontend deployed ahead of the API just shows the plain number.
+  total_capped?: boolean;
   limit: number;
   offset: number;
 }
@@ -275,6 +279,13 @@ export function validateSearchInput(
   }
 
   return { valid: true };
+}
+
+// Format a vendor search total for display. The API caps the count at 100 and
+// sets total_capped when more matched, so a capped total renders as "100+"
+// instead of claiming an exact 100.
+export function formatVendorTotal(total: number, capped?: boolean): string {
+  return capped ? `${total}+` : `${total}`;
 }
 
 // Helper function to build search params for API call
