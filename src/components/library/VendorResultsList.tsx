@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { VendorSearchResult, formatSamStatus } from "@/lib/library/types";
-import { Badge } from "@/components/ui/Badge";
+import { RowBadge } from "@/components/library/RowBadge";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
 import type { LibraryTier } from "@/lib/library/tier";
@@ -50,7 +50,7 @@ export function VendorResultsList({
               {row.original.legal_business_name || "Unknown"}
             </span>
             {row.original.small_business && (
-              <Badge variant="info" size="sm">SB</Badge>
+              <RowBadge>SB</RowBadge>
             )}
           </div>
         ),
@@ -84,12 +84,9 @@ export function VendorResultsList({
         cell: ({ row }) => {
           const samStatus = formatSamStatus(row.original.sam_status);
           return samStatus ? (
-            <Badge
-              variant={samStatus === "Active" ? "success" : "warning"}
-              size="sm"
-            >
+            <RowBadge tone={samStatus === "Active" ? "green" : "amber"}>
               {samStatus}
-            </Badge>
+            </RowBadge>
           ) : null;
         },
       },

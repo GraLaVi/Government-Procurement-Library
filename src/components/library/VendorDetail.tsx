@@ -48,6 +48,7 @@ import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
 import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
+import { RowBadge, rowBadgeClass, ROW_BADGE_BASE } from "@/components/library/RowBadge";
 
 // DoD PIID formatter: many SAM.gov solicitation numbers arrive without the
 // canonical dashes (e.g. "FA821326R3048"). When a value has no dashes AND matches
@@ -71,8 +72,11 @@ function samNoticeMeta(noticeType: string | null | undefined): {
   label: string;
   className: string;
 } {
-  const biddable = "bg-emerald-100 text-emerald-800";
-  const early = "bg-amber-100 text-amber-800";
+  // Border colours are explicit: the shared row-badge base sets border-width
+  // only, and Tailwind v4 defaults an uncoloured border to currentColor —
+  // which would draw a hard emerald/amber rule around the chip.
+  const biddable = "bg-emerald-100 text-emerald-800 border-emerald-200";
+  const early = "bg-amber-100 text-amber-800 border-amber-200";
   switch (noticeType) {
     case "Solicitation":
       return { label: "Solicitation", className: biddable };
@@ -83,7 +87,7 @@ function samNoticeMeta(noticeType: string | null | undefined): {
     case "Sources Sought":
       return { label: "Sources Sought", className: early };
     default:
-      return { label: noticeType || "Opportunity", className: "bg-muted/20 text-muted" };
+      return { label: noticeType || "Opportunity", className: "bg-muted/20 text-muted border-border" };
   }
 }
 
@@ -1600,7 +1604,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                 const notice = samNoticeMeta(sol.notice_type);
                 return (
                   <Tooltip content={sol.notice_type ? `SAM.gov · ${sol.notice_type}` : "SAM.gov opportunity"}>
-                    <span className={`inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium leading-none shrink-0 ${notice.className}`}>
+                    <span className={`${ROW_BADGE_BASE} ${notice.className}`}>
                       {notice.label}
                     </span>
                   </Tooltip>
@@ -1635,7 +1639,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
                     e.stopPropagation();
                     setAmendmentModal({ id: sol.solicitation_id, number: sol.solicitation_number });
                   }}
-                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shrink-0"
+                  className={rowBadgeClass("amber", { interactive: true })}
                   title={`${summary.amendment_count} amendment${summary.amendment_count === 1 ? "" : "s"} on this solicitation. Click to view.`}
                 >
                   Amended{summary.amendment_count > 1 ? ` ×${summary.amendment_count}` : ""}
@@ -1756,7 +1760,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
           if (!code) return <span className="text-muted">—</span>;
           return (
             <Tooltip content={label ?? code}>
-              <Badge variant="info" size="sm">{code}</Badge>
+              <RowBadge>{code}</RowBadge>
             </Tooltip>
           );
         },
