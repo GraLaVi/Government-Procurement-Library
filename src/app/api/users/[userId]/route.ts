@@ -10,7 +10,7 @@ interface RouteParams {
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { userId } = await params;
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(
@@ -67,7 +67,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { userId } = await params;
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(
@@ -131,7 +131,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
     const { userId } = await params;
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(

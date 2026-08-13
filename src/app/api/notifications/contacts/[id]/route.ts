@@ -11,7 +11,7 @@ async function forward(
   init: RequestInit,
   errorLabel: string,
 ) {
-  let accessToken = await getAccessToken();
+  const accessToken = await getAccessToken();
   if (!accessToken) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }

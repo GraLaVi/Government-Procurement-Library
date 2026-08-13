@@ -21,7 +21,7 @@ export async function POST(
       return NextResponse.json({ error: 'view query param is required' }, { status: 400 });
     }
 
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
     if (!accessToken) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }

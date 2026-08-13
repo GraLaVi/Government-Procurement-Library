@@ -37,6 +37,9 @@ export function ConfirmDialog({
   // Reset confirm input when dialog opens/closes
   useEffect(() => {
     if (!isOpen) {
+      // Clears the typed confirmation when the dialog closes, so reopening it never
+      // starts pre-confirmed. Keyed on isOpen.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setConfirmInput("");
     }
   }, [isOpen]);

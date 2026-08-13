@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { userId } = await params;
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(

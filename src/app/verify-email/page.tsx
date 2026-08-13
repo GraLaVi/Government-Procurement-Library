@@ -19,6 +19,9 @@ function VerifyEmailContent() {
 
   useEffect(() => {
     if (!token) {
+      // Reports a missing token and returns. No token means no fetch to hang the
+      // status off, and the effect has nothing else to do.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus("no-token");
       return;
     }

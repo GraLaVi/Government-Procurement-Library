@@ -7,7 +7,7 @@ import { buildForwardHeaders } from '@/lib/api/forwardHeaders';
 // Proxies to: GET /api/v1/library/vendor/search
 export async function GET(request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(

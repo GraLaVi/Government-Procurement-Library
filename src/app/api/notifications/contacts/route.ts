@@ -5,7 +5,7 @@ import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
 const UPSTREAM = `${AUTH_CONFIG.API_BASE_URL}/notifications/contacts`;
 
 async function authedFetch(init: RequestInit) {
-  let accessToken = await getAccessToken();
+  const accessToken = await getAccessToken();
   if (!accessToken) return { unauth: true };
 
   const withAuth = (token: string): RequestInit => ({

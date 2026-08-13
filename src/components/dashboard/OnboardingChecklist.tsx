@@ -28,6 +28,10 @@ export function OnboardingChecklist() {
   const [dismissed, setDismissed] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // localStorage is not available during render, so the dismissed flag can only
+    // be read after mount. Initial null renders nothing, which is what keeps
+    // server and client markup identical.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDismissed(window.localStorage.getItem(DISMISS_KEY) === "true");
   }, []);
 

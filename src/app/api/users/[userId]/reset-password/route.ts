@@ -10,7 +10,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { userId } = await params;
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(

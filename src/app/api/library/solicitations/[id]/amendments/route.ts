@@ -15,7 +15,7 @@ export async function GET(
       return NextResponse.json({ error: "Invalid solicitation ID" }, { status: 400 });
     }
 
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
     if (!accessToken) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }

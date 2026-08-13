@@ -5,7 +5,7 @@ import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
 // GET /api/users/organization/products - Get all products assigned to the organization
 export async function GET(_request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(

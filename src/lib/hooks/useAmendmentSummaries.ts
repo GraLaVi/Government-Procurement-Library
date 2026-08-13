@@ -19,6 +19,9 @@ export function useAmendmentSummaries(
 
   useEffect(() => {
     if (!key) {
+      // Runs on a keyed transition (open/close or an id change), not on every
+      // render, so it cannot cascade.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSummaries(new Map());
       return;
     }

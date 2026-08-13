@@ -51,6 +51,9 @@ export function ConsentSettingsModal({
   // When the modal reopens, sync the draft with the latest stored
   // choice so the toggles reflect what's actually persisted.
   useEffect(() => {
+    // Seeds the toggles from saved consent when the modal opens. Keyed on the
+      // open flag, so it runs on the transition, not every render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isOpen) setDraft(currentChoice);
   }, [isOpen, currentChoice]);
 

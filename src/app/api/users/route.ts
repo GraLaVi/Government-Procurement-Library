@@ -5,7 +5,7 @@ import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
 // GET /api/users - List all users in the organization
 export async function GET(request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 // POST /api/users - Create a new user
 export async function POST(request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(

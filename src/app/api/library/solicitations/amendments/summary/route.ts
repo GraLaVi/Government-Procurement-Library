@@ -7,7 +7,7 @@ import { getAccessToken, refreshAccessToken } from "@/lib/auth/getAccessToken";
 // Body: number[] (list of solicitation IDs).
 export async function POST(request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
     if (!accessToken) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }

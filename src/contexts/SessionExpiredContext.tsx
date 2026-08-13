@@ -7,7 +7,7 @@ interface PendingRequest {
   url: string;
   options: RequestInit;
   resolve: (value: Response) => void;
-  reject: (reason?: any) => void;
+  reject: (reason?: unknown) => void;
 }
 
 interface SessionExpiredContextValue {

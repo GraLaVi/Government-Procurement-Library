@@ -76,6 +76,9 @@ function LoginForm() {
   useEffect(() => {
     if (manualLoginRef.current) return;
     if (!authLoading && isAuthenticated && !redirectAttempted) {
+      // Guarded by !redirectAttempted and a manual-login ref, so it runs once per
+      // landing rather than re-entering. The flag IS the effect's purpose.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRedirectAttempted(true);
       router.replace(redirect);
       
@@ -96,6 +99,9 @@ function LoginForm() {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (rateLimitSeconds === 0) {
+      // Terminal branch of a countdown: fires only at exactly 0 and clears the
+      // value, so it cannot re-trigger itself.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRateLimitSeconds(null);
       setError(null);
     }

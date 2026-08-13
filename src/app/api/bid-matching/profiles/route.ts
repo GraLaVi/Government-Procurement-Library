@@ -5,7 +5,7 @@ import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
 // GET /api/bid-matching/profiles - List profiles
 export async function GET(_request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(
@@ -58,7 +58,7 @@ export async function GET(_request: NextRequest) {
 // POST /api/bid-matching/profiles - Create profile
 export async function POST(request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(
