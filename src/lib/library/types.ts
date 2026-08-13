@@ -230,8 +230,8 @@ export const SEARCH_TYPE_CONFIGS: SearchTypeConfig[] = [
     value: 'entity_name',
     label: 'Entity Name',
     description: 'Company or business name',
-    placeholder: 'Enter company name (min 5 chars)',
-    minLength: 5,
+    placeholder: 'Enter company name (min 3 chars)',
+    minLength: 3,
     maxLength: 255,
   },
 ];
