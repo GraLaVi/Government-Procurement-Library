@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { RowBadge } from "@/components/library/RowBadge";
 import { RfqVendorContactEditModal } from "@/components/rfq/RfqVendorContactEditModal";
 import { TableCard } from "@/components/rfq/TableCard";
 import type { VendorContact } from "@/lib/rfq/types";
@@ -200,7 +200,7 @@ export default function RfqContactsPage() {
                   <td className="px-3 py-2 text-foreground">{c.title || "—"}</td>
                   <td className="px-3 py-2">
                     {c.is_default ? (
-                      <Badge variant="success" size="sm">Default</Badge>
+                      <RowBadge tone="green">Default</RowBadge>
                     ) : (
                       <button onClick={() => setDefault(c)} disabled={busy} className="text-xs text-primary hover:underline">
                         Set default
