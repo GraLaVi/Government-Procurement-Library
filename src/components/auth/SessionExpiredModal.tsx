@@ -25,6 +25,9 @@ export function SessionExpiredModal() {
       }, 1000);
       return () => clearTimeout(timer);
     } else if (rateLimitSeconds === 0) {
+      // Terminal branch of a countdown: fires only at exactly 0 and clears the
+      // value, so it cannot re-trigger itself.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRateLimitSeconds(null);
       setError(null);
     }
@@ -33,6 +36,9 @@ export function SessionExpiredModal() {
   // Reset form when modal opens
   useEffect(() => {
     if (isModalOpen) {
+      // Clearing the form when the modal opens. Keyed on isModalOpen, so it runs
+      // on the transition, not every render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail("");
       setPassword("");
       setError(null);

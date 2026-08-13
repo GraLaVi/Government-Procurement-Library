@@ -6,7 +6,7 @@ import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
 // the logged-in customer. Body: { price_id, seat_quantity }.
 export async function POST(request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
     if (!accessToken) {
       return NextResponse.json(
         { error: 'Not authenticated' },

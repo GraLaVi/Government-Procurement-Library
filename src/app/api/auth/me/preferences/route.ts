@@ -6,7 +6,7 @@ import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
 // GET /api/auth/me/preferences - Get user preferences
 export async function GET(_request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(
@@ -60,7 +60,7 @@ export async function GET(_request: NextRequest) {
 // PUT /api/auth/me/preferences - Update user preferences
 export async function PUT(request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(

@@ -8,7 +8,7 @@ const UPSTREAM = `${AUTH_CONFIG.API_BASE_URL}/notifications/team/bulk`;
 // of subscriptions for one notification type across team users + contacts.
 export async function POST(request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
     if (!accessToken) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }

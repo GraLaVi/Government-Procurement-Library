@@ -12,7 +12,7 @@ let sessionExpiredContext: {
     url: string;
     options: RequestInit;
     resolve: (value: Response) => void;
-    reject: (reason?: any) => void;
+    reject: (reason?: unknown) => void;
   }) => void;
 } | null = null;
 
@@ -32,7 +32,7 @@ export function initFetchWithAuth(context: {
     url: string;
     options: RequestInit;
     resolve: (value: Response) => void;
-    reject: (reason?: any) => void;
+    reject: (reason?: unknown) => void;
   }) => void;
 }) {
   sessionExpiredContext = context;

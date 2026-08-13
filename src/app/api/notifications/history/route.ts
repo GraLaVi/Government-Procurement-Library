@@ -5,7 +5,7 @@ import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
 // GET /api/notifications/history - Get user's notification history
 export async function GET(request: NextRequest) {
   try {
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(

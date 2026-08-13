@@ -45,6 +45,9 @@ export function BidMatchingResultsCard() {
 
     // No access → upsell state, skip all network calls.
     if (!hasAccess) {
+      // Runs on a keyed transition (open/close or an id change), not on every
+      // render, so it cannot cascade.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ kind: "no-access" });
       return;
     }

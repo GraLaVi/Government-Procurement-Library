@@ -40,7 +40,7 @@ export function AccessDeniedPage({
           Unlock {featureName}
         </h1>
         <p className="text-muted">
-          This feature isn't included in your current plan.
+          This feature isn’t included in your current plan.
         </p>
       </div>
 

@@ -26,7 +26,7 @@ export async function GET(
       );
     }
 
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(
@@ -37,7 +37,7 @@ export async function GET(
 
     const url = `${AUTH_CONFIG.API_BASE_URL}/library/awards/${orderDetailId}/pdf`;
 
-    let response = await fetch(url, {
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

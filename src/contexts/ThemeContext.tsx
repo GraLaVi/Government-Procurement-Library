@@ -52,6 +52,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Load theme from preferences on mount
   useEffect(() => {
+    // The mounted flag exists precisely to defer theme-dependent output until
+    // after hydration; it cannot be computed during render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     
     if (!isLoading) {
@@ -128,6 +131,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       // Try to get theme from localStorage first (for immediate apply)
       const savedTheme = localStorage.getItem('theme') as Theme | null;
       if (savedTheme) {
+        // Applies the stored theme on mount to avoid a flash of the wrong one. Reads
+    // localStorage, so it cannot run during render.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         applyTheme(savedTheme);
       } else {
         applyTheme('light');

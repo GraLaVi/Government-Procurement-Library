@@ -25,6 +25,9 @@ export function useCodeDefinitions(codeType: string): UseCodeDefinitionsResult {
 
   useEffect(() => {
     let cancelled = false;
+    // Resets to loading when the key changes. On mount the value is already true
+    // and React bails on an identical value, so this costs no extra render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(null);
 

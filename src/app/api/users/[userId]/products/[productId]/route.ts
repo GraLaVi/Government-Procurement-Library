@@ -9,7 +9,7 @@ export async function POST(
 ) {
   try {
     const { userId, productId } = await params;
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(
@@ -71,7 +71,7 @@ export async function DELETE(
 ) {
   try {
     const { userId, productId } = await params;
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       return NextResponse.json(

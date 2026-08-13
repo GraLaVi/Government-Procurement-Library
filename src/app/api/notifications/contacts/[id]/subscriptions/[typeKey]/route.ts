@@ -10,7 +10,7 @@ export async function PUT(
 ) {
   try {
     const { id, typeKey } = await params;
-    let accessToken = await getAccessToken();
+    const accessToken = await getAccessToken();
     if (!accessToken) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }

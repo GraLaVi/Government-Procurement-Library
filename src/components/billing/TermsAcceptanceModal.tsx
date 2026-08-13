@@ -26,6 +26,9 @@ export function TermsAcceptanceModal({
 
   useEffect(() => {
     if (!isOpen) {
+      // Runs on a keyed transition (open/close or an id change), not on every
+      // render, so it cannot cascade.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAccepted(false);
       setShowError(false);
     }
@@ -33,6 +36,9 @@ export function TermsAcceptanceModal({
 
   // Clear the validation error as soon as the user checks the box.
   useEffect(() => {
+    // Runs on a keyed transition (open/close or an id change), not on every
+      // render, so it cannot cascade.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (accepted) setShowError(false);
   }, [accepted]);
 
