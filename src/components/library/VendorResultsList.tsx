@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { VendorSearchResult, formatSamStatus } from "@/lib/library/types";
+import { VendorSearchResult, formatSamStatus, formatVendorTotal } from "@/lib/library/types";
 import { RowBadge } from "@/components/library/RowBadge";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
@@ -10,6 +10,9 @@ import type { LibraryTier } from "@/lib/library/tier";
 interface VendorResultsListProps {
   results: VendorSearchResult[];
   total: number;
+  /** True when the API capped the count at 100 and more vendors matched —
+   *  the header then reads "100+ vendors found". */
+  totalCapped?: boolean;
   onSelect: (cageCode: string) => void;
   selectedCageCode?: string;
   isLoading?: boolean;
@@ -23,6 +26,7 @@ interface VendorResultsListProps {
 export function VendorResultsList({
   results,
   total,
+  totalCapped,
   onSelect,
   isLoading,
   tier = null,
@@ -175,7 +179,8 @@ export function VendorResultsList({
       <div className="px-4 py-2 bg-muted-light border-b border-border flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-xs font-medium text-muted">
-            {total} vendor{total !== 1 ? "s" : ""} found
+            {formatVendorTotal(total, totalCapped)} vendor
+            {total !== 1 || totalCapped ? "s" : ""} found
           </span>
           <span className="text-xs text-muted hidden sm:inline">
             Click a row to view details
