@@ -290,6 +290,23 @@ export interface RfqWorkItem {
   staged_count: number;
   staged_by_names: string[];
   notes: string | null;
+  /** Solicitation carries a contractor-tested First Article CLIN. */
+  first_article?: boolean;
+  /** Prior awards to this customer's own CAGE for parts on this solicitation.
+   * Counted per PART — "you have made N of these lines before" — not per
+   * award, which is what bid-matching's win_count means. */
+  won_part_count?: number;
+  last_won_on?: string | null;
+  won_parts?: RfqWonPart[];
+}
+
+/** One part on the solicitation the customer has been awarded before. */
+export interface RfqWonPart {
+  nsn?: string | null;
+  mfg_part_number?: string | null;
+  win_count?: number;
+  last_won_on?: string | null;
+  last_unit_price?: number | null;
 }
 
 /** POST /api/rfq/worklist/[id]/claim — always 200; claimed=false with another

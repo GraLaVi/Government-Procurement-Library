@@ -1,13 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { Fragment, useState } from "react";
 import { MatchStrengthBadge } from "@/components/ui/MatchStrengthBadge";
 import { Modal } from "@/components/ui/Modal";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { BidMatchLineItems } from "@/components/bidmatching/BidMatchLineItems";
 import { PartIdentityLink } from "@/components/bidmatching/PartIdentityLink";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
+import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
 import { formatCurrency } from "@/lib/library/types";
 
 interface MatchedCondition {
@@ -125,192 +125,6 @@ function DemandSignalChip({ signal }: { signal?: string | null }) {
 
 /** Columns the server can sort on. "" = the default newest-first ordering. */
 export type BidSortKey = "" | "interested" | "solicitation" | "quantity" | "estimated_value" | "close_date";
-
-/**
- * A win older than this still shows, but greyed: the award is still true, its
- * unit price is no longer a usable guide once material costs have moved on.
- */
-const WIN_RECENCY_YEARS = 5;
-
-function isRecentWin(lastWonOn: string | null | undefined): boolean {
-  if (!lastWonOn) return false;
-  const [y, m, d] = lastWonOn.split("-").map(Number);
-  const cutoff = new Date();
-  cutoff.setFullYear(cutoff.getFullYear() - WIN_RECENCY_YEARS);
-  return new Date(y, (m || 1) - 1, d || 1) >= cutoff;
-}
-
-/**
- * Click-to-open popover anchored under its trigger, shared by the row badges.
- *
- * Portaled to <body> at fixed coordinates rather than positioned in flow: the
- * results table scrolls horizontally, and its overflow would clip an in-flow
- * panel. Mirrors the SamDocumentsButton interaction.
- */
-function useAnchoredPopover() {
-  const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (
-        panelRef.current && !panelRef.current.contains(e.target as Node) &&
-        btnRef.current && !btnRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const next = !open;
-    setOpen(next);
-    if (next) {
-      const rect = btnRef.current?.getBoundingClientRect();
-      if (rect) setCoords({ top: rect.bottom + 4, left: rect.left });
-    }
-  };
-
-  return { open, coords, btnRef, panelRef, toggle };
-}
-
-/**
- * First Article Test requirement on the solicitation.
- *
- * DIBBS carries this as a placeholder line item rather than a field, and the
- * server now excludes those placeholders from the NSN column and the line-item
- * count — so this badge is what tells the buyer the requirement is there at
- * all. It is a cost-and-lead-time warning, not an achievement, so it reads as
- * a caution chip rather than borrowing the win badge's amber.
- */
-function FirstArticleBadge({ result }: { result: BidMatchResult }) {
-  const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
-
-  if (!result.first_article) return null;
-
-  return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={toggle}
-        aria-expanded={open}
-        aria-label="First Article required — what this means"
-        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100 cursor-pointer transition-colors"
-      >
-        FIRST ARTICLE
-      </button>
-      {open && coords && createPortal(
-        <div
-          ref={panelRef}
-          style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 60 }}
-          className="w-80 rounded-md border border-border bg-background shadow-lg p-3"
-        >
-          <p className="text-xs text-foreground leading-relaxed">
-            <span className="font-semibold">Contractor First Article Test:</span>{" "}
-            The bidder must test initial sample units and submit a formal report
-            under FAR 52.209-3 before full production delivery. Expect added cost
-            and lead time.
-          </p>
-        </div>,
-        document.body
-      )}
-    </>
-  );
-}
-
-/**
- * "You have won this part before" — prior awards to the customer's own CAGE
- * for the part shown on the row. The count is on the badge; the unit price
- * history, which is what actually prices the next bid, is in the tooltip.
- */
-function WinHistoryBadge({ result }: { result: BidMatchResult }) {
-  const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
-
-  if (!result.win_count) return null;
-
-  const recent = isRecentWin(result.last_won_on);
-  const awards = result.recent_awards ?? [];
-  const older = result.win_count - awards.length;
-  const lastYear = result.last_won_on?.slice(0, 4);
-
-  return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={toggle}
-        aria-expanded={open}
-        aria-label={`You have won this part ${result.win_count} times — show award history`}
-        className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 cursor-pointer transition-colors ${
-          recent
-            ? "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200"
-            : "text-muted border-border font-medium hover:text-foreground"
-        }`}
-      >
-        {recent ? `★ WON ${result.win_count}×` : `WON ${result.win_count}× · ${lastYear}`}
-      </button>
-      {open && coords && createPortal(
-        <div
-          ref={panelRef}
-          style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 60 }}
-          className="w-80 rounded-md border border-border bg-background shadow-lg p-3"
-        >
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-muted mb-2">
-            Your award history · won {result.win_count}×
-          </div>
-          {awards.length === 0 ? (
-            <p className="text-xs text-muted">No contract detail available.</p>
-          ) : (
-            <table className="w-full text-xs">
-              <tbody>
-                {awards.map((a) => (
-                  <tr key={a.contract_number + a.contract_date} className="align-baseline">
-                    <td className="py-0.5 pr-2 data-field text-foreground whitespace-nowrap">
-                      {a.contract_number}
-                    </td>
-                    <td className="py-0.5 pr-2 text-muted whitespace-nowrap">
-                      {formatDate(a.contract_date)}
-                    </td>
-                    <td className="py-0.5 pr-2 text-right text-muted whitespace-nowrap">
-                      {a.quantity != null ? a.quantity.toLocaleString() : "—"}
-                    </td>
-                    {/* The number that actually prices the next bid. */}
-                    <td className="py-0.5 text-right font-semibold text-foreground whitespace-nowrap">
-                      {a.unit_price != null ? formatCurrency(a.unit_price) : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {older > 0 && (
-            <p className="mt-2 text-[11px] text-muted">
-              +{older} older award{older === 1 ? "" : "s"} not shown
-            </p>
-          )}
-          {!recent && (
-            <p className="mt-2 text-[11px] text-muted">
-              Last won over {WIN_RECENCY_YEARS} years ago — treat the price as historical.
-            </p>
-          )}
-        </div>,
-        document.body
-      )}
-    </>
-  );
-}
 
 interface BidMatchResultsTableProps {
   results: BidMatchResult[];
@@ -639,8 +453,13 @@ export function BidMatchResultsTable({
                     <td className="px-2.5 py-1.5 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <PartIdentityLink part={result} className="data-field font-medium" />
-                        <FirstArticleBadge result={result} />
-                        <WinHistoryBadge result={result} />
+                        <FirstArticleBadge firstArticle={result.first_article} />
+                        <WinHistoryBadge
+                          count={result.win_count ?? 0}
+                          lastWonOn={result.last_won_on}
+                          awards={result.recent_awards ?? []}
+                          mode="part"
+                        />
                         {extraItems > 0 && (
                           <button
                             type="button"

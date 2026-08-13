@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
+import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import { QuoteVendorPickerModal } from "@/components/rfq/QuoteVendorPickerModal";
@@ -729,6 +730,19 @@ export default function RfqWorklistPage() {
                             }}
                             solicitationType={item.solicitation_type}
                             solicitationTypeLabel={item.solicitation_type_label}
+                          />
+                          {/* The quotable-items list hides First Article
+                              placeholder lines, so this badge is the only
+                              place the requirement surfaces on this page. */}
+                          <FirstArticleBadge firstArticle={item.first_article} />
+                          {/* Counted per part: a row here is a whole
+                              solicitation, so this reads "you have made N of
+                              these lines before". */}
+                          <WinHistoryBadge
+                            count={item.won_part_count ?? 0}
+                            lastWonOn={item.last_won_on}
+                            awards={item.won_parts ?? []}
+                            mode="solicitation"
                           />
                           {item.rfq_count > 0 && (
                             <button
