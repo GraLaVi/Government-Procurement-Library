@@ -80,7 +80,11 @@ You don't need to close RFQs by hand. GPH sends vendors up to two reminder email
 
 **Vendor Contacts** (**Vendor RFQs › Vendor Contacts**) is your organization's private contact book. The default contact you save for a vendor pre-fills automatically when you compose an RFQ; GPH only falls back to a SAM.gov-suggested email when you have no saved contact.
 
-Add a contact with its **CAGE** and **Email** (both required), plus optional **Name**, **Phone**, and **Title**. You can edit any field inline, mark one contact as the **Default** for a vendor, or delete a contact. Contacts are visible only to your organization.
+Adding a contact needs three things: the vendor's **CAGE / Private Vendor** identifier, a **Name**, and an **Email**. **Phone** and **Title** are optional. The required fields are marked with an asterisk, and if you submit without one, the message names the field and the box itself is outlined in red — so you never have to guess which of the five it means.
+
+The identifier field takes a CAGE for a SAM.gov vendor. On the Enterprise add-on it also takes the identifier you gave one of your own private vendors, which may be a CAGE, UEI, DUNS, or an internal code of your own.
+
+You can edit any field inline, mark one contact as the **Default** for a vendor, or delete a contact. Contacts are visible only to your organization.
 
 ## Settings
 
