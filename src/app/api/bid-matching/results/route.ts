@@ -30,17 +30,23 @@ export async function GET(request: NextRequest) {
     if (reasonSearch) params.set('reason_search', reasonSearch);
     const source = searchParams.get('source');
     if (source === 'dibbs' || source === 'sam') params.set('source', source);
-    // Sort + field-scoped search. Allowlisted here as well as server-side so a
-    // crafted value never reaches the backend query at all.
+    // Sort and field-scoped search are forwarded as given and validated by the
+    // backend, which is the real boundary: its sort_by pattern is built from
+    // BidMatchResultsService._DIBBS_SORTS, and search_field only ever reaches
+    // a dict lookup, never the SQL.
+    //
+    // A second allowlist here bought no safety and cost a bug: `interested`
+    // was added to the sort map but missed in the copy that used to live here,
+    // so the parameter was dropped and the request succeeded WITHOUT a sort —
+    // the column showed its arrow and the rows never moved. A wrong value now
+    // returns 422 instead of silently doing nothing.
     const sortBy = searchParams.get('sort_by');
-    if (sortBy && ['close_date', 'solicitation', 'quantity', 'estimated_value'].includes(sortBy)) {
-      params.set('sort_by', sortBy);
-    }
+    if (sortBy) params.set('sort_by', sortBy);
     const sortDir = searchParams.get('sort_dir');
-    if (sortDir === 'asc' || sortDir === 'desc') params.set('sort_dir', sortDir);
+    if (sortDir) params.set('sort_dir', sortDir);
     const searchField = searchParams.get('search_field');
     const search = searchParams.get('search');
-    if (search && searchField && ['reason', 'description', 'nsn', 'solicitation'].includes(searchField)) {
+    if (search && searchField) {
       params.set('search_field', searchField);
       params.set('search', search);
     }
