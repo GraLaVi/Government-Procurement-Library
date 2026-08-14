@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, FormEvent, useRef, useImperativeHandle, forwardRef, useEffect } from "react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { SearchBar } from "@/components/library/SearchBar";
 import {
   VendorSearchType,
   SEARCH_TYPE_CONFIGS,
@@ -95,93 +94,19 @@ export const VendorSearchForm = forwardRef<VendorSearchFormRef, VendorSearchForm
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Compact inline radio buttons */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <span className="text-sm font-medium text-muted">Search by:</span>
-        {SEARCH_TYPE_CONFIGS.map((config) => (
-          <label
-            key={config.value}
-            className={`
-              inline-flex items-center gap-1.5 cursor-pointer text-sm
-              ${isSearching ? "opacity-50 cursor-not-allowed" : ""}
-            `}
-          >
-            <input
-              type="radio"
-              name="searchType"
-              value={config.value}
-              checked={searchType === config.value}
-              onChange={() => handleSearchTypeChange(config.value)}
-              disabled={isSearching}
-              className="w-3.5 h-3.5 text-primary border-border focus:ring-primary focus:ring-offset-0"
-            />
-            <span className={searchType === config.value ? "text-primary font-medium" : "text-foreground"}>
-              {config.label}
-            </span>
-          </label>
-        ))}
-      </div>
-
-      {/* Search input and button */}
-      <div className="flex gap-2">
-        <div className="flex-1">
-          <Input
-            ref={inputRef}
-            type="text"
-            placeholder={currentConfig.placeholder}
-            value={searchQuery}
-            onChange={(e) => handleQueryChange(e.target.value)}
-            error={validationError}
-            disabled={isSearching}
-            maxLength={currentConfig.maxLength}
-          />
-        </div>
-        <Button
-          type="submit"
-          variant="primary"
-          size="sm"
-          disabled={isSearching || searchQuery.trim().length === 0}
-          className="px-4"
-        >
-          {isSearching ? (
-            <svg
-              className="animate-spin h-4 w-4"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          )}
-        </Button>
-      </div>
-    </form>
+    <SearchBar
+      ref={inputRef}
+      types={SEARCH_TYPE_CONFIGS}
+      type={searchType}
+      onTypeChange={(v) => handleSearchTypeChange(v as VendorSearchType)}
+      query={searchQuery}
+      onQueryChange={handleQueryChange}
+      onSubmit={handleSubmit}
+      placeholder={currentConfig.placeholder}
+      maxLength={currentConfig.maxLength}
+      error={validationError}
+      isSearching={isSearching}
+      typeLabel="Search vendors by"
+    />
   );
 });
