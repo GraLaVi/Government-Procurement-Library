@@ -201,6 +201,9 @@ export interface VendorCertification {
 export interface SearchTypeConfig {
   value: VendorSearchType;
   label: string;
+  /** Segment label for the search bar's type switcher, where the full label
+   * would crowd the row. Falls back to `label` when absent. */
+  shortLabel?: string;
   description: string;
   placeholder: string;
   minLength: number;
@@ -213,6 +216,7 @@ export const SEARCH_TYPE_CONFIGS: SearchTypeConfig[] = [
   {
     value: 'cage',
     label: 'CAGE Code',
+    shortLabel: 'CAGE',
     description: 'Commercial and Government Entity code',
     placeholder: 'Enter 5-character CAGE code',
     minLength: 5,
@@ -233,6 +237,7 @@ export const SEARCH_TYPE_CONFIGS: SearchTypeConfig[] = [
   {
     value: 'entity_name',
     label: 'Entity Name',
+    shortLabel: 'Entity',
     description: 'Company or business name',
     placeholder: 'Enter company name (min 3 chars)',
     minLength: 3,
@@ -782,6 +787,9 @@ export interface PartDemand {
 export interface PartsSearchTypeConfig {
   value: PartsSearchType;
   label: string;
+  /** Segment label for the search bar's type switcher, where the full label
+   * would crowd the row. Falls back to `label` when absent. */
+  shortLabel?: string;
   description: string;
   placeholder: string;
   minLength: number;
@@ -804,6 +812,7 @@ export const PARTS_SEARCH_TYPE_CONFIGS: PartsSearchTypeConfig[] = [
   {
     value: 'solicitation',
     label: 'Solicitation number',
+    shortLabel: 'Solicitation',
     description: 'Find parts by solicitation number (dashes, spaces optional; case-insensitive)',
     placeholder: 'Enter solicitation number (dashes/spaces optional)',
     minLength: 3,
@@ -812,6 +821,7 @@ export const PARTS_SEARCH_TYPE_CONFIGS: PartsSearchTypeConfig[] = [
   {
     value: 'mfg_part_number',
     label: 'Mfg Part Number',
+    shortLabel: 'Mfg Part #',
     description: 'Manufacturer part number; search is case-insensitive and ignores extra spaces',
     placeholder: 'Enter manufacturer part number',
     minLength: 2,
@@ -820,6 +830,7 @@ export const PARTS_SEARCH_TYPE_CONFIGS: PartsSearchTypeConfig[] = [
   {
     value: 'contract_number',
     label: 'Contract number',
+    shortLabel: 'Contract #',
     description: 'Find parts by contract/order number (dashes, spaces optional; case-insensitive)',
     placeholder: 'Enter contract number (dashes/spaces optional)',
     minLength: 2,
