@@ -11,6 +11,17 @@ import { RfqVendorContactEditModal } from "@/components/rfq/RfqVendorContactEdit
 import { TableCard } from "@/components/rfq/TableCard";
 import type { VendorContact } from "@/lib/rfq/types";
 
+// The add row's required fields, in render order. One list drives the
+// asterisks, the highlight and the error message, so they cannot disagree.
+const REQUIRED_FIELDS = [
+  { key: "cage_code", label: "CAGE / Private Vendor" },
+  { key: "contact_name", label: "Name" },
+  { key: "email", label: "Email" },
+] as const;
+type RequiredKey = (typeof REQUIRED_FIELDS)[number]["key"];
+
+const MISSING_CLASS = "border-error focus:border-error";
+
 const inputClass =
   "w-full px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm placeholder-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 
@@ -24,6 +35,9 @@ export default function RfqContactsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(emptyNew);
+  // Empty required fields from the last attempted add. Set on submit rather
+  // than on blur so an untouched form is never pre-scolded.
+  const [missingFields, setMissingFields] = useState<RequiredKey[]>([]);
   const [editingContact, setEditingContact] = useState<VendorContact | null>(null);
 
   const load = useCallback(async () => {
@@ -86,9 +100,26 @@ export default function RfqContactsPage() {
     setBusy(false);
   };
 
+  // Typing into a flagged field clears its own warning immediately, so the
+  // red does not sit there while the user is busy fixing it.
+  const setField = (key: keyof typeof emptyNew, value: string) => {
+    setAdding((prev) => ({ ...prev, [key]: value }));
+    setMissingFields((prev) => prev.filter((k) => k !== key));
+  };
+
   const add = async () => {
-    if (!adding.cage_code.trim() || !adding.email.trim()) {
-      setError("CAGE code and email are required.");
+    // Mark the specific empty fields rather than only stating the rule: the
+    // add row is five inputs wide, and a message alone leaves the user to
+    // work out which of them it means.
+    const missing = REQUIRED_FIELDS.filter((f) => !adding[f.key].trim()).map((f) => f.key);
+    setMissingFields(missing);
+    if (missing.length > 0) {
+      const labels = REQUIRED_FIELDS.filter((f) => missing.includes(f.key)).map((f) => f.label);
+      setError(
+        labels.length === 1
+          ? `${labels[0]} is required.`
+          : `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]} are required.`
+      );
       return;
     }
     setBusy(true);
@@ -110,6 +141,7 @@ export default function RfqContactsPage() {
       if (!res.ok) setError(data.error || "Failed to add contact.");
       else {
         setAdding(emptyNew);
+        setMissingFields([]);
         await load();
         setToast("Contact added.");
       }
@@ -150,11 +182,11 @@ export default function RfqContactsPage() {
       <div className="bg-card-bg rounded-lg border border-border p-4 space-y-3">
         <h2 className="text-sm font-semibold text-foreground">Add a contact</h2>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          <input className={inputClass} placeholder="CAGE *" value={adding.cage_code} onChange={(e) => setAdding({ ...adding, cage_code: e.target.value })} />
-          <input className={inputClass} placeholder="Name" value={adding.contact_name} onChange={(e) => setAdding({ ...adding, contact_name: e.target.value })} />
-          <input className={inputClass} type="email" placeholder="Email *" value={adding.email} onChange={(e) => setAdding({ ...adding, email: e.target.value })} />
-          <input className={inputClass} placeholder="Phone" value={adding.phone} onChange={(e) => setAdding({ ...adding, phone: e.target.value })} />
-          <input className={inputClass} placeholder="Title" value={adding.title} onChange={(e) => setAdding({ ...adding, title: e.target.value })} />
+          <input className={`${inputClass} ${missingFields.includes("cage_code") ? MISSING_CLASS : ""}`} aria-required="true" aria-invalid={missingFields.includes("cage_code")} placeholder="CAGE / Private Vendor *" value={adding.cage_code} onChange={(e) => setField("cage_code", e.target.value)} />
+          <input className={`${inputClass} ${missingFields.includes("contact_name") ? MISSING_CLASS : ""}`} aria-required="true" aria-invalid={missingFields.includes("contact_name")} placeholder="Name *" value={adding.contact_name} onChange={(e) => setField("contact_name", e.target.value)} />
+          <input className={`${inputClass} ${missingFields.includes("email") ? MISSING_CLASS : ""}`} type="email" aria-required="true" aria-invalid={missingFields.includes("email")} placeholder="Email *" value={adding.email} onChange={(e) => setField("email", e.target.value)} />
+          <input className={inputClass} placeholder="Phone" value={adding.phone} onChange={(e) => setField("phone", e.target.value)} />
+          <input className={inputClass} placeholder="Title" value={adding.title} onChange={(e) => setField("title", e.target.value)} />
         </div>
         <Button variant="primary" size="sm" onClick={add} disabled={busy}>Add contact</Button>
       </div>
