@@ -200,8 +200,11 @@ export function DataTable<T>({
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Table. The border lives here rather than at the call sites so every
+          DataTable gets the RFQ tables' bordered scroll box — same shape as
+          tableWrapClass in components/rfq/TableCard.tsx. Wide tables scroll
+          inside their own border, never the page. */}
+      <div className={`overflow-x-auto rounded-lg border ${config.styling.borderClass}`}>
         <table className="w-full">
           <thead>
             <tr className={`border-b ${config.styling.borderClass} ${config.styling.headerBgClass}`}>

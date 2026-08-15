@@ -204,30 +204,26 @@ export function VendorResultsList({
         </div>
       </div>
 
-      {/* DataTable, inside the RFQ tables' bordered scroll box. The border is
-          on the wrapper so the header band's tint stops at a rounded corner;
-          DataTable keeps its own inner overflow-x-auto for wide tables. */}
-      <div className="rounded-lg border border-border overflow-hidden">
-        <DataTable
-          data={results}
-          columns={columns}
-          onRowClick={(row) => onSelect(row.cage_code)}
-          getRowId={(row) => row.cage_code}
-          exportFilename="vendor-search-results"
-          config={{
-            features: {
-              sorting: true,
-              multiSort: false,
-              rowSelection: false,
-              copyRow: false, // Disabled for this table since rows are clickable
-              export: false,
-              exportFormats: ["csv"],
-              columnResize: false,
-              columnVisibility: false,
-            },
-          }}
-        />
-      </div>
+      {/* DataTable brings its own bordered scroll box. */}
+      <DataTable
+        data={results}
+        columns={columns}
+        onRowClick={(row) => onSelect(row.cage_code)}
+        getRowId={(row) => row.cage_code}
+        exportFilename="vendor-search-results"
+        config={{
+          features: {
+            sorting: true,
+            multiSort: false,
+            rowSelection: false,
+            copyRow: false, // Disabled for this table since rows are clickable
+            export: false,
+            exportFormats: ["csv"],
+            columnResize: false,
+            columnVisibility: false,
+          },
+        }}
+      />
       {/* Custom-reports upsell — under the table so the data stays
           at the top of the panel. */}
       {tier !== null && (
