@@ -26,7 +26,8 @@ interface SolicitationRowBadgesProps {
    * amendment on the solicitation. */
   hasAmendmentIndicator?: boolean;
   /** Post-match amendment: the solicitation changed AFTER the match row was
-   * generated. */
+   * generated. Raises the same pill as the pre-match flag; the difference
+   * between the two shows up in its tooltip, not in the badge. */
   hasPostMatchAmendment?: boolean;
   latestPostMatchAmendmentAt?: string | null;
   /** Opens the amendment timeline (both pills route here). Omit to render
@@ -51,43 +52,41 @@ export function SolicitationRowBadges({
   solicitationType,
   solicitationTypeLabel,
 }: SolicitationRowBadgesProps) {
-  const amendedClasses = rowBadgeClass("amber", { interactive: true });
-  const updatedClasses = rowBadgeClass("sky", { interactive: true });
+  // ONE amber "Amended" pill, never two. The separate "Updated 3h ago" badge
+  // said much the same thing and made an already-crowded column unreadable,
+  // and a merged "Amended 3h ago" just moved the noise into the same pill.
+  //
+  // Folding the post-match signal in rather than dropping it keeps rows
+  // amended ONLY after the match from losing their badge entirely. The
+  // distinction between the two — and every timestamp — still lives in the
+  // tooltip and in the timeline behind the pill.
+  const isAmended = hasAmendmentIndicator || hasPostMatchAmendment;
+  const explanation = hasPostMatchAmendment
+    ? `This solicitation was updated after your match was generated.${
+        latestPostMatchAmendmentAt
+          ? ` Latest change: ${new Date(latestPostMatchAmendmentAt).toLocaleString()} (${timeAgo(latestPostMatchAmendmentAt)}).`
+          : ""
+      }`
+    : "This solicitation was updated before this match was generated.";
+  const title = onShowAmendments
+    ? `${explanation} Click to see what changed.`
+    : explanation;
+
   return (
     <>
-      {hasAmendmentIndicator && (
+      {isAmended && (
         onShowAmendments ? (
           <button
             type="button"
             onClick={onShowAmendments}
-            className={amendedClasses}
-            title="This solicitation was updated before this match was generated. Click to see what changed."
+            className={rowBadgeClass("amber", { interactive: true })}
+            title={title}
           >
             Amended
           </button>
         ) : (
-          <span className={rowBadgeClass("amber")} title="This solicitation was updated before this match was generated.">
+          <span className={rowBadgeClass("amber")} title={title}>
             Amended
-          </span>
-        )
-      )}
-      {hasPostMatchAmendment && (
-        onShowAmendments ? (
-          <button
-            type="button"
-            onClick={onShowAmendments}
-            className={updatedClasses}
-            title={
-              latestPostMatchAmendmentAt
-                ? `This solicitation was updated after your match was generated. Latest change: ${new Date(latestPostMatchAmendmentAt).toLocaleString()}`
-                : "This solicitation was updated after your match was generated."
-            }
-          >
-            Updated{latestPostMatchAmendmentAt ? ` ${timeAgo(latestPostMatchAmendmentAt)}` : " since"}
-          </button>
-        ) : (
-          <span className={rowBadgeClass("sky")}>
-            Updated{latestPostMatchAmendmentAt ? ` ${timeAgo(latestPostMatchAmendmentAt)}` : " since"}
           </span>
         )
       )}

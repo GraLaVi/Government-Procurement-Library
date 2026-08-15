@@ -480,9 +480,10 @@ export function BidMatchResultsTable({
                             SAM
                           </span>
                         )}
-                        {/* Amendment pills + fast-award badge, shared with the
+                        {/* Amendment pill + fast-award badge, shared with the
                             Send RFQs work queue (SolicitationRowBadges) so the
-                            two pages read identically. */}
+                            two pages read identically. One pill: the component
+                            merges the pre- and post-match signals. */}
                         <SolicitationRowBadges
                           hasAmendmentIndicator={result.has_amendment_indicator}
                           hasPostMatchAmendment={result.has_post_match_amendment}
