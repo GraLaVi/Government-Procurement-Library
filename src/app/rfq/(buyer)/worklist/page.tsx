@@ -740,18 +740,15 @@ export default function RfqWorklistPage() {
                               </svg>
                             </button>
                           )}
-                          {/* One "Amended" pill, not two. The separate
-                              "Updated <n>d ago" badge said much the same thing
-                              and made an already-crowded column unreadable.
-                              Folding the post-match signal in rather than
-                              dropping it keeps rows amended ONLY after the
-                              match from losing their badge entirely; the
-                              timeline behind the pill still shows every
-                              change, before and after. */}
+                          {/* One "Amended" pill, not two — the merge now lives
+                              inside SolicitationRowBadges, so this passes the
+                              signals through raw instead of OR-ing them here.
+                              Same badge as before; the post-match timestamp it
+                              now receives only enriches the tooltip. */}
                           <SolicitationRowBadges
-                            hasAmendmentIndicator={
-                              item.has_amendment_indicator || item.has_post_match_amendment
-                            }
+                            hasAmendmentIndicator={item.has_amendment_indicator}
+                            hasPostMatchAmendment={item.has_post_match_amendment}
+                            latestPostMatchAmendmentAt={item.latest_post_match_amendment_at}
                             onShowAmendments={() => {
                               setAmendmentSolId(item.solicitation_id);
                               setAmendmentSolNumber(item.solicitation_number);
