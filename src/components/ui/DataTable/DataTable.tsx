@@ -200,8 +200,11 @@ export function DataTable<T>({
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Table. The border lives here rather than at the call sites so every
+          DataTable gets the RFQ tables' bordered scroll box — same shape as
+          tableWrapClass in components/rfq/TableCard.tsx. Wide tables scroll
+          inside their own border, never the page. */}
+      <div className={`overflow-x-auto rounded-lg border ${config.styling.borderClass}`}>
         <table className="w-full">
           <thead>
             <tr className={`border-b ${config.styling.borderClass} ${config.styling.headerBgClass}`}>
@@ -209,10 +212,15 @@ export function DataTable<T>({
                 headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className={`px-3 py-2 text-left text-[10px] font-semibold text-muted uppercase tracking-wide group ${
-                      header.column.getCanSort() ? "cursor-pointer select-none hover:text-foreground" : ""
+                    className={`px-2.5 py-1.5 text-left ${config.styling.headerTextClass} group ${
+                      header.column.getCanSort() ? "cursor-pointer select-none" : ""
                     }`}
                     style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
+                    aria-sort={
+                      header.column.getIsSorted() === "asc" ? "ascending"
+                        : header.column.getIsSorted() === "desc" ? "descending"
+                        : header.column.getCanSort() ? "none" : undefined
+                    }
                     onClick={header.column.getToggleSortingHandler()}
                   >
                     <div className="flex items-center gap-1">
@@ -223,22 +231,25 @@ export function DataTable<T>({
                             header.getContext()
                           )}
                       {/* Sort indicator */}
+                      {/* Same indicator as the RFQ tables' SortHeader: one
+                          chevron, faint until the column is the active sort,
+                          so a sortable column reads as sortable before it is
+                          clicked without drawing the eye off the data. */}
                       {header.column.getCanSort() && (
-                        <span className={header.column.getIsSorted() ? "text-primary" : "text-muted"}>
-                          {header.column.getIsSorted() === "asc" ? (
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-                            </svg>
-                          ) : header.column.getIsSorted() === "desc" ? (
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                          ) : (
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                            </svg>
-                          )}
-                        </span>
+                        <svg
+                          className={`w-3 h-3 shrink-0 ${header.column.getIsSorted() ? "text-primary" : "text-muted/40"}`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d={header.column.getIsSorted() === "asc" ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}
+                          />
+                        </svg>
                       )}
                     </div>
                   </th>
@@ -267,7 +278,7 @@ export function DataTable<T>({
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className={`px-3 ${config.styling.compactMode ? "py-1.5" : "py-2"} text-xs text-foreground`}
+                      className={`px-2.5 ${config.styling.compactMode ? "py-1.5" : "py-2"} text-xs text-foreground`}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>

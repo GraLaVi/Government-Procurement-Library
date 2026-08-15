@@ -47,7 +47,7 @@ export function VendorResultsList({
       {
         id: "legal_business_name",
         accessorKey: "legal_business_name",
-        header: "Vendor Name",
+        header: "Vendor name",
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <span className="font-medium text-foreground truncate max-w-[200px] md:max-w-[300px]">
@@ -174,9 +174,11 @@ export function VendorResultsList({
   }
 
   return (
-    <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
+    // Card, header rule, inset bordered table — the RFQ tables' panel shape,
+    // so search results and /rfq read as one product.
+    <div className="bg-card-bg rounded-lg border border-border p-4">
       {/* Header */}
-      <div className="px-4 py-2 bg-muted-light border-b border-border flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-3 mb-4 pb-3 border-b border-border">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-xs font-medium text-muted">
             {formatVendorTotal(total, totalCapped)} vendor
@@ -186,21 +188,23 @@ export function VendorResultsList({
             Click a row to view details
           </span>
         </div>
-        {/* CSV export — only renders when the user holds any vendor-library
-            tier. Advanced exports immediately; Basic/Free see an upsell.
-            Compact mode keeps the button inline with the header chrome;
-            the custom-reports hint renders below the table so the data
-            stays high on the page. */}
-        <ExportCsvButton
-          tier={tier}
-          rows={results}
-          columns={csvColumns}
-          filename="vendor-search"
-          compact
-        />
+        <div className="ml-auto">
+          {/* CSV export — only renders when the user holds any vendor-library
+              tier. Advanced exports immediately; Basic/Free see an upsell.
+              Compact mode keeps the button inline with the header chrome;
+              the custom-reports hint renders below the table so the data
+              stays high on the page. */}
+          <ExportCsvButton
+            tier={tier}
+            rows={results}
+            columns={csvColumns}
+            filename="vendor-search"
+            compact
+          />
+        </div>
       </div>
 
-      {/* DataTable */}
+      {/* DataTable brings its own bordered scroll box. */}
       <DataTable
         data={results}
         columns={columns}
@@ -223,7 +227,7 @@ export function VendorResultsList({
       {/* Custom-reports upsell — under the table so the data stays
           at the top of the panel. */}
       {tier !== null && (
-        <div className="px-4 py-2 border-t border-border bg-muted-light/30 flex justify-end">
+        <div className="mt-3 pt-3 border-t border-border flex justify-end">
           <CustomReportLink />
         </div>
       )}
