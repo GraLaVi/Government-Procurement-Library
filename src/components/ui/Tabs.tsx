@@ -33,7 +33,7 @@ interface TabPanelProps {
  * between them.
  *
  * The teal marks the selection rather than filling a band: the label stays
- * text-foreground and only the 2px rule is primary, which keeps contrast off
+ * text-foreground and only the 3px rule is primary, which keeps contrast off
  * the text and out of trouble in both themes (white-on-primary is 4.2:1, under
  * AA at this size — a solid teal chip would have needed per-theme text colors).
  */
@@ -55,9 +55,11 @@ export function Tabs({ tabs, activeTab, onTabChange, className = "" }: TabsProps
             disabled={tab.disabled}
             onClick={() => !tab.disabled && onTabChange(tab.id)}
             // -mb-px pulls the tab's own border onto the rail's, so the active
-            // underline replaces that segment of rule instead of sitting under it.
+            // underline replaces that segment of rule instead of sitting under
+            // it. Every tab carries the border at the same width, transparent
+            // when inactive, so labels don't shift as the selection moves.
             className={`
-              relative flex items-center gap-1.5 px-1 pb-2 -mb-px border-b-2 text-xs font-medium
+              relative flex items-center gap-1.5 px-1 pb-2 -mb-px border-b-[3px] text-xs font-medium
               transition-colors duration-200
               focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
               ${
