@@ -973,7 +973,7 @@ function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPa
       {
         id: "award_date",
         accessorKey: "award_date",
-        header: "Award Date",
+        header: "Award date",
         cell: ({ row }) => (
           <span className="whitespace-nowrap">
             {formatAwardDate(row.original.award_date)}
@@ -1540,7 +1540,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
       {
         id: "close_date",
         accessorKey: "close_date",
-        header: "Close Date",
+        header: "Close date",
         cell: ({ row }) => (
           <span className="text-xs whitespace-nowrap">
             {formatAwardDate(row.original.close_date)}
@@ -1750,7 +1750,7 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
       {
         id: "set_aside",
         accessorKey: "set_aside_label",
-        header: "Set-Aside",
+        header: "Set-aside",
         cell: ({ row }) => {
           // Prefer canonical code + label from the API. Fall back to the
           // legacy raw string only when the row hasn't been re-harvested.

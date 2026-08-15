@@ -2072,7 +2072,7 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
       {
         id: "close_date",
         accessorKey: "close_date",
-        header: "Close Date",
+        header: "Close date",
         cell: ({ row }) => (
           <span className="text-xs font-medium text-foreground">{formatContractDate(row.original.close_date)}</span>
         ),
@@ -2224,7 +2224,7 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
       {
         id: "set_aside",
         accessorKey: "set_aside_label",
-        header: "Set-Aside",
+        header: "Set-aside",
         cell: ({ row }) => {
           // Display the canonical short code in a badge with the
           // human-readable label on hover. Falls back to the legacy raw
@@ -2598,7 +2598,7 @@ function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, total
       {
         id: "vendor_name",
         accessorKey: "vendor_name",
-        header: "Vendor Name",
+        header: "Vendor name",
         cell: ({ row }) => (
           <span className="inline-flex items-center gap-1.5 min-w-0">
             <span className="text-xs font-medium text-foreground truncate max-w-[300px]">
@@ -2628,7 +2628,7 @@ function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, total
       {
         id: "part_number",
         accessorKey: "part_number",
-        header: "Part Number",
+        header: "Part number",
         cell: ({ row }) =>
           row.original.part_number ? (
             <Link

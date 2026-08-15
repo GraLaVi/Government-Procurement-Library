@@ -20,6 +20,8 @@ export interface DataTableConfig {
     compactMode: boolean;
     /** Table header background class */
     headerBgClass: string;
+    /** Type treatment for header cells (size, weight, casing, color). */
+    headerTextClass: string;
     /** Table border class */
     borderClass: string;
   };
@@ -73,20 +75,26 @@ export interface DataTableConfig {
  * Default configuration - modify these values to change defaults site-wide
  */
 export const dataTableConfig: DataTableConfig = {
+  // These mirror the RFQ tables' tokens in components/rfq/TableCard.tsx, so
+  // the library's tables and /rfq's read as one product rather than two.
+  // Keep the two in step: a change here usually wants the same change there.
   styling: {
-    stripedRows: true,
-    // Soft neutral stripe — purpose is row-scanning, not branding,
-    // so it stays subtle and out of the way of the data.
+    // Rules between rows carry the scanning job instead, which is what the
+    // RFQ tables do. Striping on top of them is one texture too many.
+    stripedRows: false,
     stripeClass: "bg-muted-light/40",
     hoverHighlight: true,
-    // Faint teal wash on hover — signals interactivity in the brand color
-    // without competing with the header.
-    hoverClass: "hover:bg-primary/8",
+    // Neutral hover. The teal wash competed with the teal NSN and CAGE
+    // columns, which are the values worth seeing first.
+    hoverClass: "hover:bg-muted-light/50",
     compactMode: true,
-    // Header anchors the table in the brand. Pale teal tint over the
-    // card background; brand-token-driven so it follows any future
-    // primary-color tweaks automatically.
-    headerBgClass: "bg-primary/10",
+    // Neutral header band. The brand does not need to sit behind every
+    // column label; on vendor search the tinted band sat directly above a
+    // column of teal CAGE codes.
+    headerBgClass: "bg-muted-light",
+    // Sentence case at the body size, not tracked micro-caps: column labels
+    // read as labels without shouting.
+    headerTextClass: "text-xs font-semibold text-foreground",
     borderClass: "border-border",
   },
 

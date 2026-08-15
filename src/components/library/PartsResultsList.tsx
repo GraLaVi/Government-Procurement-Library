@@ -73,7 +73,7 @@ export function PartsResultsList({
       {
         id: "unit_price",
         accessorKey: "unit_price",
-        header: () => <span className="w-full text-right block">Unit Price</span>,
+        header: () => <span className="w-full text-right block">Unit price</span>,
         cell: ({ row }) => (
           <span className="text-right block">
             {formatCurrency(row.original.unit_price)}
@@ -157,9 +157,11 @@ export function PartsResultsList({
   }
 
   return (
-    <div className="bg-card-bg rounded-lg border border-border overflow-hidden">
+    // Card, header rule, inset bordered table — the RFQ tables' panel shape,
+    // so search results and /rfq read as one product.
+    <div className="bg-card-bg rounded-lg border border-border p-4">
       {/* Header */}
-      <div className="px-4 py-2 bg-muted-light border-b border-border flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-3 mb-4 pb-3 border-b border-border">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-xs font-medium text-muted">
             {total} part{total !== 1 ? "s" : ""} found
@@ -168,44 +170,50 @@ export function PartsResultsList({
             Click a row to view details
           </span>
         </div>
-        {/* CSV export — only renders when the user holds any parts-library
-            tier. Advanced exports immediately; Basic/Free see an upsell.
-            Compact mode keeps the button inline with the header chrome;
-            the custom-reports upsell hint renders below the table so
-            the data stays high on the page. */}
-        <ExportCsvButton
-          tier={tier}
-          rows={results}
-          columns={csvColumns}
-          filename="parts-search"
-          compact
-        />
+        <div className="ml-auto">
+          {/* CSV export — only renders when the user holds any parts-library
+              tier. Advanced exports immediately; Basic/Free see an upsell.
+              Compact mode keeps the button inline with the header chrome;
+              the custom-reports upsell hint renders below the table so
+              the data stays high on the page. */}
+          <ExportCsvButton
+            tier={tier}
+            rows={results}
+            columns={csvColumns}
+            filename="parts-search"
+            compact
+          />
+        </div>
       </div>
 
-      {/* DataTable */}
-      <DataTable
-        data={results}
-        columns={columns}
-        onRowClick={(row) => onSelect(partKey(row))}
-        getRowId={(row) => partKey(row)}
-        exportFilename="parts-search-results"
-        config={{
-          features: {
-            sorting: true,
-            multiSort: false,
-            rowSelection: false,
-            copyRow: false, // Disabled for this table since rows are clickable
-            export: false,
-            exportFormats: ["csv"],
-            columnResize: false,
-            columnVisibility: false,
-          },
-        }}
-      />
+      {/* DataTable, inside the RFQ tables' bordered scroll box. The border is
+          on the wrapper so the header band's tint stops at a rounded corner;
+          DataTable keeps its own inner overflow-x-auto for wide tables. */}
+      <div className="rounded-lg border border-border overflow-hidden">
+        <DataTable
+          data={results}
+          columns={columns}
+          onRowClick={(row) => onSelect(partKey(row))}
+          getRowId={(row) => partKey(row)}
+          exportFilename="parts-search-results"
+          config={{
+            features: {
+              sorting: true,
+              multiSort: false,
+              rowSelection: false,
+              copyRow: false, // Disabled for this table since rows are clickable
+              export: false,
+              exportFormats: ["csv"],
+              columnResize: false,
+              columnVisibility: false,
+            },
+          }}
+        />
+      </div>
       {/* Custom-reports upsell — under the table so the data stays
           at the top of the panel. */}
       {tier !== null && (
-        <div className="px-4 py-2 border-t border-border bg-muted-light/30 flex justify-end">
+        <div className="mt-3 pt-3 border-t border-border flex justify-end">
           <CustomReportLink />
         </div>
       )}
