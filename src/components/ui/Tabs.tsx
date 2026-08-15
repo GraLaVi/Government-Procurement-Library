@@ -22,10 +22,25 @@ interface TabPanelProps {
   className?: string;
 }
 
+/**
+ * Underlined tabs: a rail with the active tab marked by a teal underline.
+ *
+ * The former shape — a bg-muted-light trough with the active tab raised on
+ * bg-card-bg — had two problems. In light mode the raised tab was #FFFFFF on
+ * a #F8FAFC trough, a 2% difference carried almost entirely by its shadow. And
+ * once the tables took the RFQ style, the trough and the table header beneath
+ * it were both bg-muted-light, so two recessed bands stacked with nothing
+ * between them.
+ *
+ * The teal marks the selection rather than filling a band: the label stays
+ * text-foreground and only the 2px rule is primary, which keeps contrast off
+ * the text and out of trouble in both themes (white-on-primary is 4.2:1, under
+ * AA at this size — a solid teal chip would have needed per-theme text colors).
+ */
 export function Tabs({ tabs, activeTab, onTabChange, className = "" }: TabsProps) {
   return (
     <div
-      className={`bg-muted-light rounded-lg p-0.5 inline-flex flex-wrap gap-0.5 ${className}`}
+      className={`inline-flex flex-wrap gap-x-5 border-b border-border ${className}`}
       role="tablist"
     >
       {tabs.map((tab) => {
@@ -39,14 +54,16 @@ export function Tabs({ tabs, activeTab, onTabChange, className = "" }: TabsProps
             id={`tab-${tab.id}`}
             disabled={tab.disabled}
             onClick={() => !tab.disabled && onTabChange(tab.id)}
+            // -mb-px pulls the tab's own border onto the rail's, so the active
+            // underline replaces that segment of rule instead of sitting under it.
             className={`
-              relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
-              transition-all duration-200
+              relative flex items-center gap-1.5 px-1 pb-2 -mb-px border-b-2 text-xs font-medium
+              transition-colors duration-200
               focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
               ${
                 isActive
-                  ? "bg-card-bg text-foreground shadow-sm"
-                  : "text-muted hover:text-foreground"
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted hover:text-foreground hover:border-border"
               }
               ${tab.disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
             `}
