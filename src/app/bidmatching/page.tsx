@@ -42,6 +42,31 @@ interface MatchedCondition {
   match_label?: string | null;
 }
 
+/** One reason a solicitation matched. A row can carry several. */
+interface BidMatchDetail {
+  profile_id: number;
+  profile_name: string;
+  match_strength: "HARD" | "SOFT" | null;
+  match_reason: string | null;
+  matched_conditions: MatchedCondition[];
+}
+
+/** A part the match fired on, deduplicated by part. */
+interface BidMatchPart {
+  nsn?: string | null;
+  niin?: string | null;
+  fsc?: string | null;
+  mfg_cage?: string | null;
+  mfg_part_number?: string | null;
+  part_description?: string | null;
+  quantity?: number | null;
+  unit_of_issue?: string | null;
+}
+
+// One row is one SOLICITATION. The same solicitation can match several times
+// over — two profiles, two line items, a second run the same day — and the
+// server groups those into `matches` / `matched_parts` rather than repeating
+// the solicitation down the table.
 interface BidMatchResult {
   result_id: number;
   run_id: string;
@@ -51,6 +76,8 @@ interface BidMatchResult {
   profile_id: number;
   profile_name: string;
   matched_conditions: MatchedCondition[];
+  matches?: BidMatchDetail[];
+  matched_parts?: BidMatchPart[];
   created_at: string;
   match_reason: string | null;
   match_strength: "HARD" | "SOFT" | null;
@@ -160,11 +187,19 @@ export default function BidMatchingPage() {
   // Optimistic: the star flips immediately and reverts if the write fails.
   // Flags are customer-scoped, so a teammate's flag can arrive on the next
   // fetch — this only reconciles the row the user actually clicked.
+  //
+  // Reconciles on the SOLICITATION, not result_id: the flag itself is stored
+  // per solicitation (bid_match_interest), so any row for the same
+  // solicitation shows the same star and all of them have to move together.
   const handleToggleInterest = useCallback(
     async (result: BidMatchResult, interested: boolean) => {
+      const sameTarget = (r: BidMatchResult) =>
+        result.solicitation_id != null
+          ? r.solicitation_id === result.solicitation_id
+          : r.sam_opportunity_id === result.sam_opportunity_id;
       const apply = (value: boolean) =>
         setResults((prev) =>
-          prev.map((r) => (r.result_id === result.result_id ? { ...r, interested: value } : r))
+          prev.map((r) => (sameTarget(r) ? { ...r, interested: value } : r))
         );
       apply(interested);
       try {
