@@ -31,6 +31,38 @@ interface BidMatchAward {
   unit_price?: number | null;
 }
 
+/**
+ * One reason a solicitation matched: a profile, its strength, and the
+ * conditions that fired. A row carries several when the customer matched the
+ * same solicitation through more than one profile, on more than one line item,
+ * or again on a later run the same day — the server deduplicates those to
+ * distinct reasons.
+ */
+interface BidMatchDetail {
+  profile_id: number;
+  profile_name: string;
+  match_strength: "HARD" | "SOFT" | null;
+  match_reason: string | null;
+  matched_conditions: MatchedCondition[];
+}
+
+/**
+ * A part the match fired on, deduplicated BY PART — one NSN listed against
+ * several purchase requests is one entry, not several. Largest quantity first;
+ * the first entry is what the NSN column shows inline.
+ */
+interface BidMatchPart {
+  nsn?: string | null;
+  niin?: string | null;
+  fsc?: string | null;
+  mfg_cage?: string | null;
+  mfg_part_number?: string | null;
+  part_description?: string | null;
+  quantity?: number | null;
+  unit_of_issue?: string | null;
+}
+
+// A row is one SOLICITATION, never one match row — see BidMatchDetail.
 interface BidMatchResult {
   result_id: number;
   run_id: string;
@@ -40,6 +72,8 @@ interface BidMatchResult {
   profile_id: number;
   profile_name: string;
   matched_conditions: MatchedCondition[];
+  matches?: BidMatchDetail[];
+  matched_parts?: BidMatchPart[];
   created_at: string;
   match_reason: string | null;
   match_strength: "HARD" | "SOFT" | null;
@@ -290,17 +324,23 @@ export function BidMatchResultsTable({
   onToggleInterest,
 }: BidMatchResultsTableProps) {
   const totalPages = Math.ceil(total / pageSize);
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [amendmentSolId, setAmendmentSolId] = useState<number | null>(null);
   const [amendmentSolNumber, setAmendmentSolNumber] = useState<string | null>(null);
   const [pdfModal, setPdfModal] = useState<{ id: number; number: string } | null>(null);
   const pdfUrl = pdfModal ? `/api/library/solicitations/${pdfModal.id}/pdf` : null;
 
-  const toggleExpanded = (id: number) => {
+  // Keyed on the solicitation/opportunity rather than result_id: result_id is
+  // only representative of a grouped row, so it can change between fetches
+  // (a later run wins MAX) and would silently collapse an open row.
+  const rowKey = (r: BidMatchResult) =>
+    `${r.source}-${r.solicitation_id ?? r.sam_opportunity_id ?? r.result_id}`;
+
+  const toggleExpanded = (key: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
@@ -354,11 +394,15 @@ export function BidMatchResultsTable({
           </thead>
           <tbody>
             {results.map((result) => {
-              const isOpen = expanded.has(result.result_id);
+              const key = rowKey(result);
+              const isOpen = expanded.has(key);
               // Line items beyond the one shown inline.
               const extraItems = Math.max(0, (result.line_item_count ?? 0) - 1);
+              // Parts this solicitation actually matched on. One is already in
+              // the NSN column, so only list them when there is more than one.
+              const matchedParts = result.matched_parts ?? [];
               return (
-                <Fragment key={result.result_id}>
+                <Fragment key={key}>
                   <tr
                     className="border-b border-border last:border-0 hover:bg-muted-light/50 transition-colors"
                   >
@@ -368,7 +412,7 @@ export function BidMatchResultsTable({
                     <td className="px-1.5 py-1.5 text-center">
                       <button
                         type="button"
-                        onClick={() => toggleExpanded(result.result_id)}
+                        onClick={() => toggleExpanded(key)}
                         className="text-muted hover:text-foreground cursor-pointer"
                         aria-label={isOpen ? "Collapse" : "Expand"}
                       >
@@ -474,7 +518,7 @@ export function BidMatchResultsTable({
                         {extraItems > 0 && (
                           <button
                             type="button"
-                            onClick={() => toggleExpanded(result.result_id)}
+                            onClick={() => toggleExpanded(key)}
                             title={`${result.line_item_count} line items on this solicitation`}
                             className="text-[10px] font-semibold text-muted hover:text-primary border border-border rounded px-1 py-0.5 cursor-pointer"
                           >
@@ -545,6 +589,51 @@ export function BidMatchResultsTable({
                             definitions={bidTermDefinitions}
                           />
 
+                          {/* The parts that put this solicitation in the list.
+                              Ahead of the full line-item list because they are
+                              the reason the row is here at all. Skipped at one
+                              part — the NSN column already shows it. */}
+                          {matchedParts.length > 1 && (
+                            <div>
+                              <div className="text-xs text-muted mb-2">
+                                Matched parts ({matchedParts.length.toLocaleString()})
+                              </div>
+                              <div className="overflow-x-auto rounded border border-border bg-card-bg">
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="bg-muted-light border-b border-border">
+                                      <th className="text-left px-3 py-1.5 font-semibold text-foreground">NSN</th>
+                                      <th className="text-left px-3 py-1.5 font-semibold text-foreground">Description</th>
+                                      <th className="text-right px-3 py-1.5 font-semibold text-foreground whitespace-nowrap">Qty</th>
+                                      <th className="text-left px-3 py-1.5 font-semibold text-foreground">UOM</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {matchedParts.map((part, idx) => (
+                                      <tr key={`${part.nsn ?? part.mfg_part_number ?? idx}`} className="border-b border-border/60 last:border-0">
+                                        <td className="px-3 py-1.5 whitespace-nowrap">
+                                          <PartIdentityLink part={part} className="data-field font-semibold" />
+                                        </td>
+                                        <td
+                                          className="px-3 py-1.5 text-foreground max-w-[420px] truncate"
+                                          title={part.part_description || undefined}
+                                        >
+                                          {part.part_description || "—"}
+                                        </td>
+                                        <td className="px-3 py-1.5 text-right text-muted data-field whitespace-nowrap">
+                                          {part.quantity != null ? part.quantity.toLocaleString() : "—"}
+                                        </td>
+                                        <td className="px-3 py-1.5 text-muted whitespace-nowrap">
+                                          {part.unit_of_issue || "—"}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Only worth listing when there's more than one — a
                               single line item is already shown in the NSN column,
                               and skipping it avoids a pointless fetch. */}
@@ -557,21 +646,39 @@ export function BidMatchResultsTable({
 
                           <div>
                             <div className="text-xs text-muted mb-2">Why it matched</div>
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <MatchStrengthBadge strength={result.match_strength} />
-                              <span className="text-xs text-muted">
-                                Profile:{" "}
-                                <span className="text-foreground">{result.profile_name}</span>
-                              </span>
-                              {result.match_reason && (
-                                <span className="text-xs text-foreground">{result.match_reason}</span>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {result.matched_conditions.map((cond, idx) => (
-                                <ConditionBadge key={idx} condition={cond} />
-                              ))}
-                            </div>
+                            {/* One block per distinct reason. A solicitation
+                                can match through several profiles at once, and
+                                showing only the strongest would hide the rest.
+                                Falls back to the row-level scalars for any
+                                response that predates `matches`. */}
+                            {(result.matches?.length
+                              ? result.matches
+                              : [{
+                                  profile_id: result.profile_id,
+                                  profile_name: result.profile_name,
+                                  match_strength: result.match_strength,
+                                  match_reason: result.match_reason,
+                                  matched_conditions: result.matched_conditions,
+                                }]
+                            ).map((match, mIdx) => (
+                              <div key={`${match.profile_id}-${mIdx}`} className="mb-3 last:mb-0">
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                  <MatchStrengthBadge strength={match.match_strength} />
+                                  <span className="text-xs text-muted">
+                                    Profile:{" "}
+                                    <span className="text-foreground">{match.profile_name}</span>
+                                  </span>
+                                  {match.match_reason && (
+                                    <span className="text-xs text-foreground">{match.match_reason}</span>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {match.matched_conditions.map((cond, idx) => (
+                                    <ConditionBadge key={idx} condition={cond} />
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </td>
