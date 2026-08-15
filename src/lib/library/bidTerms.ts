@@ -143,9 +143,8 @@ export const BID_TERM_SPECS: readonly BidTermSpec[] = [
 /** One resolved term, ready to render. */
 export interface ResolvedBidTerm {
   /** Field key, also the React list key. Widened past BidTermField for the
-   *  entries that aren't single coded BQ columns — the DPAS rating and the
-   *  solicitation type. */
-  field: BidTermField | "rating" | "solicitation_type";
+   *  DPAS rating, which is two codes in one column rather than one. */
+  field: BidTermField | "rating";
   name: string;
   hint: string;
   code: string;
@@ -225,33 +224,12 @@ export function resolveRating(
   };
 }
 
-/**
- * The DLA Solicitation Type Indicator as one term cell, or null when unknown.
- *
- * Already a badge beside the solicitation number; repeated here because it
- * belongs with the terms that decide how a quote is handled. The label is
- * resolved server-side from code_definitions like every other value in the
- * panel, so it arrives ready to render.
- *
- * Never notable: it describes how DLA evaluates the quote, not a gate the
- * buyer must clear or a cost they must price in, and the amber emphasis in
- * this panel is reserved for those.
- */
-export function resolveSolicitationType(
-  code: string | null | undefined,
-  label: string | null | undefined,
-): ResolvedBidTerm | null {
-  const trimmed = code?.trim();
-  if (!trimmed) return null;
-  return {
-    field: "solicitation_type",
-    name: "Solicitation type",
-    hint: "How DLA evaluates the quote",
-    code: trimmed,
-    label: label || trimmed,
-    notable: false,
-  };
-}
+// The DLA Solicitation Type Indicator deliberately does NOT appear here. It is
+// SolicitationTypeBadge's, beside the solicitation number, and that component
+// owns two decisions this panel would have quietly overridden: 'P' (Auto
+// Evaluation) is real but not decision-relevant and renders nothing at all,
+// and a code with no definition row renders nothing rather than a bare "F",
+// which tells a buyer less than silence does.
 
 /** AIDC contract terms, present only on solicitation_type = 'I' rows. */
 export interface ResolvedAidcTerm {
