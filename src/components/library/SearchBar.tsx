@@ -48,7 +48,7 @@ interface SearchBarProps {
   typeLabel: string;
 }
 
-const MENU_WIDTH = 180;
+const MENU_WIDTH = 240;
 
 export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function SearchBar(
   { types, type, onTypeChange, query, onQueryChange, onSubmit, placeholder,
@@ -199,12 +199,20 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
                     aria-selected={active}
                     onClick={() => chooseType(t.value)}
                     onKeyDown={(e) => onOptionKeyDown(e, i)}
-                    title={t.description}
-                    className={`block w-full cursor-pointer whitespace-nowrap px-2.5 py-1.5 text-left text-sm transition-colors ${
-                      active ? "bg-primary text-white font-medium" : "text-foreground hover:bg-muted-light"
+                    className={`block w-full cursor-pointer px-2.5 py-1.5 text-left transition-colors ${
+                      active ? "bg-primary text-white" : "text-foreground hover:bg-muted-light"
                     }`}
                   >
-                    {t.label}
+                    <span className="block text-sm font-medium leading-tight">{t.label}</span>
+                    {t.description && (
+                      <span
+                        className={`mt-0.5 block text-[11px] leading-snug ${
+                          active ? "text-white/80" : "text-muted"
+                        }`}
+                      >
+                        {t.description}
+                      </span>
+                    )}
                   </button>
                 );
               })}
