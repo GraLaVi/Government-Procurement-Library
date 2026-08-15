@@ -588,6 +588,8 @@ export function BidMatchResultsTable({
                           <BidTermsPanel
                             terms={result.bid_terms}
                             definitions={bidTermDefinitions}
+                            solicitationType={result.solicitation_type}
+                            solicitationTypeLabel={result.solicitation_type_label}
                           />
 
                           {/* The parts that put this solicitation in the list.

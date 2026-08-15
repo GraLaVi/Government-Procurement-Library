@@ -33,6 +33,10 @@ export interface SolicitationBidTerms {
   inspection_point?: string | null;
   hubzone_preference?: string | null;
   clause_fillins?: string | null;
+  // DPAS priority rating, "<priority>-<program>" (e.g. "DO-C9", "DX-A1").
+  // Two codes in one string, resolved against DPAS_PRIORITY and DPAS_PROGRAM.
+  // NULL = unrated order — about two thirds of solicitations.
+  rating?: string | null;
   // AIDC contract terms. Populated only where solicitation_type = 'I'
   // (~2.6% of rows); NULL everywhere else by design, not a coverage gap.
   guaranteed_minimum?: number | null;
@@ -138,7 +142,10 @@ export const BID_TERM_SPECS: readonly BidTermSpec[] = [
 
 /** One resolved term, ready to render. */
 export interface ResolvedBidTerm {
-  field: BidTermField;
+  /** Field key, also the React list key. Widened past BidTermField for the
+   *  entries that aren't single coded BQ columns — the DPAS rating and the
+   *  solicitation type. */
+  field: BidTermField | "rating" | "solicitation_type";
   name: string;
   hint: string;
   code: string;
@@ -177,6 +184,73 @@ export function resolveBidTerms(
     });
   }
   return resolved;
+}
+
+/**
+ * The DPAS priority rating as one term cell, or null when the order is
+ * unrated.
+ *
+ * "DO-C9" is two codes: the priority (DO / DX) and the program the order
+ * supports (C9 = MRO for DoD facilities). Both resolve server-side, so the
+ * cell can read "DO - Critical Priority / Aircraft" instead of a code buyers
+ * would have to look up — while the raw string stays visible, because that is
+ * what box 4 of the PDF says.
+ *
+ * Only DX is flagged notable. A rated order carries a scheduling obligation
+ * either way, but DO-C9 alone is ~91% of rated solicitations, so treating
+ * every rating as remarkable would make the flag meaningless. DX is the one
+ * that outranks everything else in the shop.
+ */
+export function resolveRating(
+  terms: SolicitationBidTerms | null | undefined,
+  definitions: BidTermDefinitions | undefined,
+): ResolvedBidTerm | null {
+  const raw = terms?.rating?.trim();
+  if (!raw) return null;
+  const [priority, program] = raw.split("-", 2);
+  const priorityDef = definitions?.["DPAS_PRIORITY"]?.[priority];
+  const programDef = program ? definitions?.["DPAS_PROGRAM"]?.[program] : undefined;
+  return {
+    field: "rating",
+    name: "DPAS rating",
+    // The program is this VALUE's context, so it takes the hint line that a
+    // coded term fills with static per-field text.
+    hint: programDef?.label || (program ? `Program ${program}` : "Priority rating on the order"),
+    code: raw,
+    label: priorityDef?.label || priority || raw,
+    description: [priorityDef?.description, programDef?.description]
+      .filter(Boolean)
+      .join(" ") || null,
+    notable: priority === "DX",
+  };
+}
+
+/**
+ * The DLA Solicitation Type Indicator as one term cell, or null when unknown.
+ *
+ * Already a badge beside the solicitation number; repeated here because it
+ * belongs with the terms that decide how a quote is handled. The label is
+ * resolved server-side from code_definitions like every other value in the
+ * panel, so it arrives ready to render.
+ *
+ * Never notable: it describes how DLA evaluates the quote, not a gate the
+ * buyer must clear or a cost they must price in, and the amber emphasis in
+ * this panel is reserved for those.
+ */
+export function resolveSolicitationType(
+  code: string | null | undefined,
+  label: string | null | undefined,
+): ResolvedBidTerm | null {
+  const trimmed = code?.trim();
+  if (!trimmed) return null;
+  return {
+    field: "solicitation_type",
+    name: "Solicitation type",
+    hint: "How DLA evaluates the quote",
+    code: trimmed,
+    label: label || trimmed,
+    notable: false,
+  };
 }
 
 /** AIDC contract terms, present only on solicitation_type = 'I' rows. */
@@ -234,5 +308,9 @@ export function hasBidTerms(
   terms: SolicitationBidTerms | null | undefined,
   definitions: BidTermDefinitions | undefined,
 ): boolean {
-  return resolveBidTerms(terms, definitions).length > 0 || resolveAidcTerms(terms).length > 0;
+  return (
+    resolveBidTerms(terms, definitions).length > 0
+    || resolveRating(terms, definitions) !== null
+    || resolveAidcTerms(terms).length > 0
+  );
 }
