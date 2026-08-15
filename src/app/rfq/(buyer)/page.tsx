@@ -7,14 +7,45 @@ import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { RowBadge } from "@/components/library/RowBadge";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { TableCard } from "@/components/rfq/TableCard";
-import { rfqStatusLabel, rfqStatusTone, type RfqListItem, type RfqContributor } from "@/lib/rfq/types";
+import {
+  SortHeader, TableCard, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
+import { WorkStatusSelect } from "@/components/rfq/WorkStatusSelect";
+import {
+  rfqStatusLabel,
+  rfqStatusTone,
+  type RfqListItem,
+  type RfqContributor,
+  type RfqWorkStatus,
+} from "@/lib/rfq/types";
 import { formatDateMmDdYyyy } from "@/lib/dates";
 
 const ALL = "all";
 const FILTER_KEY = "rfq_filter_user";
 
-export default function RfqListPage() {
+/** Columns the server can sort on. "" = the default newest-first ordering. */
+type PipelineSortKey = "" | "vendor" | "updated_by" | "progress" | "bid_due" | "sent";
+
+/**
+ * Long text cell: caps the width and moves the full value to a hover tooltip.
+ *
+ * Vendor names and RFQ titles are both unbounded — a legal name like
+ * "PRECISION AEROSPACE COMPONENTS MANUFACTURING, INCORPORATED" would otherwise
+ * set the column width for every row on the page. Short values skip the
+ * tooltip entirely so row hover stays quiet.
+ */
+const TOOLTIP_AT_CHARS = 28;
+
+function Truncated({ value, className = "" }: { value: string; className?: string }) {
+  if (value.length <= TOOLTIP_AT_CHARS) return <span className={className}>{value}</span>;
+  return (
+    <Tooltip content={value}>
+      <span className={`block truncate ${className}`}>{value}</span>
+    </Tooltip>
+  );
+}
+
+export default function RfqPipelinePage() {
   const { isLoading: authLoading, hasAnyProductAccess, user } = useAuth();
   const [rfqs, setRfqs] = useState<RfqListItem[] | null>(null);
   const [contributors, setContributors] = useState<RfqContributor[]>([]);
@@ -22,6 +53,11 @@ export default function RfqListPage() {
   const [filterInitialized, setFilterInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Sorting is server-side: the endpoint assembles progress, updated-by and
+  // ready-to-bid from several tables, so it is the only place that can order
+  // on them consistently.
+  const [sortBy, setSortBy] = useState<PipelineSortKey>("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   // Restore the last-used filter (defaulting to Everyone) before the first
   // fetch. Waiting for auth + doing this once means only one fetch fires, with
@@ -39,11 +75,28 @@ export default function RfqListPage() {
     window.localStorage.setItem(FILTER_KEY, filterUser);
   }, [filterUser, filterInitialized]);
 
+  // First click picks the direction each column is actually useful in: the
+  // soonest bid date and A-Z names, but the most recent activity first.
+  const handleSort = (key: PipelineSortKey) => {
+    if (key === sortBy) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir(key === "bid_due" || key === "vendor" || key === "updated_by" ? "asc" : "desc");
+    }
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const qs = filterUser !== ALL ? `?created_by_user_id=${filterUser}` : "";
+      const params = new URLSearchParams();
+      if (filterUser !== ALL) params.set("created_by_user_id", filterUser);
+      if (sortBy) {
+        params.set("sort_by", sortBy);
+        params.set("sort_dir", sortDir);
+      }
+      const qs = params.toString() ? `?${params}` : "";
       const [res, contribRes] = await Promise.all([
         fetch(`/api/rfq${qs}`),
         fetch("/api/rfq/contributors"),
@@ -62,13 +115,48 @@ export default function RfqListPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterUser]);
+  }, [filterUser, sortBy, sortDir]);
 
   useEffect(() => {
     if (filterInitialized && hasAnyProductAccess(RFQ_SENDER_KEYS)) {
       load();
     }
   }, [filterInitialized, hasAnyProductAccess, load]);
+
+  // Progress is stored per SOLICITATION, so a change moves every RFQ row that
+  // came from the same one. Patch them all locally rather than refetching, and
+  // revert the whole set together if the write fails.
+  const handleProgressChange = useCallback(
+    async (row: RfqListItem, next: RfqWorkStatus) => {
+      const solId = row.source_solicitation_id;
+      if (!solId) return;
+      const previous = row.work_status;
+      const apply = (value: RfqWorkStatus | null) =>
+        setRfqs((prev) =>
+          prev
+            ? prev.map((r) =>
+                r.source_solicitation_id === solId ? { ...r, work_status: value } : r,
+              )
+            : prev,
+        );
+      apply(next);
+      try {
+        const res = await fetch(`/api/rfq/worklist/${solId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ work_status: next }),
+        });
+        if (!res.ok) {
+          apply(previous);
+          setError("Could not update progress. Please try again.");
+        }
+      } catch {
+        apply(previous);
+        setError("Could not update progress. Please try again.");
+      }
+    },
+    [],
+  );
 
   if (authLoading) {
     return <div className="p-6 text-sm text-muted">Loading…</div>;
@@ -94,9 +182,9 @@ export default function RfqListPage() {
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">My RFQs</h1>
+          <h1 className="text-2xl font-bold text-foreground">RFQ Pipeline</h1>
           <p className="text-muted mt-1 text-sm">
-            Requests for quote you&apos;ve sent to vendors. Start one from the Manufacturers tab of a part.
+            Every RFQ your team has sent, where it stands, and whether it&apos;s priced and ready to bid.
           </p>
         </div>
         <div className="flex items-center gap-4 whitespace-nowrap">
@@ -144,55 +232,118 @@ export default function RfqListPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-xs">
-            <thead className="bg-card-bg/60 text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium">RFQ</th>
-                <th className="px-3 py-2 text-left font-medium">Vendor</th>
-                <th className="px-3 py-2 text-left font-medium">Created by</th>
-                <th className="px-3 py-2 text-left font-medium">Status</th>
-                <th className="px-3 py-2 text-left font-medium">Responses</th>
-                <th className="px-3 py-2 text-left font-medium">Due</th>
-                <th className="px-3 py-2 text-left font-medium">Sent</th>
+        <div className={tableWrapClass}>
+          <table className={tableClass}>
+            <thead>
+              <tr className={tableHeadRowClass}>
+                <th className={thClass}>RFQ</th>
+                <th className={thClass}>Solicitation</th>
+                <SortHeader label="Vendor" sortKey="vendor" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+                <SortHeader
+                  label="Updated by" sortKey="updated_by" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}
+                  title="Who last moved the progress or edited the pricing"
+                />
+                <SortHeader label="RFQ progress" sortKey="progress" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+                <th className={thClass}>Responses</th>
+                <SortHeader
+                  label="Bid due" sortKey="bid_due" sortBy={sortBy} sortDir={sortDir} onSort={handleSort}
+                  title="When the government's bid is due (solicitation close date)"
+                />
+                <th className={thClass} title="When the vendor's quote is due back to you">
+                  Quote due
+                </th>
+                <SortHeader label="Sent" sortKey="sent" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
               </tr>
             </thead>
             <tbody>
               {rfqs?.map((rfq) => (
-                <tr key={rfq.id} className="border-t border-border hover:bg-card-bg/40">
-                  <td className="px-4 py-2">
-                    {/* Titles can be very long (vendor name + part). Cap the
-                        column and show the full value on hover; short titles
-                        skip the tooltip so row hover stays quiet. */}
-                    {rfq.title.length > 40 ? (
-                      <Tooltip content={rfq.title}>
+                <tr key={rfq.id} className={rowClass}>
+                  <td className={tdClass}>
+                    <div className="flex items-center gap-1.5">
+                      {/* The reference carries identity, the title carries
+                          content. Two lines rather than one long string: the
+                          reference is what a buyer says out loud and what they
+                          scan for, and it stays a fixed width whatever the part
+                          is called. */}
+                      <div className="min-w-0">
                         <Link
                           href={`/rfq/${rfq.id}`}
-                          className="block max-w-[20rem] truncate text-primary hover:underline font-medium"
+                          className="text-primary hover:underline font-semibold data-field whitespace-nowrap"
                         >
-                          {rfq.title}
+                          RFQ-{rfq.reference_number}
                         </Link>
-                      </Tooltip>
-                    ) : (
-                      <Link href={`/rfq/${rfq.id}`} className="text-primary hover:underline font-medium">
-                        {rfq.title}
+                        <div className="text-[11px] text-muted leading-tight">
+                          <Truncated value={rfq.title} className="max-w-[16rem]" />
+                        </div>
+                      </div>
+                      {/* Every quoted line that came back is priced — the
+                          "is this ready to go" question, answered in the row. */}
+                      {rfq.ready_to_bid && (
+                        <Tooltip content="Every quoted line has a price to government">
+                          <RowBadge tone="green">Ready</RowBadge>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </td>
+                  <td className={tdClass}>
+                    {rfq.solicitation_number ? (
+                      <Link
+                        href={`/rfq/worklist?q=${encodeURIComponent(rfq.solicitation_number)}`}
+                        className="font-mono text-primary hover:underline whitespace-nowrap"
+                      >
+                        {rfq.solicitation_number}
                       </Link>
+                    ) : (
+                      <span className="text-muted">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-foreground">
-                    {rfq.primary_vendor_name || rfq.primary_cage_code || "—"}
+                  <td className={`${tdClass} text-foreground`}>
+                    <Truncated
+                      value={rfq.primary_vendor_name || rfq.primary_cage_code || "—"}
+                      className="max-w-[12rem]"
+                    />
                   </td>
-                  <td className="px-4 py-2 text-muted">{rfq.created_by_name || "—"}</td>
-                  <td className="px-4 py-2">
+                  <td className={`${tdClass} text-muted`}>
+                    {rfq.updated_by_name || "—"}
+                    {rfq.updated_at && (
+                      <div className="text-[11px] text-muted/70 leading-tight">
+                        {formatDateMmDdYyyy(rfq.updated_at)}
+                      </div>
+                    )}
+                  </td>
+                  <td className={tdClass}>
+                    {/* Stored per solicitation, so this control moves every RFQ
+                        sent for it. RFQs with no solicitation behind them have
+                        nowhere to keep a status. */}
+                    {rfq.source_solicitation_id ? (
+                      <WorkStatusSelect
+                        value={rfq.work_status}
+                        sharedCount={rfq.shared_progress_rfq_count}
+                        onChange={(next) => handleProgressChange(rfq, next)}
+                      />
+                    ) : (
+                      <Tooltip content="Progress is tracked per solicitation. This RFQ was created outside the Send RFQs queue, so it has none.">
+                        <span className="text-muted">—</span>
+                      </Tooltip>
+                    )}
+                  </td>
+                  <td className={tdClass}>
                     <RowBadge tone={rfqStatusTone(rfq.aggregate_status)}>
                       {rfqStatusLabel(rfq.aggregate_status)}
                     </RowBadge>
+                    <span className="ml-1.5 text-muted">
+                      {rfq.response_count}/{rfq.recipient_count}
+                    </span>
                   </td>
-                  <td className="px-4 py-2 text-muted">
-                    {rfq.response_count}/{rfq.recipient_count}
+                  <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    {formatDateMmDdYyyy(rfq.bid_due_date)}
                   </td>
-                  <td className="px-4 py-2 text-muted">{formatDateMmDdYyyy(rfq.response_due_date)}</td>
-                  <td className="px-4 py-2 text-muted">{formatDateMmDdYyyy(rfq.sent_at)}</td>
+                  <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    {formatDateMmDdYyyy(rfq.response_due_date)}
+                  </td>
+                  <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    {formatDateMmDdYyyy(rfq.sent_at)}
+                  </td>
                 </tr>
               ))}
             </tbody>

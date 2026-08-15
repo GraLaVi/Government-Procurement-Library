@@ -6,14 +6,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
-import { rowBadgeClass, ROW_BADGE_BASE, type RowBadgeTone } from "@/components/library/RowBadge";
+import { ROW_BADGE_BASE } from "@/components/library/RowBadge";
 import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
+import { WorkStatusSelect } from "@/components/rfq/WorkStatusSelect";
 import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import { QuoteVendorPickerModal } from "@/components/rfq/QuoteVendorPickerModal";
 import { QuoteComparisonModal } from "@/components/rfq/QuoteComparisonModal";
-import { SortHeader, TableCard, rowHoverClass, tableHeadRowClass, tdClass, thClass } from "@/components/rfq/TableCard";
+import {
+  SortHeader, TableCard, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import {
@@ -101,18 +104,6 @@ function dueDateFromClose(closeIso: string | null, leadDays: number | null): str
   if (due < today) return null; // never default to a past date
   return `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
 }
-
-// The RFQ Progress control is a <select> wearing a row badge, so it takes its
-// colour from the same tone set every other pill in the row uses.
-const statusPillTone: Record<RfqWorkStatus, RowBadgeTone> = {
-  unworked: "neutral",
-  rfq_sent: "sky",
-  quotes_in: "indigo",
-  priced: "amber",
-  bid: "green",
-  no_bid: "red",
-  passed: "slate",
-};
 
 export default function RfqWorklistPage() {
   const { isLoading: authLoading, hasAnyProductAccess, user } = useAuth();
@@ -608,7 +599,6 @@ export default function RfqWorklistPage() {
         </div>
       ) : (
         <TableCard
-          className="overflow-x-auto"
           header={
             <>
               {/* Label and control are one <label> element rather than two
@@ -661,10 +651,11 @@ export default function RfqWorklistPage() {
             </>
           }
         >
-          <table className="w-full text-xs">
+          <div className={tableWrapClass}>
+          <table className={tableClass}>
             <thead>
               <tr className={tableHeadRowClass}>
-                <th className="px-3 py-2 w-8">
+                <th className={`${thClass} w-8`}>
                   <input type="checkbox" checked={allOnPageSelected} onChange={toggleAll} aria-label="Select all" />
                 </th>
                 <th className="px-2 py-2 w-8" aria-label="Expand" />
@@ -678,15 +669,15 @@ export default function RfqWorklistPage() {
                 <SortHeader label="Assignee" sortKey="assignee" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {items.map((item) => {
                 const dtc = daysToClose(item.close_date);
                 const isOpen = expanded.has(item.solicitation_id);
                 const partsState = partsBySol[item.solicitation_id];
                 return (
                   <Fragment key={item.solicitation_id}>
-                    <tr className={rowHoverClass}>
-                      <td className="px-3 py-2">
+                    <tr className={rowClass}>
+                      <td className={tdClass}>
                         <input
                           type="checkbox"
                           checked={selected.has(item.solicitation_id)}
@@ -806,17 +797,13 @@ export default function RfqWorklistPage() {
                         )}
                       </td>
                       <td className={tdClass}>
-                        <select
-                          className={rowBadgeClass(statusPillTone[item.work_status], { className: "cursor-pointer" })}
-                          title="Your RFQ progress on this solicitation. RFQ Sent and Quotes In advance automatically; set the rest as you work."
+                        {/* Shared with the RFQ Pipeline, which edits the same
+                            per-solicitation row from its per-vendor rows. */}
+                        <WorkStatusSelect
                           value={item.work_status}
-                          onChange={(e) => patchStatus(item, e.target.value as RfqWorkStatus)}
-                          aria-label="Work status"
-                        >
-                          {(Object.keys(WORK_STATUS_LABELS) as RfqWorkStatus[]).map((s) => (
-                            <option key={s} value={s}>{WORK_STATUS_LABELS[s]}</option>
-                          ))}
-                        </select>
+                          sharedCount={item.rfq_count}
+                          onChange={(next) => patchStatus(item, next)}
+                        />
                       </td>
                       <td className={`${tdClass} whitespace-nowrap`}>
                         <span className={dtc != null && dtc <= 3 ? "text-error font-semibold" : "text-foreground"}>
@@ -887,20 +874,20 @@ export default function RfqWorklistPage() {
                           ) : partsState.parts.length === 0 ? (
                             <p className="text-xs text-muted italic py-1">No quotable line items on this solicitation.</p>
                           ) : (
-                            <table className="w-full text-xs">
+                            <table className={tableClass}>
                               <thead>
-                                <tr className="text-left text-[10px] font-semibold text-muted uppercase tracking-wide border-b border-border">
-                                  <th className="px-3 py-1.5">NSN</th>
-                                  <th className="px-3 py-1.5">Description</th>
-                                  <th className="px-3 py-1.5 text-right whitespace-nowrap">Qty / Unit</th>
-                                  <th className="px-3 py-1.5 text-right">Unit Price</th>
-                                  <th className="px-3 py-1.5 text-right" aria-label="Actions" />
+                                <tr className={tableHeadRowClass}>
+                                  <th className={thClass}>NSN</th>
+                                  <th className={thClass}>Description</th>
+                                  <th className={`${thClass} !text-right whitespace-nowrap`}>Qty / Unit</th>
+                                  <th className={`${thClass} !text-right`}>Unit Price</th>
+                                  <th className={`${thClass} !text-right`} aria-label="Actions" />
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-border/60">
+                              <tbody>
                                 {partsState.parts.map((p) => (
-                                  <tr key={p.id}>
-                                    <td className="px-3 py-2 font-mono font-semibold whitespace-nowrap">
+                                  <tr key={p.id} className={rowClass}>
+                                    <td className={`${tdClass} font-mono font-semibold whitespace-nowrap`}>
                                       {p.nsn?.trim() ? (
                                         <a
                                           href={`/library/parts?search_type=nsn_niin&q=${encodeURIComponent(p.nsn)}`}
@@ -929,18 +916,18 @@ export default function RfqWorklistPage() {
                                         <span className="text-foreground">{formatPartIdentity(p)}</span>
                                       )}
                                     </td>
-                                    <td className="px-3 py-2 text-foreground truncate max-w-[380px]" title={p.description || undefined}>
+                                    <td className={`${tdClass} text-foreground truncate max-w-[380px]`} title={p.description || undefined}>
                                       {p.description || "—"}
                                     </td>
-                                    <td className="px-3 py-2 text-right whitespace-nowrap font-mono tabular-nums">
+                                    <td className={`${tdClass} text-right whitespace-nowrap font-mono tabular-nums`}>
                                       {p.quantity != null
                                         ? `${p.quantity.toLocaleString()}${p.unit_of_issue ? `/${p.unit_of_issue}` : ""}`
                                         : p.unit_of_issue || "—"}
                                     </td>
-                                    <td className="px-3 py-2 text-right whitespace-nowrap font-mono tabular-nums">
+                                    <td className={`${tdClass} text-right whitespace-nowrap font-mono tabular-nums`}>
                                       {formatCurrency(p.unit_price)}
                                     </td>
-                                    <td className="px-3 py-2 text-right">
+                                    <td className={`${tdClass} text-right`}>
                                       <Button
                                         variant="primary"
                                         size="sm"
@@ -974,6 +961,7 @@ export default function RfqWorklistPage() {
               })}
             </tbody>
           </table>
+          </div>
         </TableCard>
       )}
 

@@ -8,7 +8,9 @@ import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
 import { RowBadge } from "@/components/library/RowBadge";
 import { RfqVendorContactEditModal } from "@/components/rfq/RfqVendorContactEditModal";
-import { TableCard } from "@/components/rfq/TableCard";
+import {
+  TableCard, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
 import type { VendorContact } from "@/lib/rfq/types";
 
 // The add row's required fields, in render order. One list drives the
@@ -199,23 +201,23 @@ export default function RfqContactsPage() {
           <p className="text-sm text-muted">No saved contacts yet. Add one above, or enter a contact when composing an RFQ.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-xs">
-            <thead className="bg-card-bg/60 text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium">CAGE / ID</th>
-                <th className="px-3 py-2 text-left font-medium">Name</th>
-                <th className="px-3 py-2 text-left font-medium">Email</th>
-                <th className="px-3 py-2 text-left font-medium">Phone</th>
-                <th className="px-3 py-2 text-left font-medium">Title</th>
-                <th className="px-3 py-2 text-left font-medium">Default</th>
+        <div className={tableWrapClass}>
+          <table className={tableClass}>
+            <thead>
+              <tr className={tableHeadRowClass}>
+                <th className={thClass}>CAGE / ID</th>
+                <th className={thClass}>Name</th>
+                <th className={thClass}>Email</th>
+                <th className={thClass}>Phone</th>
+                <th className={thClass}>Title</th>
+                <th className={thClass}>Default</th>
                 <th className="px-3 py-2 w-24"></th>
               </tr>
             </thead>
             <tbody>
               {contacts.map((c) => (
-                <tr key={c.id} className="border-t border-border">
-                  <td className="px-3 py-2 font-mono text-xs text-foreground">
+                <tr key={c.id} className={rowClass}>
+                  <td className={`${tdClass} font-mono text-xs text-foreground`}>
                     {/* CAGE vendors show their CAGE; private-vendor contacts
                         show the vendor's own identifier (which may itself be
                         a CAGE), with the company name on hover. */}
@@ -226,11 +228,11 @@ export default function RfqContactsPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-foreground">{c.contact_name || "—"}</td>
-                  <td className="px-3 py-2 text-foreground">{c.email}</td>
-                  <td className="px-3 py-2 text-foreground">{c.phone || "—"}</td>
-                  <td className="px-3 py-2 text-foreground">{c.title || "—"}</td>
-                  <td className="px-3 py-2">
+                  <td className={`${tdClass} text-foreground`}>{c.contact_name || "—"}</td>
+                  <td className={`${tdClass} text-foreground`}>{c.email}</td>
+                  <td className={`${tdClass} text-foreground`}>{c.phone || "—"}</td>
+                  <td className={`${tdClass} text-foreground`}>{c.title || "—"}</td>
+                  <td className={tdClass}>
                     {c.is_default ? (
                       <RowBadge tone="green">Default</RowBadge>
                     ) : (
@@ -239,7 +241,7 @@ export default function RfqContactsPage() {
                       </button>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                  <td className={`${tdClass} text-right whitespace-nowrap`}>
                     <button onClick={() => setEditingContact(c)} disabled={busy} className="text-xs text-primary hover:underline mr-3">
                       Edit
                     </button>

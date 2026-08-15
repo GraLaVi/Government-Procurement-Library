@@ -7,6 +7,9 @@ import {
   formatCurrency,
 } from "@/lib/library/types";
 import { PartIdentityLink } from "@/components/bidmatching/PartIdentityLink";
+import {
+  rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
 
 // Full line-item list for one solicitation, loaded when its results row is
 // expanded. The results table shows only the matched (or largest) line item
@@ -78,34 +81,34 @@ export function BidMatchLineItems({
       ) : !items || items.length === 0 ? (
         <p className="py-2 text-xs text-muted">No line items found for this solicitation.</p>
       ) : (
-        <div className="overflow-x-auto rounded border border-border bg-card-bg">
-          <table className="w-full text-xs">
+        <div className={`${tableWrapClass} bg-card-bg`}>
+          <table className={tableClass}>
             <thead>
-              <tr className="bg-muted-light border-b border-border">
-                <th className="text-left px-3 py-1.5 font-semibold text-foreground">NSN</th>
-                <th className="text-left px-3 py-1.5 font-semibold text-foreground">Description</th>
-                <th className="text-right px-3 py-1.5 font-semibold text-foreground whitespace-nowrap">Qty</th>
-                <th className="text-left px-3 py-1.5 font-semibold text-foreground">UOM</th>
-                <th className="text-right px-3 py-1.5 font-semibold text-foreground whitespace-nowrap">Unit Price</th>
+              <tr className={tableHeadRowClass}>
+                <th className={thClass}>NSN</th>
+                <th className={thClass}>Description</th>
+                <th className={`${thClass} !text-right whitespace-nowrap`}>Qty</th>
+                <th className={thClass}>UOM</th>
+                <th className={`${thClass} !text-right whitespace-nowrap`}>Unit Price</th>
               </tr>
             </thead>
             <tbody>
               {items.map((p) => (
-                <tr key={p.id} className="border-b border-border/60 last:border-0">
-                  <td className="px-3 py-1.5 whitespace-nowrap">
+                <tr key={p.id} className={rowClass}>
+                  <td className={`${tdClass} whitespace-nowrap`}>
                     <PartIdentityLink part={p} className="data-field font-semibold" />
                   </td>
                   <td
-                    className="px-3 py-1.5 text-foreground max-w-[420px] truncate"
+                    className={`${tdClass} text-foreground max-w-[420px] truncate`}
                     title={p.description || undefined}
                   >
                     {p.description || "—"}
                   </td>
-                  <td className="px-3 py-1.5 text-right text-muted data-field whitespace-nowrap">
+                  <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
                     {p.quantity != null ? p.quantity.toLocaleString() : "—"}
                   </td>
-                  <td className="px-3 py-1.5 text-muted whitespace-nowrap">{p.unit_of_issue || "—"}</td>
-                  <td className="px-3 py-1.5 text-right text-muted data-field whitespace-nowrap">
+                  <td className={`${tdClass} text-muted whitespace-nowrap`}>{p.unit_of_issue || "—"}</td>
+                  <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
                     {formatCurrency(p.unit_price)}
                   </td>
                 </tr>

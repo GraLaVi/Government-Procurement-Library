@@ -6,7 +6,7 @@ description: "Create and send Requests for Quote to vendors from a part's Manufa
 
 A Request for Quote (RFQ) lets you ask vendors for pricing on a part and collect their answers in one place. You start an RFQ from a part's manufacturers, send it to one or more vendors, and GPH gathers each vendor's structured quote — unit price, lead time, alternates, and notes — back on the RFQ.
 
-RFQ is an add-on. It's unlocked by the **RFQ product**, which is assigned per user (a seat). If you don't have it, the RFQ pages show an upgrade prompt instead of the tools below. Everything RFQ lives under the **Vendor RFQs** menu in the top navigation: **My RFQs**, **Batch**, **Vendor Contacts**, **Settings**, and **Received RFQs**.
+RFQ is an add-on. It's unlocked by the **RFQ product**, which is assigned per user (a seat). If you don't have it, the RFQ pages show an upgrade prompt instead of the tools below. Everything RFQ lives under the **Vendor RFQs** menu in the top navigation: **RFQ Pipeline**, **Batch**, **Vendor Contacts**, **Settings**, and **Received RFQs**.
 
 ## In this article
 
@@ -14,6 +14,7 @@ RFQ is an add-on. It's unlocked by the **RFQ product**, which is assigned per us
 - [Batch RFQs](#batch-rfqs)  
 - [Tracking your RFQs](#tracking-your-rfqs)  
 - [Reading an RFQ and its quotes](#reading-an-rfq-and-its-quotes)  
+- [Marking a bid as sent](#marking-a-bid-as-sent)  
 - [Closing or cancelling an RFQ](#closing-or-cancelling-an-rfq)  
 - [Vendor Contacts](#vendor-contacts)  
 - [Settings](#settings)  
@@ -48,7 +49,20 @@ On the batch page you can filter by **Added by** (yourself, a teammate, or every
 
 ## Tracking your RFQs
 
-**My RFQs** (**Vendor RFQs › My RFQs**) lists the RFQs your organization has sent. Columns show the **RFQ** title, the **Vendor**, who it was **Created by**, its **Status**, **Responses** (how many recipients have replied out of how many were sent), the **Due** date, and when it was **Sent**. Use the **Created by** filter to narrow the list to yourself or a teammate.
+**RFQ Pipeline** (**Vendor RFQs › RFQ Pipeline**) lists the RFQs your organization has sent, where each stands, and whether it's priced and ready to bid. Columns show the **RFQ** reference and what it's for, the **Solicitation** it's bidding, the **Vendor**, who last **Updated** it, its **RFQ progress**, **Responses** (how many recipients have replied out of how many were sent), **Bid due**, **Quote due**, and when it was **Sent**. Use the **Created by** filter to narrow the list to yourself or a teammate, and click **Vendor**, **Updated by**, **RFQ progress**, **Bid due** or **Sent** to sort.
+
+Every RFQ gets a reference like **RFQ-104** — your organization's own numbering, starting at 100 and counting up, so RFQ-104 is your fifth request. It's what to quote in email or on the phone, it appears in the vendor's invitation, and two organizations can both have an RFQ-104 without confusion. Underneath it the **RFQ** column shows what the request is *for* — the part number, or "3 items" when it covers several.
+
+Two dates, and the difference matters:
+
+- **Bid due** — when the *government's* bid is due, i.e. the solicitation's close date.
+- **Quote due** — when the *vendor's* quote is due back to you. It's normally earlier, so you have time to price the bid before the solicitation closes.
+
+**Updated by** is who last moved the RFQ progress or edited the pricing, falling back to whoever created the RFQ if neither has happened yet.
+
+A green **Ready** badge next to the title means every quoted line that came back has a price to government — the bid can go out.
+
+**RFQ progress** is the same dropdown as the Send RFQs queue, editable here. It tracks the *solicitation*, not the individual RFQ, so if you sent RFQs to five vendors for one solicitation, all five rows show the same progress and changing it on any one of them moves them all — hover the control and it tells you how many it covers. RFQs created outside the Send RFQs queue have no solicitation behind them and show a dash instead.
 
 The **Status** badge summarizes where an RFQ stands across all the vendors it went to:
 
@@ -66,6 +80,14 @@ Click an RFQ to open its detail page. It shows three things:
 - **Recipients** — every vendor the RFQ went to, with the contact email, that vendor's status, and how many reminder emails GPH has sent them.
 - **Requested items** — the line items you asked about (part/NSN, quantity, unit of measure, need-by date, target price, and notes).
 - **Quotes received** — each vendor's response. A quote's header shows its **total** and **lead time**, and a per-line table shows the vendor's **unit price**, **quantity available**, **lead time**, any **alternate part** they're offering, whether they marked a line **no bid**, and their notes.
+
+Where you've priced a line, a row underneath it spells out what *you* changed after the quote arrived — the vendor's unit price, then the markup, shipping and other charges you added, the resulting price to government, and who set it when. A green **Priced** badge on the quote header means at least one line has a price to government; a **Bid sent** badge appears once the solicitation's progress reaches that state.
+
+## Marking a bid as sent
+
+When you've priced the quote and sent your bid to the government, click **Complete** on the RFQ's detail page. That moves the RFQ progress to **Bid sent**.
+
+Progress belongs to the *solicitation*, not the individual RFQ, so Complete also moves every other RFQ you sent for the same solicitation — which is what you want, since you bid the solicitation once. Once it's set, the button is replaced by a **Bid sent** marker; change it from the RFQ Pipeline's progress dropdown if you set it by mistake. RFQs created outside the Send RFQs queue have no solicitation behind them, so they show no Complete button.
 
 ## Closing or cancelling an RFQ
 

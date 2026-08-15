@@ -12,6 +12,9 @@ import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndF
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
 import { formatCurrency } from "@/lib/library/types";
+import {
+  SortHeader, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
 
 interface MatchedCondition {
   condition_type: string;
@@ -217,59 +220,6 @@ function InterestStar({
   );
 }
 
-/**
- * Sortable column header for this table.
- *
- * Deliberately not the RFQ SortHeader: that one carries the shared DataTable
- * header styling (px-3 py-2, uppercase, muted), which would clash with the
- * plain <th>s beside it here. Same chevron affordance, this table's type.
- */
-function SortTh({
-  label, sortKey, sortBy, sortDir, onSort, align = "left", className = "",
-}: {
-  label: string;
-  sortKey: Exclude<BidSortKey, "">;
-  sortBy: BidSortKey;
-  sortDir: "asc" | "desc";
-  onSort: (k: BidSortKey) => void;
-  align?: "left" | "right";
-  className?: string;
-}) {
-  const active = sortBy === sortKey;
-  return (
-    // Written out in full — Tailwind scans for complete class names, so a
-    // `text-${align}` template would never be generated.
-    <th className={`${align === "right" ? "text-right" : "text-left"} px-2.5 py-1.5 font-semibold text-foreground ${className}`}>
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        title={`Sort by ${label.toLowerCase()}`}
-        className={`inline-flex items-center gap-1 font-semibold cursor-pointer select-none ${
-          align === "right" ? "flex-row-reverse" : ""
-        } ${active ? "text-foreground" : "text-foreground/70 hover:text-foreground"}`}
-      >
-        {label}
-        {/* The inactive arrow stays faint rather than absent so the column
-            reads as sortable before it is clicked. */}
-        <svg
-          className={`w-3 h-3 shrink-0 ${active ? "text-primary" : "text-muted/40"}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d={active && sortDir === "asc" ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}
-          />
-        </svg>
-      </button>
-    </th>
-  );
-}
-
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
   // Tolerate a full timestamp as well as a bare YYYY-MM-DD so the date is read
@@ -374,22 +324,22 @@ export function BidMatchResultsTable({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-xs">
+      <div className={tableWrapClass}>
+        <table className={tableClass}>
           <thead>
-            <tr className="bg-muted-light border-b border-border">
-              <SortTh label="★" sortKey="interested" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="w-8" />
+            <tr className={tableHeadRowClass}>
+              <SortHeader label="★" sortKey="interested" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="w-8" />
               <th className="w-6 px-1.5 py-1.5" aria-label="Expand"></th>
-              <SortTh label="Solicitation" sortKey="solicitation" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">NSN</th>
-              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">Description</th>
-              <SortTh label="Qty" sortKey="quantity" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
-              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">UOM</th>
-              <SortTh label="Est. Value" sortKey="estimated_value" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
-              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground whitespace-nowrap">Posted</th>
-              <SortTh label="Close Date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
-              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">Set-Aside</th>
-              <th className="text-left px-2.5 py-1.5 font-semibold text-foreground">Status</th>
+              <SortHeader label="Solicitation" sortKey="solicitation" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <th className={thClass}>NSN</th>
+              <th className={thClass}>Description</th>
+              <SortHeader label="Qty" sortKey="quantity" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
+              <th className={thClass}>UOM</th>
+              <SortHeader label="Est. Value" sortKey="estimated_value" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
+              <th className={`${thClass} whitespace-nowrap`}>Posted</th>
+              <SortHeader label="Close Date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
+              <th className={thClass}>Set-Aside</th>
+              <th className={thClass}>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -403,9 +353,7 @@ export function BidMatchResultsTable({
               const matchedParts = result.matched_parts ?? [];
               return (
                 <Fragment key={key}>
-                  <tr
-                    className="border-b border-border last:border-0 hover:bg-muted-light/50 transition-colors"
-                  >
+                  <tr className={rowClass}>
                     <td className="px-1.5 py-1.5 text-center">
                       <InterestStar result={result} onToggle={onToggleInterest} />
                     </td>
@@ -427,7 +375,7 @@ export function BidMatchResultsTable({
                         </svg>
                       </button>
                     </td>
-                    <td className="px-2.5 py-1.5">
+                    <td className={tdClass}>
                       <div className="flex flex-wrap items-center gap-1.5 font-medium">
                         {/* Plain text — the drill-down lives on the NSN link now.
                             whitespace-nowrap keeps the number on one line when the
@@ -506,7 +454,7 @@ export function BidMatchResultsTable({
                     </td>
                     {/* Primary line item. "+N more" expands the row rather than
                         opening a modal — the full list renders there. */}
-                    <td className="px-2.5 py-1.5 whitespace-nowrap">
+                    <td className={`${tdClass} whitespace-nowrap`}>
                       <div className="flex items-center gap-1.5">
                         <PartIdentityLink part={result} className="data-field font-medium" />
                         <FirstArticleBadge firstArticle={result.first_article} />
@@ -528,7 +476,7 @@ export function BidMatchResultsTable({
                         )}
                       </div>
                     </td>
-                    <td className="px-2.5 py-1.5 text-foreground">
+                    <td className={`${tdClass} text-foreground`}>
                       {result.part_description ? (
                         <span
                           className="block max-w-[260px] truncate"
@@ -540,28 +488,28 @@ export function BidMatchResultsTable({
                         <span className="text-muted">—</span>
                       )}
                     </td>
-                    <td className="px-2.5 py-1.5 text-right text-muted data-field whitespace-nowrap">
+                    <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
                       {result.quantity != null ? result.quantity.toLocaleString() : "—"}
                     </td>
-                    <td className="px-2.5 py-1.5 text-muted whitespace-nowrap">
+                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
                       {result.unit_of_issue || "—"}
                     </td>
-                    <td className="px-2.5 py-1.5 text-right text-muted data-field whitespace-nowrap">
+                    <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
                       {result.estimated_value != null ? formatCurrency(result.estimated_value) : "—"}
                     </td>
                     {/* Posted date. DIBBS rows carry it as issue_date; SAM rows
                         as posted_date. Neither source populates both. */}
-                    <td className="px-2.5 py-1.5 text-muted whitespace-nowrap">
+                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
                       {formatDate(result.posted_date ?? result.issue_date)}
                     </td>
-                    <td className="px-2.5 py-1.5 text-muted whitespace-nowrap">
+                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
                       {formatDate(result.close_date)}
                     </td>
                     {/* The short code carries the column; the readable label
                         moves to the tooltip, matching the vendor Open
                         Solicitations tab. Falls back to the label, then the raw
                         string, so an unmapped row still shows something. */}
-                    <td className="px-2.5 py-1.5 text-muted whitespace-nowrap">
+                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
                       {result.set_aside_code ? (
                         <RowBadge title={result.set_aside_label || result.set_aside || undefined}>
                           {result.set_aside_code}
@@ -570,7 +518,7 @@ export function BidMatchResultsTable({
                         result.set_aside_label || result.set_aside || "—"
                       )}
                     </td>
-                    <td className="px-2.5 py-1.5">
+                    <td className={tdClass}>
                       <SolStatusBadge status={result.status} />
                     </td>
                   </tr>
@@ -599,32 +547,32 @@ export function BidMatchResultsTable({
                               <div className="text-xs text-muted mb-2">
                                 Matched parts ({matchedParts.length.toLocaleString()})
                               </div>
-                              <div className="overflow-x-auto rounded border border-border bg-card-bg">
-                                <table className="w-full text-xs">
+                              <div className={`${tableWrapClass} bg-card-bg`}>
+                                <table className={tableClass}>
                                   <thead>
-                                    <tr className="bg-muted-light border-b border-border">
-                                      <th className="text-left px-3 py-1.5 font-semibold text-foreground">NSN</th>
-                                      <th className="text-left px-3 py-1.5 font-semibold text-foreground">Description</th>
-                                      <th className="text-right px-3 py-1.5 font-semibold text-foreground whitespace-nowrap">Qty</th>
-                                      <th className="text-left px-3 py-1.5 font-semibold text-foreground">UOM</th>
+                                    <tr className={tableHeadRowClass}>
+                                      <th className={thClass}>NSN</th>
+                                      <th className={thClass}>Description</th>
+                                      <th className={`${thClass} !text-right whitespace-nowrap`}>Qty</th>
+                                      <th className={thClass}>UOM</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {matchedParts.map((part, idx) => (
                                       <tr key={`${part.nsn ?? part.mfg_part_number ?? idx}`} className="border-b border-border/60 last:border-0">
-                                        <td className="px-3 py-1.5 whitespace-nowrap">
+                                        <td className={`${tdClass} whitespace-nowrap`}>
                                           <PartIdentityLink part={part} className="data-field font-semibold" />
                                         </td>
                                         <td
-                                          className="px-3 py-1.5 text-foreground max-w-[420px] truncate"
+                                          className={`${tdClass} text-foreground max-w-[420px] truncate`}
                                           title={part.part_description || undefined}
                                         >
                                           {part.part_description || "—"}
                                         </td>
-                                        <td className="px-3 py-1.5 text-right text-muted data-field whitespace-nowrap">
+                                        <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
                                           {part.quantity != null ? part.quantity.toLocaleString() : "—"}
                                         </td>
-                                        <td className="px-3 py-1.5 text-muted whitespace-nowrap">
+                                        <td className={`${tdClass} text-muted whitespace-nowrap`}>
                                           {part.unit_of_issue || "—"}
                                         </td>
                                       </tr>
@@ -732,8 +680,8 @@ export function BidMatchResultsTable({
           <button
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
-            className="px-3 py-1.5 rounded-lg border border-border text-sm font-medium transition-colors
-              enabled:hover:bg-muted-light disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`${tdClass} rounded-lg border border-border text-sm font-medium transition-colors
+              enabled:hover:bg-muted-light disabled:opacity-40 disabled:cursor-not-allowed`}
           >
             Previous
           </button>
@@ -743,8 +691,8 @@ export function BidMatchResultsTable({
           <button
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages}
-            className="px-3 py-1.5 rounded-lg border border-border text-sm font-medium transition-colors
-              enabled:hover:bg-muted-light disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`${tdClass} rounded-lg border border-border text-sm font-medium transition-colors
+              enabled:hover:bg-muted-light disabled:opacity-40 disabled:cursor-not-allowed`}
           >
             Next
           </button>

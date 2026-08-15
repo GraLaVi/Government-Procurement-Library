@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/Button";
 import { RowBadge } from "@/components/library/RowBadge";
 import { RfqVendorCapabilitiesModal } from "@/components/rfq/RfqVendorCapabilitiesModal";
 import { RfqVendorContactEditModal } from "@/components/rfq/RfqVendorContactEditModal";
-import { TableCard, tableHeadRowClass } from "@/components/rfq/TableCard";
+import {
+  TableCard, rowClass, tableClass, tableHeadRowClass, tableWrapClass,
+} from "@/components/rfq/TableCard";
 import {
   MIN_SENDS_FOR_RESPONSIVENESS,
   type RfqVendor,
@@ -467,10 +469,11 @@ export default function RfqVendorsPage() {
             : "No private vendors yet. Add the suppliers you work with outside SAM.gov."}
         </div>
       ) : (
-        <TableCard className="overflow-x-auto mt-4">
-          <table className="w-full text-xs">
+        <TableCard className="mt-4">
+          <div className={tableWrapClass}>
+          <table className={tableClass}>
             <thead>
-              <tr className={`${tableHeadRowClass} text-[10px] font-semibold uppercase tracking-wide text-muted`}>
+              <tr className={tableHeadRowClass}>
                 <th className="px-2 py-2 w-8" aria-label="Expand" />
                 <th className="px-3 py-2">Company</th>
                 <th className="px-3 py-2">Identifier</th>
@@ -481,14 +484,14 @@ export default function RfqVendorsPage() {
                 <th className="px-3 py-2 text-right" aria-label="Actions" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {vendors.map((v) => {
                 const isOpen = expandedVendors.has(v.id);
                 const defaultContact = v.contacts.find((c) => c.is_default) || v.contacts[0] || null;
                 const location = [v.city, v.state].filter(Boolean).join(", ");
                 return (
                   <Fragment key={v.id}>
-                    <tr className={`hover:bg-primary/8 transition-colors ${!v.is_active ? "opacity-60" : ""}`}>
+                    <tr className={`${rowClass} ${!v.is_active ? "opacity-60" : ""}`}>
                       <td className="px-2 py-2 text-center">
                         <button
                           type="button"
@@ -681,6 +684,7 @@ export default function RfqVendorsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </TableCard>
       )}
 
@@ -710,10 +714,11 @@ export default function RfqVendorsPage() {
           <p className="text-xs text-muted mb-3">
             Last 12 months, across all RFQs your team has sent. Who answers, how often, and how fast.
           </p>
-          <TableCard className="overflow-x-auto !p-0">
-            <table className="w-full text-xs">
+          <TableCard className="!p-0">
+            <div className={tableWrapClass}>
+            <table className={tableClass}>
               <thead>
-                <tr className={`${tableHeadRowClass} text-[10px] font-semibold uppercase tracking-wide text-muted`}>
+                <tr className={tableHeadRowClass}>
                   <th className="px-3 py-2">Vendor</th>
                   <th className="px-3 py-2 text-right">RFQs sent</th>
                   <th className="px-3 py-2 text-right">Responded</th>
@@ -723,7 +728,7 @@ export default function RfqVendorsPage() {
                   <th className="px-3 py-2 text-right">Median turnaround</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody>
                 {stats.map((s, i) => (
                   <tr key={i} className={s.rfqs_sent < MIN_SENDS_FOR_RESPONSIVENESS ? "opacity-60" : undefined}>
                     <td className="px-3 py-2">
@@ -748,6 +753,7 @@ export default function RfqVendorsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </TableCard>
         </div>
       )}
