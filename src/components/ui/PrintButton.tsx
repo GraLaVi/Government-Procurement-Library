@@ -5,6 +5,53 @@
 export const toolbarButtonClass =
   "inline-flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-card-bg text-card-foreground text-xs font-medium transition-colors hover:bg-muted-light hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-wait disabled:hover:bg-card-bg disabled:hover:border-border";
 
+/**
+ * Tone variants for a toolbar button.
+ *
+ * Geometry is fixed by toolbarButtonClass — same padding, radius, border width
+ * and type scale for every button in a toolbar. Only colour varies, so a row of
+ * them reads as one control group rather than three unrelated buttons at three
+ * different sizes, which is what the RFQ detail page had when Close was an
+ * outline Button, Cancel a ghost Button and Print a toolbar button.
+ */
+export type ToolbarTone = "default" | "primary" | "danger";
+
+const TOOLBAR_TONES: Record<ToolbarTone, string> = {
+  default: "",
+  // The action you came to the page to take.
+  primary: "!border-primary/50 !text-primary hover:!bg-primary/10 hover:!border-primary",
+  // Destructive and irreversible — reads as a warning without shouting.
+  danger: "!text-error/90 hover:!bg-error/10 hover:!border-error/50",
+};
+
+export function ToolbarButton({
+  onClick,
+  tone = "default",
+  disabled = false,
+  title,
+  className = "",
+  children,
+}: {
+  onClick?: () => void;
+  tone?: ToolbarTone;
+  disabled?: boolean;
+  title?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`${toolbarButtonClass} ${TOOLBAR_TONES[tone]} ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function PrintButton({
   onClick,
   preparing = false,

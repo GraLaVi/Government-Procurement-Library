@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
-import { TableCard } from "@/components/rfq/TableCard";
+import {
+  TableCard, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
 
 interface BuyerCoverageRow {
   user_id: number;
@@ -29,6 +31,12 @@ interface CoverageSummary {
   unassigned_count: number;
   unassigned_soon_days: number;
   unassigned_closing_soon: number;
+  /** Started and not finished: RFQ Sent / Quotes In / Priced with no bid,
+   *  no-bid or pass recorded. `stale` is the subset whose progress hasn't
+   *  moved in `in_flight_stale_days`. */
+  in_flight_not_bid: number;
+  in_flight_stale: number;
+  in_flight_stale_days: number;
   by_buyer: BuyerCoverageRow[];
 }
 
@@ -118,13 +126,28 @@ export default function RfqCoveragePage() {
         </div>
       ) : data ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <StatTile
               label="Closing soon, unworked"
               value={data.closing_soon_unworked}
               sub={`Close within ${data.closing_soon_days} days, no RFQ sent`}
               urgent
               href="/rfq/worklist?scope=all"
+            />
+            {/* Work begun and never finished. The headline is the whole set;
+                the stale subset is what actually needs chasing, so it carries
+                the urgency rather than the total. Links to the pipeline, where
+                each of these has a row and an editable progress. */}
+            <StatTile
+              label="In flight, not bid"
+              value={data.in_flight_not_bid}
+              sub={
+                data.in_flight_stale > 0
+                  ? `${data.in_flight_stale.toLocaleString()} untouched for ${data.in_flight_stale_days}+ days`
+                  : `RFQ sent, quotes in or priced — no outcome yet`
+              }
+              urgent={data.in_flight_stale > 0}
+              href="/rfq"
             />
             <StatTile
               label="Quotes overdue"
@@ -156,39 +179,41 @@ export default function RfqCoveragePage() {
                 </Link>.
               </p>
             ) : (
-              <TableCard className="overflow-x-auto !p-0">
-                <table className="w-full text-xs">
+              <TableCard>
+                <div className={tableWrapClass}>
+                <table className={tableClass}>
                   <thead>
-                    <tr className="border-b border-border bg-primary/10 text-left text-[10px] font-semibold text-muted uppercase tracking-wide">
-                      <th className="px-3 py-2">Buyer</th>
-                      <th className="px-3 py-2 text-right" title="Unclaimed solicitations deriving to this buyer via CAGE ownership">In queue (derived)</th>
-                      <th className="px-3 py-2 text-right">Unworked</th>
-                      <th className="px-3 py-2 text-right">RFQ sent</th>
-                      <th className="px-3 py-2 text-right">Quotes in</th>
-                      <th className="px-3 py-2 text-right">Priced</th>
-                      <th className="px-3 py-2 text-right">Bid</th>
-                      <th className="px-3 py-2 text-right">No bid</th>
-                      <th className="px-3 py-2 text-right">Passed</th>
-                      <th className="px-3 py-2 text-right">Total</th>
+                    <tr className={tableHeadRowClass}>
+                      <th className={thClass}>Buyer</th>
+                      <th className={`${thClass} !text-right`} title="Unclaimed solicitations deriving to this buyer via CAGE ownership — nobody has claimed them. Counted inside the status columns too, not added to them.">In queue (derived)</th>
+                      <th className={`${thClass} !text-right`} title="Routing to this buyer and not started — no RFQ sent yet">Unworked</th>
+                      <th className={`${thClass} !text-right`}>RFQ sent</th>
+                      <th className={`${thClass} !text-right`}>Quotes in</th>
+                      <th className={`${thClass} !text-right`}>Priced</th>
+                      <th className={`${thClass} !text-right`}>Bid sent</th>
+                      <th className={`${thClass} !text-right`}>No bid</th>
+                      <th className={`${thClass} !text-right`}>Passed</th>
+                      <th className={`${thClass} !text-right`}>Total</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody>
                     {data.by_buyer.map((b) => (
-                      <tr key={b.user_id}>
-                        <td className="px-3 py-2 text-card-foreground">{b.name}</td>
-                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.derived_unclaimed}</td>
-                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.unworked}</td>
-                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.rfq_sent}</td>
-                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.quotes_in}</td>
-                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.priced}</td>
-                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.bid}</td>
-                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.no_bid}</td>
-                        <td className="px-3 py-2 text-right font-mono tabular-nums">{b.passed}</td>
-                        <td className="px-3 py-2 text-right font-mono tabular-nums font-semibold">{b.total}</td>
+                      <tr key={b.user_id} className={rowClass}>
+                        <td className={`${tdClass} text-foreground`}>{b.name}</td>
+                        <td className={`${tdClass} text-right font-mono tabular-nums`}>{b.derived_unclaimed}</td>
+                        <td className={`${tdClass} text-right font-mono tabular-nums`}>{b.unworked}</td>
+                        <td className={`${tdClass} text-right font-mono tabular-nums`}>{b.rfq_sent}</td>
+                        <td className={`${tdClass} text-right font-mono tabular-nums`}>{b.quotes_in}</td>
+                        <td className={`${tdClass} text-right font-mono tabular-nums`}>{b.priced}</td>
+                        <td className={`${tdClass} text-right font-mono tabular-nums`}>{b.bid}</td>
+                        <td className={`${tdClass} text-right font-mono tabular-nums`}>{b.no_bid}</td>
+                        <td className={`${tdClass} text-right font-mono tabular-nums`}>{b.passed}</td>
+                        <td className={`${tdClass} text-right font-mono tabular-nums font-semibold`}>{b.total}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </div>
               </TableCard>
             )}
           </div>

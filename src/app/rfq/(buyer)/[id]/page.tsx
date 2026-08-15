@@ -1,25 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { RowBadge } from "@/components/library/RowBadge";
-import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   PLACEHOLDER_LINE_DESCRIPTION,
   rfqStatusLabel, rfqStatusTone,
+  WORK_STATUS_LABELS,
   type RfqDetail,
   type RfqResponseDetail,
 } from "@/lib/rfq/types";
 import { formatDateMmDdYyyy } from "@/lib/dates";
-import { formatNSN } from "@/lib/library/types";
-import { TableCard } from "@/components/rfq/TableCard";
-import { PricingPopover } from "@/components/rfq/PricingPopover";
-import { PrintButton } from "@/components/ui/PrintButton";
+import { formatCurrency, formatNSN } from "@/lib/library/types";
+import {
+  TableCard, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
+import { PrintButton, ToolbarButton } from "@/components/ui/PrintButton";
 
 export default function RfqDetailPage() {
   const router = useRouter();
@@ -36,9 +37,10 @@ export default function RfqDetailPage() {
   // Stamped when Print is clicked rather than during render — `new Date()` at
   // render time would mismatch between the server and client HTML.
   const [printedOn, setPrintedOn] = useState<string | null>(null);
-  // Prev/next navigation across the My RFQs list (same order as /rfq).
+  // Prev/next navigation across the RFQ Pipeline list (same order as /rfq).
   const [rfqIds, setRfqIds] = useState<number[]>([]);
   const [printRequested, setPrintRequested] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!rfqId) return;
@@ -95,6 +97,32 @@ export default function RfqDetailPage() {
     return () => window.cancelAnimationFrame(id);
   }, [printRequested]);
 
+  // Mark the bid as sent. Writes the SOLICITATION's progress, not this RFQ's —
+  // one solicitation fans out to an RFQ per vendor and "we bid this" is one
+  // fact about the solicitation, so the same click moves every sibling.
+  const handleComplete = async () => {
+    if (!rfq?.source_solicitation_id) return;
+    setCompleting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/rfq/worklist/${rfq.source_solicitation_id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ work_status: "bid" }),
+      });
+      if (res.ok) {
+        setRfq((prev) => (prev ? { ...prev, work_status: "bid" } : prev));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Could not mark the bid as sent.");
+      }
+    } catch {
+      setError("Network error marking the bid as sent.");
+    } finally {
+      setCompleting(false);
+    }
+  };
+
   const act = async (action: "close" | "cancel") => {
     if (!rfqId) return;
     setBusy(true);
@@ -147,6 +175,7 @@ export default function RfqDetailPage() {
   }
 
   const isOpen = rfq.status === "sent";
+  const isBidSent = rfq.work_status === "bid";
 
   return (
     <div className="print-root space-y-6">
@@ -182,26 +211,71 @@ export default function RfqDetailPage() {
         </div>
         <div className="mt-2 flex items-start justify-between gap-3 flex-wrap">
           <div>
+            {/* Reference first: it is what the buyer quotes in email and what
+                the vendor sees in the invitation subject. The title says what
+                the request is for. */}
+            <div className="data-field text-sm font-semibold text-muted">
+              RFQ-{rfq.reference_number}
+            </div>
             <h1 className="text-2xl font-bold text-foreground">{rfq.title}</h1>
             <p className="text-sm text-muted mt-1">
               Created {formatDateMmDdYyyy(rfq.created_at)}
-              {rfq.response_due_date ? ` · Due ${formatDateMmDdYyyy(rfq.response_due_date)}` : ""}
+              {rfq.response_due_date ? ` · Quote due ${formatDateMmDdYyyy(rfq.response_due_date)}` : ""}
+              {/* The status pill that used to sit beside Close was the only
+                  thing saying an RFQ was no longer open — the Close/Cancel
+                  buttons hide themselves once it isn't. Kept as text. */}
+              {!isOpen ? ` · ${rfqStatusLabel(rfq.status)}${rfq.closed_at ? ` ${formatDateMmDdYyyy(rfq.closed_at)}` : ""}` : ""}
             </p>
-            {/* Paper needs an identifier and a date the screen doesn't. */}
-            <p className="print-only text-sm text-muted mt-1">
-              RFQ #{rfq.id}
-              {printedOn ? ` · Printed ${printedOn}` : ""}
-            </p>
+            {/* Paper needs a date the screen doesn't. The reference is already
+                above and prints with it — `id` was standing in for one before
+                there was a customer-facing number. */}
+            {printedOn && (
+              <p className="print-only text-sm text-muted mt-1">Printed {printedOn}</p>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <RowBadge tone={rfqStatusTone(rfq.status)}>{rfqStatusLabel(rfq.status)}</RowBadge>
+          {/* One toolbar, one geometry. Close was an outline Button, Cancel a
+              ghost Button and Print a toolbar button — three sizes and three
+              type scales sitting in a row. */}
+          <div className="no-print flex items-center gap-2">
+            {/* The reason a bidder opens this page: read the priced quote,
+                send the bid, mark it done. Only offered when there is a
+                solicitation to record it against. */}
+            {rfq.source_solicitation_id && (
+              isBidSent ? (
+                <ToolbarButton
+                  disabled
+                  title="A bid has been sent to the government for this solicitation. Change it from the RFQ Pipeline if that was wrong."
+                >
+                  <svg className="w-3 h-3 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {WORK_STATUS_LABELS.bid}
+                </ToolbarButton>
+              ) : (
+                <ToolbarButton
+                  tone="primary"
+                  onClick={handleComplete}
+                  disabled={completing}
+                  title={
+                    "Mark the bid as sent to the government. Progress is tracked per "
+                    + "solicitation, so this also moves any other RFQs you sent for it."
+                  }
+                >
+                  {completing ? "Saving…" : "Complete"}
+                </ToolbarButton>
+              )
+            )}
             {isOpen && (
               <>
-                <Button variant="outline" size="sm" className="no-print" onClick={() => setConfirmAction("close")} disabled={busy}>Close</Button>
-                <Button variant="ghost" size="sm" className="no-print" onClick={() => setConfirmAction("cancel")} disabled={busy}>Cancel</Button>
+                <ToolbarButton onClick={() => setConfirmAction("close")} disabled={busy}>
+                  Close
+                </ToolbarButton>
+                <ToolbarButton tone="danger" onClick={() => setConfirmAction("cancel")} disabled={busy}>
+                  Cancel
+                </ToolbarButton>
               </>
             )}
-            <PrintButton className="no-print" onClick={handlePrint} title="Print this RFQ" />
+            <PrintButton onClick={handlePrint} title="Print this RFQ" />
           </div>
         </div>
       </div>
@@ -212,28 +286,28 @@ export default function RfqDetailPage() {
 
       {/* Recipients */}
       <TableCard as="section" header={<h2 className="text-sm font-semibold text-foreground">Recipients</h2>}>
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-xs">
-            <thead className="bg-card-bg/60 text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium">Vendor</th>
-                <th className="px-3 py-2 text-left font-medium">Contact</th>
-                <th className="px-3 py-2 text-left font-medium">Status</th>
-                <th className="px-3 py-2 text-left font-medium">Reminders</th>
+        <div className={tableWrapClass}>
+          <table className={tableClass}>
+            <thead>
+              <tr className={tableHeadRowClass}>
+                <th className={thClass}>Vendor</th>
+                <th className={thClass}>Contact</th>
+                <th className={thClass}>Status</th>
+                <th className={thClass}>Reminders</th>
               </tr>
             </thead>
             <tbody>
               {rfq.recipients.map((r) => (
-                <tr key={r.id} className="border-t border-border">
-                  <td className="px-4 py-2 text-foreground">
+                <tr key={r.id} className={rowClass}>
+                  <td className={`${tdClass} text-foreground`}>
                     {r.vendor_name || r.cage_code}{" "}
                     <span className="font-mono text-xs text-muted">({r.cage_code})</span>
                   </td>
-                  <td className="px-4 py-2 text-muted">{r.contact_email || "—"}</td>
-                  <td className="px-4 py-2">
+                  <td className={`${tdClass} text-muted`}>{r.contact_email || "—"}</td>
+                  <td className={tdClass}>
                     <RowBadge tone={rfqStatusTone(r.status)}>{rfqStatusLabel(r.status)}</RowBadge>
                   </td>
-                  <td className="px-4 py-2 text-muted">{r.reminder_count}</td>
+                  <td className={`${tdClass} text-muted`}>{r.reminder_count}</td>
                 </tr>
               ))}
             </tbody>
@@ -243,24 +317,24 @@ export default function RfqDetailPage() {
 
       {/* Line items */}
       <TableCard as="section" header={<h2 className="text-sm font-semibold text-foreground">Requested items</h2>}>
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-xs">
-            <thead className="bg-card-bg/60 text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium">#</th>
-                <th className="px-3 py-2 text-left font-medium">Part number</th>
-                <th className="px-3 py-2 text-left font-medium">NSN</th>
-                <th className="px-3 py-2 text-left font-medium">Qty</th>
-                <th className="px-3 py-2 text-left font-medium">Need by</th>
-                <th className="px-3 py-2 text-left font-medium">Target $/unit</th>
-                <th className="px-3 py-2 text-left font-medium">Notes</th>
+        <div className={tableWrapClass}>
+          <table className={tableClass}>
+            <thead>
+              <tr className={tableHeadRowClass}>
+                <th className={thClass}>#</th>
+                <th className={thClass}>Part number</th>
+                <th className={thClass}>NSN</th>
+                <th className={thClass}>Qty</th>
+                <th className={thClass}>Need by</th>
+                <th className={thClass}>Target $/unit</th>
+                <th className={thClass}>Notes</th>
               </tr>
             </thead>
             <tbody>
               {rfq.line_items.map((li) => (
-                <tr key={li.id} className="border-t border-border">
-                  <td className="px-4 py-2 text-muted">{li.line_number}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-foreground">
+                <tr key={li.id} className={rowClass}>
+                  <td className={`${tdClass} text-muted`}>{li.line_number}</td>
+                  <td className={`${tdClass} font-mono text-xs text-foreground`}>
                     {li.part_number || "—"}
                     {/* The part description, which no longer has a column of
                         its own. Legacy lines carry a placeholder here instead
@@ -269,15 +343,15 @@ export default function RfqDetailPage() {
                       <div className="font-sans text-xs text-muted">{li.description}</div>
                     )}
                   </td>
-                  <td className="px-4 py-2 font-mono text-xs text-foreground">
+                  <td className={`${tdClass} font-mono text-xs text-foreground`}>
                     {formatNSN(li.nsn) || "—"}
                   </td>
-                  <td className="px-4 py-2 text-foreground">
+                  <td className={`${tdClass} text-foreground`}>
                     {li.quantity}{li.unit_of_measure ? ` ${li.unit_of_measure}` : ""}
                   </td>
-                  <td className="px-4 py-2 text-muted">{formatDateMmDdYyyy(li.need_by_date)}</td>
-                  <td className="px-4 py-2 text-muted">{li.target_unit_price ?? "—"}</td>
-                  <td className="px-4 py-2 text-muted">{li.notes || "—"}</td>
+                  <td className={`${tdClass} text-muted`}>{formatDateMmDdYyyy(li.need_by_date)}</td>
+                  <td className={`${tdClass} text-muted`}>{li.target_unit_price ?? "—"}</td>
+                  <td className={`${tdClass} text-muted`}>{li.notes || "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -306,20 +380,27 @@ export default function RfqDetailPage() {
                     {resp.line_items.some((l) => l.price_to_gov != null) && (
                       <RowBadge tone="green">Priced</RowBadge>
                     )}
+                    {/* Progress is per solicitation, so this says the bid went
+                        to the government for the solicitation this quote is
+                        part of — not that this vendor was the one quoted. */}
+                    {rfq.work_status === "bid" && (
+                      <RowBadge tone="blue" title="A bid has been sent to the government for this solicitation">
+                        {WORK_STATUS_LABELS.bid}
+                      </RowBadge>
+                    )}
                     <RowBadge tone={rfqStatusTone(resp.status)}>{rfqStatusLabel(resp.status)}</RowBadge>
                   </div>
                 </div>
-                <div className="overflow-x-auto rounded-lg border border-border/60">
-                  <table className="w-full text-xs">
-                    <thead className="bg-card-bg/60 text-muted">
-                      <tr>
-                        <th className="px-3 py-1.5 text-left font-medium">Line / Part</th>
-                        <th className="px-3 py-1.5 text-left font-medium">Unit $</th>
-                        <th className="px-3 py-1.5 text-left font-medium">Qty avail</th>
-                        <th className="px-3 py-1.5 text-left font-medium">Lead</th>
-                        <th className="px-3 py-1.5 text-left font-medium">Alt part</th>
-                        <th className="px-3 py-1.5 text-left font-medium">No bid</th>
-                        <th className="px-3 py-1.5 text-right font-medium">Your price to gov</th>
+                <div className={tableWrapClass}>
+                  <table className={tableClass}>
+                    <thead>
+                      <tr className={tableHeadRowClass}>
+                        <th className={thClass}>Line / Part</th>
+                        <th className={thClass}>Unit $</th>
+                        <th className={thClass}>Qty avail</th>
+                        <th className={thClass}>Lead</th>
+                        <th className={thClass}>Alt part</th>
+                        <th className={thClass}>No bid</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -329,8 +410,9 @@ export default function RfqDetailPage() {
                         // and part it refers to instead.
                         const li = lineItemsById.get(rli.rfq_line_item_id);
                         return (
-                        <tr key={i} className="border-t border-border/60">
-                          <td className="px-3 py-1.5 text-muted">
+                        <Fragment key={i}>
+                        <tr className={rowClass}>
+                          <td className={`${tdClass} text-muted`}>
                             {li ? (
                               <>
                                 <span className="text-foreground">{li.line_number}</span>
@@ -342,26 +424,57 @@ export default function RfqDetailPage() {
                               "—"
                             )}
                           </td>
-                          <td className="px-3 py-1.5 text-foreground">{rli.unit_price ?? "—"}</td>
-                          <td className="px-3 py-1.5 text-muted">{rli.quantity_available ?? "—"}</td>
-                          <td className="px-3 py-1.5 text-muted">{rli.lead_time_days ?? "—"}</td>
-                          <td className="px-3 py-1.5 text-muted">{rli.alternate_part_number || "—"}</td>
-                          <td className="px-3 py-1.5 text-muted">{rli.is_no_bid ? "Yes" : "—"}</td>
-                          <td className="px-3 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-                            {rli.price_to_gov != null ? (
-                              <PricingPopover
-                                priceToGov={rli.price_to_gov}
-                                vendorUnitPrice={rli.unit_price}
-                                markupPercent={rli.markup_percent ?? null}
-                                shippingAmount={rli.shipping_amount ?? null}
-                                otherCharges={rli.other_charges ?? null}
-                                pricedAt={rli.priced_at ?? null}
-                              />
-                            ) : (
-                              "—"
-                            )}
-                          </td>
+                          <td className={`${tdClass} text-foreground`}>{rli.unit_price ?? "—"}</td>
+                          <td className={`${tdClass} text-muted`}>{rli.quantity_available ?? "—"}</td>
+                          <td className={`${tdClass} text-muted`}>{rli.lead_time_days ?? "—"}</td>
+                          <td className={`${tdClass} text-muted`}>{rli.alternate_part_number || "—"}</td>
+                          <td className={`${tdClass} text-muted`}>{rli.is_no_bid ? "Yes" : "—"}</td>
                         </tr>
+                        {/* What the BUYER did to this line after the vendor
+                            quoted it, spelled out rather than summarised behind
+                            a popover on a "price to gov" column. The vendor
+                            sends unit_price; everything here was added by us,
+                            so a bidder reading the record can see exactly how
+                            the government number was reached and who reached
+                            it. Absent until someone prices the line. */}
+                        {rli.price_to_gov != null && (
+                          <tr className="border-t border-border/40 bg-muted-light/40">
+                            <td colSpan={6} className="px-3 py-1.5">
+                              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[11px]">
+                                <span className="text-muted">↳ Buyer priced:</span>
+                                <span className="font-mono tabular-nums text-muted">
+                                  {formatCurrency(rli.unit_price)} vendor
+                                </span>
+                                {rli.markup_percent != null && (
+                                  <span className="font-mono tabular-nums text-muted">
+                                    + {rli.markup_percent}% markup
+                                  </span>
+                                )}
+                                {rli.shipping_amount != null && (
+                                  <span className="font-mono tabular-nums text-muted">
+                                    + {formatCurrency(rli.shipping_amount)} shipping
+                                  </span>
+                                )}
+                                {rli.other_charges != null && (
+                                  <span className="font-mono tabular-nums text-muted">
+                                    + {formatCurrency(rli.other_charges)} other
+                                  </span>
+                                )}
+                                <span className="text-muted">→</span>
+                                <span className="font-mono tabular-nums font-semibold text-foreground">
+                                  {formatCurrency(rli.price_to_gov)} to government
+                                </span>
+                                {(rli.priced_by_name || rli.priced_at) && (
+                                  <span className="text-muted/80">
+                                    ·{rli.priced_by_name ? ` ${rli.priced_by_name}` : ""}
+                                    {rli.priced_at ? `, ${formatDateMmDdYyyy(rli.priced_at)}` : ""}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </Fragment>
                         );
                       })}
                     </tbody>

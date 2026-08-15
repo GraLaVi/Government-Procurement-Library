@@ -244,15 +244,25 @@ export interface BatchItem {
 export type RfqWorkStatus =
   | "unworked" | "rfq_sent" | "quotes_in" | "priced" | "bid" | "no_bid" | "passed";
 
+// Display only. The stored values are unchanged — 'bid' is written into a
+// CHECK constraint, the coverage query, the worklist filter and every audit
+// row already recorded, and renaming it would buy nothing a label does not.
 export const WORK_STATUS_LABELS: Record<RfqWorkStatus, string> = {
   unworked: "Unworked",
   rfq_sent: "RFQ Sent",
   quotes_in: "Quotes In",
   priced: "Priced",
-  bid: "Bid",
+  // "Bid sent", not "Bid": the buyer sets this when the bid has gone to the
+  // government, and the noun read as a state the row was already in.
+  bid: "Bid sent",
   no_bid: "No Bid",
   passed: "Passed",
 };
+
+/** Workflow order, for sorting progress by position rather than alphabet. */
+export const WORK_STATUS_ORDER: RfqWorkStatus[] = [
+  "unworked", "rfq_sent", "quotes_in", "priced", "bid", "no_bid", "passed",
+];
 
 export interface RfqWorkItem {
   solicitation_id: number;
@@ -463,10 +473,18 @@ export interface BatchContributor {
   item_count: number;
 }
 
+/** One row of the RFQ Pipeline. */
 export interface RfqListItem {
   id: number;
+  /** Per-customer number from 100, rendered "RFQ-104". The handle people use
+   *  out loud; `id` is a global sequence and shows other tenants' gaps. */
+  reference_number: number;
+  /** What the RFQ is FOR — the part, or "N items". No vendor prefix; the
+   *  Vendor column sits beside it. */
   title: string;
   status: string;
+  /** The VENDOR's deadline to quote back — rendered as "Quote due".
+   *  Distinct from bid_due_date, which is the government's. */
   response_due_date: string | null;
   sent_at: string | null;
   created_at: string;
@@ -477,6 +495,23 @@ export interface RfqListItem {
   primary_cage_code: string | null;
   created_by_user_id: number | null;
   created_by_name: string | null;
+  /** The government solicitation being bid. Null on RFQs started outside the
+   *  Send RFQs queue — those have no bid date and no progress to show. */
+  source_solicitation_id: number | null;
+  solicitation_number: string | null;
+  /** solicitations.close_date — when the GOVERNMENT's bid is due. */
+  bid_due_date: string | null;
+  /** Progress on the solicitation, NOT on this RFQ. One solicitation fans out
+   *  to an RFQ per vendor and they all share this value, so editing it here
+   *  moves every sibling row. shared_progress_rfq_count says how many. */
+  work_status: RfqWorkStatus | null;
+  shared_progress_rfq_count: number;
+  /** Most recent attributed change — a progress move or a pricing edit —
+   *  falling back to the creator when neither has happened. */
+  updated_by_name: string | null;
+  updated_at: string | null;
+  /** Every quoted line that came back is priced, and at least one quote is in. */
+  ready_to_bid: boolean;
 }
 
 export interface RfqContributor {
@@ -516,6 +551,7 @@ export interface RfqRecipient {
 
 export interface RfqDetail {
   id: number;
+  reference_number: number;
   title: string;
   notes: string | null;
   status: string;
@@ -523,6 +559,12 @@ export interface RfqDetail {
   sent_at: string | null;
   closed_at: string | null;
   created_at: string;
+  /** The solicitation being bid and its progress — the same per-solicitation
+   *  value the pipeline and the work queue show. Null when this RFQ was
+   *  started outside the Send RFQs queue. */
+  source_solicitation_id: number | null;
+  solicitation_number: string | null;
+  work_status: RfqWorkStatus | null;
   line_items: RfqLineItem[];
   recipients: RfqRecipient[];
 }
@@ -536,12 +578,17 @@ export interface RfqResponseLineItem {
   alternate_part_number: string | null;
   is_no_bid: boolean;
   notes: string | null;
-  /** Buyer pricing from the Enterprise comparison view. */
+  /** Buyer pricing from the Enterprise comparison view. Together these are the
+   *  record of what the buyer changed after the quote arrived: the vendor
+   *  sends unit_price, the buyer adds markup, shipping and other charges to
+   *  reach price_to_gov. */
   markup_percent?: number | null;
   shipping_amount?: number | null;
   other_charges?: number | null;
   price_to_gov?: number | null;
   priced_at?: string | null;
+  priced_by_user_id?: number | null;
+  priced_by_name?: string | null;
 }
 
 export interface RfqResponseDetail {

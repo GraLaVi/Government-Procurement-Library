@@ -35,7 +35,7 @@ const mainNavItems = [
 // for every Enterprise holder — non-admins get the page's own admins-only
 // notice rather than a hidden feature.
 const rfqMenuSpec = [
-  { href: "/rfq", label: "My RFQs" },
+  { href: "/rfq", label: "RFQ Pipeline" },
   { href: "/rfq/worklist", label: "Send RFQs", enterprise: true },
   { href: "/rfq/batch", label: "Batch" },
   { href: "/rfq/contacts", label: "Vendor Contacts" },
@@ -59,7 +59,7 @@ function isGroupActive(items: { href: string }[], pathname: string): boolean {
 }
 
 // Within a dropdown, the most specific matching sibling wins. Needed for the
-// RFQ group, where "/rfq" (My RFQs) is a path parent of every other entry —
+// RFQ group, where "/rfq" (RFQ Pipeline) is a path parent of every other entry —
 // plain prefix matching would highlight it on /rfq/batch, /rfq/received, etc.
 function isGroupItemActive(item: { href: string }, items: { href: string }[], pathname: string): boolean {
   if (!isLinkActive(item.href, pathname)) return false;

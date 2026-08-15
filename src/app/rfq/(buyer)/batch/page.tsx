@@ -7,7 +7,9 @@ import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
 import { RfqBatchItemEditModal } from "@/components/rfq/RfqBatchItemEditModal";
-import { TableCard } from "@/components/rfq/TableCard";
+import {
+  TableCard, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
 import type { BatchItem, BatchContributor, RfqSendResponse } from "@/lib/rfq/types";
 import { rfqVendorKey } from "@/lib/rfq/types";
 
@@ -229,28 +231,28 @@ export default function RfqBatchPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-xs">
-            <thead className="bg-card-bg/60 text-xs text-muted">
-              <tr>
+        <div className={tableWrapClass}>
+          <table className={tableClass}>
+            <thead>
+              <tr className={tableHeadRowClass}>
                 <th className="px-3 py-2 w-8">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" />
                 </th>
-                <th className="px-3 py-2 text-left font-medium">Vendor</th>
-                <th className="px-3 py-2 text-left font-medium">Recipient</th>
-                <th className="px-3 py-2 text-left font-medium">Part / NSN</th>
-                <th className="px-3 py-2 text-left font-medium">Qty</th>
-                <th className="px-3 py-2 text-left font-medium">Added by</th>
+                <th className={thClass}>Vendor</th>
+                <th className={thClass}>Recipient</th>
+                <th className={thClass}>Part / NSN</th>
+                <th className={thClass}>Qty</th>
+                <th className={thClass}>Added by</th>
                 <th className="px-3 py-2 w-24"></th>
               </tr>
             </thead>
             <tbody>
               {items.map((it) => (
-                <tr key={it.id} className="border-t border-border">
-                  <td className="px-3 py-2">
+                <tr key={it.id} className={rowClass}>
+                  <td className={tdClass}>
                     <input type="checkbox" checked={selected.has(it.id)} onChange={() => toggle(it.id)} aria-label={`Select item ${it.id}`} />
                   </td>
-                  <td className="px-3 py-2 text-foreground">
+                  <td className={`${tdClass} text-foreground`}>
                     {it.vendor_name || it.cage_code}{" "}
                     {it.cage_code ? (
                       <span className="font-mono text-xs text-muted">({it.cage_code})</span>
@@ -258,7 +260,7 @@ export default function RfqBatchPage() {
                       <span className="text-xs text-muted">(private)</span>
                     )}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className={tdClass}>
                     {it.resolved_contact_email ? (
                       <div>
                         <div className="text-xs text-foreground">{it.resolved_contact_email}</div>
@@ -270,10 +272,10 @@ export default function RfqBatchPage() {
                       <span className="text-xs text-error">No contact on file</span>
                     )}
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs text-foreground">
+                  <td className={`${tdClass} font-mono text-xs text-foreground`}>
                     {it.part_number || it.nsn || it.description || "—"}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className={tdClass}>
                     <input
                       type="number"
                       min="0"
@@ -283,8 +285,8 @@ export default function RfqBatchPage() {
                       className="w-20 px-2 py-1 rounded-md border border-border bg-card-bg text-card-foreground text-sm"
                     />
                   </td>
-                  <td className="px-3 py-2 text-muted">{it.added_by_name || `User ${it.added_by_user_id}`}</td>
-                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                  <td className={`${tdClass} text-muted`}>{it.added_by_name || `User ${it.added_by_user_id}`}</td>
+                  <td className={`${tdClass} text-right whitespace-nowrap`}>
                     <button
                       onClick={() => setEditingItem(it)}
                       disabled={busy}

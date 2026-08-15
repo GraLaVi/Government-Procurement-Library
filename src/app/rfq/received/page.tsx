@@ -6,7 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { RowBadge } from "@/components/library/RowBadge";
 import { rfqStatusLabel, rfqStatusTone, type ReceivedRfqItem } from "@/lib/rfq/types";
 import { formatDateMmDdYyyy } from "@/lib/dates";
-import { TableCard } from "@/components/rfq/TableCard";
+import {
+  TableCard, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
 
 export default function RfqReceivedPage() {
   const { isLoading: authLoading, isAuthenticated } = useAuth();
@@ -100,29 +102,29 @@ export default function RfqReceivedPage() {
           <p className="text-sm text-muted">No RFQs yet.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-xs">
-            <thead className="bg-card-bg/60 text-xs text-muted">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium">RFQ</th>
-                <th className="px-3 py-2 text-left font-medium">From</th>
-                <th className="px-3 py-2 text-left font-medium">Status</th>
-                <th className="px-3 py-2 text-left font-medium">Due</th>
+        <div className={tableWrapClass}>
+          <table className={tableClass}>
+            <thead>
+              <tr className={tableHeadRowClass}>
+                <th className={thClass}>RFQ</th>
+                <th className={thClass}>From</th>
+                <th className={thClass}>Status</th>
+                <th className={thClass}>Due</th>
               </tr>
             </thead>
             <tbody>
               {items?.map((it) => (
-                <tr key={it.recipient_id} className="border-t border-border hover:bg-card-bg/40">
-                  <td className="px-4 py-2">
+                <tr key={it.recipient_id} className={rowClass}>
+                  <td className={tdClass}>
                     <Link href={`/rfq/received/${it.recipient_id}`} className="text-primary hover:underline font-medium">
                       {it.title}
                     </Link>
                   </td>
-                  <td className="px-4 py-2 text-foreground">{it.sender_company_name}</td>
-                  <td className="px-4 py-2">
+                  <td className={`${tdClass} text-foreground`}>{it.sender_company_name}</td>
+                  <td className={tdClass}>
                     <RowBadge tone={rfqStatusTone(it.status)}>{rfqStatusLabel(it.status)}</RowBadge>
                   </td>
-                  <td className="px-4 py-2 text-muted">{formatDateMmDdYyyy(it.response_due_date)}</td>
+                  <td className={`${tdClass} text-muted`}>{formatDateMmDdYyyy(it.response_due_date)}</td>
                 </tr>
               ))}
             </tbody>

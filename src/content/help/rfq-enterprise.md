@@ -131,10 +131,15 @@ aren't real purchasable items, so they don't appear here.
 ## Work status
 
 Every solicitation moves through: **Unworked → RFQ Sent → Quotes In → Priced
-→ Bid / No Bid / Passed**. Two transitions are automatic: sending an RFQ
+→ Bid sent / No Bid / Passed**. Two transitions are automatic: sending an RFQ
 marks it **RFQ Sent**, and the first vendor quote back marks it **Quotes
-In**. Everything else you set from the status pill on the row — so the whole
-team can see who's working what, and what's done.
+In**. Everything else you set from the status pill on the row — including
+**Bid sent**, which you set once the bid has gone to the government — so the
+whole team can see who's working what, and what's done.
+
+The status belongs to the *solicitation*, so the same pill appears on every
+RFQ you sent for it over on the [RFQ Pipeline](/help/requests-for-quote), and
+setting it in either place moves both.
 
 ## Requesting quotes
 
@@ -245,8 +250,23 @@ Your admin controls whether non-admin users can edit the vendor book
 ## Coverage
 
 **Vendor RFQs → Coverage** answers "what's falling through": solicitations
-closing soon that nobody has worked, vendor quotes past their due date, the
-size of the unassigned pool, and each buyer's workload across every status.
+closing soon that nobody has worked, work started and never finished, vendor
+quotes past their due date, the size of the unassigned pool, and each buyer's
+workload across every status.
+
+- **Closing soon, unworked** — closing within a few days with no RFQ sent.
+- **In flight, not bid** — sitting at RFQ Sent, Quotes In or Priced with no
+  outcome recorded. The subtitle calls out how many haven't moved in a week,
+  which is the part worth chasing. Links to the RFQ Pipeline.
+- **Quotes overdue** — RFQ sent, the vendor's window passed, no quote back.
+- **Unassigned pool** — matched solicitations routing to nobody.
+
+In the **By buyer** table, **In queue (derived)** is work that routes to that
+buyer through CAGE ownership but nobody has claimed, and **Unworked** is work
+routing to them that hasn't been started. The status columns cover everything
+routing to a buyer, claimed or not — so derived work they've moved to Priced
+shows up under Priced. **In queue (derived)** is a slice of those same
+numbers, not an extra column to add to them.
 
 Admins can also set an alert threshold in Settings — when the unassigned pool
 grows past it, admins get a bell and email notification.
