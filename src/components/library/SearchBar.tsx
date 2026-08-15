@@ -48,7 +48,7 @@ interface SearchBarProps {
   typeLabel: string;
 }
 
-const MENU_WIDTH = 256;
+const MENU_WIDTH = 180;
 
 export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function SearchBar(
   { types, type, onTypeChange, query, onQueryChange, onSubmit, placeholder,
@@ -105,7 +105,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
     const rect = chipRef.current?.getBoundingClientRect();
     if (rect) {
       setCoords({
-        top: rect.bottom + 6,
+        top: rect.bottom + 4,
         left: Math.max(8, Math.min(rect.left, window.innerWidth - MENU_WIDTH - 8)),
       });
     }
@@ -141,7 +141,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
     <form onSubmit={onSubmit} className="max-w-[38rem] space-y-2">
       <div
         className={`flex items-center gap-1.5 rounded-md border bg-card-bg p-1 transition-colors ${
-          error ? "border-error" : "border-border focus-within:border-primary"
+          error ? "border-error" : "border-border"
         }`}
       >
         <div className="shrink-0">
@@ -186,7 +186,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
               role="listbox"
               aria-label={typeLabel}
               style={{ position: "fixed", top: coords.top, left: coords.left, width: MENU_WIDTH, zIndex: 60 }}
-              className="overflow-hidden rounded-lg border border-border bg-card-bg shadow-lg"
+              className="overflow-hidden rounded-md border border-border bg-card-bg shadow-lg"
             >
               {types.map((t, i) => {
                 const active = t.value === type;
@@ -199,16 +199,12 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function S
                     aria-selected={active}
                     onClick={() => chooseType(t.value)}
                     onKeyDown={(e) => onOptionKeyDown(e, i)}
-                    className={`block w-full cursor-pointer px-3 py-2 text-left transition-colors ${
-                      active ? "bg-primary text-white" : "text-foreground hover:bg-muted-light"
+                    title={t.description}
+                    className={`block w-full cursor-pointer whitespace-nowrap px-2.5 py-1.5 text-left text-sm transition-colors ${
+                      active ? "bg-primary text-white font-medium" : "text-foreground hover:bg-muted-light"
                     }`}
                   >
-                    <span className="block text-sm font-medium">{t.label}</span>
-                    {t.description && (
-                      <span className={`mt-0.5 block text-xs ${active ? "text-white/80" : "text-muted"}`}>
-                        {t.description}
-                      </span>
-                    )}
+                    {t.label}
                   </button>
                 );
               })}
