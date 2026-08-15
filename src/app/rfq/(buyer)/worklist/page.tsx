@@ -875,6 +875,8 @@ export default function RfqWorklistPage() {
                           <BidTermsPanel
                             terms={item.bid_terms}
                             definitions={data?.bid_term_definitions}
+                            solicitationType={item.solicitation_type}
+                            solicitationTypeLabel={item.solicitation_type_label}
                           />
 
                           {!partsState || partsState.loading ? (

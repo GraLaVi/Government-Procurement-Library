@@ -4,6 +4,8 @@ import { formatCurrency } from "@/lib/library/types";
 import {
   resolveAidcTerms,
   resolveBidTerms,
+  resolveRating,
+  resolveSolicitationType,
   type BidTermDefinitions,
   type ResolvedBidTerm,
   type SolicitationBidTerms,
@@ -64,13 +66,27 @@ function TermCell({ term }: { term: ResolvedBidTerm }) {
 export function BidTermsPanel({
   terms,
   definitions,
+  solicitationType,
+  solicitationTypeLabel,
   className = "",
 }: {
   terms: SolicitationBidTerms | null | undefined;
   definitions: BidTermDefinitions | undefined;
+  /** DLA Solicitation Type Indicator. Passed in rather than read off `terms`
+   *  because both pages already carry it as a top-level field with its label
+   *  resolved — no reason to send it twice. */
+  solicitationType?: string | null;
+  solicitationTypeLabel?: string | null;
   className?: string;
 }) {
-  const resolved = resolveBidTerms(terms, definitions);
+  // The eight coded BQ fields, then the DPAS rating, then the solicitation
+  // type. The order is unchanged where it matters — what disqualifies you,
+  // then what it costs you — with the two contextual terms after it.
+  const resolved = [
+    ...resolveBidTerms(terms, definitions),
+    resolveRating(terms, definitions),
+    resolveSolicitationType(solicitationType, solicitationTypeLabel),
+  ].filter((t): t is ResolvedBidTerm => t !== null);
   const aidc = resolveAidcTerms(terms);
 
   // Nothing stated on this solicitation — render nothing rather than an empty
