@@ -231,6 +231,30 @@ html {
 }
 
 @media print {
+  /* Page geometry. Paper has no horizontal scroll and no horizontal
+     pagination — anything wider than the page box is silently dropped, so
+     the printable width is a hard budget. Letter portrait at these margins
+     is ~7.7in ≈ 740px, which a 9-column table cannot make.
+
+     `.print-landscape` opts a record into a landscape sheet (~10.2in ≈
+     980px), enough for the widest tables we print (Recent Solicitations at
+     9 columns, Bid-Matching results at 12). It is opt-in rather than global
+     because the RFQ detail page is a form-shaped document that reads better
+     portrait. Browsers without named-page support ignore `page:` and fall
+     back to the portrait @page — the same output as before this rule, so
+     the degradation is graceful. */
+  @page {
+    size: letter;
+    margin: 0.4in;
+  }
+  @page landscape-sheet {
+    size: letter landscape;
+    margin: 0.4in;
+  }
+  .print-landscape {
+    page: landscape-sheet;
+  }
+
   /* Force the light palette. The dark theme's light-on-dark tokens print
      as near-white text, because browsers drop background colors. */
   :root[data-theme="dark"] {
@@ -247,7 +271,16 @@ html {
     --error: #B91C1C;
   }
 
-  body * {
+  /* Hide-everything, then reveal the record. This only applies on pages that
+     actually have a print root — unscoped, it made every other route (help,
+     pricing, the RFQ and bid-matching lists) print a blank sheet, since
+     nothing was ever revealed. Those pages now print as they render.
+
+     `:where()` contributes no specificity, so this stays at (0,0,1) exactly
+     as `body *` did. Written as a bare `body:has(...)` it would score
+     (0,1,1), outrank the `.print-root *` reveal below, and hide the record
+     it is meant to print. */
+  body:where(:has(.print-root)) * {
     visibility: hidden;
   }
   .print-root,
@@ -277,6 +310,49 @@ html {
     overflow: visible !important;
   }
   .print-root section {
+    break-inside: avoid;
+  }
+
+  /* ---- Wide tables -------------------------------------------------
+     An auto-layout table can never render narrower than the sum of its
+     columns' min-content widths — `w-full` does not help, and the excess
+     falls off the right edge of the sheet, taking the last columns with
+     it. Landscape (above) buys width; the rules below cut demand. */
+
+  /* text-xs (12px) → 9px. Roughly a quarter off every column. */
+  .print-root table {
+    font-size: 9px;
+    width: 100% !important;
+  }
+  /* px-2.5 py-1.5 is 20px of horizontal padding per column — ~180px on a
+     9-column table, a quarter of a portrait sheet spent on whitespace. */
+  .print-root th,
+  .print-root td {
+    padding: 2px 4px !important;
+  }
+  /* Cells and their inline children are widely `whitespace-nowrap` so
+     numbers stay on one line on screen. On paper that turns every long
+     value into an immovable minimum width. Let them wrap; break inside a
+     word only when the word alone will not fit. */
+  .print-root th,
+  .print-root td,
+  .print-root th *,
+  .print-root td * {
+    white-space: normal !important;
+    overflow-wrap: break-word;
+  }
+  /* Sort chevrons, external-link and PDF glyphs, expand carets — all
+     interactive affordances that cost real width and mean nothing once
+     printed. Scoped to tables so document iconography elsewhere (e.g. the
+     RFQ header) still prints. */
+  .print-root table svg {
+    display: none !important;
+  }
+  /* A table spilling past the first sheet currently continues headerless. */
+  .print-root thead {
+    display: table-header-group;
+  }
+  .print-root tr {
     break-inside: avoid;
   }
 }

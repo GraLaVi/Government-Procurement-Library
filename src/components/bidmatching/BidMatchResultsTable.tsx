@@ -676,7 +676,7 @@ export function BidMatchResultsTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-6">
+        <div className="no-print flex items-center justify-center gap-2 mt-6">
           <button
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
