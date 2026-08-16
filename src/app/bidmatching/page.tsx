@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { BidMatchDateMenu, type DateSelection } from "@/components/bidmatching/BidMatchDateMenu";
 import { BidMatchResultsTable, type BidSortKey } from "@/components/bidmatching/BidMatchResultsTable";
+import { PrintButton } from "@/components/ui/PrintButton";
+import { formatDateMmDdYyyy } from "@/lib/dates";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
 
 /** Fields the results search can target. Values match the API's search_field. */
@@ -158,6 +160,11 @@ export default function BidMatchingPage() {
   const [page, setPage] = useState(1);
   const [isLoadingDates, setIsLoadingDates] = useState(true);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
+  // Stamped when Print is clicked rather than during render — `new Date()` at
+  // render time would mismatch between the server and client HTML. Same
+  // pattern as the RFQ detail page.
+  const [printedOn, setPrintedOn] = useState<string | null>(null);
+  const [printRequested, setPrintRequested] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasProfiles, setHasProfiles] = useState<boolean | null>(null);
   const [hardOnly, setHardOnly] = useState(false);
@@ -370,6 +377,22 @@ export default function BidMatchingPage() {
     setPage(newPage);
   };
 
+  // Prints the page of results currently on screen — filters, sort and
+  // paging all apply. The browser's print dialog is also the "Save as PDF"
+  // path, so one button covers both.
+  const handlePrint = () => {
+    setPrintedOn(formatDateMmDdYyyy(new Date().toISOString()));
+    setPrintRequested(true);
+  };
+
+  // Open the print dialog once the printed-on stamp has actually painted.
+  useEffect(() => {
+    if (!printRequested) return;
+    setPrintRequested(false);
+    const id = window.requestAnimationFrame(() => window.print());
+    return () => window.cancelAnimationFrame(id);
+  }, [printRequested]);
+
   // Loading auth
   if (authLoading) {
     return (
@@ -398,21 +421,38 @@ export default function BidMatchingPage() {
   }
 
   return (
-    <div className="space-y-6">
+    /* print-root: everything outside it is hidden when printing (see
+       globals.css). Without it this page printed a blank sheet, because the
+       hide-everything rule is global while the reveal is scoped to the root.
+       print-landscape: the results table is 12 columns wide. */
+    <div className="print-root print-landscape space-y-6">
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Bid-Matching</h1>
-          <p className="mt-1 text-muted">
+          <p className="mt-1 text-muted no-print">
             Solicitations matched to your bid-matching profiles.
           </p>
+          {/* On paper the date selector is gone, so the printout has to say
+              for itself which run it is. */}
+          {selectedRunDate && (
+            <p className="print-only mt-1 text-sm text-muted">
+              {selectedSource === "sam" ? "SAM.gov" : "DIBBS"} matches — run{" "}
+              {formatDateMmDdYyyy(selectedRunDate)}
+              {selectedIssueDate ? `, posted ${formatDateMmDdYyyy(selectedIssueDate)}` : ""}
+              {printedOn ? ` · printed ${printedOn}` : ""}
+            </p>
+          )}
         </div>
-        <Link
-          href="/account/bidmatching"
-          className="flex-shrink-0 inline-flex items-center text-sm font-medium text-primary hover:underline"
-        >
-          Manage profiles →
-        </Link>
+        <div className="no-print flex-shrink-0 flex items-center gap-3">
+          <PrintButton onClick={handlePrint} title="Print this page of results" />
+          <Link
+            href="/account/bidmatching"
+            className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+          >
+            Manage profiles →
+          </Link>
+        </div>
       </div>
 
       {/* Error */}
@@ -470,7 +510,7 @@ export default function BidMatchingPage() {
            results table gets the full page width. */
         <div className="space-y-4">
           {/* Command bar: date selection + filters on one line */}
-          <div className="flex flex-wrap items-center gap-3 bg-card-bg rounded-lg border border-border p-2">
+          <div className="no-print flex flex-wrap items-center gap-3 bg-card-bg rounded-lg border border-border p-2">
             <BidMatchDateMenu
               dateTree={dateTree}
               selectedRunDate={selectedRunDate}
