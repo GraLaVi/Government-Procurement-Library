@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AmendmentEntry,
   SolicitationAmendmentsResponse,
@@ -14,6 +14,10 @@ import {
 } from "@/lib/amendments";
 import { useCodeDefinitions } from "@/lib/hooks/useCodeDefinitions";
 import type { CodeDefinition } from "@/lib/codeDefinitions";
+import {
+  SolicitationHistoryCard,
+  SolicitationHistoryList,
+} from "@/components/ui/SolicitationHistoryModal";
 
 interface Props {
   solicitationId: number;
@@ -78,11 +82,11 @@ export function AmendmentTimeline({ solicitationId, initial }: Props) {
   }
 
   return (
-    <ol className="space-y-3">
+    <SolicitationHistoryList>
       {data.amendments.map((a) => (
         <AmendmentCard key={a.id} amendment={a} setAsideByCode={setAsideByCode} />
       ))}
-    </ol>
+    </SolicitationHistoryList>
   );
 }
 
@@ -101,23 +105,15 @@ function AmendmentCard({
   setAsideByCode: ReadonlyMap<string, CodeDefinition>;
 }) {
   return (
-    <li className="rounded-lg border border-border bg-card-bg p-3">
-      <div className="flex items-baseline justify-between gap-3 mb-2">
-        <div className="flex items-baseline gap-2">
-          <span className="text-xs font-semibold text-foreground">
-            Amendment {a.amendment_number}
-          </span>
-          <span className="text-xs text-muted">{labelForChangeReason(a.change_reason)}</span>
-        </div>
-        <div className="flex items-center gap-2 text-[11px] text-muted">
-          <span title={new Date(a.detected_at).toLocaleString()}>{timeAgo(a.detected_at)}</span>
-          <span className="px-1.5 py-0.5 rounded bg-muted/10 uppercase tracking-wide">
-            via {a.source}
-          </span>
-        </div>
+    <SolicitationHistoryCard
+      headline={`Amendment ${a.amendment_number}`}
+      meta={<span title={new Date(a.detected_at).toLocaleString()}>{timeAgo(a.detected_at)}</span>}
+      facts={[labelForChangeReason(a.change_reason), `via ${a.source}`]}
+    >
+      <div className="pt-1">
+        <AmendmentBody amendment={a} setAsideByCode={setAsideByCode} />
       </div>
-      <AmendmentBody amendment={a} setAsideByCode={setAsideByCode} />
-    </li>
+    </SolicitationHistoryCard>
   );
 }
 
