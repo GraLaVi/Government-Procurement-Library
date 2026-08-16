@@ -12,6 +12,7 @@ import {
   type SortingState,
   type RowSelectionState,
   type Row,
+  type RowData,
 } from "@tanstack/react-table";
 import {
   dataTableConfig,
@@ -19,6 +20,26 @@ import {
   type DataTableConfig,
 } from "@/config/dataTable.config";
 import { exportToCsv, exportToJson, copyRowToClipboard } from "@/lib/dataTable/utils";
+
+/**
+ * Per-column classes, applied to both the `<th>` and every `<td>` so a column
+ * stays one column — alignment and responsive visibility can't drift between
+ * head and body.
+ *
+ * Call sites have been passing `meta: { className: "hidden lg:table-cell" }`
+ * since the library tables were written, but nothing ever read it: every
+ * column rendered at every width, and wide tables just scrolled sideways.
+ * Printing made that visible — see the print block in globals.css, which
+ * forces cells back on for paper, where these breakpoints resolve against the
+ * page box rather than the viewport.
+ */
+declare module "@tanstack/react-table" {
+  // TData/TValue are fixed by the interface being augmented, not used here.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    className?: string;
+  }
+}
 
 export interface DataTableProps<T> {
   /** Data array to display */
@@ -214,7 +235,7 @@ export function DataTable<T>({
                     key={header.id}
                     className={`px-2.5 py-1.5 text-left ${config.styling.headerTextClass} group ${
                       header.column.getCanSort() ? "cursor-pointer select-none" : ""
-                    }`}
+                    } ${header.column.columnDef.meta?.className ?? ""}`}
                     style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                     aria-sort={
                       header.column.getIsSorted() === "asc" ? "ascending"
@@ -278,7 +299,7 @@ export function DataTable<T>({
                   {row.getVisibleCells().map((cell) => (
                     <td
                       key={cell.id}
-                      className={`px-2.5 ${config.styling.compactMode ? "py-1.5" : "py-2"} text-xs text-foreground`}
+                      className={`px-2.5 ${config.styling.compactMode ? "py-1.5" : "py-2"} text-xs text-foreground ${cell.column.columnDef.meta?.className ?? ""}`}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
