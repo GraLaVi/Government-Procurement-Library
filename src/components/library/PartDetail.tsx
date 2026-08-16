@@ -21,6 +21,7 @@ import {
   PartProcurementHistoryResponse,
   PartSolicitation,
   SolicitationAward,
+  SolicitationVersion,
   PartSolicitationsResponse,
   PartManufacturer,
   PartManufacturersResponse,
@@ -68,6 +69,7 @@ import { buildCsv, buildCombinedCsv, triggerDownload, todayIsoDate } from "@/lib
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
+import { SolicitationVersionsModal } from "@/components/library/SolicitationVersionsModal";
 import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
 import { RowBadge } from "@/components/library/RowBadge";
 
@@ -170,6 +172,9 @@ const SOLICITATIONS_CSV_COLUMNS: CsvColumn<PartSolicitation>[] = [
   { header: "Close Date", value: (r) => r.close_date ?? "" },
   { header: "Solicitation #", value: (r) => formatSolicitationNumber(r.solicitation_number) },
   { header: "Notice Type", value: (r) => r.notice_type ?? "" },
+  // A SAM row can stand for several postings of the same solicitation. Export
+  // the count so a collapsed row does not read as a single posting.
+  { header: "Postings", value: (r) => r.version_count ?? 1 },
   { header: "Qty", value: (r) => r.quantity ?? "" },
   { header: "Qty Unit", value: (r) => r.quantity_unit ?? "" },
   { header: "Unit Price", value: (r) => r.unit_price ?? "" },
@@ -2073,6 +2078,9 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
   const amendmentSummaries = useAmendmentSummaries(solIds);
   const [amendmentModal, setAmendmentModal] = useState<{ id: number; number: string | null } | null>(null);
   const [contractModal, setContractModal] = useState<SolicitationAward | null>(null);
+  // SAM rows carry their amendment history inline (each amendment is a separate
+  // repost), so this modal needs no fetch — unlike the DLA amendment timeline.
+  const [versionsModal, setVersionsModal] = useState<{ number: string; versions: SolicitationVersion[] } | null>(null);
 
   const columns = useMemo<ColumnDef<PartSolicitation>[]>(
     () => [
@@ -2178,6 +2186,26 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
                   title={`${summary.amendment_count} amendment${summary.amendment_count === 1 ? "" : "s"} on this solicitation. Click to view.`}
                 >
                   Amended{summary.amendment_count > 1 ? ` ×${summary.amendment_count}` : ""}
+                </button>
+              )}
+              {/* SAM equivalent of the amendment pill. These offices amend by
+                  reposting the whole notice, so the row is the newest posting
+                  and the count is the number of reposts behind it. Same
+                  affordance, different source — hence the same styling. */}
+              {isSam && (sol.version_count ?? 1) > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setVersionsModal({
+                      number: displayNumber,
+                      versions: sol.versions ?? [],
+                    });
+                  }}
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shrink-0"
+                  title={`Reposted on SAM.gov ${(sol.version_count ?? 1) - 1} time${(sol.version_count ?? 1) === 2 ? "" : "s"} since it was first issued. Click to see every posting and its documents.`}
+                >
+                  Amended{(sol.version_count ?? 1) > 2 ? ` ×${(sol.version_count ?? 1) - 1}` : ""}
                 </button>
               )}
               {/* DLA fast-award / AIDC indicator. Renders nothing unless the
@@ -2395,6 +2423,12 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
         solicitationId={amendmentModal?.id ?? null}
         solicitationNumber={amendmentModal?.number ?? null}
         onClose={() => setAmendmentModal(null)}
+      />
+      {/* Posting history for a SAM.gov solicitation amended by repost — opened
+          from the "Amended" pill on a SAM row. */}
+      <SolicitationVersionsModal
+        solicitation={versionsModal}
+        onClose={() => setVersionsModal(null)}
       />
       {/* Contract-details modal — opened from the contract number in the
           "Status / Contract #" column when the solicitation has been awarded. */}

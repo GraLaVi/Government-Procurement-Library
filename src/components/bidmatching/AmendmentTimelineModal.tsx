@@ -1,6 +1,7 @@
 "use client";
 
 import { AmendmentTimeline } from "@/components/bidmatching/AmendmentTimeline";
+import { SolicitationHistoryModal } from "@/components/ui/SolicitationHistoryModal";
 
 interface Props {
   // null/undefined hides the modal. When a number is provided, the modal
@@ -10,41 +11,24 @@ interface Props {
   onClose: () => void;
 }
 
-// Shared modal chrome around AmendmentTimeline. Used from BidMatchResultsTable
-// and any solicitation list view that wants to surface "what changed on
-// this sol".
+// Amendment history for a DIBBS solicitation. Used from BidMatchResultsTable,
+// the RFQ worklist, and the parts/vendor solicitation tables.
+//
+// Shares its chrome with the SAM.gov posting history via
+// SolicitationHistoryModal, so "what changed on this solicitation" looks the
+// same wherever it is opened from. What differs is the body of each entry, and
+// only because the sources record different things: DIBBS revises the
+// solicitation in place and we store a field-level diff per amendment, while
+// SAM offices amend by reposting the whole notice, so there each entry is a
+// posting with its own deadline, link and attachments.
 export function AmendmentTimelineModal({ solicitationId, solicitationNumber, onClose }: Props) {
-  if (solicitationId === null) return null;
   return (
-    <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
-      onClick={onClose}
+    <SolicitationHistoryModal
+      title={solicitationId === null ? null : "Amendment history"}
+      subtitle={solicitationNumber}
+      onClose={onClose}
     >
-      <div
-        className="bg-card-bg rounded-xl border border-border shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-4 border-b border-border flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">Amendment history</h3>
-            {solicitationNumber && (
-              <p className="text-xs text-muted">{solicitationNumber}</p>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-foreground"
-            aria-label="Close"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div className="p-4">
-          <AmendmentTimeline solicitationId={solicitationId} />
-        </div>
-      </div>
-    </div>
+      {solicitationId !== null && <AmendmentTimeline solicitationId={solicitationId} />}
+    </SolicitationHistoryModal>
   );
 }

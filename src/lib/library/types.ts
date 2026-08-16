@@ -574,6 +574,24 @@ export interface SolicitationAward {
   awardee_name: string | null;
 }
 
+// One posting in a SAM.gov repost chain. Offices like NAVSUP WSS publish each
+// amendment as a brand-new notice (same solicitation number, new notice id, new
+// deep link), so the tab collapses the chain to a single row and hands the
+// superseded postings back here — including their own documents, which are not
+// always re-uploaded to the newest notice.
+export interface SolicitationVersion {
+  solicitation_id: number;
+  posted_date: string | null;
+  close_date: string | null;
+  notice_type: string | null;
+  status: string | null;
+  quantity: number | null;
+  sam_url: string | null;
+  document_count: number;
+  // True for the posting rendered as the table row.
+  is_current: boolean;
+}
+
 export interface PartSolicitation {
   solicitation_id: number;
   solicitation_number: string;
@@ -615,6 +633,12 @@ export interface PartSolicitation {
   sam_url?: string | null;
   // Number of viewable documents attached to a SAM opportunity. 0 for DLA rows.
   document_count?: number;
+  // Postings collapsed into this row: 1 for a solicitation posted once, higher
+  // when it was reposted (amended). Always 1 for DLA rows.
+  version_count?: number;
+  // The full repost chain, newest first, including the posting this row
+  // represents. Empty for DLA rows and for SAM solicitations posted once.
+  versions?: SolicitationVersion[];
 }
 
 export interface PartSolicitationsResponse {
