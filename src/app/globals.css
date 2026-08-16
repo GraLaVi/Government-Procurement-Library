@@ -319,6 +319,22 @@ html {
      falls off the right edge of the sheet, taking the last columns with
      it. Landscape (above) buys width; the rules below cut demand. */
 
+  /* Columns carry responsive visibility (`hidden lg:table-cell`) to keep
+     narrow viewports readable. Those breakpoints resolve against the page
+     box when printing — ~980px landscape, under the 1024px `lg` — so paper
+     would silently lose exactly the columns this print work exists to keep.
+     Paper is not a narrow viewport: force every cell back on, and let the
+     width rules below make them fit. Opt a column out with `print-hide` if
+     it is genuinely not worth the ink. */
+  .print-root table th,
+  .print-root table td {
+    display: table-cell !important;
+  }
+  .print-root table th.print-hide,
+  .print-root table td.print-hide {
+    display: none !important;
+  }
+
   /* text-xs (12px) → 9px. Roughly a quarter off every column. */
   .print-root table {
     font-size: 9px;
