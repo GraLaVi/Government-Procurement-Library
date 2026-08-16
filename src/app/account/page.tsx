@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { Button } from "@/components/ui/Button";
-import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 
 const accountSections = [
   {
@@ -48,19 +47,6 @@ const accountSections = [
     icon: (
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-      </svg>
-    ),
-  },
-  {
-    title: "RFQ Buyer Assignments",
-    description: "Assign CAGE codes to buyers to disburse matched solicitations (RFQ Enterprise)",
-    href: "/account/rfq-assignments",
-    adminOnly: true,
-    // Only meaningful when the org holds the RFQ Enterprise Add-on.
-    enterpriseOnly: true,
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4m8 4a4 4 0 10-4-4m-8 12h8" />
       </svg>
     ),
   },
@@ -132,7 +118,7 @@ const accountSections = [
 ];
 
 export default function AccountPage() {
-  const { user, isRfqResponderOnly, hasAnyProductAccess } = useAuth();
+  const { user, isRfqResponderOnly } = useAuth();
   const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [companyName, setCompanyName] = useState<string | null>(null);
@@ -338,7 +324,6 @@ export default function AccountPage() {
         {accountSections
           .filter((section) => !section.adminOnly || user?.roles?.includes('admin'))
           .filter((section) => !(section.responderHidden && isRfqResponderOnly))
-          .filter((section) => !section.enterpriseOnly || hasAnyProductAccess([RFQ_ENTERPRISE_PRODUCT_KEY]))
           .map((section) => (
             <Link
               key={section.href}

@@ -180,21 +180,11 @@ export default function RfqPipelinePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">RFQ Pipeline</h1>
-          <p className="text-muted mt-1 text-sm">
-            Every RFQ your team has sent, where it stands, and whether it&apos;s priced and ready to bid.
-          </p>
-        </div>
-        <div className="flex items-center gap-4 whitespace-nowrap">
-          <Link href="/rfq/batch" className="text-xs text-primary hover:underline">
-            View batch →
-          </Link>
-          <Link href="/rfq/settings" className="text-xs text-primary hover:underline">
-            Settings
-          </Link>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">RFQ Pipeline</h1>
+        <p className="text-muted mt-1 text-sm">
+          Every RFQ your team has sent, where it stands, and whether it&apos;s priced and ready to bid.
+        </p>
       </div>
 
       {error && (
