@@ -5,8 +5,10 @@ import { createPortal } from "react-dom";
 import {
   SamOpportunityDocument,
   SamOpportunityDocumentsResponse,
+  formatSolicitationNumber,
 } from "@/lib/library/types";
 import { Modal } from "@/components/ui/Modal";
+import { RowBadge } from "@/components/library/RowBadge";
 
 function formatBytes(bytes: number | null | undefined): string {
   if (!bytes || bytes <= 0) return "";
@@ -18,6 +20,32 @@ function formatBytes(bytes: number | null | undefined): string {
     i++;
   }
   return `${n >= 10 || i === 0 ? Math.round(n) : n.toFixed(1)} ${units[i]}`;
+}
+
+// NECO — the Navy Electronic Commerce Online portal — is where Navy solicitation
+// packages actually live. SAM.gov notices for them carry a link out to NECO
+// rather than the documents themselves, so these entries leave SAM entirely and
+// land on a different portal; the badge says so before the click.
+const NECO_HOST = /(^|\.)neco\.navy\.mil$/i;
+
+// What a NECO link is really addressing, read off its query string. The `soln`
+// parameter carries the solicitation number the link opens — including the
+// revision suffix (…FE380001), which is how one notice can link to several
+// amendments of the same solicitation. It is far more use than the URL, whose
+// filename half ("840-v5soln.aspx?soln=…") is what the row would otherwise show
+// for these items, since SAM sends them to us with no name at all.
+function describeLink(url: string | null | undefined): { isNeco: boolean; soln: string | null } {
+  if (!url) return { isNeco: false, soln: null };
+  try {
+    const parsed = new URL(url);
+    return {
+      isNeco: NECO_HOST.test(parsed.hostname),
+      soln: parsed.searchParams.get("soln"),
+    };
+  } catch {
+    // Not a parseable absolute URL — nothing to read, and the raw name stands.
+    return { isNeco: false, soln: null };
+  }
 }
 
 // Documents affordance for a SAM.gov opportunity row. A SAM opportunity can carry
@@ -128,11 +156,17 @@ export function SamDocumentsButton({ oppId, count, label }: { oppId: number; cou
           {!loading && !error && docs && docs.length === 0 && (
             <div className="px-3 py-3 text-xs text-muted">No viewable documents.</div>
           )}
-          {!loading && !error && docs && docs.map((doc) => (
+          {!loading && !error && docs && docs.map((doc) => {
+            const { isNeco, soln } = describeLink(doc.link_url);
+            // A link that names the solicitation it opens beats the tail of its
+            // own URL, which is all these rows have otherwise.
+            const title = soln ? formatSolicitationNumber(soln) : doc.name;
+            return (
             <button
               key={doc.item_id}
               type="button"
               onClick={(e) => openDoc(doc, e)}
+              title={doc.link_url ?? doc.name}
               className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/10 cursor-pointer"
             >
               <span className="shrink-0 text-muted">
@@ -147,14 +181,22 @@ export function SamDocumentsButton({ oppId, count, label }: { oppId: number; cou
                 )}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-xs font-medium text-foreground truncate">{doc.name}</span>
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-xs font-medium text-foreground truncate">{title}</span>
+                  {isNeco && (
+                    <RowBadge tone="indigo" title="Opens on NECO, the Navy's own solicitation portal">
+                      NECO
+                    </RowBadge>
+                  )}
+                </span>
                 <span className="block text-[10px] text-muted">
                   {doc.kind === "link" ? "External link" : (doc.is_pdf ? "PDF" : "Download")}
                   {formatBytes(doc.size) ? ` · ${formatBytes(doc.size)}` : ""}
                 </span>
               </span>
             </button>
-          ))}
+            );
+          })}
         </div>,
         document.body
       )}

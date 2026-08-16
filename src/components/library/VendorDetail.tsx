@@ -27,6 +27,7 @@ import {
   VendorTabCounts,
   formatFiscalYearEnd,
   formatSamStatus,
+  formatSolicitationNumber,
   formatContactType,
   formatNiin,
   formatCurrency,
@@ -48,19 +49,6 @@ import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimeli
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
 import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
 import { RowBadge, rowBadgeClass, ROW_BADGE_BASE } from "@/components/library/RowBadge";
-
-// DoD PIID formatter: many SAM.gov solicitation numbers arrive without the
-// canonical dashes (e.g. "FA821326R3048"). When a value has no dashes AND matches
-// the PIID shape — 6-char office code, 2-digit fiscal year, 1-letter instrument
-// type, then a serial — insert dashes ("FA8213-26-R-3048"). Anything already
-// dashed, or that doesn't match the shape, is returned unchanged.
-const PIID_PATTERN = /^([A-Z][A-Z0-9]{5})(\d{2})([A-Z])([A-Z0-9]{3,})$/;
-function formatSolicitationNumber(value: string | null | undefined): string {
-  if (!value) return "—";
-  if (value.includes("-")) return value;
-  const m = PIID_PATTERN.exec(value);
-  return m ? `${m[1]}-${m[2]}-${m[3]}-${m[4]}` : value;
-}
 
 // Maps a SAM.gov notice_type to the compact label + tint used in the
 // segmented source/type pill on the Open Solicitations tab. "Biddable"
