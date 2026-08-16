@@ -355,6 +355,19 @@ export function formatSamStatus(status: string | null | undefined): string | nul
   return SAM_STATUS_MAP[status.toUpperCase()] || status;
 }
 
+// A solicitation number as a PIID: issuing office, fiscal year, instrument
+// type, serial. SAM and NECO both hand us the unpunctuated form, so restore
+// the dashes people read it by. Anything already punctuated, or not matching
+// the shape, is left exactly as it came.
+const PIID_PATTERN = /^([A-Z][A-Z0-9]{5})(\d{2})([A-Z])([A-Z0-9]{3,})$/;
+
+export function formatSolicitationNumber(value: string | null | undefined): string {
+  if (!value) return '—';
+  if (value.includes('-')) return value;
+  const m = PIID_PATTERN.exec(value);
+  return m ? `${m[1]}-${m[2]}-${m[3]}-${m[4]}` : value;
+}
+
 // Contact type mappings
 const CONTACT_TYPE_MAP: Record<string, string> = {
   'govt_business': 'Government Business',
