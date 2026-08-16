@@ -1137,8 +1137,15 @@ export function PartDetail({ part }: PartDetailProps) {
   // Fire the print dialog once the expanded (all-sections) render has painted.
   useEffect(() => {
     if (!expandForPrint || !printRequested) return;
-    setPrintRequested(false);
-    const id = window.requestAnimationFrame(() => window.print());
+    // The reset belongs inside the frame. Done before it, it flips a
+    // dependency of this effect, React re-runs the effect, and the cleanup
+    // cancels the very frame meant to open the dialog — so the record
+    // expanded to its printable layout and nothing else happened. Whether
+    // the frame beat React's re-render decided whether one click was enough.
+    const id = window.requestAnimationFrame(() => {
+      setPrintRequested(false);
+      window.print();
+    });
     return () => window.cancelAnimationFrame(id);
   }, [expandForPrint, printRequested]);
 

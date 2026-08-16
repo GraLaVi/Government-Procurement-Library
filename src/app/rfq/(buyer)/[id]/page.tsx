@@ -92,8 +92,13 @@ export default function RfqDetailPage() {
   // Open the print dialog once the print-only header has actually painted.
   useEffect(() => {
     if (!printRequested) return;
-    setPrintRequested(false);
-    const id = window.requestAnimationFrame(() => window.print());
+    // The reset belongs inside the frame. Done before it, it flips a
+    // dependency of this effect, React re-runs the effect, and the cleanup
+    // cancels the very frame meant to open the dialog.
+    const id = window.requestAnimationFrame(() => {
+      setPrintRequested(false);
+      window.print();
+    });
     return () => window.cancelAnimationFrame(id);
   }, [printRequested]);
 
