@@ -91,7 +91,13 @@ interface BidMatchResult {
   issue_date: string | null;
   posted_date?: string | null;
   close_date: string | null;
+  // DERIVED server-side, not solicitations.status verbatim — a stored 'open'
+  // that nothing has confirmed is overruled by a close date in the past.
   status: string | null;
+  // Deadline-closed, but DIBBS still lists it as open on a check inside 24h:
+  // the outcome is pending, NOT still quotable. See PendingOutcomeFlag.
+  dibbs_listed_open?: boolean;
+  last_status_check_at?: string | null;
   buyer_name: string | null;
   set_aside: string | null;
   set_aside_code?: string | null;
