@@ -1,7 +1,8 @@
 "use client";
 
-import { RowBadge } from "@/components/library/RowBadge";
-import { Tooltip } from "@/components/ui/Tooltip";
+import { createPortal } from "react-dom";
+import { RowBadge, rowBadgeClass } from "@/components/library/RowBadge";
+import { useAnchoredPopover } from "@/components/library/WinAndFirstArticleBadges";
 import { useCodeDefinitions } from "@/lib/hooks/useCodeDefinitions";
 
 // ============================================================================
@@ -55,9 +56,10 @@ interface SolicitationTypeBadgeProps {
 }
 
 export function SolicitationTypeBadge({ code, label }: SolicitationTypeBadgeProps) {
-  // Hook runs unconditionally (rules of hooks) — the shared cache makes the
-  // call free for the rows that end up rendering nothing.
+  // Hooks run unconditionally (rules of hooks) — the shared cache makes the
+  // definitions call free for the rows that end up rendering nothing.
   const { byCode } = useCodeDefinitions("SOLICITATION_TYPE");
+  const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
 
   const normalized = code?.trim().toUpperCase();
   if (!normalized) return null;
@@ -71,33 +73,28 @@ export function SolicitationTypeBadge({ code, label }: SolicitationTypeBadgeProp
   // in flight with no server-side label) — stay silent rather than show "F".
   if (!text) return null;
 
+  const tone = variant === "success" ? "green" : "neutral";
+
   // 'F' is the urgency signal, so it shows as a bolt alone — the row already
   // carries several badges and this one needs the least width it can take.
-  // The label still reaches the user through the popover and the aria-label,
+  // The label still reaches the user through the popover and the sr-only text,
   // so nothing is lost by dropping the words. Other coded types keep short
   // text ('Automated IDC' -> 'IDC'), since no glyph reads as a contract
   // vehicle.
-  const badge = (
-    <RowBadge
-      tone={variant === "success" ? "green" : "neutral"}
-      className="whitespace-nowrap"
-    >
-      {normalized === "F" ? (
-        <>
-          <svg
-            className="w-3 h-3 shrink-0"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z" />
-          </svg>
-          <span className="sr-only">{text}</span>
-        </>
-      ) : (
-        SHORT_LABELS[normalized] ?? text
-      )}
-    </RowBadge>
+  const content = normalized === "F" ? (
+    <>
+      <svg
+        className="w-3 h-3 shrink-0"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z" />
+      </svg>
+      <span className="sr-only">{text}</span>
+    </>
+  ) : (
+    SHORT_LABELS[normalized] ?? text
   );
 
   // description is the customer-value copy ("...may be awarded prior to the
@@ -105,7 +102,43 @@ export function SolicitationTypeBadge({ code, label }: SolicitationTypeBadgeProp
   // mirrored into a native title= attribute: the browser renders that as its
   // own tooltip on top of the popover, so the copy shows up twice.
   const description = definition?.description;
-  if (!description) return badge;
 
-  return <Tooltip content={description}>{badge}</Tooltip>;
+  // Nothing to explain — a plain, inert pill.
+  if (!description) {
+    return (
+      <RowBadge tone={tone} className="whitespace-nowrap">
+        {content}
+      </RowBadge>
+    );
+  }
+
+  // Click to open, not hover. These pills sit in dense table rows, where a
+  // hover popover fires on any pass of the cursor and cannot be held open long
+  // enough to read. Same click-anchored popover the win and First Article
+  // badges beside it already use, so the whole cluster behaves alike.
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        aria-label={`${text} — what this means`}
+        className={rowBadgeClass(tone, { interactive: true, className: "whitespace-nowrap" })}
+      >
+        {content}
+      </button>
+      {open && coords && createPortal(
+        <div
+          ref={panelRef}
+          style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 60 }}
+          className="w-72 rounded-md border border-border bg-background shadow-lg p-3"
+        >
+          <div className="text-xs font-semibold text-foreground mb-1">{text}</div>
+          <p className="text-xs text-foreground leading-relaxed">{description}</p>
+        </div>,
+        document.body
+      )}
+    </>
+  );
 }
