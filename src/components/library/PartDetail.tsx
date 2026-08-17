@@ -819,7 +819,10 @@ export function PartDetail({ part }: PartDetailProps) {
     if (tabId === 'procurement' && !procurementFetched) {
       fetchProcurementHistory();
     } else if (tabId === 'solicitations' && !solicitationsFetched) {
-      fetchSolicitations();
+      // The Solicitations tab is visible at Free too, but Free renders
+      // FreeSolicitationsView off the /tab-counts 30-day count — the
+      // solicitations endpoint is Advanced-only and would just 403.
+      if (tierMeets(tier, "advanced")) fetchSolicitations();
     } else if (tabId === 'manufacturers' && !manufacturersFetched) {
       fetchManufacturers();
     } else if (tabId === 'technical' && !technicalFetched) {
@@ -831,7 +834,7 @@ export function PartDetail({ part }: PartDetailProps) {
     } else if (tabId === 'procurementitemdesc' && !procurementItemDescFetched) {
       fetchProcurementItemDescription();
     }
-  }, [partReqKey, procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
+  }, [partReqKey, tier, procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
 
   // Demand & Stock now lives on the Overview tab (analytics add-on), so fetch
   // it eagerly on mount rather than on a tab click. fetchDemand self-guards
