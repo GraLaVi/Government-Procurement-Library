@@ -7,6 +7,7 @@ import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimeli
 import { BidMatchLineItems } from "@/components/bidmatching/BidMatchLineItems";
 import { PartIdentityLink } from "@/components/bidmatching/PartIdentityLink";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
+import { PendingOutcomeFlag } from "@/components/library/PendingOutcomeFlag";
 import { RowBadge, rowBadgeClass, ROW_BADGE_BASE } from "@/components/library/RowBadge";
 import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
@@ -90,7 +91,18 @@ interface BidMatchResult {
   issue_date: string | null;
   posted_date?: string | null;
   close_date: string | null;
+  // DERIVED server-side, not solicitations.status verbatim — a stored 'open'
+  // that nothing has confirmed is overruled by a close date in the past.
   status: string | null;
+  // True when `status` is "closed" only because the deadline passed, while
+  // DIBBS — checked within the last 24h — still lists the solicitation as open.
+  // On DIBBS that means only that it has not been awarded or cancelled; quoting
+  // stops at the close date regardless. So this marks a PENDING OUTCOME and must
+  // never be worded as "you can still quote it". Always false on SAM rows.
+  dibbs_listed_open?: boolean;
+  // When update_solicitation_statuses last resolved this solicitation on DIBBS.
+  // The only measure of how fresh `status` is. Null/absent means never checked.
+  last_status_check_at?: string | null;
   buyer_name: string | null;
   // Legacy raw set-aside string. Kept for one release; prefer set_aside_label.
   set_aside: string | null;
@@ -518,8 +530,22 @@ export function BidMatchResultsTable({
                         result.set_aside_label || result.set_aside || "—"
                       )}
                     </td>
+                    {/* Muted rather than red when the award is merely pending:
+                        a solicitation past its deadline with no outcome yet is
+                        an ordinary lifecycle stage, and on prod that is ~97% of
+                        the rows this column newly reads "closed" on. */}
                     <td className={tdClass}>
-                      <SolStatusBadge status={result.status} />
+                      <div className="flex items-center gap-1">
+                        <SolStatusBadge
+                          status={result.status}
+                          muted={result.dibbs_listed_open}
+                        />
+                        <PendingOutcomeFlag
+                          dibbsListedOpen={result.dibbs_listed_open}
+                          closeDate={result.close_date}
+                          lastStatusCheckAt={result.last_status_check_at}
+                        />
+                      </div>
                     </td>
                   </tr>
                   {isOpen && (

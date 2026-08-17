@@ -9,11 +9,30 @@ import { timeAgo } from "@/lib/amendments";
  * filled badge style the bid-matching page has always used (green open,
  * blue awarded, red closed), shared so every table renders it identically.
  */
-export function SolStatusBadge({ status }: { status: string | null }) {
+export function SolStatusBadge({
+  status, muted = false,
+}: {
+  status: string | null;
+  /**
+   * Drop the tone to a neutral outline. Set for a solicitation closed only by
+   * its deadline with the award still pending (see PendingOutcomeFlag): that
+   * is an ordinary lifecycle stage, not a problem, and red beside a warning
+   * glyph reads as an alarm the row does not warrant. A genuinely closed or
+   * cancelled solicitation keeps the red.
+   */
+  muted?: boolean;
+}) {
+  // SAM rows briefly rendered a muted "Inactive" here, on the theory that
+  // their close came from SAM deactivating the listing rather than from a
+  // deadline. That is no longer how either source works: the response
+  // deadline closes a solicitation on SAM exactly as it does on DIBBS
+  // ("late is late"), so both say Closed and both look the same.
   if (!status) return <span className="text-muted">—</span>;
   const s = status.toLowerCase();
+
   const tone: RowBadgeTone =
-    s === "open" ? "green"
+    muted ? "outline"
+    : s === "open" ? "green"
     : s === "awarded" ? "blue"
     : s === "closed" ? "red"
     : "slate";
