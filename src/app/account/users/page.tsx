@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -13,6 +13,17 @@ import { ManagedUser, CreateUserRequest, UpdateUserRequest, AssignableItem, Deac
 import { SeatCapSuspensionAlert } from "@/components/dashboard/SeatCapSuspensionAlert";
 import { useSeatCapSuspensions } from "@/lib/hooks/useSeatCapSuspensions";
 import { resolveOrgTier } from "@/lib/library/tier";
+import { ANALYTICS_PRODUCT_KEY } from "@/lib/analytics/tier";
+
+// Seat-assignable add-ons: 'feature' products with requires_seat_assignment,
+// which stack alongside the org's library tier rather than being one. Unlike
+// the org-wide tier, each of these must be handed to named users, so every
+// held add-on gets its own column in the users table. Adding a third add-on
+// is a one-line change here.
+const SEAT_ADDONS = [
+  { key: "request_for_quote", label: "RFQ" },
+  { key: ANALYTICS_PRODUCT_KEY, label: "Analytics" },
+] as const;
 
 // Available permission roles that can be assigned. The "read_only"
 // permission isn't actually wired anywhere on the backend, so it's not
@@ -75,7 +86,6 @@ export default function UsersPage() {
   const onPaidPlan = hasAnyProductAccess([
     "library_search_basic",
     "library_search_advanced",
-    "library_search_maximum",
   ]);
 
   // Users list state
@@ -90,18 +100,29 @@ export default function UsersPage() {
   const [orgProducts, setOrgProducts] = useState<AssignableItem[]>([]);
   const orgTier = resolveOrgTier(orgProducts);
 
-  // RFQ is a standalone, per-seat add-on (not a library tier) — unlike the
-  // org-wide tiers above, access must be explicitly assigned to named users.
-  // Only shown when the org actually holds the product.
-  const rfqProduct = orgProducts.find(
-    (p) => p.kind === "product" && p.product_key === "request_for_quote"
-  ) ?? null;
-  const [rfqSeatUsage, setRfqSeatUsage] = useState<{ used: number; cap: number | null } | null>(null);
-  // userId -> source ('user_direct' = individually assigned seat;
-  // 'customer_direct'/'customer_group' = org-wide comp/admin grant, not
+  // The seat-assignable add-ons this org actually holds. Each renders its own
+  // column; an org with neither sees no extra columns at all.
+  const heldAddons = useMemo(
+    () =>
+      SEAT_ADDONS.flatMap((addon) => {
+        const product = orgProducts.find(
+          (p) => p.kind === "product" && p.product_key === addon.key
+        );
+        return product ? [{ ...addon, product }] : [];
+      }),
+    [orgProducts],
+  );
+  // product_key -> seat usage for that add-on.
+  const [addonSeatUsage, setAddonSeatUsage] = useState<
+    Record<string, { used: number; cap: number | null }>
+  >({});
+  // product_key -> userId -> source ('user_direct' = individually assigned
+  // seat; 'customer_direct'/'customer_group' = org-wide comp/admin grant, not
   // seat-gated and not toggleable here).
-  const [rfqAssignments, setRfqAssignments] = useState<Record<number, string>>({});
-  const [rfqTogglingUserId, setRfqTogglingUserId] = useState<number | null>(null);
+  const [addonAssignments, setAddonAssignments] = useState<
+    Record<string, Record<number, string>>
+  >({});
+  const [togglingSeat, setTogglingSeat] = useState<{ key: string; userId: number } | null>(null);
 
   // Org-level user-cap from feature_limits.max_customer_users (or
   // seat_quantity on an active library subscription). Drives the
@@ -193,48 +214,63 @@ export default function UsersPage() {
     }
   }, []);
 
-  // Fetch RFQ seat usage (used/cap out of the customer's purchased RFQ
-  // seats). Filtered client-side from the shared per-product seat-usage
-  // list — same endpoint the org-wide seat pill would use for other
-  // seat-required products.
-  const fetchRfqSeatUsage = useCallback(async () => {
+  // Fetch per-add-on seat usage (used/cap out of the customer's purchased
+  // seats) in one call — the shared seat-usage list covers every
+  // seat-required product, so all add-ons come back together.
+  const fetchAddonSeatUsage = useCallback(async () => {
     try {
       const response = await fetch("/api/billing/seat-usage", { credentials: 'include' });
       if (response.ok) {
         const data: Array<{ product_key: string; used: number; cap: number | null }> = await response.json();
-        const rfq = data.find((row) => row.product_key === "request_for_quote");
-        setRfqSeatUsage(rfq ? { used: rfq.used, cap: rfq.cap } : null);
+        const wanted = new Set<string>(SEAT_ADDONS.map((a) => a.key));
+        setAddonSeatUsage(
+          Object.fromEntries(
+            data
+              .filter((row) => wanted.has(row.product_key))
+              .map((row) => [row.product_key, { used: row.used, cap: row.cap }])
+          )
+        );
       }
     } catch {
       // Soft-fail — the backend still enforces the cap on assign.
     }
   }, []);
 
-  // Fetch which of the currently-listed users hold the RFQ seat, and how
-  // (individually assigned vs. an org-wide comp/admin grant). N+1 by
-  // design — mirrors the equivalent internal-staff dashboard UI, and org
-  // sizes here are small.
-  const fetchRfqAssignments = useCallback(async (forUsers: ManagedUser[]) => {
-    if (!rfqProduct) {
-      setRfqAssignments({});
+  // Fetch which of the currently-listed users hold each add-on seat, and how
+  // (individually assigned vs. an org-wide comp/admin grant). N+1 over users
+  // by design — mirrors the equivalent internal-staff dashboard UI, and org
+  // sizes here are small. One request per user covers every add-on, so
+  // holding both costs the same as holding one.
+  const fetchAddonAssignments = useCallback(async (forUsers: ManagedUser[]) => {
+    if (heldAddons.length === 0) {
+      setAddonAssignments({});
       return;
     }
     try {
-      const entries = await Promise.all(
+      const perUser = await Promise.all(
         forUsers.filter((u) => u.is_active).map(async (u) => {
           const response = await fetch(`/api/users/${u.id}/products`, { credentials: 'include' });
-          if (!response.ok) return [u.id, undefined] as const;
+          if (!response.ok) return [u.id, {}] as const;
           const data: { source: Record<string, string> } = await response.json();
-          return [u.id, data.source?.[String(rfqProduct.id)]] as const;
+          return [u.id, data.source ?? {}] as const;
         })
       );
-      setRfqAssignments(
-        Object.fromEntries(entries.filter((e): e is [number, string] => Boolean(e[1])))
+      setAddonAssignments(
+        Object.fromEntries(
+          heldAddons.map((addon) => [
+            addon.key,
+            Object.fromEntries(
+              perUser
+                .map(([userId, source]) => [userId, source[String(addon.product.id)]] as const)
+                .filter((e): e is [number, string] => Boolean(e[1]))
+            ),
+          ])
+        )
       );
     } catch {
-      // Soft-fail — RFQ column just shows nothing assigned until retried.
+      // Soft-fail — add-on columns show nothing assigned until retried.
     }
-  }, [rfqProduct]);
+  }, [heldAddons]);
 
   // Initial fetch
   useEffect(() => {
@@ -246,17 +282,17 @@ export default function UsersPage() {
       fetchUsers();
       fetchOrgProducts();
       fetchUserCap();
-      fetchRfqSeatUsage();
+      fetchAddonSeatUsage();
     }
-  }, [authLoading, user, router, fetchUsers, fetchOrgProducts, fetchUserCap, fetchRfqSeatUsage]);
+  }, [authLoading, user, router, fetchUsers, fetchOrgProducts, fetchUserCap, fetchAddonSeatUsage]);
 
-  // Once the org's products are known (so we know whether RFQ is held) and
-  // the user list has loaded, fetch per-user RFQ assignment state.
+  // Once the org's products are known (so we know which add-ons are held) and
+  // the user list has loaded, fetch per-user seat assignment state.
   useEffect(() => {
-    if (rfqProduct && users.length > 0) {
-      fetchRfqAssignments(users);
+    if (heldAddons.length > 0 && users.length > 0) {
+      fetchAddonAssignments(users);
     }
-  }, [rfqProduct, users, fetchRfqAssignments]);
+  }, [heldAddons, users, fetchAddonAssignments]);
 
   // Close menus when clicking outside, scrolling, or resizing
   useEffect(() => {
@@ -408,33 +444,35 @@ export default function UsersPage() {
     }
   };
 
-  // Assign/unassign the RFQ seat for a single user. Org-wide grants
+  // Assign/unassign one add-on seat for a single user. Org-wide grants
   // (customer_direct/customer_group — comp/admin) aren't toggled here; only
   // individually-assigned seats (user_direct) are.
-  const toggleRfqSeat = async (targetUser: ManagedUser) => {
-    if (!rfqProduct) return;
-    const isAssigned = rfqAssignments[targetUser.id] === "user_direct";
+  const toggleAddonSeat = async (
+    addon: { key: string; label: string; product: AssignableItem },
+    targetUser: ManagedUser,
+  ) => {
+    const isAssigned = addonAssignments[addon.key]?.[targetUser.id] === "user_direct";
 
     setError(null);
-    setRfqTogglingUserId(targetUser.id);
+    setTogglingSeat({ key: addon.key, userId: targetUser.id });
     try {
-      const response = await fetch(`/api/users/${targetUser.id}/products/${rfqProduct.id}`, {
+      const response = await fetch(`/api/users/${targetUser.id}/products/${addon.product.id}`, {
         method: isAssigned ? "DELETE" : "POST",
       });
 
       if (!isAssigned || response.status !== 204) {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          setError(data.error || `Failed to ${isAssigned ? "unassign" : "assign"} RFQ seat`);
+          setError(data.error || `Failed to ${isAssigned ? "unassign" : "assign"} ${addon.label} seat`);
           return;
         }
       }
 
-      await Promise.all([fetchRfqAssignments(users), fetchRfqSeatUsage()]);
+      await Promise.all([fetchAddonAssignments(users), fetchAddonSeatUsage()]);
     } catch {
       setError("An unexpected error occurred");
     } finally {
-      setRfqTogglingUserId(null);
+      setTogglingSeat(null);
     }
   };
 
@@ -513,22 +551,26 @@ export default function UsersPage() {
                 <p className="text-muted mt-1">
                   Add, edit, and manage team members in your organization
                 </p>
-                {(hasSeatCap || (rfqProduct && rfqSeatUsage)) && (
+                {(hasSeatCap || heldAddons.some((a) => addonSeatUsage[a.key])) && (
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {hasSeatCap && (
                       <RowBadge tone={atSeatCap ? "amber" : "sky"}>
                         {userCap!.used}/{userCap!.cap} seats
                       </RowBadge>
                     )}
-                    {rfqProduct && rfqSeatUsage && (
-                      rfqSeatUsage.cap === null || rfqSeatUsage.cap === 0 ? (
-                        <RowBadge tone="amber">RFQ: no active subscription</RowBadge>
-                      ) : (
-                        <RowBadge tone={rfqSeatUsage.used >= rfqSeatUsage.cap ? "amber" : "sky"}>
-                          {rfqSeatUsage.used}/{rfqSeatUsage.cap} RFQ seats
+                    {heldAddons.map((addon) => {
+                      const usage = addonSeatUsage[addon.key];
+                      if (!usage) return null;
+                      return usage.cap === null || usage.cap === 0 ? (
+                        <RowBadge key={addon.key} tone="amber">
+                          {addon.label}: no active subscription
                         </RowBadge>
-                      )
-                    )}
+                      ) : (
+                        <RowBadge key={addon.key} tone={usage.used >= usage.cap ? "amber" : "sky"}>
+                          {usage.used}/{usage.cap} {addon.label} seats
+                        </RowBadge>
+                      );
+                    })}
                   </div>
                 )}
                 {/* Sits under the seats pill, which is where "why is my seat
@@ -711,11 +753,14 @@ export default function UsersPage() {
                 <th className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
                   Status
                 </th>
-                {rfqProduct && (
-                  <th className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
-                    RFQ
+                {heldAddons.map((addon) => (
+                  <th
+                    key={addon.key}
+                    className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider"
+                  >
+                    {addon.label}
                   </th>
-                )}
+                ))}
                 <th className="text-right px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
                   Actions
                 </th>
@@ -724,7 +769,7 @@ export default function UsersPage() {
             <tbody className="divide-y divide-border">
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={rfqProduct ? 7 : 6} className="px-6 py-8 text-center text-muted">
+                  <td colSpan={6 + heldAddons.length} className="px-6 py-8 text-center text-muted">
                     No users found
                   </td>
                 </tr>
@@ -795,13 +840,13 @@ export default function UsersPage() {
                         </div>
                       )}
                     </td>
-                    {rfqProduct && (
-                      <td className="px-6 py-4">
+                    {heldAddons.map((addon) => (
+                      <td key={addon.key} className="px-6 py-4">
                         {!u.is_active ? (
                           <span className="text-sm text-muted">—</span>
                         ) : (
                           (() => {
-                            const source = rfqAssignments[u.id];
+                            const source = addonAssignments[addon.key]?.[u.id];
                             if (source === "customer_direct" || source === "customer_group") {
                               return (
                                 <span className="text-xs text-muted" title="Granted org-wide (comp/admin) — not an individually assigned seat">
@@ -810,14 +855,16 @@ export default function UsersPage() {
                               );
                             }
                             const isAssigned = source === "user_direct";
-                            const isToggling = rfqTogglingUserId === u.id;
-                            const atCap = rfqSeatUsage != null && rfqSeatUsage.cap != null && rfqSeatUsage.used >= rfqSeatUsage.cap;
+                            const isToggling =
+                              togglingSeat?.key === addon.key && togglingSeat?.userId === u.id;
+                            const usage = addonSeatUsage[addon.key];
+                            const atCap = usage != null && usage.cap != null && usage.used >= usage.cap;
                             const disabled = isToggling || (!isAssigned && atCap);
                             return (
                               <button
-                                onClick={() => toggleRfqSeat(u)}
+                                onClick={() => toggleAddonSeat(addon, u)}
                                 disabled={disabled}
-                                title={!isAssigned && atCap ? "No RFQ seats available — buy more or unassign one" : undefined}
+                                title={!isAssigned && atCap ? `No ${addon.label} seats available — buy more or unassign one` : undefined}
                                 className={`text-xs font-medium px-2 py-1 -mx-2 rounded transition-colors ${
                                   isAssigned
                                     ? "text-success hover:text-error hover:bg-error/10"
@@ -832,7 +879,7 @@ export default function UsersPage() {
                           })()
                         )}
                       </td>
-                    )}
+                    ))}
                     <td className="px-6 py-4 text-right">
                       {/* Menu always opens — even on the current user's own row.
                           Self-targeted destructive actions (Deactivate, Delete)
@@ -929,7 +976,7 @@ export default function UsersPage() {
         message={
           onPaidPlan
             ? `You're using all ${userCap?.cap ?? ""} of your seats. To add another user, add a seat to your plan first — it's prorated, and during a trial the added seat is billed when your trial converts.`
-            : "The Free plan includes 1 user. Upgrade to a paid plan to add your team."
+            : "The Free plan includes 3 users. Upgrade to a paid plan to add more of your team."
         }
         confirmLabel={onPaidPlan ? "Add a seat" : "See plans"}
       />

@@ -11,7 +11,8 @@ import { Footer } from "@/components/layout/Footer";
 import { TermsAcceptanceModal } from "@/components/billing/TermsAcceptanceModal";
 import { clearPendingSignup, readPendingSignup } from "@/lib/signup/pendingSignup";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
-import { ChartIcon, CheckIcon, TargetIcon } from "@/components/icons";
+import { ChartIcon, CheckIcon, TargetIcon, ZapIcon } from "@/components/icons";
+import { ANALYTICS_PRODUCT_KEY } from "@/lib/analytics/tier";
 import {
   type Price,
   formatMoney,
@@ -91,7 +92,6 @@ function splitFamilyTier(name: string): { family: string; tier: string | null } 
 const TIER_DISPLAY_ORDER: Record<string, number> = {
   basic: 1,
   advanced: 2,
-  maximum: 3,
 };
 
 function tierSortKey(plan: Plan): number {
@@ -491,13 +491,27 @@ function PricingPageContent() {
     [plans],
   );
 
-  // The RFQ add-on panel below the tier grid. Only 'request_for_quote'
-  // exists today; a future second add-on would need its own panel (this
-  // one's copy is written specifically for RFQ, not generic add-on copy).
+  // Add-on panels below the tier grid. Each has its own hand-written copy
+  // (icon, tagline, feature bullets) rather than generic add-on text, so
+  // adding a third means adding an entry here — see AddonPanel below.
+  // Both self-hide: GET /billing/plans only returns billing_enabled products,
+  // so an unannounced add-on never reaches `plans` and its panel never
+  // renders. That's the switch for the analytics add-on's public launch.
   const rfqPlan = useMemo(() => plans.find((p) => p.key === "request_for_quote") ?? null, [plans]);
-  const rfqPrice = rfqPlan?.prices[0] ?? null;
-  const rfqSeatCount = rfqPlan?.default_seat_count ?? 1;
-  const rfqTotalCents = rfqPrice ? computeTotalCents(rfqPrice, rfqSeatCount) : null;
+  const analyticsPlan = useMemo(
+    () => plans.find((p) => p.key === ANALYTICS_PRODUCT_KEY) ?? null,
+    [plans],
+  );
+  // Data Reports is always rendered, so the row is never empty.
+  const addonPanelCount = 1 + (rfqPlan ? 1 : 0) + (analyticsPlan ? 1 : 0);
+  // Full literal class strings so Tailwind's JIT keeps them (same pattern as
+  // the tier grid above).
+  const addonColsClass =
+    addonPanelCount === 1
+      ? "grid-cols-1"
+      : addonPanelCount === 2
+        ? "md:grid-cols-2"
+        : "md:grid-cols-2 lg:grid-cols-3";
   // Add-ons require an active paid-tier subscription — Free-tier and
   // logged-out visitors can't add one yet. currentSub already excludes
   // add-on subscriptions (see the effect above), so "has one" == "has a paid tier".
@@ -611,7 +625,7 @@ function PricingPageContent() {
             <li>• Vendor search</li>
             <li>• Recent-solicitation count</li>
             <li>• Bid matching: 1 profile, 1 NIIN or NSN condition</li>
-            <li>• 1 user</li>
+            <li>• 3 users</li>
           </ul>
           <div className="mt-auto">
             <Button
@@ -903,86 +917,48 @@ function PricingPageContent() {
 
       </div>
 
-      {/* RFQ add-on + Data Reports — side by side, not stacked full-width
-          panels, so two similar-looking CTA cards don't repeat down the
-          page. Neither is a tier (kept out of the grid above). RFQ's CTA
-          routes to /account/billing's "Add-ons" section instead of starting
-          a standalone checkout here — it only makes sense alongside a paid
-          tier subscription. <h2> instead of <h3> because the pricing page's
-          heading hierarchy starts at <h1> (landing nests under an <h2>,
-          hence <h3> there — same content otherwise). When RFQ billing is
-          disabled the plan drops out entirely, so the row collapses to a
-          single column and Data Reports goes full width instead of sitting
-          in a half-empty two-column row. */}
-      <div className={`mt-6 grid gap-6 ${rfqPlan ? "md:grid-cols-2" : "grid-cols-1"}`}>
+      {/* Add-ons + Data Reports — side by side, not stacked full-width panels,
+          so similar-looking CTA cards don't repeat down the page. None of
+          these is a tier (all kept out of the grid above). Add-on CTAs route
+          to /account/billing's "Add-ons" section instead of starting a
+          standalone checkout here — an add-on only makes sense alongside a
+          paid tier subscription. <h2> instead of <h3> because the pricing
+          page's heading hierarchy starts at <h1> (landing nests under an
+          <h2>, hence <h3> there — same content otherwise). When an add-on's
+          billing is disabled the plan drops out entirely, so the row
+          collapses and Data Reports takes the freed space instead of sitting
+          in a half-empty row. */}
+      <div className={`mt-6 grid gap-6 ${addonColsClass}`}>
         {rfqPlan && (
-          <div className="rounded-2xl border border-border bg-muted-light/40 dark:bg-card-bg p-6 lg:p-8 flex flex-col">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center flex-shrink-0">
-                <TargetIcon className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-xl font-semibold text-secondary dark:text-card-foreground">
-                    {rfqPlan.name}
-                  </h2>
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                    Add-on
-                  </span>
-                </div>
-                <p className="mt-1 text-sm font-medium text-primary">
-                  Send RFQs to vendors and collect quotes, right from the platform.
-                </p>
-              </div>
-            </div>
-            <p className="mt-4 text-muted dark:text-card-foreground/80 leading-relaxed">
-              {rfqPlan.description ||
-                "Send structured RFQs to vendors and collect quotes, with a shared batch cart, a private vendor contact book, and response tracking."}
-            </p>
+          <AddonPanel
+            plan={rfqPlan}
+            icon={<TargetIcon className="w-6 h-6 text-primary" />}
+            tagline="Send RFQs to vendors and collect quotes, right from the platform."
+            fallbackDescription="Send structured RFQs to vendors and collect quotes, with a shared batch cart, a private vendor contact book, and response tracking."
+            features={[
+              "Structured RFQs with line-item detail",
+              "Shared batch cart and private vendor contact book",
+              "Response tracking across every recipient",
+            ]}
+            hasPaidTier={hasPaidTier}
+            isSignedIn={!!user}
+          />
+        )}
 
-            <ul className="mt-4 space-y-2.5">
-              {[
-                "Structured RFQs with line-item detail",
-                "Shared batch cart and private vendor contact book",
-                "Response tracking across every recipient",
-              ].map((feature) => (
-                <li
-                  key={feature}
-                  className="flex items-start gap-2 text-sm text-foreground dark:text-card-foreground/90"
-                >
-                  <CheckIcon className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            {rfqPrice && rfqTotalCents !== null && (
-              <p className="mt-4 text-sm text-muted">
-                From {formatMoney(rfqTotalCents, rfqPrice.currency)}
-                {perMonthSuffix(rfqTotalCents, rfqPrice.interval_count, rfqPrice.currency)}
-                {rfqPlan.requires_seat_assignment && ` for ${rfqSeatCount} seat${rfqSeatCount === 1 ? "" : "s"}`}
-              </p>
-            )}
-
-            <div className="mt-6 pt-4 border-t border-border">
-              {hasPaidTier ? (
-                <Button href="/account/billing" variant="primary" size="sm">
-                  Add to your plan →
-                </Button>
-              ) : user ? (
-                <p className="text-sm text-muted">
-                  Available once you&apos;re on a paid plan — pick a tier above to add it.
-                </p>
-              ) : (
-                <>
-                  <Link href="/signup" className="inline-flex items-center text-primary font-medium hover:underline">
-                    Sign up to get started →
-                  </Link>
-                  <p className="mt-1 text-xs text-muted">Available as an add-on on any paid plan.</p>
-                </>
-              )}
-            </div>
-          </div>
+        {analyticsPlan && (
+          <AddonPanel
+            plan={analyticsPlan}
+            icon={<ZapIcon className="w-6 h-6 text-primary" />}
+            tagline="Know your market, your competitors, and what DLA is about to buy."
+            fallbackDescription="Competitive intel, opportunity targeting, and bid-readiness alerts across your whole business — plus DLA demand and stock signals on every part you supply."
+            features={[
+              "Procurement history, win rate, and competitor leaderboard",
+              "Market prioritization — parts worth getting qualified on",
+              "DLA demand forecasts and stock levels on every part",
+            ]}
+            hasPaidTier={hasPaidTier}
+            isSignedIn={!!user}
+          />
         )}
 
         {/* Data Reports — bespoke engagements, no Stripe product. */}
@@ -1057,5 +1033,97 @@ function PricingPageContent() {
     />
     <Footer />
     </>
+  );
+}
+
+
+// A 'feature'-category add-on panel below the tier grid. Each add-on supplies
+// its own icon/tagline/bullets — deliberately hand-written marketing copy
+// rather than something derived from the catalog row, which only carries a
+// name and a one-line description. Price comes from the plan's first Price at
+// its default seat count; the exact interval and seat count are picked later
+// in /account/billing's add-on modal.
+function AddonPanel({
+  plan,
+  icon,
+  tagline,
+  fallbackDescription,
+  features,
+  hasPaidTier,
+  isSignedIn,
+}: {
+  plan: Plan;
+  icon: React.ReactNode;
+  tagline: string;
+  fallbackDescription: string;
+  features: string[];
+  hasPaidTier: boolean;
+  isSignedIn: boolean;
+}) {
+  const price = plan.prices[0] ?? null;
+  const seatCount = plan.default_seat_count ?? 1;
+  const totalCents = price ? computeTotalCents(price, seatCount) : null;
+
+  return (
+    <div className="rounded-2xl border border-border bg-muted-light/40 dark:bg-card-bg p-6 lg:p-8 flex flex-col">
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center flex-shrink-0">
+          {icon}
+        </div>
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-xl font-semibold text-secondary dark:text-card-foreground">
+              {plan.name}
+            </h2>
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+              Add-on
+            </span>
+          </div>
+          <p className="mt-1 text-sm font-medium text-primary">{tagline}</p>
+        </div>
+      </div>
+      <p className="mt-4 text-muted dark:text-card-foreground/80 leading-relaxed">
+        {plan.description || fallbackDescription}
+      </p>
+
+      <ul className="mt-4 space-y-2.5">
+        {features.map((feature) => (
+          <li
+            key={feature}
+            className="flex items-start gap-2 text-sm text-foreground dark:text-card-foreground/90"
+          >
+            <CheckIcon className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+
+      {price && totalCents !== null && (
+        <p className="mt-4 text-sm text-muted">
+          From {formatMoney(totalCents, price.currency)}
+          {perMonthSuffix(totalCents, price.interval_count, price.currency)}
+          {plan.requires_seat_assignment && ` for ${seatCount} seat${seatCount === 1 ? "" : "s"}`}
+        </p>
+      )}
+
+      <div className="mt-6 pt-4 border-t border-border">
+        {hasPaidTier ? (
+          <Button href="/account/billing" variant="primary" size="sm">
+            Add to your plan →
+          </Button>
+        ) : isSignedIn ? (
+          <p className="text-sm text-muted">
+            Available once you&apos;re on a paid plan — pick a tier above to add it.
+          </p>
+        ) : (
+          <>
+            <Link href="/signup" className="inline-flex items-center text-primary font-medium hover:underline">
+              Sign up to get started →
+            </Link>
+            <p className="mt-1 text-xs text-muted">Available as an add-on on any paid plan.</p>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

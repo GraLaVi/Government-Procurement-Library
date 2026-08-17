@@ -64,6 +64,7 @@ import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import type { RfqManufacturerSelection } from "@/lib/rfq/types";
 import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { resolvePartsTier, tierMeets } from "@/lib/library/tier";
+import { hasAnalyticsAccess } from "@/lib/analytics/tier";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
 import { usePreferences } from "@/lib/hooks/usePreferences";
 import { resolveResultsLayout } from "@/lib/preferences/resultsLayout";
@@ -381,9 +382,12 @@ interface PartDetailProps {
 type TabId = "overview" | "procurement" | "solicitations" | "manufacturers" | "technical" | "enduse" | "packaging" | "procurementitemdesc";
 
 export function PartDetail({ part }: PartDetailProps) {
-  const { hasAnyProductAccess } = useAuth();
+  const { hasProductAccess, hasAnyProductAccess } = useAuth();
   const tier = resolvePartsTier(hasAnyProductAccess);
   const isFreeOnly = tier === "free";
+  // Demand & Stock is gated by the gph_analytics add-on, not by a search
+  // tier — it's per-user, so two people on the same Advanced org can differ.
+  const canSeeDemand = hasAnalyticsAccess(hasProductAccess, hasAnyProductAccess);
   const { preferences } = usePreferences();
   const layout = resolveResultsLayout(preferences);
 
@@ -829,14 +833,15 @@ export function PartDetail({ part }: PartDetailProps) {
     }
   }, [partReqKey, procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
 
-  // Demand & Stock now lives on the Overview tab (Maximum tier), so fetch it
-  // eagerly on mount rather than on a tab click. fetchDemand self-guards
-  // against duplicate calls; the endpoint 403s below Maximum so we skip them.
+  // Demand & Stock now lives on the Overview tab (analytics add-on), so fetch
+  // it eagerly on mount rather than on a tab click. fetchDemand self-guards
+  // against duplicate calls; the endpoint 403s without the add-on so we skip
+  // the request entirely for users who don't hold it.
   useEffect(() => {
-    if (partReqKey && tierMeets(tier, "maximum")) {
+    if (partReqKey && canSeeDemand) {
       fetchDemand();
     }
-  }, [partReqKey, tier, fetchDemand]);
+  }, [partReqKey, canSeeDemand, fetchDemand]);
 
   // Build tabs dynamically with counts.
   // Prefer data-fetched totals once loaded; fall back to lightweight tabCounts.
@@ -979,7 +984,7 @@ export function PartDetail({ part }: PartDetailProps) {
         part={part}
         codeDefinitions={codeDefinitions}
         codeTypeNames={codeTypeNames}
-        showDemand={tierMeets(tier, "maximum")}
+        showDemand={canSeeDemand}
         demand={demand}
         isLoadingDemand={isLoadingDemand}
         demandError={demandError}
@@ -1005,8 +1010,8 @@ export function PartDetail({ part }: PartDetailProps) {
         error={solicitationsError}
         onRetry={fetchSolicitations}
         demand={demand}
-        onEnsureDemand={tierMeets(tier, "maximum") ? fetchDemand : undefined}
-        onViewDemand={tierMeets(tier, "maximum") ? () => handleTabChange("overview") : undefined}
+        onEnsureDemand={canSeeDemand ? fetchDemand : undefined}
+        onViewDemand={canSeeDemand ? () => handleTabChange("overview") : undefined}
       />
     ),
     manufacturers: (
@@ -1103,14 +1108,14 @@ export function PartDetail({ part }: PartDetailProps) {
     if (tierMeets(tier, "advanced")) jobs.push(fetchProcurementHistory());
     if (tierMeets(tier, "advanced")) jobs.push(fetchSolicitations());
     if (tierMeets(tier, "basic")) jobs.push(fetchManufacturers());
-    if (tierMeets(tier, "maximum")) jobs.push(fetchDemand());
+    if (canSeeDemand) jobs.push(fetchDemand());
     if (tierMeets(tier, "basic")) jobs.push(fetchTechnicalCharacteristics());
     if (tierMeets(tier, "basic")) jobs.push(fetchEndUseDescriptions());
     if (tierMeets(tier, "advanced")) jobs.push(fetchPackaging());
     if (tierMeets(tier, "basic")) jobs.push(fetchProcurementItemDescription());
     await Promise.all(jobs);
   }, [
-    tier,
+    tier, canSeeDemand,
     fetchProcurementHistory, fetchSolicitations, fetchManufacturers, fetchDemand,
     fetchTechnicalCharacteristics, fetchEndUseDescriptions, fetchPackaging,
     fetchProcurementItemDescription,

@@ -32,8 +32,6 @@ Bid-matching profiles tell GPH which solicitations to monitor for you. Once a pr
 
 To create your first profile, go to **Account \> Bid-Matching Profile** and click **Create Profile**.
 
-<!-- HIDDEN UNTIL MAXIMUM LAUNCH: the note below should read "... Basic includes 5, Advanced includes 20, and Maximum includes 30\." -->
-
 *Note: profile limits vary by plan — Free includes 1 profile, Basic includes 5, and Advanced includes 20\.*
 
 → How to create one: [Setting Up Bid-Matching Profiles](/help/bid-matching-profiles) → How matching works: [How Solicitation Matching Works](/help/solicitation-matching)

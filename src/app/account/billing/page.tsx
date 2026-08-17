@@ -908,6 +908,38 @@ function PaymentBillingCard({
 // actual current plan — mirror the SubscriptionCard styling so it reads as one.
 function FreePlanCard() {
   const badge = statusBadge("active");
+
+  // Free's user allowance is feature_limits.max_customer_users, not a Stripe
+  // seat quantity, so read it live from the same endpoint that drives the
+  // seat pill on /account/users rather than hardcoding the number here.
+  const [userCap, setUserCap] = useState<{ used: number; cap: number | null } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetchWithAuth("/api/billing/user-cap");
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!cancelled) setUserCap(data);
+      } catch {
+        // Soft-fail — the card still reads correctly without the usage line.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Mirrors the "2 of 3 seats used" phrasing on Manage Users. Dashes until
+  // the fetch lands (or if it failed) so we never assert a wrong number.
+  const seatsLabel =
+    userCap === null
+      ? "—"
+      : userCap.cap === null
+        ? `${userCap.used} · uncapped`
+        : `${userCap.used} of ${userCap.cap}`;
+
   return (
     <div className="bg-card-bg border border-border rounded-xl p-6">
       <div className="flex items-start justify-between mb-3">
@@ -918,14 +950,16 @@ function FreePlanCard() {
         <span className={badge.className}>{badge.label}</span>
       </div>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        <dt className="text-muted">Seats</dt>
-        <dd className="text-card-foreground font-medium">1 of 1</dd>
+        <dt className="text-muted">Users</dt>
+        <dd className="text-card-foreground font-medium">{seatsLabel}</dd>
         <dt className="text-muted">Price</dt>
         <dd className="text-card-foreground font-medium">Free</dd>
       </dl>
       <p className="text-sm text-muted mt-3">
-        The Free tier includes 1 user. Upgrade to Basic or Advanced for the full
-        parts &amp; vendor library, bid matching, and up to 3 users.
+        {userCap?.cap != null &&
+          `The Free tier includes ${userCap.cap} user${userCap.cap === 1 ? "" : "s"}. `}
+        Upgrade to Basic or Advanced for the full parts &amp; vendor library, bid
+        matching, and up to 10 users.
       </p>
       <div className="mt-5 pt-4 border-t border-border flex flex-wrap gap-2">
         <Button href="/pricing" variant="primary" size="sm">
@@ -996,7 +1030,7 @@ function SubscriptionCard({
   // fallback: for every tiered plan it's a placeholder 0, not a real price,
   // so falling back to it silently renders "$0.00" for a paid, non-free plan
   // (e.g. a product missing/disabled in GET /billing/plans — this bit a
-  // Maximum-tier trial customer in 2026-07 when the product's
+  // trial customer in 2026-07 when the product's
   // `billing_enabled` flag was off). Only trust the raw field when it's
   // genuinely nonzero; otherwise treat the price as unknown.
   const totalCents = matchingPrice

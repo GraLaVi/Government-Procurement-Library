@@ -10,14 +10,20 @@ Paid plans are **priced per seat**: you choose how many users (seats) you need �
 
 ## The plans at a glance
 
-**Free** — Try GPH with a limited view. Search and look up parts and vendors with their basic identifiers, and set up one bid-matching profile to see how many matches your business would receive. Viewing the actual solicitation details, complete part and vendor data, and other features requires a paid plan. Free is a single user.
+**Free** — Try GPH with a limited view. Search and look up parts and vendors with their basic identifiers, and set up one bid-matching profile to see how many matches your business would receive. Viewing the actual solicitation details, complete part and vendor data, and other features requires a paid plan. Free includes up to 3 users.
 
 **Basic** — Unlock the full data picture: complete part records (manufacturers, technical specifications, packaging, end-use data) and vendor profiles (contacts, recent awards, and the 13-month Contracts Booked breakdown). Up to 5 bid-matching profiles. Up to daily match notifications.
 
 **Advanced** — Everything in Basic plus the features power users rely on: full procurement history on parts, open solicitations on vendor profiles, pinned searches, CSV exports, immediate match notifications, and up to 20 bid-matching profiles.
 
-<!-- HIDDEN UNTIL MAXIMUM LAUNCH: restore the bullet below, and change the intro paragraph back to "GPH is available on four plans: Free, Basic, Advanced, and Maximum."
-**Maximum** — Everything in Advanced, plus the Procurement Analytics dashboard and DLA demand & stock intelligence on every part.
+<!-- HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: restore the "Add-ons" section below, and add "Add-ons" to the Related articles list at the bottom.
+
+## Add-ons
+
+Add-ons stack on top of a paid plan rather than replacing it, and are **assigned per user**: you buy a number of add-on seats, then your account admin decides which team members get them under **Account \> Users**. A ten-person team can put two people on Procurement Analytics without paying for ten.
+
+**Procurement Analytics** — The [Procurement Analytics dashboard](/help/procurement-analytics) plus [DLA demand & stock intelligence](/help/demand-intelligence) on every part. Requires the Advanced plan.
+
 -->
 
 ## Features available only on Advanced
@@ -34,8 +40,6 @@ If you've hit a paywall on one of these features, upgrading to Advanced unlocks 
 ## Bid-matching profile limits
 
 The number of bid-matching profiles you can have active depends on your plan:
-
-<!-- HIDDEN UNTIL MAXIMUM LAUNCH: restore as the last list item below — "- **Maximum** — 30 profiles" -->
 
 - **Free** — 1 profile  
 - **Basic** — 5 profiles  
@@ -59,14 +63,16 @@ If you move to a plan with a lower profile limit, your existing profiles aren't 
 
 Go to **Account \> Billing** to see everything about your subscription in one place. Your plan appears as **Procurement Intelligence — Free**, **— Basic**, or **— Advanced**.
 
-<!-- HIDDEN UNTIL MAXIMUM LAUNCH: the sentence above should read "... **— Advanced**, or **— Maximum**." -->
+<!-- HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: restore the sentence below.
+Any add-ons you've bought are listed under **Add-ons** on the same page, separately from your plan.
+-->
 
 *Note: Billing is available to account admins only. If you're a member and don't see Billing under Account, ask your account admin to make plan, seat, or payment changes.*
 
 ### Current plan card
 
 - Your plan name and, for paid plans, the billing interval (for example, Monthly or Annual) and the plan price.
-- **Seats** — the number of seats on your subscription (what you're billed for), shown as, for example, "3 seats · up to 10". This is also the **maximum number of users you can add** — one seat per user. Free includes 1 user. (The *used-of-total* view, e.g. "2 of 3 seats used", appears on the **Manage Users** page.)
+- **Seats** — the number of seats on your subscription (what you're billed for), shown as, for example, "3 seats · up to 10". This is also the **maximum number of users you can add** — one seat per user. Free includes 3 users. (The *used-of-total* view, e.g. "2 of 3 seats used", appears on the **Manage Users** page.)
 - If you're on a **free trial**, a banner tells you when the trial ends. Add a payment method before then to keep your plan — without one, your subscription ends and you return to the Free tier (no charge). Your card is never charged *during* the trial, and any seats you add during the trial are simply included in what you're billed when the trial converts.
 - Once your plan is active, the card shows your **current billing period** and, if you've scheduled a cancellation, the date access ends.
 

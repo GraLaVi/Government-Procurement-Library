@@ -355,7 +355,7 @@ export default function NotificationsPage() {
                 <h4 className="text-sm font-semibold text-foreground">DLA buy-signal alerts</h4>
                 <p className="text-sm text-muted mt-1">
                   Show a bell alert when parts you supply go on backorder or
-                  drop below DLA&apos;s reorder point (Maximum plan only).
+                  drop below DLA&apos;s reorder point (Analytics add-on only).
                 </p>
               </div>
               {/* On/off toggle */}

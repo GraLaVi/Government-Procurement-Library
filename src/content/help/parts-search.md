@@ -90,8 +90,6 @@ The Recent Solicitations tab shows active and recently closed solicitations for 
 
 Solicitations that have been changed show an amber **Amended** badge (with a **×N** count for multiple amendments); click it for a change timeline. SAM.gov rows that carry attachments show a documents button with the attachment count. Fast-award candidates carry a green **lightning bolt** — these can be awarded before their close date, so quoting early matters; see [Solicitation type indicators](/help/solicitations-and-contracts#solicitation-type-indicators). To learn more about viewing a solicitation PDF or amendment history, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
 
-<!-- HIDDEN UNTIL MAXIMUM LAUNCH: the note below should end "— the full table is available on Advanced and Maximum." -->
-
 *Note: on the Free plan this tab shows a count of recent solicitations and an upgrade prompt rather than the full table. It isn't shown at all on Basic — the full table is available on Advanced.*
 
 ## Manufacturers tab

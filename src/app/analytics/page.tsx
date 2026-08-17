@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { resolveLibraryTier } from "@/lib/library/tier";
-import { Button } from "@/components/ui/Button";
+import { ANALYTICS_PRODUCT_KEY, hasAnalyticsAccess } from "@/lib/analytics/tier";
+import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { useMarketAnalytics, useMyBusinessAnalytics, useBidMatchAnalytics, useMarketPrioritization } from '@/lib/hooks/useAnalytics';
 import {
   KPICard,
@@ -33,12 +33,12 @@ import {
 } from '@/components/analytics';
 
 export default function AnalyticsPage() {
-  const { hasAnyProductAccess } = useAuth();
+  const { hasProductAccess, hasAnyProductAccess } = useAuth();
   // Resolved client-side from the product list useAuth() already loaded
   // before this page rendered — no network call, and no doomed-to-403
-  // requests fired against the Maximum-only analytics endpoints for users
+  // requests fired against the add-on-gated analytics endpoints for users
   // who can't use them.
-  const tier = resolveLibraryTier(hasAnyProductAccess);
+  const canUseAnalytics = hasAnalyticsAccess(hasProductAccess, hasAnyProductAccess);
 
   return (
     <>
@@ -50,49 +50,30 @@ export default function AnalyticsPage() {
         </p>
       </div>
 
-      {tier === "maximum" ? <MaximumAnalytics /> : <UpgradeToMaximumPrompt />}
+      {canUseAnalytics ? <FullAnalytics /> : <AnalyticsUpsell />}
     </>
   );
 }
 
-function UpgradeToMaximumPrompt() {
+// Non-holders get the shared add-on upsell — the same surface every RFQ
+// sender page uses for customers without that add-on.
+function AnalyticsUpsell() {
   return (
-    <div className="bg-card-bg border border-border rounded-xl p-8 max-w-2xl mx-auto text-center">
-      <div className="w-16 h-16 bg-info/10 rounded-full flex items-center justify-center mx-auto mb-4">
-        <svg
-          className="w-8 h-8 text-info"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M13 10V3L4 14h7v7l9-11h-7z"
-          />
-        </svg>
-      </div>
-      <h2 className="text-xl font-bold text-foreground mb-2">
-        Procurement Analytics requires the Maximum plan
-      </h2>
-      <p className="text-muted mb-6">
-        Upgrade to Maximum to unlock competitive intel, opportunity targeting,
-        and bid-readiness alerts across your whole business.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
-        <Button href="/pricing" variant="primary" size="md">
-          View Pricing
-        </Button>
-        <Button href="/account/billing" variant="outline" size="md">
-          Manage Billing
-        </Button>
-      </div>
-    </div>
+    <AccessDeniedPage
+      featureName="Procurement Analytics"
+      featureKey={ANALYTICS_PRODUCT_KEY}
+      description="Competitive intel, opportunity targeting, and bid-readiness alerts across your whole business — plus DLA demand and stock signals on every part you supply. Available as an add-on on the Advanced plan."
+      benefits={[
+        "Your procurement history, win rate, and competitor leaderboard",
+        "Market prioritization — parts worth getting qualified on",
+        "DLA demand forecasts and stock levels on every part",
+        "Buy-signal alerts when your parts go on backorder",
+      ]}
+    />
   );
 }
 
-function MaximumAnalytics() {
+function FullAnalytics() {
   const market = useMarketAnalytics();
   const business = useMyBusinessAnalytics();
   const bidMatch = useBidMatchAnalytics();

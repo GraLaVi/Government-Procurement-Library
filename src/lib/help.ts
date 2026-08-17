@@ -71,15 +71,26 @@ export const HELP_ARTICLES: HelpArticleMeta[] = [
       "Investigate any government contractor's awards, contracts, and active solicitations by CAGE code or name.",
     group: "platform",
   },
-  // HIDDEN UNTIL MAXIMUM LAUNCH: Maximum-only feature, not ready to deploy.
-  // Uncomment to relist; src/content/help/demand-intelligence.md is unchanged
-  // on disk and the article renders as-is once this entry is restored.
+  // HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: both articles below cover features
+  // gated by the gph_analytics add-on, which isn't announced yet. Uncomment
+  // BOTH at the same time as ANALYTICS_ADDON_PUBLIC in @/lib/analytics/tier —
+  // they cross-link to each other, so relisting one alone leaves a dead link.
+  // Their markdown is unchanged on disk and renders as-is once restored. Also
+  // restore the analytics passages commented out in plans-and-pricing.md.
+  // {
+  //   slug: "procurement-analytics",
+  //   title: "Reading the Procurement Analytics Dashboard",
+  //   blurb:
+  //     "Understand every section of the Analytics dashboard — market pulse, act-now signals, your win history, and prospecting — and how to act on each.",
+  //   group: "platform",
+  // },
   // {
   //   slug: "demand-intelligence",
   //   title: "Reading Demand & Stock Data",
   //   blurb:
   //     "Use DLA's demand forecast and inventory signals on a part's Demand & Stock tab to decide what to bid on and how to price.",
   //   group: "platform",
+  //   spokeOf: "procurement-analytics",
   // },
   // HIDDEN UNTIL RFQ LAUNCH: RFQ add-on isn't ready to deploy. Uncomment to
   // relist; src/content/help/requests-for-quote.md is unchanged on disk. Also

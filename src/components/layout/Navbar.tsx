@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { MenuIcon, CloseIcon } from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
-import { resolveLibraryTier } from "@/lib/library/tier";
+import { showAnalyticsNav } from "@/lib/analytics/tier";
 
 // Whether the given href should render as "current". Real routes match
 // on exact path or sub-path (so /library/parts/123 still highlights the
@@ -67,14 +67,16 @@ export function Navbar() {
   const [isMobileHelpOpen, setIsMobileHelpOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const helpDropdownRef = useRef<HTMLDivElement>(null);
-  const { user, isAuthenticated, isLoading, hasAnyProductAccess } = useAuth();
+  const { user, isAuthenticated, isLoading, hasProductAccess, hasAnyProductAccess } = useAuth();
   const pathname = usePathname() || "/";
 
   const userInitial = user?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || "U";
-  // Analytics is Maximum-tier only — see /analytics's own gate, which uses
-  // the same resolveLibraryTier() helper. Hidden from the nav entirely for
-  // everyone else rather than shown-and-upsold, unlike Bid Matching.
-  const isMaximumTier = resolveLibraryTier(hasAnyProductAccess) === "maximum";
+  // Analytics needs the gph_analytics add-on — see /analytics's own gate,
+  // which uses the same helper. Until the add-on is announced this shows only
+  // to seat-holders; once ANALYTICS_ADDON_PUBLIC flips it becomes an upsell
+  // surface for everyone and the page self-gates to a buy CTA, the same way
+  // the RFQ menu works.
+  const showAnalytics = showAnalyticsNav(hasProductAccess, hasAnyProductAccess);
 
   // Visual treatment for active vs idle nav targets. Kept inline so the
   // same classes apply to <Link> rows and dropdown <button> triggers.
@@ -196,8 +198,8 @@ export function Navbar() {
                 Bid Matching
               </Link>
             )}
-            {/* Analytics - Maximum tier only. */}
-            {!isLoading && isAuthenticated && isMaximumTier && (
+            {/* Analytics - gph_analytics add-on. */}
+            {!isLoading && isAuthenticated && showAnalytics && (
               <Link
                 href="/analytics"
                 className={topLinkClass(isLinkActive("/analytics", pathname))}
@@ -355,8 +357,8 @@ export function Navbar() {
                   Bid Matching
                 </Link>
               )}
-              {/* Mobile Analytics - Maximum tier only */}
-              {!isLoading && isAuthenticated && isMaximumTier && (
+              {/* Mobile Analytics - gph_analytics add-on */}
+              {!isLoading && isAuthenticated && showAnalytics && (
                 <Link
                   href="/analytics"
                   className={mobileLinkClass(isLinkActive("/analytics", pathname))}

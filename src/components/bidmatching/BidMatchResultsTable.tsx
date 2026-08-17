@@ -121,9 +121,11 @@ interface BidMatchResult {
   // SAM-source rows. Rendered in the expanded row by BidTermsPanel.
   bid_terms?: SolicitationBidTerms | null;
   sam_url?: string | null;
-  // Maximum-tier DLA demand signal — strongest across the opportunity's NIINs
-  // ('on_backorder' | 'below_reorder_point' | 'recurring'). Null/absent when no
-  // signal or the customer lacks the Maximum parts tier.
+  // DLA demand signal (gph_analytics add-on) — strongest across the
+  // opportunity's NIINs ('on_backorder' | 'below_reorder_point' |
+  // 'recurring'). Null/absent when there's no signal, or when the user
+  // doesn't hold an analytics seat: the backend only enriches rows for
+  // holders, so no client-side gate is needed here.
   demand_signal?: string | null;
 
   // Primary line item — the item that triggered the match where the worker
@@ -455,8 +457,9 @@ export function BidMatchResultsTable({
                           solicitationType={result.solicitation_type}
                           solicitationTypeLabel={result.solicitation_type_label}
                         />
-                        {/* DLA demand signal (Maximum tier) — strongest across
-                            the opportunity's NIINs; informs the bid decision. */}
+                        {/* DLA demand signal (analytics add-on) — strongest
+                            across the opportunity's NIINs; informs the bid
+                            decision. Renders nothing when absent. */}
                         <DemandSignalChip signal={result.demand_signal}
                         />
                       </div>

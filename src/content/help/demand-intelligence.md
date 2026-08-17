@@ -6,7 +6,7 @@ description: "Understand the DLA demand forecast and inventory signals on a part
 
 The **Demand & Stock** tab on a part record adds a forward-looking layer to your research. Procurement history tells you what the government *bought*, and Recent Solicitations tells you what it's *buying now* — Demand & Stock tells you what the Defense Logistics Agency (DLA) expects to buy, and roughly when. It draws on two DLA datasets, keyed to the part's NIIN, to help you decide **which** opportunities are worth pursuing and **how aggressively to price**.
 
-This tab is exclusive to the **Maximum** plan.
+This tab is part of the **Procurement Analytics** add-on, available on the Advanced plan. Because add-on seats are assigned per user, your account admin controls who on your team sees it — see [Plans and pricing](/help/plans-and-pricing#add-ons).
 
 ## In this article
 

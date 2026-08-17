@@ -13,22 +13,19 @@ import type { RowBadgeTone } from "@/components/library/RowBadge";
 //     const { hasAnyProductAccess } = useAuth();
 //     const tier = resolveVendorTier(hasAnyProductAccess);
 
-export type LibraryTier = "maximum" | "advanced" | "basic" | "free" | null;
+export type LibraryTier = "advanced" | "basic" | "free" | null;
 
 type HasAccess = (keys: string[]) => boolean;
 
-const VENDOR_MAXIMUM_KEYS = ["library_search_maximum"];
 const VENDOR_ADVANCED_KEYS = ["library_search_advanced", "library_vendor_search_advanced"];
 const VENDOR_BASIC_KEYS = ["library_search_basic", "library_vendor_search_basic"];
 const VENDOR_FREE_KEYS = ["library_search_free", "library_vendor_search_free"];
 
-const PARTS_MAXIMUM_KEYS = ["library_search_maximum"];
 const PARTS_ADVANCED_KEYS = ["library_search_advanced", "library_parts_search_advanced"];
 const PARTS_BASIC_KEYS = ["library_search_basic", "library_parts_search_basic"];
 const PARTS_FREE_KEYS = ["library_search_free", "library_parts_search_free"];
 
 export function resolveVendorTier(hasAnyProductAccess: HasAccess): LibraryTier {
-  if (hasAnyProductAccess(VENDOR_MAXIMUM_KEYS)) return "maximum";
   if (hasAnyProductAccess(VENDOR_ADVANCED_KEYS)) return "advanced";
   if (hasAnyProductAccess(VENDOR_BASIC_KEYS)) return "basic";
   if (hasAnyProductAccess(VENDOR_FREE_KEYS)) return "free";
@@ -36,7 +33,6 @@ export function resolveVendorTier(hasAnyProductAccess: HasAccess): LibraryTier {
 }
 
 export function resolvePartsTier(hasAnyProductAccess: HasAccess): LibraryTier {
-  if (hasAnyProductAccess(PARTS_MAXIMUM_KEYS)) return "maximum";
   if (hasAnyProductAccess(PARTS_ADVANCED_KEYS)) return "advanced";
   if (hasAnyProductAccess(PARTS_BASIC_KEYS)) return "basic";
   if (hasAnyProductAccess(PARTS_FREE_KEYS)) return "free";
@@ -50,7 +46,6 @@ const TIER_RANK: Record<Exclude<LibraryTier, null>, number> = {
   free: 1,
   basic: 2,
   advanced: 3,
-  maximum: 4,
 };
 
 export function tierMeets(actual: LibraryTier, required: Exclude<LibraryTier, null>): boolean {
@@ -76,13 +71,14 @@ export function resolveLibraryTier(hasAnyProductAccess: HasAccess): LibraryTier 
 // Locked pricing: one tier per org (Free / Basic / Advanced), being the
 // highest library_search_* grant the org holds. Both /account/users and
 // /account/billing derive the badge from the org product list they fetch.
+// Add-ons (gph_analytics, request_for_quote) are deliberately absent — they
+// stack alongside a tier rather than being one, and get their own badges.
 export type OrgTierBadge = { label: string; tone: RowBadgeTone };
 
 // Minimal shape shared by AssignableItem and AssignedProduct.
 type TierKeyed = { product_key?: string; group_key?: string };
 
 const ORG_TIER_BADGES: Record<string, { label: string; rank: number; tone: RowBadgeTone }> = {
-  library_search_maximum: { label: "Maximum", rank: 4, tone: "green" },
   library_search_advanced: { label: "Advanced", rank: 3, tone: "sky" },
   library_search_basic: { label: "Basic", rank: 2, tone: "neutral" },
   library_search_free: { label: "Free", rank: 1, tone: "neutral" },

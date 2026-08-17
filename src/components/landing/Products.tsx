@@ -25,7 +25,7 @@ const products: Array<{
       "See which vendors are registered and active on the parts you sell",
       "Bid-matching: 1 profile (match alerts, no solicitation detail)",
       "Weekly match notifications",
-      "1 user",
+      "3 users",
     ],
   },
   {
@@ -63,18 +63,20 @@ const products: Array<{
   },
   {
     icon: ZapIcon,
-    family: "Parts & Vendor Library",
-    tier: "Maximum",
-    tagline: "The deepest procurement intelligence available.",
+    family: "Procurement Analytics",
+    tier: "Add-on",
+    tagline: "Know your market, your competitors, and what DLA is about to buy.",
     description:
-      "Everything in Advanced, plus Procurement Analytics and DLA demand & stock intelligence — see market and inventory signals no other tier gets.",
+      "Competitive intel, opportunity targeting, and bid-readiness alerts across your whole business, plus DLA demand and stock signals on every part you supply. Available as an add-on on the Advanced plan, assigned per user.",
     features: [
-      "Everything in Advanced",
-      "Procurement Analytics dashboard",
-      "Demand forecasting on every part",
-      "DLA stock-level intelligence",
-      "$149 per user / mo — volume discounts for teams",
+      "Procurement history, win rate, and competitor leaderboard",
+      "Market prioritization — parts worth getting qualified on",
+      "DLA demand forecasts and stock levels on every part",
     ],
+    cta: {
+      href: "/pricing",
+      label: "See pricing →",
+    },
   },
   {
     icon: TargetIcon,
@@ -113,27 +115,26 @@ const products: Array<{
 ];
 
 export function Products() {
-  // Split the products into the four subscription tiers (rendered as a
-  // 4-up grid: Free / Basic / Advanced / Maximum) and the non-tier offers
-  // rendered as panels below: the RFQ add-on (stacks alongside a paid
-  // tier, not a tier itself — see /pricing, which mirrors this split) and
-  // the bespoke Data Reports engagement. Keeping the layouts visually
-  // distinct signals these aren't subscription tiers and avoids the
-  // "single-card row looks lonely" problem you get from folding either
-  // into the tier grid.
-  // Maximum and the RFQ add-on are temporarily hidden from the landing
-  // page (both kept in `products` and still fully live on /pricing) —
-  // resurface by dropping the tier !== "Maximum" clause below and
-  // rendering `rfqProduct` again in the panel grid.
-  const tierProducts = products.filter(
-    (p) => p.family !== "Data Reports" && p.family !== "Request for Quote" && p.tier !== "Maximum",
-  );
+  // Split the products into the subscription tiers (rendered as a grid:
+  // Free / Basic / Advanced) and the non-tier offers rendered as panels
+  // below: the add-ons (which stack alongside a paid tier rather than being
+  // one — see /pricing, which mirrors this split) and the bespoke Data
+  // Reports engagement. Keeping the layouts visually distinct signals these
+  // aren't subscription tiers and avoids the "single-card row looks lonely"
+  // problem you get from folding either into the tier grid.
+  //
+  // Both add-ons are temporarily hidden from the landing page (kept in
+  // `products` and still live on /pricing, which self-hides them via each
+  // product's billing_enabled flag). Resurface an add-on by rendering it in
+  // the panel grid below; for analytics, do it when ANALYTICS_ADDON_PUBLIC
+  // flips in @/lib/analytics/tier.
+  const tierProducts = products.filter((p) => p.tier !== "Add-on" && p.tier !== "Quote");
   const customReportsProduct = products.find((p) => p.family === "Data Reports");
 
   // Large-screen column count tracks how many tier cards are actually
-  // rendered, so hiding Maximum shrinks the grid instead of leaving an
-  // empty slot at the end of the row. Full literal class strings so
-  // Tailwind's JIT keeps them (same pattern as /pricing).
+  // rendered, so the grid shrinks instead of leaving an empty slot at the
+  // end of the row. Full literal class strings so Tailwind's JIT keeps them
+  // (same pattern as /pricing).
   const lgColsClass =
     tierProducts.length <= 1
       ? "lg:grid-cols-1"

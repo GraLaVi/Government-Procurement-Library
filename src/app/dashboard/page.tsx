@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { useMyBusinessSummary, useBidMatchAnalytics, useUpcomingSolicitations, useOpenSolicitationsAndCompetitors } from "@/lib/hooks/useAnalytics";
 import { resolveLibraryTier, type LibraryTier } from "@/lib/library/tier";
+import { hasAnalyticsAccess } from "@/lib/analytics/tier";
 import {
   KPICard,
   KPICardSkeleton,
@@ -21,7 +22,7 @@ import { RecentSearches } from "@/components/dashboard/RecentSearches";
 import { BidMatchingResultsCard } from "@/components/dashboard/BidMatchingResultsCard";
 
 export default function DashboardPage() {
-  const { user, hasAnyProductAccess } = useAuth();
+  const { user, hasProductAccess, hasAnyProductAccess } = useAuth();
   // Resolved client-side from the product list useAuth() already loaded
   // before this page rendered — no network call. This decides which branch
   // to mount BEFORE any tier-gated endpoint is hit, so we never fire a
@@ -29,21 +30,27 @@ export default function DashboardPage() {
   // what tier the user holds (each branch below fetches only what it can
   // actually use).
   const tier = resolveLibraryTier(hasAnyProductAccess);
+  const canUseAnalytics = hasAnalyticsAccess(hasProductAccess, hasAnyProductAccess);
 
   const userName = user?.first_name || user?.email?.split("@")[0] || "User";
 
-  // Three branches:
-  //   - tier === null                       → no library access (subscription
-  //                                            expired) — full resubscribe prompt
-  //   - tier ∈ {advanced,basic,free}         → search-launcher dashboard (Free is
-  //                                            the baseline; Basic adds bid-matching
-  //                                            caps; Advanced adds full search plus
-  //                                            two lightweight KPI cards — full
-  //                                            analytics is Maximum-only)
-  //   - tier === "maximum"                   → full analytics dashboard
+  // Three branches, in priority order:
+  //   - tier === null            → no library access (subscription expired) —
+  //                                full resubscribe prompt
+  //   - analytics add-on seat    → full analytics dashboard. The add-on already
+  //                                requires Advanced, so this strictly beats the
+  //                                launcher branch below.
+  //   - any library tier         → search-launcher dashboard (Free is the
+  //                                baseline; Basic adds bid-matching caps;
+  //                                Advanced adds full search plus two
+  //                                lightweight KPI cards). An Advanced user at
+  //                                an org that bought the add-on but didn't
+  //                                assign them a seat lands here — seats are
+  //                                per-user, so a colleague's access doesn't
+  //                                change what they see.
   const showResubscribe = tier === null;
-  const showLauncher = tier === "advanced" || tier === "basic" || tier === "free";
-  const showMaximum = tier === "maximum";
+  const showFullAnalytics = tier !== null && canUseAnalytics;
+  const showLauncher = tier !== null && !canUseAnalytics;
 
   return (
     <>
@@ -59,7 +66,7 @@ export default function DashboardPage() {
 
       {showResubscribe && <ResubscribePrompt />}
       {showLauncher && <BasicDashboard tier={tier} />}
-      {showMaximum && <FullDashboard />}
+      {showFullAnalytics && <FullDashboard />}
     </>
   );
 }
@@ -108,7 +115,7 @@ interface BasicDashboardProps {
 
 function BasicDashboard({ tier }: BasicDashboardProps) {
   // Parts-based "closing soonest" table — shown to basic + free + advanced
-  // via the tier-open endpoint (useMyBusinessSummary is Maximum-only).
+  // via the tier-open endpoint (useMyBusinessSummary needs the add-on).
   const upcoming = useUpcomingSolicitations();
 
   return (
@@ -134,10 +141,9 @@ function BasicDashboard({ tier }: BasicDashboardProps) {
   );
 }
 
-// Open Solicitations + Competitors — restored for Advanced tier via a
-// lightweight endpoint that doesn't require the Maximum-gated analytics
-// bundle. Basic/Free never see these two cards (matches pre-Maximum
-// behavior, where only Advanced had the full dashboard).
+// Open Solicitations + Competitors — available to Advanced tier via a
+// lightweight endpoint that doesn't require the add-on-gated analytics
+// bundle. Basic/Free never see these two cards.
 function AdvancedKpiCards() {
   const kpis = useOpenSolicitationsAndCompetitors();
 

@@ -113,7 +113,7 @@ interface BidMatchResult {
   // bid_term_definitions map. Always null on SAM-source rows.
   bid_terms?: SolicitationBidTerms | null;
   sam_url?: string | null;
-  // Maximum-tier DLA demand signal (strongest across the opportunity's NIINs).
+  // DLA demand signal (analytics add-on; strongest across the opportunity's NIINs).
   demand_signal?: string | null;
   // Primary line item + solicitation-level estimated value. See
   // BidMatchResultsTable for how these render.

@@ -4,8 +4,8 @@ import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
 
 // GET /api/library/analytics/my-business/market-prioritization
 //   Prospecting list: parts outside the customer's catalog that DLA is
-//   flagging for a near-term buy, ranked by estimated value. Maximum-tier
-//   only — same 403 {reason, tier} shape as /my-business.
+//   flagging for a near-term buy, ranked by estimated value. Analytics add-on
+//   only — same 403 {reason, required_product} shape as /my-business.
 // Proxies to: GET /api/v1/library/analytics/my-business/market-prioritization
 export async function GET(request: NextRequest) {
   try {

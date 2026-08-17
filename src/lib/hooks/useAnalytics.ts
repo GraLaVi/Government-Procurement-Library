@@ -191,18 +191,17 @@ export function useMarketAnalytics() {
   return { data, isLoading, error, refetch: fetchData };
 }
 
-// Effective library tier returned alongside a 403 from the analytics endpoint.
-// "advanced" / "basic" / "free" → render the search-launcher dashboard.
-// null                          → no library product at all (subscription
-//                                 expired) — render the resubscribe prompt.
-export type LibraryTier = "advanced" | "basic" | "free" | null;
+// A 403 from these endpoints means the user doesn't hold an analytics seat.
+// Callers surface that as `forbidden`; they don't need to know the user's
+// library tier, because every page that mounts these hooks has already
+// resolved access client-side via hasAnalyticsAccess() from useAuth()'s
+// product list. A 403 here is therefore a safety net, not a routing signal.
 
 export function useMyBusinessAnalytics() {
   const [data, setData] = useState<CustomerAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
-  const [tier, setTier] = useState<LibraryTier>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -217,13 +216,9 @@ export function useMyBusinessAnalytics() {
         return;
       }
 
-      // 403 = user lacks the Maximum library tier. Body carries `tier` so the
-      // dashboard can branch (advanced/basic/free → launcher; null → resubscribe).
+      // 403 = no analytics seat (or the org dropped below Advanced).
       if (response.status === 403) {
-        const errData = await response.json().catch(() => ({}));
         setForbidden(true);
-        const t = errData.tier;
-        setTier(t === "advanced" || t === "basic" || t === "free" ? t : null);
         setData(null);
         return;
       }
@@ -252,11 +247,11 @@ export function useMyBusinessAnalytics() {
     };
   }, [fetchData]);
 
-  return { data, isLoading, error, forbidden, tier, refetch: fetchData };
+  return { data, isLoading, error, forbidden, refetch: fetchData };
 }
 
 // ============================================================================
-// Market Prioritization — its own lightweight, Maximum-gated endpoint
+// Market Prioritization — its own lightweight, add-on-gated endpoint
 // ============================================================================
 
 export interface ProspectRow {
@@ -276,7 +271,7 @@ export interface MarketPrioritization {
 }
 
 // Kept off useMyBusinessAnalytics (like useOpenSolicitationsAndCompetitors) —
-// a distinct, heavier query. Same Maximum-tier gate/403 shape as /my-business.
+// a distinct, heavier query. Same add-on gate / 403 shape as /my-business.
 export function useMarketPrioritization() {
   const [data, setData] = useState<MarketPrioritization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -347,7 +342,6 @@ export function useMyBusinessSummary() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
-  const [tier, setTier] = useState<LibraryTier>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -363,10 +357,7 @@ export function useMyBusinessSummary() {
       }
 
       if (response.status === 403) {
-        const errData = await response.json().catch(() => ({}));
         setForbidden(true);
-        const t = errData.tier;
-        setTier(t === "advanced" || t === "basic" || t === "free" ? t : null);
         setData(null);
         return;
       }
@@ -394,7 +385,7 @@ export function useMyBusinessSummary() {
     };
   }, [fetchData]);
 
-  return { data, isLoading, error, forbidden, tier, refetch: fetchData };
+  return { data, isLoading, error, forbidden, refetch: fetchData };
 }
 
 // ============================================================================
@@ -402,7 +393,7 @@ export function useMyBusinessSummary() {
 // ============================================================================
 
 // Standalone fetch of just the parts-based "closing soonest" list. Unlike
-// useMyBusinessSummary (Maximum-only, 403s advanced/basic/free), this endpoint
+// useMyBusinessSummary (which needs the analytics add-on), this endpoint
 // is open to any library tier, so basic/free dashboards can render the table too.
 export function useUpcomingSolicitations() {
   const [data, setData] = useState<UpcomingSolicitation[]>([]);
@@ -451,7 +442,7 @@ export function useUpcomingSolicitations() {
 }
 
 // ============================================================================
-// Open Solicitations + Competitors — Advanced tier and up (not Maximum-only)
+// Open Solicitations + Competitors — Advanced tier and up (no add-on needed)
 // ============================================================================
 
 export interface OpenSolicitationsCompetitors {
@@ -461,8 +452,8 @@ export interface OpenSolicitationsCompetitors {
   generated_at: string;
 }
 
-// The two KPI cards Advanced tier had before Maximum split off the full
-// analytics bundle. Unlike useMyBusinessSummary (Maximum-only), this hits a
+// The two KPI cards every Advanced customer keeps, independent of the
+// analytics add-on. Unlike useMyBusinessSummary (add-on gated), this hits a
 // lightweight endpoint open to Advanced tier and up — same two indexed
 // queries, without the other premium widgets.
 export function useOpenSolicitationsAndCompetitors() {

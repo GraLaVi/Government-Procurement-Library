@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
-import { resolveLibraryTier } from "@/lib/library/tier";
+import { showAnalyticsNav } from "@/lib/analytics/tier";
 
 const librarySearchItems = [
   { href: "/library/parts", label: "Parts Search" },
@@ -74,10 +74,11 @@ interface HeaderProps {
 }
 
 export function Header({ showAccountLink = true }: HeaderProps) {
-  const { user, logout, isRfqResponderOnly, hasAnyProductAccess } = useAuth();
-  // Analytics is Maximum-tier only — see /analytics's own gate, which uses
-  // the same resolveLibraryTier() helper.
-  const isMaximumTier = resolveLibraryTier(hasAnyProductAccess) === "maximum";
+  const { user, logout, isRfqResponderOnly, hasProductAccess, hasAnyProductAccess } = useAuth();
+  // Analytics needs the gph_analytics add-on — see /analytics's own gate,
+  // which uses the same helper. Shows only to seat-holders until the add-on
+  // is announced (ANALYTICS_ADDON_PUBLIC), then becomes an upsell surface.
+  const showAnalytics = showAnalyticsNav(hasProductAccess, hasAnyProductAccess);
   // Enterprise RFQ entries only for holders — unlike the base RFQ menu,
   // these are not an upsell surface.
   const isRfqEnterprise = hasAnyProductAccess([RFQ_ENTERPRISE_PRODUCT_KEY]);
@@ -238,7 +239,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 Bid-Matching
               </Link>
               )}
-              {!isRfqResponderOnly && isMaximumTier && (
+              {!isRfqResponderOnly && showAnalytics && (
               <Link
                 href="/analytics"
                 className={topLinkClass(isLinkActive("/analytics", pathname))}
@@ -365,7 +366,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   {item.label}
                 </Link>
               ))}
-              {!isRfqResponderOnly && isMaximumTier && (
+              {!isRfqResponderOnly && showAnalytics && (
                 <Link
                   href="/analytics"
                   className={mobileRowClass(isLinkActive("/analytics", pathname))}

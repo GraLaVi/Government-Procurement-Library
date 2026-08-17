@@ -4,7 +4,8 @@ import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
 
 // GET /api/library/analytics/my-business/open-solicitations-competitors
 //   Open Solicitations + Competitors KPI pair, available to Advanced tier
-//   and up (unlike /my-business-summary, which is Maximum-only). Powers the
+//   and up (unlike /my-business-summary, which needs the analytics add-on).
+//   Powers the
 //   two cards restored to the Advanced-tier dashboard.
 // Proxies to: GET /api/v1/library/analytics/my-business/open-solicitations-competitors
 export async function GET(request: NextRequest) {
