@@ -265,7 +265,7 @@ export default function RfqSettingsPage() {
           {/* My notifications (per-user, saves immediately) */}
           <div className="bg-card-bg rounded-xl border border-border p-6">
             <div className="mb-6">
-              <h2 className="text-lg font-semibold text-secondary mb-1">My notifications</h2>
+              <h2 className="text-lg font-semibold text-secondary mb-1">Notifications</h2>
               <p className="text-sm text-muted">
                 How you&apos;re alerted when a vendor responds to an RFQ you receive alerts for. Applies only to you.
               </p>
@@ -285,35 +285,6 @@ export default function RfqSettingsPage() {
                 onChange={(v) => updateMyPrefs({ bell_on_response: v })}
               />
             </div>
-
-            {isEnterprise && (
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold text-secondary mb-1">My Send RFQs queue</h3>
-                <p className="text-xs text-muted mb-3">Applies only to you.</p>
-                <label className="block text-sm font-medium text-foreground mb-1">
-                  Hide solicitations with estimated value under ($)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  className="w-full max-w-[200px] px-3 py-2 rounded-md border border-border bg-card-bg text-card-foreground text-sm"
-                  value={minEstDraft}
-                  onChange={(e) => setMinEstDraft(e.target.value)}
-                  onBlur={() => {
-                    const parsed = minEstDraft ? parseFloat(minEstDraft) : null;
-                    if (parsed === (myPrefs.worklist_min_est_value ?? null)) return; // unchanged
-                    // -1 is the backend's clear sentinel (null in a PATCH
-                    // reads as "not provided").
-                    updateMyPrefs({ worklist_min_est_value: (parsed ?? -1) as number });
-                  }}
-                />
-                <p className="text-xs text-muted mt-1">
-                  Solicitations below this estimated value are hidden from your Send RFQs
-                  queue (rows with no estimate stay visible). Blank to show everything.
-                </p>
-              </div>
-            )}
 
             <div className="mt-6">
               <h3 className="text-sm font-semibold text-secondary mb-1">How the bell groups response alerts</h3>
@@ -402,8 +373,37 @@ export default function RfqSettingsPage() {
                   <div>
                     <h3 className="text-sm font-semibold text-secondary mb-1">Enterprise</h3>
                     <p className="text-xs text-muted">
-                      Work queue and vendor-book behavior.
+                      Work queue and vendor-book behavior. Settings noted as applying only
+                      to you are personal, not company-wide.
                       {!isAdmin && " Marked settings can only be changed by a customer admin."}
+                    </p>
+                  </div>
+
+                  {/* Personal, not company-wide: saves immediately on blur via
+                      /settings/me rather than with the Save button below. */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">
+                      Hide solicitations with estimated value under ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      className="w-full max-w-[200px] px-3 py-2 rounded-md border border-border bg-card-bg text-card-foreground text-sm"
+                      value={minEstDraft}
+                      onChange={(e) => setMinEstDraft(e.target.value)}
+                      onBlur={() => {
+                        const parsed = minEstDraft ? parseFloat(minEstDraft) : null;
+                        if (parsed === (myPrefs.worklist_min_est_value ?? null)) return; // unchanged
+                        // -1 is the backend's clear sentinel (null in a PATCH
+                        // reads as "not provided").
+                        updateMyPrefs({ worklist_min_est_value: (parsed ?? -1) as number });
+                      }}
+                    />
+                    <p className="text-xs text-muted mt-1">
+                      Solicitations below this estimated value are hidden from your Send RFQs
+                      queue (rows with no estimate stay visible). Blank to show everything.
+                      Applies only to you, and saves as soon as you leave the field.
                     </p>
                   </div>
 
@@ -532,7 +532,7 @@ export default function RfqSettingsPage() {
                   Saving...
                 </>
               ) : (
-                "Save company settings"
+                "Save settings"
               )}
             </Button>
           </div>
