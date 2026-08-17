@@ -613,6 +613,16 @@ export interface PartSolicitation {
   // For DLA rows this is dla_solicitation_items.closed_status; for SAM rows a synthesized
   // open/closed value. Shown in the Status column when the row has no award.
   status: string | null;
+  // True when `status` is "closed" only because the deadline passed, while
+  // DIBBS — checked within the last 24h — still lists the solicitation as open.
+  // DIBBS "open" means only that it has not been awarded or cancelled; quoting
+  // stops at the close date regardless. So this marks a PENDING OUTCOME and must
+  // never be worded as "you can still quote it". Always false on SAM rows.
+  dibbs_listed_open?: boolean;
+  // When update_solicitation_statuses last resolved this solicitation on DIBBS.
+  // A confirmation writes only this column, so it is the only measure of how
+  // fresh `status` is. Null/absent means never checked.
+  last_status_check_at?: string | null;
   // Award details when the solicitation has a linked order_details row; null otherwise.
   // When present, the contract number is shown (opening a details modal) in place of status.
   award?: SolicitationAward | null;

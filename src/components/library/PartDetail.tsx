@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 
 // ============================================================================
@@ -48,6 +49,8 @@ import {
   isPartNumberOnly,
   EXCLUDED_VENDOR_WARNING,
 } from "@/lib/library/types";
+import { timeAgo } from "@/lib/amendments";
+import { useAnchoredPopover } from "@/components/library/WinAndFirstArticleBadges";
 import { DetailSections, DetailToolbar } from "@/components/library/DetailSections";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { KPICard } from "@/components/analytics/KPICard";
@@ -2031,6 +2034,66 @@ function ProcurementPanel({ records, isLoading, error, onRetry }: ProcurementPan
   );
 }
 
+/**
+ * "Closed by its deadline, but DIBBS says the outcome is still pending."
+ *
+ * The row reads Closed and that is correct — DIBBS stops accepting quotes at
+ * the close date. But update_solicitation_statuses resolved this solicitation
+ * on DIBBS within the last day and DIBBS still listed it as open, which there
+ * means only that it has not been awarded or cancelled yet.
+ *
+ * That distinction is the whole point of the flag, and the copy has to carry
+ * it: a buyer who reads "still open on DIBBS" as "I can still quote" would go
+ * to DIBBS and find they cannot. So the popover leads with quoting being
+ * closed, and explains what DIBBS's "Open" actually means.
+ *
+ * Click, not hover, matching the win/First Article badges — this is several
+ * sentences of consequential copy, not a label expansion.
+ */
+function PendingOutcomeFlag({ sol }: { sol: PartSolicitation }) {
+  const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
+
+  if (!sol.dibbs_listed_open) return null;
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        aria-label="DIBBS still lists this solicitation as open — what that means"
+        className="inline-flex items-center text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 cursor-pointer shrink-0"
+      >
+        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+        </svg>
+      </button>
+      {open && coords && createPortal(
+        <div
+          ref={panelRef}
+          style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 60 }}
+          className="w-80 rounded-md border border-border bg-background shadow-lg p-3"
+        >
+          <div className="text-xs font-semibold text-foreground mb-1">
+            Award still pending
+          </div>
+          <p className="text-xs text-foreground leading-relaxed">
+            Quoting closed on {formatContractDate(sol.close_date)}. DIBBS still
+            lists this solicitation as Open
+            {sol.last_status_check_at
+              ? ` (checked ${timeAgo(sol.last_status_check_at)})`
+              : ""}
+            {" "}— on DIBBS that means it has not been awarded or cancelled yet,
+            not that it is still accepting quotes.
+          </p>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
 // Solicitations Panel
 interface SolicitationsPanelProps {
   solicitations: PartSolicitation[];
@@ -2236,7 +2299,10 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
           ) : (
             // The API now hands back status all-lowercase; `capitalize` is
             // presentation-only, so the raw value still sorts and exports as-is.
-            <span className="text-xs font-medium text-foreground capitalize">{row.original.status || "—"}</span>
+            <span className="inline-flex items-center gap-1">
+              <span className="text-xs font-medium text-foreground capitalize">{row.original.status || "—"}</span>
+              <PendingOutcomeFlag sol={row.original} />
+            </span>
           );
         },
       },
