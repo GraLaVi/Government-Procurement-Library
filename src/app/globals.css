@@ -1,8 +1,22 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* Configure dark mode to use data-theme attribute */
-@variant dark (&:where([data-theme="dark"] *));
+/* Dark mode keys off the data-theme attribute (set by ThemeContext), not the
+   OS preference, so the in-app toggle is what decides.
+
+   Wrapped in `not print` because the attribute stays on <html> while printing:
+   without this, the print block below correctly flips the TOKENS to their
+   light values while every `dark:` utility keeps its dark-mode styling, so a
+   dark-theme user printing a part record got dim washes and light-on-light
+   chip text on white paper. Scoping the variant fixes all of them at once,
+   in CSS, with no repaint of the live window. */
+@custom-variant dark {
+  @media not print {
+    &:where([data-theme="dark"] *) {
+      @slot;
+    }
+  }
+}
 
 /* =====================================================================
    GPH brand tokens — see LAYOUT_STANDARDS.md → "Brand Colors"
