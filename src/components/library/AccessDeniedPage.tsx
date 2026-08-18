@@ -16,7 +16,7 @@ export function AccessDeniedPage({
   benefits,
 }: AccessDeniedPageProps) {
   return (
-    <div className="bg-white rounded-lg border border-border p-8 max-w-2xl mx-auto">
+    <div className="bg-card-bg rounded-lg border border-border p-8 max-w-2xl mx-auto">
       <div className="text-center mb-6">
         {/* Lock Icon */}
         <div className="w-16 h-16 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-4">
