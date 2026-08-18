@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
+import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
 
 const accountSections = [
@@ -63,6 +64,20 @@ const accountSections = [
     ),
   },
   {
+    title: "Email Delivery",
+    description: "Send RFQ emails to vendors from your own mail server instead of ours",
+    href: "/account/email-connections",
+    adminOnly: true,
+    // Custom sending identities exist for RFQ today; the card follows the
+    // product rather than showing a setting with nothing to configure.
+    rfqOnly: true,
+    icon: (
+      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
     title: "Notifications",
     description: "Configure email and alert preferences",
     href: "/account/notifications",
@@ -118,7 +133,8 @@ const accountSections = [
 ];
 
 export default function AccountPage() {
-  const { user, isRfqResponderOnly } = useAuth();
+  const { user, isRfqResponderOnly, hasAnyProductAccess } = useAuth();
+  const hasRfq = hasAnyProductAccess(RFQ_SENDER_KEYS);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [companyName, setCompanyName] = useState<string | null>(null);
@@ -324,6 +340,7 @@ export default function AccountPage() {
         {accountSections
           .filter((section) => !section.adminOnly || user?.roles?.includes('admin'))
           .filter((section) => !(section.responderHidden && isRfqResponderOnly))
+          .filter((section) => !section.rfqOnly || hasRfq)
           .map((section) => (
             <Link
               key={section.href}
