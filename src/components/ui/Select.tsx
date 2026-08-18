@@ -31,7 +31,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           id={selectId}
           className={`
             w-full px-4 py-3 rounded-lg border border-border
-            bg-white text-foreground
+            bg-card-bg text-foreground
             transition-colors duration-200
             focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20
             ${error ? "border-error focus:border-error focus:ring-error/20" : ""}
