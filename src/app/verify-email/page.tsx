@@ -70,7 +70,7 @@ function VerifyEmailContent() {
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-xl border border-border p-8 text-center">
+        <div className="bg-card-bg rounded-xl border border-border p-8 text-center">
           {status === "loading" && (
             <>
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -192,7 +192,7 @@ function VerifyEmailLoading() {
             <span className="wordmark text-3xl text-secondary">GPH</span>
           </Link>
         </div>
-        <div className="bg-white rounded-xl border border-border p-8 text-center">
+        <div className="bg-card-bg rounded-xl border border-border p-8 text-center">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8 text-primary animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

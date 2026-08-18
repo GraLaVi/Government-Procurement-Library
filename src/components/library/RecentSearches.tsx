@@ -13,7 +13,7 @@ interface RecentSearchesProps {
 export function RecentSearches({ actions, onSelectSearch, onDelete, isLoading }: RecentSearchesProps) {
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-border p-4">
+      <div className="bg-card-bg rounded-lg border border-border p-4">
         <div className="flex items-center justify-center gap-2 py-2">
           <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
           <span className="text-sm text-muted">Loading recent searches...</span>
@@ -27,7 +27,7 @@ export function RecentSearches({ actions, onSelectSearch, onDelete, isLoading }:
   }
 
   return (
-    <div className="bg-white rounded-lg border border-border p-4">
+    <div className="bg-card-bg rounded-lg border border-border p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-foreground">Recent Searches</h3>
         <span className="text-xs text-muted">{actions.length} recent</span>
