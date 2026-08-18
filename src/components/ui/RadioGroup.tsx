@@ -82,6 +82,7 @@ export function RadioGroup({
                 `}
               >
                 {isSelected && (
+                  /* theme-ok: the dot inside a filled bg-primary circle */
                   <span className="block w-full h-full rounded-full bg-white scale-[0.4]" />
                 )}
               </span>

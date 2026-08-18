@@ -343,6 +343,7 @@ export default function NotificationsPage() {
                 } ${savingBell ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
               >
                 <span
+                  /* theme-ok: the knob of a switch — white on a colored track in both themes */
                   className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
                     bell.bell_bid_matches ? "translate-x-6" : "translate-x-1"
                   }`}
@@ -370,6 +371,7 @@ export default function NotificationsPage() {
                 } ${savingBell ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
               >
                 <span
+                  /* theme-ok: the knob of a switch — white on a colored track in both themes */
                   className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
                     bell.bell_dla_signals ? "translate-x-6" : "translate-x-1"
                   }`}
