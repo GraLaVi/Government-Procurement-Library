@@ -468,8 +468,8 @@ export default function BidMatchingPage() {
 
       {/* Error */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-800">{error}</p>
+        <div className="rounded-lg border border-error/20 bg-error/5 p-4">
+          <p className="text-sm text-error">{error}</p>
         </div>
       )}
 

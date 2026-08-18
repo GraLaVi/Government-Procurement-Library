@@ -837,9 +837,9 @@ export default function BidMatchingPage() {
           modal is open the same error renders inside the modal body so it
           stays visible (the modal overlay z-50 covers anything on the page). */}
       {error && !showModal && (
-        <div className="mb-4 px-4 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-center justify-between">
+        <div className="mb-4 px-4 py-2 bg-error/5 border border-error/20 text-error rounded-lg text-sm flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700 ml-4">
+          <button onClick={() => setError(null)} className="text-error hover:text-error/80 ml-4">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -1001,11 +1001,11 @@ export default function BidMatchingPage() {
                   per-tier condition limit, allowed-types rejection) right
                   next to the form where the user is working. */}
               {error && (
-                <div className="px-3 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-start justify-between gap-3">
+                <div className="px-3 py-2 bg-error/5 border border-error/20 text-error rounded-lg text-sm flex items-start justify-between gap-3">
                   <span>{error}</span>
                   <button
                     onClick={() => setError(null)}
-                    className="text-red-500 hover:text-red-700 flex-shrink-0"
+                    className="text-error hover:text-error/80 flex-shrink-0"
                     aria-label="Dismiss"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
