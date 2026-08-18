@@ -1,6 +1,12 @@
 import { Button } from "@/components/ui/Button";
 import { ShieldIcon, ZapIcon } from "@/components/icons";
 
+/**
+ * theme-ok-file: a fixed-palette section. The whole block is painted on the
+ * brand ink (#0F1D2F) and a primary gradient in both themes, so its white
+ * text, white/10 washes and white button are correct as written rather than
+ * light-mode leftovers.
+ */
 export function CTA() {
   return (
     <section className="py-20 lg:py-32 bg-[#0F1D2F]">

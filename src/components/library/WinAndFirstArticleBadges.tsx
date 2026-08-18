@@ -119,7 +119,7 @@ export function FirstArticleBadge({ firstArticle }: { firstArticle?: boolean }) 
         aria-expanded={open}
         aria-label="First Article required — what this means"
         title="First Article Test required"
-        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100 cursor-pointer transition-colors"
+        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100 cursor-pointer transition-colors dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/30 dark:hover:bg-sky-500/20"
       >
         FAT
       </button>
@@ -183,7 +183,7 @@ export function WinHistoryBadge({
         }
         className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 cursor-pointer transition-colors ${
           recent
-            ? "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200"
+            ? "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30 dark:hover:bg-amber-500/20"
             : "text-muted border-border font-medium hover:text-foreground"
         }`}
       >

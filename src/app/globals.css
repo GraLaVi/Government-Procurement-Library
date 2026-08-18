@@ -1,8 +1,22 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* Configure dark mode to use data-theme attribute */
-@variant dark (&:where([data-theme="dark"] *));
+/* Dark mode keys off the data-theme attribute (set by ThemeContext), not the
+   OS preference, so the in-app toggle is what decides.
+
+   Wrapped in `not print` because the attribute stays on <html> while printing:
+   without this, the print block below correctly flips the TOKENS to their
+   light values while every `dark:` utility keeps its dark-mode styling, so a
+   dark-theme user printing a part record got dim washes and light-on-light
+   chip text on white paper. Scoping the variant fixes all of them at once,
+   in CSS, with no repaint of the live window. */
+@custom-variant dark {
+  @media not print {
+    &:where([data-theme="dark"] *) {
+      @slot;
+    }
+  }
+}
 
 /* =====================================================================
    GPH brand tokens — see LAYOUT_STANDARDS.md → "Brand Colors"
@@ -12,6 +26,13 @@
    values change. Renaming tokens is a v2 cleanup.
    ===================================================================== */
 :root {
+  /* Tells the browser which palette to render NATIVE controls with —
+     checkboxes, radios, date pickers, the popup list of a <select>, autofill
+     backgrounds and default scrollbars. Without it those stay light in dark
+     mode no matter what our tokens say, because they're painted by the UA and
+     never see our CSS. Paired with the override under [data-theme="dark"]. */
+  color-scheme: light;
+
   /* Brand accent (teal) — primary interactive color */
   --primary: #0E8989;
   --primary-hover: #0B6B6B;
@@ -42,6 +63,8 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
+
   --primary: #0E8989;
   --primary-hover: #15ADAD;
   --primary-light: #155E5E;
@@ -258,6 +281,10 @@ html {
   /* Force the light palette. The dark theme's light-on-dark tokens print
      as near-white text, because browsers drop background colors. */
   :root[data-theme="dark"] {
+    /* Native controls follow the same rule — a dark-scheme checkbox prints
+       as a filled block on white paper. */
+    color-scheme: light;
+
     --secondary: #1E293B;
     --background: #FFFFFF;
     --foreground: #1E293B;

@@ -62,8 +62,8 @@ function samNoticeMeta(noticeType: string | null | undefined): {
   // Border colours are explicit: the shared row-badge base sets border-width
   // only, and Tailwind v4 defaults an uncoloured border to currentColor —
   // which would draw a hard emerald/amber rule around the chip.
-  const biddable = "bg-emerald-100 text-emerald-800 border-emerald-200";
-  const early = "bg-amber-100 text-amber-800 border-amber-200";
+  const biddable = "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30";
+  const early = "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30";
   switch (noticeType) {
     case "Solicitation":
       return { label: "Solicitation", className: biddable };

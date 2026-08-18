@@ -206,7 +206,7 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                                 q.is_no_bid
                                   ? "opacity-50"
                                   : q.is_best_price
-                                  ? "bg-emerald-50/60"
+                                  ? "bg-emerald-50/60 dark:bg-emerald-500/10"
                                   : undefined
                               }
                             >
@@ -226,7 +226,7 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                                     <span className="font-mono text-muted">Alt P/N {q.alternate_part_number}</span>
                                     {q.alternate_not_approved && (
                                       <span
-                                        className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-800 border border-rose-200"
+                                        className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/30"
                                         title="This vendor quoted an alternate part but is not an approved source for the requested item. DLA rejects such quotes on items described by manufacturer CAGE/part number — do not price without an exception."
                                       >
                                         Not an approved source
@@ -275,7 +275,7 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
                               </td>
                             </tr>
                             {(q.notes || q.response_notes) && (
-                              <tr className={q.is_no_bid ? "opacity-50" : q.is_best_price ? "bg-emerald-50/60" : undefined}>
+                              <tr className={q.is_no_bid ? "opacity-50" : q.is_best_price ? "bg-emerald-50/60 dark:bg-emerald-500/10" : undefined}>
                                 <td colSpan={7} className="px-6 pb-2.5 pt-0 text-xs text-muted">
                                   {/* Full-width, untruncated — the vendor's message is
                                       decision context, not an afterthought. */}

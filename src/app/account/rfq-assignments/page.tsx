@@ -256,7 +256,7 @@ export default function RfqAssignmentsPage() {
                       (b) => !r.buyers.some((x) => x.user_id === b.user_id)
                     );
                     return (
-                      <tr key={r.cage_code} className={unowned ? "bg-amber-50/50" : undefined}>
+                      <tr key={r.cage_code} className={unowned ? "bg-amber-50/50 dark:bg-amber-500/10" : undefined}>
                         <td className="px-3 py-2 font-mono font-semibold text-foreground whitespace-nowrap">
                           {r.cage_code}
                         </td>
@@ -283,7 +283,7 @@ export default function RfqAssignmentsPage() {
                               </span>
                             ))}
                             {unowned && (
-                              <span className="text-xs font-medium text-amber-700">nobody</span>
+                              <span className="text-xs font-medium text-warning">nobody</span>
                             )}
                             {assignableBuyers.length > 0 && (
                               <select

@@ -828,7 +828,7 @@ export default function BidMatchingPage() {
 
       {/* Toast */}
       {toast && (
-        <div className="mb-4 px-4 py-2 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+        <div className="mb-4 px-4 py-2 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">
           {toast}
         </div>
       )}
@@ -837,9 +837,9 @@ export default function BidMatchingPage() {
           modal is open the same error renders inside the modal body so it
           stays visible (the modal overlay z-50 covers anything on the page). */}
       {error && !showModal && (
-        <div className="mb-4 px-4 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-center justify-between">
+        <div className="mb-4 px-4 py-2 bg-error/5 border border-error/20 text-error rounded-lg text-sm flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700 ml-4">
+          <button onClick={() => setError(null)} className="text-error hover:text-error/80 ml-4">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -954,7 +954,7 @@ export default function BidMatchingPage() {
                         >
                           <td className="py-2 px-4 text-card-foreground font-medium">
                             {cond.is_negated && (
-                              <span className="inline-block mr-1.5 text-[10px] font-bold text-red-600">NOT</span>
+                              <span className="inline-block mr-1.5 text-[10px] font-bold text-error">NOT</span>
                             )}
                             {CONDITION_TYPE_LABELS[cond.condition_type] || cond.condition_type}
                           </td>
@@ -1001,11 +1001,11 @@ export default function BidMatchingPage() {
                   per-tier condition limit, allowed-types rejection) right
                   next to the form where the user is working. */}
               {error && (
-                <div className="px-3 py-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-start justify-between gap-3">
+                <div className="px-3 py-2 bg-error/5 border border-error/20 text-error rounded-lg text-sm flex items-start justify-between gap-3">
                   <span>{error}</span>
                   <button
                     onClick={() => setError(null)}
-                    className="text-red-500 hover:text-red-700 flex-shrink-0"
+                    className="text-error hover:text-error/80 flex-shrink-0"
                     aria-label="Dismiss"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1268,7 +1268,7 @@ export default function BidMatchingPage() {
                           )}
                           <button
                             onClick={() => removeCondition(idx)}
-                            className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                            className="text-error hover:text-error/80 p-1 flex-shrink-0"
                             aria-label="Remove condition"
                           >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1363,7 +1363,7 @@ export default function BidMatchingPage() {
                               onChange={(e) => updateCondition(idx, { is_negated: e.target.checked })}
                               className="rounded border-border"
                             />
-                            <span className={cond.is_negated ? "text-red-600 font-medium" : ""}>
+                            <span className={cond.is_negated ? "text-error font-medium" : ""}>
                               {cond.is_negated ? "Excluded — drops matches that fire this" : "Exclude matches"}
                             </span>
                           </label>

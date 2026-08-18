@@ -261,6 +261,7 @@ export function BidMatchDateMenu({
                             Posted {formatDate(entry.issue_date)}
                           </span>
                           <span
+                            /* theme-ok: white on the selected row's primary fill */
                             className={`
                               ml-auto text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0
                               ${isActive ? "bg-white/20 text-white" : "bg-muted-light text-muted"}
@@ -294,6 +295,7 @@ export function BidMatchDateMenu({
                             SAM Opportunities
                           </span>
                           <span
+                            /* theme-ok: white on the selected row's primary fill */
                             className={`
                               ml-auto text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0
                               ${isActive ? "bg-white/20 text-white" : "bg-muted-light text-muted"}

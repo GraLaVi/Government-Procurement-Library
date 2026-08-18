@@ -54,7 +54,7 @@ export function RadioGroup({
                 ${
                   isSelected
                     ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                    : "border-border bg-white hover:border-muted hover:bg-muted-light/50"
+                    : "border-border bg-card-bg hover:border-muted hover:bg-muted-light/50"
                 }
                 ${disabled ? "opacity-50 cursor-not-allowed" : ""}
               `}
@@ -77,11 +77,12 @@ export function RadioGroup({
                   ${
                     isSelected
                       ? "border-primary bg-primary"
-                      : "border-muted bg-white"
+                      : "border-muted bg-card-bg"
                   }
                 `}
               >
                 {isSelected && (
+                  /* theme-ok: the dot inside a filled bg-primary circle */
                   <span className="block w-full h-full rounded-full bg-white scale-[0.4]" />
                 )}
               </span>

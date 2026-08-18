@@ -7,7 +7,8 @@
     "dev:webpack": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint && npm run lint:theme",
+    "lint:theme": "node scripts/check-theme-classes.mjs"
   },
   "dependencies": {
     "@tanstack/react-table": "^8.21.3",

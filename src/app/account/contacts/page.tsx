@@ -229,7 +229,7 @@ export default function ContactsPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-border bg-white overflow-hidden">
+      <div className="rounded-xl border border-border bg-card-bg overflow-hidden">
         {contacts.length === 0 ? (
           <div className="px-6 py-10 text-center text-sm text-muted">
             No contacts yet. Add your first one to start subscribing non-login
@@ -325,7 +325,7 @@ export default function ContactsPage() {
               <select
                 value={form.contact_type}
                 onChange={(e) => setForm({ ...form, contact_type: e.target.value })}
-                className="w-full text-sm border border-border rounded px-2 py-1.5 bg-white"
+                className="w-full text-sm border border-border rounded px-2 py-1.5 bg-card-bg text-card-foreground"
               >
                 <option value="">—</option>
                 {CONTACT_TYPES.map((t) => (
@@ -386,7 +386,7 @@ function Field({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full text-sm border border-border rounded px-2 py-1.5 bg-white"
+        className="w-full text-sm border border-border rounded px-2 py-1.5 bg-card-bg text-card-foreground"
       />
     </div>
   );
