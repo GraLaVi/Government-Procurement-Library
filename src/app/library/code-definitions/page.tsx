@@ -143,8 +143,8 @@ function CodeDefinitionsPageContent() {
       )}
 
       {error && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6">
-          <p className="text-sm text-destructive">{error}</p>
+        <div className="bg-error/10 border border-error/20 rounded-lg p-4 mb-6">
+          <p className="text-sm text-error">{error}</p>
         </div>
       )}
 

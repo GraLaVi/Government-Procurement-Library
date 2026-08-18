@@ -12,6 +12,13 @@
    values change. Renaming tokens is a v2 cleanup.
    ===================================================================== */
 :root {
+  /* Tells the browser which palette to render NATIVE controls with —
+     checkboxes, radios, date pickers, the popup list of a <select>, autofill
+     backgrounds and default scrollbars. Without it those stay light in dark
+     mode no matter what our tokens say, because they're painted by the UA and
+     never see our CSS. Paired with the override under [data-theme="dark"]. */
+  color-scheme: light;
+
   /* Brand accent (teal) — primary interactive color */
   --primary: #0E8989;
   --primary-hover: #0B6B6B;
@@ -42,6 +49,8 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
+
   --primary: #0E8989;
   --primary-hover: #15ADAD;
   --primary-light: #155E5E;
@@ -258,6 +267,10 @@ html {
   /* Force the light palette. The dark theme's light-on-dark tokens print
      as near-white text, because browsers drop background colors. */
   :root[data-theme="dark"] {
+    /* Native controls follow the same rule — a dark-scheme checkbox prints
+       as a filled block on white paper. */
+    color-scheme: light;
+
     --secondary: #1E293B;
     --background: #FFFFFF;
     --foreground: #1E293B;
