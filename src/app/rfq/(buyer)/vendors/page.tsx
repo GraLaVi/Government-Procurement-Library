@@ -515,7 +515,7 @@ export default function RfqVendorsPage() {
                       <td className="px-3 py-2 font-mono text-xs text-muted">{v.vendor_code || "—"}</td>
                       <td className="px-3 py-2 text-xs">
                         {v.contacts.length === 0 ? (
-                          <span className="text-amber-700 font-medium">none</span>
+                          <span className="text-warning font-medium">none</span>
                         ) : (
                           <span className="text-card-foreground">
                             {defaultContact?.email}

@@ -640,7 +640,7 @@ export default function RfqWorklistPage() {
               <span className="ml-auto text-xs text-muted">
                 {myMinEst != null && (
                   <span
-                    className="mr-3 text-amber-700"
+                    className="mr-3 text-warning"
                     title="Your personal filter in RFQ Settings hides solicitations with an estimated value below this floor (rows with no estimate stay visible)."
                   >
                     Hiding under {myMinEst.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}

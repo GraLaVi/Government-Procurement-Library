@@ -954,7 +954,7 @@ export default function BidMatchingPage() {
                         >
                           <td className="py-2 px-4 text-card-foreground font-medium">
                             {cond.is_negated && (
-                              <span className="inline-block mr-1.5 text-[10px] font-bold text-red-600">NOT</span>
+                              <span className="inline-block mr-1.5 text-[10px] font-bold text-error">NOT</span>
                             )}
                             {CONDITION_TYPE_LABELS[cond.condition_type] || cond.condition_type}
                           </td>
@@ -1268,7 +1268,7 @@ export default function BidMatchingPage() {
                           )}
                           <button
                             onClick={() => removeCondition(idx)}
-                            className="text-red-500 hover:text-red-700 p-1 flex-shrink-0"
+                            className="text-error hover:text-error/80 p-1 flex-shrink-0"
                             aria-label="Remove condition"
                           >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1363,7 +1363,7 @@ export default function BidMatchingPage() {
                               onChange={(e) => updateCondition(idx, { is_negated: e.target.checked })}
                               className="rounded border-border"
                             />
-                            <span className={cond.is_negated ? "text-red-600 font-medium" : ""}>
+                            <span className={cond.is_negated ? "text-error font-medium" : ""}>
                               {cond.is_negated ? "Excluded — drops matches that fire this" : "Exclude matches"}
                             </span>
                           </label>

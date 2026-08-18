@@ -283,7 +283,7 @@ export default function RfqAssignmentsPage() {
                               </span>
                             ))}
                             {unowned && (
-                              <span className="text-xs font-medium text-amber-700">nobody</span>
+                              <span className="text-xs font-medium text-warning">nobody</span>
                             )}
                             {assignableBuyers.length > 0 && (
                               <select
