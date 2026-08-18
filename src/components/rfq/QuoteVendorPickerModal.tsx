@@ -201,7 +201,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, solicitationId, 
     return (
       <span
         className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-          good ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+          good ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300" : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
         }`}
         title={`Last ${s.months} months: ${s.responded} responded, ${s.declined} declined, ${s.unanswered} no answer${
           s.median_turnaround_days != null ? `. Median turnaround ${s.median_turnaround_days} days.` : "."
@@ -241,7 +241,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, solicitationId, 
     if (compat === "incompatible") {
       return (
         <span
-          className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-300"
+          className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30"
           title="This solicitation is set aside for a socioeconomic status this vendor's profile doesn't list. You can still request a quote, but an award may not be possible — verify the vendor's status."
         >
           Set-aside mismatch
@@ -453,7 +453,7 @@ export function QuoteVendorPickerModal({ isOpen, onClose, part, solicitationId, 
                             no-gate rule is absolute; the buyer decides. */}
                         {m.is_excluded ? (
                           <span
-                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300"
+                            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/30"
                             title={EXCLUDED_VENDOR_WARNING}
                           >
                             ⚠ Excluded

@@ -255,7 +255,7 @@ function ConditionBadge({ condition }: { condition: MatchedCondition }) {
     <span
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${
         negated
-          ? "bg-red-50 text-red-700 border-red-200"
+          ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/30"
           // text-foreground, not an accent tone: the surface is only a 10%
           // accent tint, so teal-on-teal would fail contrast (~2.4:1 in light
           // mode). It also preserves what this rendered before — the previous

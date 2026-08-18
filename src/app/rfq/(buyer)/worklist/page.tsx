@@ -479,7 +479,7 @@ export default function RfqWorklistPage() {
               aria-pressed={autoRefresh}
               className={`inline-flex items-center gap-2 px-3 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
                 autoRefresh
-                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20"
                   : "bg-muted/10 text-muted hover:bg-muted/20"
               }`}
               title={
@@ -542,7 +542,7 @@ export default function RfqWorklistPage() {
           >
             {s.label}
             {s.count != null && s.count > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-amber-100 text-amber-800 text-[10px] font-semibold px-1.5 py-0.5">
+              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-amber-100 text-amber-800 text-[10px] font-semibold px-1.5 py-0.5 dark:bg-amber-500/10 dark:text-amber-300">
                 {s.count.toLocaleString()}
               </span>
             )}

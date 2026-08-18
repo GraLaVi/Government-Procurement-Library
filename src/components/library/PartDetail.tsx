@@ -2178,7 +2178,7 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
                     e.stopPropagation();
                     setAmendmentModal({ id: sol.solicitation_id, number: sol.solicitation_number });
                   }}
-                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shrink-0"
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shrink-0 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20 dark:border-amber-500/30"
                   title={`${summary.amendment_count} amendment${summary.amendment_count === 1 ? "" : "s"} on this solicitation. Click to view.`}
                 >
                   Amended{summary.amendment_count > 1 ? ` ×${summary.amendment_count}` : ""}
@@ -2198,7 +2198,7 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
                       versions: sol.versions ?? [],
                     });
                   }}
-                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shrink-0"
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shrink-0 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20 dark:border-amber-500/30"
                   title={`Reposted on SAM.gov ${(sol.version_count ?? 1) - 1} time${(sol.version_count ?? 1) === 2 ? "" : "s"} since it was first issued. Click to see every posting and its documents.`}
                 >
                   Amended{(sol.version_count ?? 1) > 2 ? ` ×${(sol.version_count ?? 1) - 1}` : ""}
@@ -2650,7 +2650,7 @@ function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, total
             </span>
             {row.original.is_excluded && (
               <Tooltip content={EXCLUDED_VENDOR_WARNING}>
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shrink-0">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shrink-0 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/30">
                   ⚠ Excluded
                 </span>
               </Tooltip>
@@ -2873,7 +2873,7 @@ function TechnicalCharacteristicsPanel({ characteristics, isLoading, error, onRe
   }
 
   return (
-    <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card">
+    <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card-bg">
       {characteristics.map((char, index) => (
         <span key={`${char.name}-${index}`}>
           <span className="font-medium text-muted">{char.name}</span> - <span className="font-medium text-foreground">{char.value || "—"}</span>
@@ -2928,7 +2928,7 @@ function EndUseDescriptionPanel({ descriptions, isLoading, error, onRetry }: End
   }
 
   return (
-    <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card">
+    <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card-bg">
       {descriptions.map((desc, index) => (
         <span key={`${desc.description}-${index}`} className="font-medium">
           {desc.description}
@@ -3286,7 +3286,7 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, supple
             <h4 className="text-[11px] font-semibold text-muted uppercase tracking-wide mb-1">
               Packaging Data
             </h4>
-            <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card">
+            <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card-bg">
               {packagingParts}
             </div>
           </div>
@@ -3298,7 +3298,7 @@ function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, supple
             <h4 className="text-[11px] font-semibold text-muted uppercase tracking-wide mb-1">
               {supplemental.title}
             </h4>
-            <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card whitespace-pre-wrap">
+            <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card-bg whitespace-pre-wrap">
               {supplemental.text}
             </div>
           </div>
@@ -3358,7 +3358,7 @@ function ProcurementItemDescriptionPanel({ description, isLoading, error, onRetr
   const sddtBlocks = description.sddt_blocks ?? [];
 
   return (
-    <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card">
+    <div className="text-xs text-foreground py-1.5 px-2.5 rounded border border-border/50 bg-card-bg">
       {ctdfHtml && (
         <div
           className="procurement-description"

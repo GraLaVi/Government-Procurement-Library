@@ -549,11 +549,11 @@ export default function NotificationsPage() {
       )}
 
       {/* Info section */}
-      <div className="mt-8 p-6 bg-info/5 border border-info/20 rounded-xl">
+      <div className="mt-8 p-6 bg-primary/5 border border-primary/20 rounded-xl">
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 bg-info/10 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
             <svg
-              className="w-5 h-5 text-info"
+              className="w-5 h-5 text-primary"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -583,11 +583,11 @@ export default function NotificationsPage() {
       {/* Other emails note — sets expectations that billing/marketing emails
           are managed outside this page, reducing "where are these settings?"
           support tickets. */}
-      <div className="mt-4 p-6 bg-info/5 border border-info/20 rounded-xl">
+      <div className="mt-4 p-6 bg-primary/5 border border-primary/20 rounded-xl">
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 bg-info/10 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
             <svg
-              className="w-5 h-5 text-info"
+              className="w-5 h-5 text-primary"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

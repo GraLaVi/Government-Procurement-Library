@@ -548,7 +548,7 @@ export default function BidMatchingPage() {
               title="Show only solicitations your team flagged to come back to"
               className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm transition-colors cursor-pointer ${
                 interestedOnly
-                  ? "border-amber-400 bg-amber-50 text-amber-800"
+                  ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
                   : "border-border text-muted hover:text-foreground"
               }`}
             >

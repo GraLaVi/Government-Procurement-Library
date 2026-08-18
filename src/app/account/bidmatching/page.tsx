@@ -828,7 +828,7 @@ export default function BidMatchingPage() {
 
       {/* Toast */}
       {toast && (
-        <div className="mb-4 px-4 py-2 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+        <div className="mb-4 px-4 py-2 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300">
           {toast}
         </div>
       )}

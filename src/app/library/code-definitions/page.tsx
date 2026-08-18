@@ -151,7 +151,7 @@ function CodeDefinitionsPageContent() {
       {codeDefinitions && !isLoading && (
         <div className="space-y-4">
           {codeDefinitions.code_types.map((codeTypeGroup) => (
-            <div key={codeTypeGroup.code_type} className="bg-card rounded-lg border border-border p-4">
+            <div key={codeTypeGroup.code_type} className="bg-card-bg rounded-lg border border-border p-4">
               <h2 className="text-xl font-semibold text-foreground mb-3">
                 {getCodeTypeDisplayName(codeTypeGroup)}
                 {codeTypeGroup.code_type !== getCodeTypeDisplayName(codeTypeGroup) && (
