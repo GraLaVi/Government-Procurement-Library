@@ -429,9 +429,28 @@ function BillingPageContent() {
     return matchedPlan ? !isAddonPlan(matchedPlan) : true;
   });
 
-  // Add-ons the customer doesn't already hold — purchasable as an independent
-  // second subscription (see isAddonPlan). A "live" subscription to the same
-  // product name means they already have it; canceled/expired ones don't count.
+  // The billing interval of the tier an add-on would attach to. Add-ons join
+  // the tier's Stripe subscription (one bill, one cycle), so only the
+  // matching-interval price is purchasable while a tier is live.
+  const hostTierInterval = (() => {
+    const tier = subscriptions.find((s) => {
+      if (!LIVE_SUB_STATUSES.has(s.status)) return false;
+      const matchedPlan = plans.find((p) =>
+        s.plan_kind && s.plan_id !== null
+          ? p.kind === s.plan_kind && p.id === s.plan_id
+          : (!!s.product_name && p.kind === "product" && p.name === s.product_name) ||
+            (!!s.product_group_name && p.kind === "product_group" && p.name === s.product_group_name),
+      );
+      return matchedPlan ? !isAddonPlan(matchedPlan) : false;
+    });
+    return tier?.interval_count ?? null;
+  })();
+
+  // Add-ons the customer doesn't already hold. Purchased onto the tier's
+  // existing subscription when one is live (one invoice, prorated to the
+  // tier's period); Checkout is only the fallback when there is no tier.
+  // A "live" subscription to the same product name means they already have
+  // it; canceled/expired ones don't count.
   const addonPlans = hasPaidTier
     ? plans.filter(
         (p) => isAddonPlan(p) && !subscriptions.some(
@@ -791,6 +810,11 @@ function BillingPageContent() {
       {modal?.kind === "addAddon" && (
         <AddAddonModal
           plan={modal.plan}
+          hostIntervalCount={hostTierInterval}
+          onPurchased={(next) => {
+            setSubscriptions((prev) => [...prev, next]);
+            setModal(null);
+          }}
           onClose={() => setModal(null)}
           onError={setError}
         />
@@ -1527,22 +1551,36 @@ function AddonCard({ plan, onAdd }: { plan: Plan; onAdd: () => void }) {
   );
 }
 
-// Purchases a 'feature'-category add-on as an independent second Stripe
-// subscription (POST /billing/checkout-session) — the same mechanism
-// /pricing uses for "existing customer adding a sub". Never touches the
-// customer's existing plan subscription(s).
+// Purchases a 'feature'-category add-on. When the customer holds a live tier
+// subscription, POST /billing/purchase-addon attaches the add-on to it as a
+// second item: the prorated remainder of the tier's current period is charged
+// immediately and every later invoice covers both together. Checkout (a
+// separate subscription) is only the fallback the API signals with 409
+// no_host_subscription — an add-on bought with no tier to join.
 function AddAddonModal({
-  plan, onClose, onError,
+  plan, hostIntervalCount, onPurchased, onClose, onError,
 }: {
   plan: Plan;
+  // interval_count of the live tier this add-on would attach to; null when
+  // the customer has no tier (Checkout path — any interval is fine).
+  hostIntervalCount: number | null;
+  onPurchased: (sub: Subscription) => void;
   onClose: () => void;
   onError: (msg: string | null) => void;
 }) {
   const prices = plan.prices; // pre-ordered by interval_count (GET /billing/plans)
   const maxSeats = plan.max_seat_count ?? (prices[0] ? maxPickerSeats(prices[0]) : 10);
 
+  // One subscription has one cycle, so with a live tier only the matching
+  // interval is purchasable — preselect it and pin the picker to it below.
+  const matchingPrice = hostIntervalCount !== null
+    ? prices.find((p) => p.interval_count === hostIntervalCount) ?? null
+    : null;
+
   const [seatQty, setSeatQty] = useState(() => Math.max(1, Math.min(plan.default_seat_count ?? 1, maxSeats)));
-  const [selectedPriceId, setSelectedPriceId] = useState<number | null>(prices[0]?.id ?? null);
+  const [selectedPriceId, setSelectedPriceId] = useState<number | null>(
+    matchingPrice?.id ?? prices[0]?.id ?? null,
+  );
   const [showTos, setShowTos] = useState(false);
   const [checkoutPending, setCheckoutPending] = useState(false);
   // null = still loading; default to "needs acceptance" (show the modal)
@@ -1576,17 +1614,35 @@ function AddAddonModal({
     if (selectedPriceId === null) return;
     setCheckoutPending(true);
     onError(null);
+    const tosBody = tosVersion && tosAcceptedAt
+      ? { tos_version: tosVersion, tos_accepted_at: tosAcceptedAt }
+      : {};
     try {
+      // Attach to the existing tier subscription first — one bill, prorated,
+      // charged now. 409 no_host_subscription is the API saying "nothing to
+      // attach to"; only then does Checkout (a separate subscription) run.
+      const attach = await fetchWithAuth("/api/billing/purchase-addon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ price_id: selectedPriceId, seat_quantity: seatQty, ...tosBody }),
+      });
+      if (attach.ok) {
+        const sub = await attach.json();
+        onPurchased(sub);
+        return;
+      }
+      const attachErr = await attach.json().catch(() => ({}));
+      if (!(attach.status === 409 && attachErr.error === "no_host_subscription")) {
+        onError(attachErr.error || "Failed to add the add-on");
+        setCheckoutPending(false);
+        setShowTos(false);
+        return;
+      }
+
       const resp = await fetchWithAuth("/api/billing/checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          price_id: selectedPriceId,
-          seat_quantity: seatQty,
-          ...(tosVersion && tosAcceptedAt
-            ? { tos_version: tosVersion, tos_accepted_at: tosAcceptedAt }
-            : {}),
-        }),
+        body: JSON.stringify({ price_id: selectedPriceId, seat_quantity: seatQty, ...tosBody }),
       });
       const data = await resp.json();
       if (!resp.ok || !data.checkout_url) {
@@ -1624,7 +1680,11 @@ function AddAddonModal({
   return (
     <ModalShell
       title={`Add ${plan.name}`}
-      subtitle="Billed as a separate subscription alongside your current plan"
+      subtitle={
+        matchingPrice
+          ? "Added to your current plan's bill — prorated for the rest of this period, then renewed together"
+          : "Billed as a separate subscription"
+      }
       onClose={onClose}
     >
       {plan.description && <p className="text-sm text-muted mb-4">{plan.description}</p>}
@@ -1670,11 +1730,20 @@ function AddAddonModal({
           <div className="space-y-2 mb-4">
             {prices.map((p) => {
               const priceTotal = computeTotalCents(p, seatQty);
+              // With a live tier the add-on shares its billing cycle, so the
+              // other interval isn't purchasable — shown disabled with the
+              // reason rather than hidden, so the price difference stays
+              // visible.
+              const pinned = matchingPrice !== null && p.id !== matchingPrice.id;
               return (
                 <label
                   key={p.id}
-                  className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedPriceId === p.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                  className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                    pinned
+                      ? "border-border opacity-60 cursor-not-allowed"
+                      : selectedPriceId === p.id
+                        ? "border-primary bg-primary/5 cursor-pointer"
+                        : "border-border hover:border-primary/50 cursor-pointer"
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -1682,9 +1751,13 @@ function AddAddonModal({
                       type="radio"
                       name="addon-price"
                       checked={selectedPriceId === p.id}
+                      disabled={pinned}
                       onChange={() => setSelectedPriceId(p.id)}
                     />
                     <span className="text-sm font-medium text-card-foreground">{priceIntervalLabel(p.interval_count)}</span>
+                    {pinned && (
+                      <span className="text-xs text-muted">matches your plan&apos;s billing cycle only</span>
+                    )}
                   </div>
                   <span className="text-sm text-muted">
                     {priceTotal !== null ? formatPriceMoney(priceTotal, p.currency) : "Price unavailable"}
