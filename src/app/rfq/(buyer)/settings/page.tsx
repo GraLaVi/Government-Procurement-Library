@@ -366,6 +366,14 @@ export default function RfqSettingsPage() {
                 </div>
               </div>
 
+              <ToggleRow
+                label="Remind vendors who haven't responded"
+                description="Automatic email nudges before the quote due date. Admin-only setting."
+                checked={settings.reminder_enabled}
+                disabled={!isAdmin}
+                onChange={(v) => setSettings({ ...settings, reminder_enabled: v })}
+              />
+
               {/* Enterprise settings — visible only with the Enterprise
                   add-on. Admin-only fields render read-only for non-admins
                   (the backend 403s changes to them either way). */}
@@ -457,38 +465,34 @@ export default function RfqSettingsPage() {
                     onChange={(v) => setSettings({ ...settings, allow_user_vendor_book_edits: v })}
                   />
 
-                  <ToggleRow
-                    label="Remind vendors who haven't responded"
-                    description="Automatic email nudges before the quote due date. Admin-only setting."
-                    checked={settings.reminder_enabled}
-                    disabled={!isAdmin}
-                    onChange={(v) => setSettings({ ...settings, reminder_enabled: v })}
-                  />
-
+                  {/* The reminder toggle itself is available to either tier and
+                      lives above; only the cadence fields are Enterprise. */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1">Max reminders per vendor</label>
                       <input
                         type="number"
                         min="0"
-                        max="10"
+                        max="3"
                         disabled={!isAdmin || !settings.reminder_enabled}
                         className="w-full px-3 py-2 rounded-md border border-border bg-card-bg text-card-foreground text-sm disabled:opacity-50"
                         value={settings.reminder_max_count}
                         onChange={(e) => setSettings({ ...settings, reminder_max_count: parseInt(e.target.value || "0", 10) })}
                       />
+                      <p className="text-xs text-muted mt-1">Up to 3. Use 0 to stop reminders without turning the setting off.</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-foreground mb-1">Hours between reminders</label>
                       <input
                         type="number"
                         min="1"
-                        max="720"
+                        max="24"
                         disabled={!isAdmin || !settings.reminder_enabled}
                         className="w-full px-3 py-2 rounded-md border border-border bg-card-bg text-card-foreground text-sm disabled:opacity-50"
                         value={settings.reminder_cooldown_hours}
-                        onChange={(e) => setSettings({ ...settings, reminder_cooldown_hours: parseInt(e.target.value || "48", 10) })}
+                        onChange={(e) => setSettings({ ...settings, reminder_cooldown_hours: parseInt(e.target.value || "24", 10) })}
                       />
+                      <p className="text-xs text-muted mt-1">Up to 24, so every nudge lands inside the quote window.</p>
                     </div>
                   </div>
 
