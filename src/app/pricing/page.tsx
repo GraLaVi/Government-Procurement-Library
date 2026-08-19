@@ -433,16 +433,40 @@ function PricingPageContent() {
         return;
       }
 
-      // Logged-in flow.
+      // Logged-in flow. An add-on attaches to the customer's existing tier
+      // subscription when one is live — one invoice, prorated to the tier's
+      // period, charged now — same as the billing page's add-on modal. 409
+      // no_host_subscription means there is no tier to join, and only then
+      // does Checkout (a separate subscription) run.
+      const tosBody = tosVersion && tosAcceptedAt
+        ? { tos_version: tosVersion, tos_accepted_at: tosAcceptedAt }
+        : {};
+      if (isAddonPlan(plan)) {
+        const attach = await fetch("/api/billing/purchase-addon", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ price_id: priceId, seat_quantity: seatCount, ...tosBody }),
+        });
+        if (attach.ok) {
+          // No Checkout hop to come back from — land on the billing page,
+          // where the new line is already on the subscription list.
+          window.location.href = "/account/billing";
+          return;
+        }
+        const attachErr = await attach.json().catch(() => ({}));
+        if (!(attach.status === 409 && attachErr.error === "no_host_subscription")) {
+          setError(attachErr.error || "Failed to add the add-on");
+          return;
+        }
+      }
+
       const response = await fetch("/api/billing/checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           price_id: priceId,
           seat_quantity: seatCount,
-          ...(tosVersion && tosAcceptedAt
-            ? { tos_version: tosVersion, tos_accepted_at: tosAcceptedAt }
-            : {}),
+          ...tosBody,
         }),
       });
       const data = await response.json();
