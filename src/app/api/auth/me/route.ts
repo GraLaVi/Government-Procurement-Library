@@ -1,38 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { ACCOUNT_INACTIVE_CODE, ACCOUNT_INACTIVE_MESSAGE, AUTH_CONFIG } from '@/lib/auth/config';
-import { setAccessCookie, clearAuthCookies } from '@/lib/auth/cookies';
+import { clearAuthCookies } from '@/lib/auth/cookies';
+import { refreshSession } from '@/lib/auth/refresh';
 
 async function refreshAccessToken(cookieStore: Awaited<ReturnType<typeof cookies>>): Promise<string | null> {
-  const refreshToken = cookieStore.get(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN)?.value;
-
-  if (!refreshToken) {
-    return null;
-  }
-
-  try {
-    const response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-
-    // Update the access token cookie
-    setAccessCookie(cookieStore, data.access_token, data.expires_in || AUTH_CONFIG.TOKEN_EXPIRY.ACCESS);
-
-    return data.access_token;
-  } catch (error) {
-    console.error('Token refresh error:', error);
-    return null;
-  }
+  const result = await refreshSession(cookieStore);
+  return result.ok ? result.accessToken : null;
 }
 
 export async function GET(_request: NextRequest) {

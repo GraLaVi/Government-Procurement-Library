@@ -31,7 +31,7 @@ const COOKIES: CookieRow[] = [
     storage: "Cookie (httpOnly)",
     category: "Strictly necessary",
     purpose: "Refreshes your access token in the background so you don't get logged out mid-task.",
-    expiry: "7 days",
+    expiry: "30 days, renewed each time you use the site",
   },
   {
     name: "gph_cookie_consent",

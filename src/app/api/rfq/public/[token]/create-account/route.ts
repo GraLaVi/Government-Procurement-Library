@@ -33,7 +33,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
     const cookieStore = await cookies();
     await clearLegacyAuthCookies(cookieStore);
     setAccessCookie(cookieStore, data.access_token, data.expires_in);
-    setRefreshCookie(cookieStore, data.refresh_token);
+    setRefreshCookie(cookieStore, data.refresh_token, data.refresh_expires_in);
 
     return NextResponse.json({ success: true });
   } catch (error) {
