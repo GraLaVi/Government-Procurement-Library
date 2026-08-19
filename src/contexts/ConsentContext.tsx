@@ -14,6 +14,7 @@ import { ConsentSettingsModal } from "@/components/consent/ConsentSettingsModal"
 import { ConsentChoice, StoredConsent } from "@/lib/consent/types";
 import {
   DEFAULT_ACCEPTED,
+  DEFAULT_PRE_DECISION,
   DEFAULT_REJECTED,
   readStoredConsent,
   writeStoredConsent,
@@ -40,12 +41,13 @@ interface ConsentContextValue {
 const ConsentContext = createContext<ConsentContextValue | null>(null);
 
 export function ConsentProvider({ children }: { children: ReactNode }) {
-  // Pre-decision default: functional storage is on. The visitor can
-  // still toggle it off via the banner or the preferences modal. This
-  // mirrors hasConsent()'s no-choice behavior so storage gates that
-  // run before the user engages with the banner see a consistent state.
+  // Pre-decision default: functional storage is on, analytics is NOT.
+  // The visitor can still toggle functional off via the banner or the
+  // preferences modal. This mirrors hasConsent()'s no-choice behavior
+  // so storage gates that run before the user engages with the banner
+  // see a consistent state.
   // The banner is hidden until mount completes to avoid a hydration flash.
-  const [consent, setConsentState] = useState<ConsentChoice>(DEFAULT_ACCEPTED);
+  const [consent, setConsentState] = useState<ConsentChoice>(DEFAULT_PRE_DECISION);
   const [hasDecided, setHasDecided] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

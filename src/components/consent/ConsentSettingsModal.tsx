@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { ConsentChoice } from "@/lib/consent/types";
+import { ConsentCategory, ConsentChoice } from "@/lib/consent/types";
 
 interface CategoryDef {
-  key: "necessary" | "functional";
+  key: ConsentCategory;
   label: string;
   description: string;
   examples: string;
@@ -30,6 +30,13 @@ const CATEGORIES: CategoryDef[] = [
     description:
       "Remembers preferences and in-progress forms across pages so you don't lose work. On by default — uncheck if you'd rather not store these.",
     examples: "theme (light/dark), gph_pending_signup",
+  },
+  {
+    key: "analytics",
+    label: "Analytics",
+    description:
+      "Google Analytics, on our public pages only — never on signed-in pages. Tells us how many people reach the site and which pages they land on, so we can tell real visitors apart from automated scanners. Off unless you turn it on.",
+    examples: "_ga, _ga_GB3CHK3839 (Google Analytics)",
   },
 ];
 

@@ -230,10 +230,16 @@ export default function PreferencesPage() {
     setSuccess(false);
   };
 
-  // Cookie toggles persist immediately (they don't ride the Save bar). Only
-  // the optional "functional" category is user-editable; necessary is fixed.
+  // Cookie toggles persist immediately (they don't ride the Save bar).
+  // Spread the current choice rather than rebuilding it, so toggling one
+  // category can't silently reset another — writing a literal here is what
+  // would have wiped the visitor's analytics choice when the category was
+  // added.
   const handleFunctionalToggle = (next: boolean) =>
-    setConsent({ necessary: true, functional: next });
+    setConsent({ ...consent, functional: next });
+
+  const handleAnalyticsToggle = (next: boolean) =>
+    setConsent({ ...consent, analytics: next });
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -351,6 +357,17 @@ export default function PreferencesPage() {
               checked={consent.functional}
               onChange={handleFunctionalToggle}
               ariaLabel="Functional cookies"
+            />
+          </SettingRow>
+
+          <SettingRow
+            title="Analytics"
+            description="Google Analytics on our public pages only — never on signed-in pages like this one. Off unless you turn it on."
+          >
+            <ToggleSwitch
+              checked={consent.analytics}
+              onChange={handleAnalyticsToggle}
+              ariaLabel="Analytics cookies"
             />
           </SettingRow>
         </div>

@@ -8,7 +8,7 @@ import { Footer } from "@/components/layout/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsent } from "@/contexts/ConsentContext";
 
-const LAST_UPDATED = "June 26, 2026";
+const LAST_UPDATED = "August 19, 2026";
 
 interface CookieRow {
   name: string;
@@ -62,6 +62,22 @@ const COOKIES: CookieRow[] = [
       "Powers the “Help” button in the bottom-right of signed-in pages so you can raise a support request without leaving the app. Loaded only after you accept functional cookies; never shown on public pages.",
     expiry: "Managed by Atlassian",
   },
+  {
+    name: "_ga",
+    storage: "Cookie (set by Google Analytics)",
+    category: "Analytics",
+    purpose:
+      "Distinguishes one visitor from another so we can count unique visitors rather than raw page loads. Set only on public pages, and only after you turn on the Analytics category.",
+    expiry: "2 years",
+  },
+  {
+    name: "_ga_GB3CHK3839",
+    storage: "Cookie (set by Google Analytics)",
+    category: "Analytics",
+    purpose:
+      "Keeps track of a single visit (session state) for the GA4 property. Set only on public pages, and only after you turn on the Analytics category.",
+    expiry: "2 years",
+  },
 ];
 
 export default function CookiePolicyPage() {
@@ -82,13 +98,15 @@ export default function CookiePolicyPage() {
         <p className="text-sm text-muted mt-6 leading-relaxed">
           This page lists every cookie and browser-storage entry the
           Government Procurement Hub website uses, what it&rsquo;s for, and how
-          long it lives. We don&rsquo;t use analytics or marketing
-          storage of any kind — no Google Analytics, no advertising
-          pixels, no cross-site tracking. The only categories you can
-          toggle are strictly-necessary (always on) and functional (on
-          by default). If we ever add analytics or marketing in the
-          future we&rsquo;ll add them back to this page and re-prompt
-          you for consent.
+          long it lives. We use no marketing or advertising storage of
+          any kind — no advertising pixels, no cross-site tracking, and
+          we don&rsquo;t sell or share what we collect. We do use Google
+          Analytics, but only on our public pages (the home page,
+          pricing, signup, help and legal pages) and only if you turn
+          the Analytics category on — it is off by default and never
+          loads on signed-in pages. The categories you can toggle are
+          functional (on by default) and analytics (off by default);
+          strictly-necessary is always on.
         </p>
 
         <div className="mt-6 flex flex-wrap gap-2">
@@ -178,6 +196,23 @@ export default function CookiePolicyPage() {
           bottom-right “Help” button. It only loads after you accept
           functional cookies, and any cookies it sets are governed by
           Atlassian&rsquo;s privacy policy, not ours.
+        </p>
+        <p className="text-sm text-muted mt-4 leading-relaxed">
+          On public pages only, and only if you turn on the Analytics
+          category, we load{" "}
+          <a
+            href="https://policies.google.com/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Google Analytics
+          </a>{" "}
+          (GA4) to measure how many people reach the site. If you leave
+          Analytics off, the Google script is never loaded at all — no
+          request is made to Google and no analytics cookies are set.
+          Any cookies it does set are governed by Google&rsquo;s privacy
+          policy, not ours.
         </p>
 
         <h2 className="text-xl font-semibold text-foreground mt-10">
