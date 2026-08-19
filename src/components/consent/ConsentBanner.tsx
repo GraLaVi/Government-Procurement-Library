@@ -31,8 +31,9 @@ export function ConsentBanner({
               Strictly-necessary cookies (authentication and this consent
               choice) are always on. Functional storage (preferences,
               in-progress forms) is on by default — you can disable it
-              from the preferences modal. We don&rsquo;t use analytics or
-              marketing storage at all. Read our{" "}
+              from the preferences modal. Analytics (Google Analytics, on
+              our public pages only) is off unless you turn it on. We use
+              no marketing or advertising storage at all. Read our{" "}
               <Link href="/legal/cookies" className="text-primary hover:underline">
                 cookie policy
               </Link>{" "}

@@ -51,9 +51,10 @@ Billing records are retained in accordance with applicable tax and accounting re
 We use cookies for the following purposes:
 
 - **Essential cookies:** Required for the Service to function (session management, authentication).
-- **Analytics cookies:** Help us understand how you use the Service so we can improve it.
+- **Functional cookies:** Remember your preferences and in-progress forms so you don't lose work.
+- **Analytics cookies:** Google Analytics (GA4), on our public pages only and never on signed-in pages, so we can see how many people reach the site. These are off unless you turn them on.
 
-You can manage cookie preferences through your browser settings. Disabling essential cookies may prevent you from using the Service.
+You can manage your cookie preferences at any time from the "Cookie preferences" link in the site footer, or through your browser settings. Our [cookie policy](/legal/cookies) lists every cookie individually. Disabling essential cookies may prevent you from using the Service.
 ## 6. Data Security
 We implement commercially reasonable security measures to protect your personal information, including encryption in transit (HTTPS/TLS) and secure access controls. Payment information is processed and secured by Stripe in compliance with PCI DSS Level 1 standards.
 

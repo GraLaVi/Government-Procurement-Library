@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SessionExpiredProvider } from "@/contexts/SessionExpiredContext";
 import { SessionExpiredModal } from "@/components/auth/SessionExpiredModal";
 import { ConsentProvider } from "@/contexts/ConsentContext";
+import { GoogleAnalytics } from "@/components/tracking/GoogleAnalytics";
 import "./globals.css";
 
 // Brand display + body. Figtree handles the wordmark (700 with tight overlap),
@@ -57,6 +58,9 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ConsentProvider>
+          {/* Inside ConsentProvider so it can read the analytics choice;
+              it renders nothing on gated routes or without consent. */}
+          <GoogleAnalytics />
           <ThemeProvider>
             <SessionExpiredProvider>
               <AuthProvider>
