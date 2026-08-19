@@ -6,7 +6,7 @@ Detailed documentation for customer authentication endpoints.
 
 The Customer API uses JWT (JSON Web Tokens) for authentication. The system provides:
 
-- **Access Tokens**: Short-lived tokens (8 hours) for API access
+- **Access Tokens**: Short-lived tokens (1 hour) for API access
 - **Refresh Tokens**: Long-lived tokens (30 days) for obtaining new access tokens
 - **Refresh Token Rotation**: Each refresh mints a new refresh token and revokes the one used, so an active session slides forward and never expires on a fixed schedule
 - **Rate Limiting**: Protection against brute-force attacks
@@ -21,7 +21,7 @@ The Customer API uses JWT (JSON Web Tokens) for authentication. The system provi
 2. User makes API requests with access_token
    └─> Authorization: Bearer <access_token>
 
-3. Access token expires (after 8 hours)
+3. Access token expires (after 1 hour)
    └─> Use refresh_token to get a new access_token
        AND a new refresh_token (the old one is revoked)
 
@@ -33,6 +33,13 @@ Because step 3 issues a fresh refresh token, the 30 days is an **inactivity
 ceiling**, not a session cap: anyone using the product at least once a month
 stays signed in indefinitely, while an abandoned session still dies on
 schedule.
+
+A customer user may hold at most `CUSTOMER_MAX_CONCURRENT_SESSIONS` signed-in
+devices at once (default 2). Logging in on one too many signs out the
+least-recently-used device rather than refusing the login; that device gets a
+401 on its next request or refresh, which `SessionExpiredContext` already
+handles as an ordinary expiry. Nothing in this app needs to detect the
+difference.
 
 In this app the tokens live in httpOnly cookies, and every server-side call to
 `/auth/refresh` goes through `refreshSession()` in `src/lib/auth/refresh.ts`,
@@ -60,7 +67,7 @@ Authenticate a customer user and receive tokens.
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "bearer",
-  "expires_in": 28800,
+  "expires_in": 3600,
   "refresh_expires_in": 2592000,
   "must_change_password": false
 }
@@ -99,7 +106,7 @@ token**.
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "bearer",
-  "expires_in": 28800,
+  "expires_in": 3600,
   "refresh_expires_in": 2592000
 }
 ```
@@ -439,7 +446,7 @@ class CustomerAPIClient:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `CUSTOMER_JWT_SECRET` | Secret key for JWT signing | (required in production) |
-| `CUSTOMER_ACCESS_TOKEN_EXPIRE_HOURS` | Access token lifetime | 8 |
+| `CUSTOMER_ACCESS_TOKEN_EXPIRE_HOURS` | Access token lifetime. Short by design — a stateless token cannot be withdrawn early, so this bounds how long a signed-out device keeps working | 1 |
 | `CUSTOMER_REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token lifetime (inactivity ceiling — rotation restarts it) | 30 |
 | `CUSTOMER_REFRESH_ROTATION_GRACE_SECONDS` | How long a just-rotated refresh token is still accepted; 0 disables | 60 |
 

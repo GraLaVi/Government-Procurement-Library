@@ -32,7 +32,7 @@ export const AUTH_CONFIG = {
   // `refresh_expires_in`, mirroring CUSTOMER_ACCESS_TOKEN_EXPIRE_HOURS and
   // CUSTOMER_REFRESH_TOKEN_EXPIRE_DAYS on the API.
   TOKEN_EXPIRY: {
-    ACCESS: 8 * 60 * 60, // 8 hours in seconds
+    ACCESS: 60 * 60, // 1 hour in seconds
     REFRESH: 30 * 24 * 60 * 60, // 30 days in seconds
   },
   ROUTES: {

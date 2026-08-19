@@ -24,7 +24,7 @@ const COOKIES: CookieRow[] = [
     storage: "Cookie (httpOnly)",
     category: "Strictly necessary",
     purpose: "Signed-in session token (JWT). Without it you can't stay logged in.",
-    expiry: "8 hours",
+    expiry: "1 hour, renewed automatically while you're using the site",
   },
   {
     name: "govt_proc_hub_refresh_token_v2",
