@@ -28,9 +28,12 @@ export const AUTH_CONFIG = {
     'govt_proc_hub_refresh_token',
   ],
   LEGACY_COOKIE_DOMAINS: ['.gphusa.com'],
+  // Fallbacks only — the live values arrive with each token as `expires_in` /
+  // `refresh_expires_in`, mirroring CUSTOMER_ACCESS_TOKEN_EXPIRE_HOURS and
+  // CUSTOMER_REFRESH_TOKEN_EXPIRE_DAYS on the API.
   TOKEN_EXPIRY: {
     ACCESS: 8 * 60 * 60, // 8 hours in seconds
-    REFRESH: 7 * 24 * 60 * 60, // 7 days in seconds
+    REFRESH: 30 * 24 * 60 * 60, // 30 days in seconds
   },
   ROUTES: {
     LOGIN: '/login',

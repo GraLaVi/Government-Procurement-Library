@@ -24,13 +24,23 @@ export function setAccessCookie(
   store.set(AUTH_CONFIG.COOKIE_NAMES.ACCESS_TOKEN, value, { ...baseOptions, maxAge });
 }
 
-/** Write the canonical refresh-token cookie. */
+/**
+ * Write the canonical refresh-token cookie.
+ *
+ * `maxAge` should come from the backend's `refresh_expires_in`, so the cookie
+ * dies exactly when the token inside it does. The constant is only a fallback
+ * for responses that predate that field; if the two drift apart the browser
+ * either drops a still-valid token early or keeps sending a dead one.
+ */
 export function setRefreshCookie(
   store: CookieStore,
   value: string,
-  maxAge: number = AUTH_CONFIG.TOKEN_EXPIRY.REFRESH,
+  maxAge: number | undefined = AUTH_CONFIG.TOKEN_EXPIRY.REFRESH,
 ): void {
-  store.set(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN, value, { ...baseOptions, maxAge });
+  store.set(AUTH_CONFIG.COOKIE_NAMES.REFRESH_TOKEN, value, {
+    ...baseOptions,
+    maxAge: maxAge ?? AUTH_CONFIG.TOKEN_EXPIRY.REFRESH,
+  });
 }
 
 /** The current request host (no port), lowercased, or null if unavailable. */

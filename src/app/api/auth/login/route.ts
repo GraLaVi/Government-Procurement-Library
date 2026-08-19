@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     await clearLegacyAuthCookies(cookieStore);
     setAccessCookie(cookieStore, data.access_token, data.expires_in);
-    setRefreshCookie(cookieStore, data.refresh_token);
+    setRefreshCookie(cookieStore, data.refresh_token, data.refresh_expires_in);
 
     // Return success without exposing tokens
     return NextResponse.json({

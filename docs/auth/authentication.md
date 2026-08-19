@@ -7,7 +7,8 @@ Detailed documentation for customer authentication endpoints.
 The Customer API uses JWT (JSON Web Tokens) for authentication. The system provides:
 
 - **Access Tokens**: Short-lived tokens (8 hours) for API access
-- **Refresh Tokens**: Long-lived tokens (7 days) for obtaining new access tokens
+- **Refresh Tokens**: Long-lived tokens (30 days) for obtaining new access tokens
+- **Refresh Token Rotation**: Each refresh mints a new refresh token and revokes the one used, so an active session slides forward and never expires on a fixed schedule
 - **Rate Limiting**: Protection against brute-force attacks
 - **Account Lockout**: Automatic lockout after failed attempts
 
@@ -21,11 +22,23 @@ The Customer API uses JWT (JSON Web Tokens) for authentication. The system provi
    └─> Authorization: Bearer <access_token>
 
 3. Access token expires (after 8 hours)
-   └─> Use refresh_token to get new access_token
+   └─> Use refresh_token to get a new access_token
+       AND a new refresh_token (the old one is revoked)
 
-4. Refresh token expires (after 7 days)
+4. Refresh token expires (30 days after the LAST refresh)
    └─> User must log in again
 ```
+
+Because step 3 issues a fresh refresh token, the 30 days is an **inactivity
+ceiling**, not a session cap: anyone using the product at least once a month
+stays signed in indefinitely, while an abandoned session still dies on
+schedule.
+
+In this app the tokens live in httpOnly cookies, and every server-side call to
+`/auth/refresh` goes through `refreshSession()` in `src/lib/auth/refresh.ts`,
+which writes both the access **and** the rotated refresh cookie. Any new call
+site must use that helper: dropping the rotated token leaves the browser
+holding one that dies with the server's grace window.
 
 ## Endpoints
 
@@ -48,6 +61,7 @@ Authenticate a customer user and receive tokens.
   "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "bearer",
   "expires_in": 28800,
+  "refresh_expires_in": 2592000,
   "must_change_password": false
 }
 ```
@@ -69,7 +83,8 @@ Authenticate a customer user and receive tokens.
 
 ### POST /api/v1/auth/refresh
 
-Get a new access token using a valid refresh token.
+Exchange a valid refresh token for a new access token **and a new refresh
+token**.
 
 **Request:**
 ```json
@@ -82,16 +97,24 @@ Get a new access token using a valid refresh token.
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "token_type": "bearer",
-  "expires_in": 28800
+  "expires_in": 28800,
+  "refresh_expires_in": 2592000
 }
 ```
+
+**Clients must replace their stored refresh token with the one returned here.**
+The token that was presented is revoked (`revoked_reason = 'rotated'`), but is
+still accepted for `CUSTOMER_REFRESH_ROTATION_GRACE_SECONDS` (default 60s) so
+requests already in flight with the pre-rotation token are not signed out.
 
 **Error Responses:**
 
 | Status | Detail | Cause |
 |--------|--------|-------|
 | 401 | Invalid or expired refresh token | Token invalid/expired |
+| 401 | Refresh token has been revoked | Logged out, revoked, or rotated more than the grace window ago |
 | 403 | User account is inactive | Account deactivated |
 
 ---
@@ -417,7 +440,8 @@ class CustomerAPIClient:
 |----------|-------------|---------|
 | `CUSTOMER_JWT_SECRET` | Secret key for JWT signing | (required in production) |
 | `CUSTOMER_ACCESS_TOKEN_EXPIRE_HOURS` | Access token lifetime | 8 |
-| `CUSTOMER_REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token lifetime | 7 |
+| `CUSTOMER_REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token lifetime (inactivity ceiling — rotation restarts it) | 30 |
+| `CUSTOMER_REFRESH_ROTATION_GRACE_SECONDS` | How long a just-rotated refresh token is still accepted; 0 disables | 60 |
 
 ## Database Schema
 

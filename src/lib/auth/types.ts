@@ -7,7 +7,10 @@ export interface LoginResponse {
   access_token: string;
   refresh_token: string;
   token_type: string;
+  /** Access-token lifetime in seconds. */
   expires_in: number;
+  /** Refresh-token lifetime in seconds; used as the refresh cookie's Max-Age. */
+  refresh_expires_in: number;
   must_change_password: boolean;
 }
 
