@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { BidMatchDateMenu, type DateSelection } from "@/components/bidmatching/BidMatchDateMenu";
 import { BidMatchResultsTable, type BidSortKey } from "@/components/bidmatching/BidMatchResultsTable";
-import { PrintButton } from "@/components/ui/PrintButton";
 import { formatDateMmDdYyyy } from "@/lib/dates";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
 
@@ -157,7 +156,11 @@ interface ResultsResponse {
   non_biddable_count?: number | null;
 }
 
-const PAGE_SIZE = 50;
+// 200 is the server's ceiling (page_size is Query(le=200) on the results
+// endpoint), so the widest choice here is the widest one the API will serve.
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
+const DEFAULT_PAGE_SIZE = 50;
+const PAGE_SIZE_STORAGE_KEY = "bidmatching-page-size";
 
 export default function BidMatchingPage() {
   const { isLoading: authLoading, hasProductAccessByPrefix } = useAuth();
@@ -172,6 +175,11 @@ export default function BidMatchingPage() {
   const [bidTermDefinitions, setBidTermDefinitions] = useState<BidTermDefinitions>({});
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
+  // Restored from localStorage on mount, never during render: reading storage
+  // in the initializer would hand the client a different first render than the
+  // server sent, and hydration would tear. Same shape as the RFQ worklist.
+  const [pageSizeInitialized, setPageSizeInitialized] = useState(false);
   const [isLoadingDates, setIsLoadingDates] = useState(true);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   // Stamped when Print is clicked rather than during render — `new Date()` at
@@ -188,8 +196,8 @@ export default function BidMatchingPage() {
   const [searchField, setSearchField] = useState<SearchField>("reason");
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
-  // Sorting is server-side: the page holds 50 of N rows, so sorting here
-  // would only reorder the slice already on screen.
+  // Sorting is server-side: the page holds one slice of N rows, so sorting
+  // here would only reorder the slice already on screen.
   const [sortBy, setSortBy] = useState<BidSortKey>("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [interestedOnly, setInterestedOnly] = useState(false);
@@ -208,6 +216,24 @@ export default function BidMatchingPage() {
     const t = setTimeout(() => setAppliedSearch(searchInput.trim()), 300);
     return () => clearTimeout(t);
   }, [searchInput]);
+
+  // Validate against the option list rather than trusting the stored number:
+  // it is user-editable, and anything above the API's le=200 would 422 every
+  // results fetch until the user cleared their storage.
+  useEffect(() => {
+    try {
+      const stored = Number(localStorage.getItem(PAGE_SIZE_STORAGE_KEY));
+      if ((PAGE_SIZE_OPTIONS as readonly number[]).includes(stored)) setPageSize(stored);
+    } catch { /* ignore */ }
+    setPageSizeInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (!pageSizeInitialized) return;
+    try {
+      localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(pageSize));
+    } catch { /* ignore */ }
+  }, [pageSize, pageSizeInitialized]);
 
   useEffect(() => {
     // Reset to page 1 whenever the filters or sort change so we don't land on
@@ -329,6 +355,7 @@ export default function BidMatchingPage() {
       runDate: string,
       issueDate: string | null,
       pg: number,
+      size: number,
       strength: boolean,
       search: string,
       field: SearchField,
@@ -343,7 +370,7 @@ export default function BidMatchingPage() {
         const params = new URLSearchParams({
           run_date: runDate,
           page: pg.toString(),
-          page_size: PAGE_SIZE.toString(),
+          page_size: size.toString(),
           source,
         });
         if (source === "dibbs" && issueDate) params.set("date", issueDate);
@@ -383,14 +410,18 @@ export default function BidMatchingPage() {
   );
 
   useEffect(() => {
+    // Wait for the stored page size, or the first load fetches 50 rows and
+    // then immediately refetches at the restored size.
+    if (!pageSizeInitialized) return;
     if (!selectedRunDate) return;
     if (selectedSource === "dibbs" && !selectedIssueDate) return;
     fetchResults(
-      selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly,
+      selectedSource, selectedRunDate, selectedIssueDate, page, pageSize, hardOnly,
       appliedSearch, searchField, sortBy, sortDir, interestedOnly, biddableOnly,
     );
   }, [
-    selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly,
+    pageSizeInitialized,
+    selectedSource, selectedRunDate, selectedIssueDate, page, pageSize, hardOnly,
     appliedSearch, searchField, sortBy, sortDir, interestedOnly, biddableOnly,
     fetchResults,
   ]);
@@ -408,6 +439,14 @@ export default function BidMatchingPage() {
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
+  };
+
+  // Back to page 1 on a size change: page 7 of 50-row pages doesn't exist once
+  // the rows are 200 apiece, and landing past the end shows an empty table.
+  // Both setters in one handler so React batches them into a single fetch.
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPage(1);
   };
 
   // Prints the page of results currently on screen — filters, sort and
@@ -483,7 +522,8 @@ export default function BidMatchingPage() {
           )}
         </div>
         <div className="no-print flex-shrink-0 flex items-center gap-3">
-          <PrintButton onClick={handlePrint} title="Print this page of results" />
+          {/* Print used to sit here. It acts on the results, not the page, so
+              it lives in the results toolbar now — this slot is navigation. */}
           <Link
             href="/account/bidmatching"
             className="inline-flex items-center text-sm font-medium text-primary hover:underline"
@@ -679,8 +719,11 @@ export default function BidMatchingPage() {
                 isLoading={isLoadingResults}
                 total={total}
                 page={page}
-                pageSize={PAGE_SIZE}
+                pageSize={pageSize}
                 onPageChange={handlePageChange}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+                onPageSizeChange={handlePageSizeChange}
+                onPrint={handlePrint}
                 sortBy={sortBy}
                 sortDir={sortDir}
                 onSort={handleSort}

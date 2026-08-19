@@ -12,6 +12,7 @@ import { NoticeTypeBadge } from "@/components/library/NoticeTypeBadge";
 import { RowBadge, ROW_BADGE_BASE } from "@/components/library/RowBadge";
 import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
+import { PrintButton } from "@/components/ui/PrintButton";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
 import { formatCurrency } from "@/lib/library/types";
 import {
@@ -199,6 +200,13 @@ interface BidMatchResultsTableProps {
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  pageSizeOptions: readonly number[];
+  onPageSizeChange: (size: number) => void;
+  // Print lives here rather than in the page header because what it prints is
+  // this result set — current filters, sort and page. The page owns the
+  // handler (it stamps the printed-on date first); the button just sits with
+  // the rows it acts on.
+  onPrint: () => void;
   sortBy: BidSortKey;
   sortDir: "asc" | "desc";
   onSort: (key: BidSortKey) => void;
@@ -287,6 +295,9 @@ export function BidMatchResultsTable({
   page,
   pageSize,
   onPageChange,
+  pageSizeOptions,
+  onPageSizeChange,
+  onPrint,
   sortBy,
   sortDir,
   onSort,
@@ -314,33 +325,67 @@ export function BidMatchResultsTable({
     });
   };
 
+  /* Results toolbar: what this view is showing on the left, what to do with it
+     on the right. Rendered above the loading and empty states too — controls
+     that disappear on every refetch are controls the user has to hunt for
+     twice. The count is the only part that prints; the range and total are
+     what tell a printed sheet which slice of the matches it holds. */
+  const toolbar = (
+    <div className="flex items-center justify-between gap-3 mb-2">
+      {total > 0 ? (
+        <p className="text-xs text-muted">
+          Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} of {total.toLocaleString()} matches
+        </p>
+      ) : (
+        <span />
+      )}
+      <div className="no-print flex items-center gap-2">
+        <select
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          aria-label="Rows per page"
+          title="How many matches to show on each page"
+          className="text-xs border border-border rounded px-2 py-1 bg-card-bg text-card-foreground cursor-pointer"
+        >
+          {pageSizeOptions.map((size) => (
+            <option key={size} value={size}>
+              {size} rows
+            </option>
+          ))}
+        </select>
+        <PrintButton onClick={onPrint} title="Print the matches shown here" />
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      <div>
+        {toolbar}
+        <div className="flex items-center justify-center py-16">
+          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+        </div>
       </div>
     );
   }
 
   if (results.length === 0) {
     return (
-      <div className="text-center py-16">
-        <svg className="mx-auto h-12 w-12 text-muted/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-        </svg>
-        <p className="mt-4 text-muted">No matches found for this date.</p>
+      <div>
+        {toolbar}
+        <div className="text-center py-16">
+          <svg className="mx-auto h-12 w-12 text-muted/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+          <p className="mt-4 text-muted">No matches found for this date.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div>
-      {/* Results count */}
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-muted">
-          Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, total)} of {total.toLocaleString()} matches
-        </p>
-      </div>
+      {toolbar}
 
       {/* Table */}
       <div className={tableWrapClass}>
