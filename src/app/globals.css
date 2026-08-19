@@ -206,6 +206,30 @@ html {
 }
 
 /* ---------------------------------------------------------------------
+   Jira Service Management help widget (bottom-right launcher)
+   --------------------------------------------------------------------- */
+/* The widget renders into an iframe that embed.js writes with document.write
+   (no src), and Atlassian's bundle inside it picks its palette from
+   `prefers-color-scheme` evaluated in THAT document — Atlassian Design System
+   `defaultColorMode: "auto"`, resolved once and then kept live by a
+   matchMedia listener that writes data-color-mode onto its own <html>.
+
+   Nothing linked that to our theme, so the widget followed the OS while the
+   app followed data-theme: a user on dark with an OS that switches light by
+   day got a white widget every morning, correct again at night. Mirrored for
+   a light-theme user whose OS goes dark.
+
+   `color-scheme` on the embedding element is the one supported channel for
+   telling an embedded document which palette to use — the widget exposes no
+   theme parameter (embed.js reads only data-key and data-base-url).
+
+   Deliberately not scoped under `@media not print` like the `dark:` variant:
+   the widget is screen-only chrome and never reaches paper. */
+:root[data-theme="dark"] #jsd-widget {
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------
    Focus indicators — visible in both modes, accent color, instant (no transition)
    --------------------------------------------------------------------- */
 *:focus-visible {

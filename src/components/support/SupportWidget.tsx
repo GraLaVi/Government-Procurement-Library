@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useConsent } from "@/contexts/ConsentContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 // Public embeddable-widget key for our Jira Service Management portal. Safe to
 // commit (it only identifies which portal the widget opens), but overridable
@@ -49,6 +50,7 @@ const WIDGET_IFRAME_ID = "jsd-widget";
 export function SupportWidget() {
   const { isAuthenticated } = useAuth();
   const { consent } = useConsent();
+  const { resolvedTheme } = useTheme();
 
   const enabled = isAuthenticated && consent.functional;
 
@@ -95,6 +97,64 @@ export function SupportWidget() {
 
     document.body.appendChild(script);
   }, [enabled]);
+
+  /*
+   * Push our theme into the widget once it exists.
+   *
+   * The CSS rule (globals.css, `:root[data-theme="dark"] #jsd-widget`) is the
+   * declarative half and it works — but only for a theme change made while the
+   * widget is already running. It cannot fix startup, because of how the two
+   * sides are sequenced:
+   *
+   *   - layout.tsx renders <html> with NO data-theme, and there is no
+   *     pre-hydration script; ThemeContext adds the attribute in an effect.
+   *   - Atlassian's bundle resolves its palette exactly once at init
+   *     (`useState(resolve(colorMode))` over prefers-color-scheme) and after
+   *     that only reacts to a media-query CHANGE event.
+   *
+   * So the widget samples the scheme while the page is still unmarked, latches
+   * light, and never re-reads it. Toggling the theme by hand produces the
+   * change event it was waiting for, which is why that looked fixed until the
+   * next reload.
+   *
+   * The fix is to manufacture that change after the frame exists: set the
+   * opposite scheme, then the real one on the next frame. Two computed-value
+   * changes, so the listener inside the frame fires regardless of what it
+   * latched at init. Only needed for dark — light is what it already assumed,
+   * and flipping through dark there would flash the widget.
+   */
+  useEffect(() => {
+    if (!enabled || resolvedTheme !== "dark") return;
+
+    let raf = 0;
+    const force = (frame: HTMLIFrameElement) => {
+      frame.style.colorScheme = "light";
+      raf = window.requestAnimationFrame(() => {
+        frame.style.colorScheme = "dark";
+      });
+    };
+
+    const frame = document.getElementById(WIDGET_IFRAME_ID);
+    if (frame instanceof HTMLIFrameElement) {
+      force(frame);
+      return () => window.cancelAnimationFrame(raf);
+    }
+
+    // embed.js appends the launcher to <body> whenever its bundle finishes, so
+    // there is no event to await — watch for the node instead of polling.
+    const observer = new MutationObserver(() => {
+      const added = document.getElementById(WIDGET_IFRAME_ID);
+      if (added instanceof HTMLIFrameElement) {
+        observer.disconnect();
+        force(added);
+      }
+    });
+    observer.observe(document.body, { childList: true });
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(raf);
+    };
+  }, [enabled, resolvedTheme]);
 
   return null;
 }
