@@ -88,6 +88,9 @@ interface BidMatchResult {
   latest_post_match_amendment_at?: string | null;
   solicitation_number: string | null;
   agency_code: string | null;
+  // SAM rows only: stage of the posting. "Presolicitation" / "Sources Sought"
+  // are NOT biddable and are badged as such. Null on DIBBS rows.
+  notice_type?: string | null;
   issue_date: string | null;
   posted_date?: string | null;
   close_date: string | null;
@@ -147,6 +150,11 @@ interface ResultsResponse {
   // results[].bid_terms. Page-level so the same ~110 DLA definitions aren't
   // repeated on all 50 rows.
   bid_term_definitions?: BidTermDefinitions;
+  // SAM buckets only: how many rows in this bucket cannot be quoted —
+  // Presolicitation and Sources Sought, plus the Award / Special Notice tail.
+  // Counted BEFORE the biddable_only filter, so it keeps reporting what the
+  // toggle is hiding while the toggle is on. Absent on the DIBBS path.
+  non_biddable_count?: number | null;
 }
 
 const PAGE_SIZE = 50;
@@ -185,6 +193,16 @@ export default function BidMatchingPage() {
   const [sortBy, setSortBy] = useState<BidSortKey>("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [interestedOnly, setInterestedOnly] = useState(false);
+  // Keep only postings that can actually be quoted. SAM buckets only — every
+  // DIBBS row is a solicitation on the street, so the backend ignores it there
+  // and the control isn't rendered. Defaults OFF: pre-solicitations and
+  // market-research notices are genuinely useful to vendors who work them, and
+  // silently dropping matches the user was notified about would be worse than
+  // showing them clearly badged.
+  const [biddableOnly, setBiddableOnly] = useState(false);
+  // How many rows the toggle is (or would be) hiding, straight off the last
+  // response. Null when the bucket has none, or on the DIBBS path.
+  const [nonBiddableCount, setNonBiddableCount] = useState<number | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setAppliedSearch(searchInput.trim()), 300);
@@ -195,7 +213,7 @@ export default function BidMatchingPage() {
     // Reset to page 1 whenever the filters or sort change so we don't land on
     // an empty out-of-range page after narrowing results.
     setPage(1);
-  }, [hardOnly, appliedSearch, searchField, sortBy, sortDir, interestedOnly]);
+  }, [hardOnly, appliedSearch, searchField, sortBy, sortDir, interestedOnly, biddableOnly]);
 
   // Optimistic: the star flips immediately and reverts if the write fails.
   // Flags are customer-scoped, so a teammate's flag can arrive on the next
@@ -317,6 +335,7 @@ export default function BidMatchingPage() {
       sort: BidSortKey,
       dir: "asc" | "desc",
       onlyInterested: boolean,
+      onlyBiddable: boolean,
     ) => {
       setIsLoadingResults(true);
       setError(null);
@@ -338,11 +357,13 @@ export default function BidMatchingPage() {
           params.set("sort_dir", dir);
         }
         if (onlyInterested) params.set("interested_only", "true");
+        if (onlyBiddable) params.set("biddable_only", "true");
         const res = await fetch(`/api/bid-matching/results?${params}`);
         if (!res.ok) throw new Error("Failed to load match results");
         const data: ResultsResponse = await res.json();
         setResults(data.results);
         setTotal(data.total);
+        setNonBiddableCount(data.non_biddable_count ?? null);
         // The SAM path returns an EMPTY map, not a missing one — SAM rows
         // carry no bid terms. Keep whatever we already hold rather than
         // blanking it, so switching back to a DIBBS date doesn't briefly
@@ -353,6 +374,7 @@ export default function BidMatchingPage() {
         setError(err instanceof Error ? err.message : "Failed to load match results");
         setResults([]);
         setTotal(0);
+        setNonBiddableCount(null);
       } finally {
         setIsLoadingResults(false);
       }
@@ -365,17 +387,22 @@ export default function BidMatchingPage() {
     if (selectedSource === "dibbs" && !selectedIssueDate) return;
     fetchResults(
       selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly,
-      appliedSearch, searchField, sortBy, sortDir, interestedOnly,
+      appliedSearch, searchField, sortBy, sortDir, interestedOnly, biddableOnly,
     );
   }, [
     selectedSource, selectedRunDate, selectedIssueDate, page, hardOnly,
-    appliedSearch, searchField, sortBy, sortDir, interestedOnly, fetchResults,
+    appliedSearch, searchField, sortBy, sortDir, interestedOnly, biddableOnly,
+    fetchResults,
   ]);
 
   const handleDateSelect = (selection: DateSelection) => {
     setSelectedRunDate(selection.runDate);
     setSelectedSource(selection.source);
     setSelectedIssueDate(selection.source === "dibbs" ? selection.issueDate : null);
+    // The stage filter is SAM-only and its control is hidden on DIBBS buckets.
+    // Clearing it on the way out keeps it from silently reapplying when the
+    // user comes back to a SAM bucket several selections later.
+    if (selection.source !== "sam") setBiddableOnly(false);
     setPage(1);
   };
 
@@ -555,6 +582,38 @@ export default function BidMatchingPage() {
               <span className={interestedOnly ? "text-amber-500" : "text-muted/50"}>★</span>
               Flagged only
             </button>
+            {/* Stage filter — SAM buckets only, because every DIBBS row IS a
+                solicitation on the street. Hidden when the bucket holds
+                nothing early-stage (nothing to hide), but kept visible while
+                it is switched on so the filter can never be invisibly active.
+                The count is what it hides, so the user can decide whether it
+                is worth hiding before clicking. */}
+            {selectedSource === "sam" && ((nonBiddableCount ?? 0) > 0 || biddableOnly) && (
+              <button
+                type="button"
+                onClick={() => setBiddableOnly((v) => !v)}
+                aria-pressed={biddableOnly}
+                title="Hide postings you cannot quote — Presolicitation and Sources Sought notices, and any award or special notice that matched"
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm transition-colors cursor-pointer ${
+                  biddableOnly
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted hover:text-foreground"
+                }`}
+              >
+                Biddable only
+                {(nonBiddableCount ?? 0) > 0 && (
+                  <span
+                    className={`rounded px-1 text-[11px] font-semibold ${
+                      biddableOnly
+                        ? "bg-primary/15 text-primary"
+                        : "bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300"
+                    }`}
+                  >
+                    {nonBiddableCount}
+                  </span>
+                )}
+              </button>
+            )}
             {/* Field selector + term, joined into one control so it reads as a
                 single search rather than two unrelated inputs. */}
             {/* ONE border, on the wrapper — the select and input are
@@ -592,7 +651,7 @@ export default function BidMatchingPage() {
                 className="flex-1 min-w-0 border-0 bg-card-bg text-foreground text-sm px-3 py-1.5 focus:outline-none"
               />
             </div>
-            {(hardOnly || appliedSearch || sortBy || interestedOnly) && (
+            {(hardOnly || appliedSearch || sortBy || interestedOnly || biddableOnly) && (
               <button
                 type="button"
                 onClick={() => {
@@ -602,6 +661,7 @@ export default function BidMatchingPage() {
                   setSortBy("");
                   setSortDir("desc");
                   setInterestedOnly(false);
+                  setBiddableOnly(false);
                 }}
                 className="text-xs text-muted hover:text-foreground cursor-pointer"
               >

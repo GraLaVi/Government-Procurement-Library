@@ -8,7 +8,8 @@ import { BidMatchLineItems } from "@/components/bidmatching/BidMatchLineItems";
 import { PartIdentityLink } from "@/components/bidmatching/PartIdentityLink";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
 import { PendingOutcomeFlag } from "@/components/library/PendingOutcomeFlag";
-import { RowBadge, rowBadgeClass, ROW_BADGE_BASE } from "@/components/library/RowBadge";
+import { NoticeTypeBadge } from "@/components/library/NoticeTypeBadge";
+import { RowBadge, ROW_BADGE_BASE } from "@/components/library/RowBadge";
 import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
@@ -88,6 +89,10 @@ interface BidMatchResult {
   has_pdf?: boolean;
   solicitation_number: string | null;
   agency_code: string | null;
+  // SAM rows only: the stage of the posting ("Solicitation", "Presolicitation",
+  // "Sources Sought", "Combined Synopsis/Solicitation"). The early-stage two
+  // are not biddable and get badged — see NoticeTypeBadge. Null on DIBBS rows.
+  notice_type?: string | null;
   issue_date: string | null;
   posted_date?: string | null;
   close_date: string | null;
@@ -434,14 +439,15 @@ export function BidMatchResultsTable({
                             </svg>
                           </a>
                         )}
-                        {result.source === "sam" && (
-                          <span
-                            className={rowBadgeClass("indigo")}
-                            title="Pure-SAM opportunity — no linked DIBBS solicitation"
-                          >
-                            SAM
-                          </span>
-                        )}
+                        {/* Stage of the SAM posting, badged only when it is
+                            NOT yet biddable — nothing renders on a real
+                            solicitation.
+
+                            There is deliberately no "SAM" source pill beside
+                            it: a bucket is entirely DIBBS or entirely SAM, so
+                            the date menu has already said which, and repeating
+                            it on all fifty rows only crowded the column. */}
+                        <NoticeTypeBadge noticeType={result.notice_type} />
                         {/* Amendment pill + fast-award badge, shared with the
                             Send RFQs work queue (SolicitationRowBadges) so the
                             two pages read identically. One pill: the component

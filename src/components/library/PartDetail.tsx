@@ -74,6 +74,7 @@ import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimeli
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
 import { SolicitationVersionsModal } from "@/components/library/SolicitationVersionsModal";
 import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
+import { NoticeTypeBadge } from "@/components/library/NoticeTypeBadge";
 import { RowBadge } from "@/components/library/RowBadge";
 
 // Map UI tabId -> audit `view` name (matches FastAPI _VALID_TAB_VIEWS)
@@ -2164,6 +2165,11 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
               ) : (
                 <span className="text-xs font-mono font-semibold">—</span>
               )}
+              {/* "Not biddable yet" flag. Renders only for the early-stage
+                  SAM notice types, so a real solicitation looks exactly as it
+                  always did — the SAM.gov source is already marked by the
+                  external-link glyph / "SAM.gov" tag on the number. */}
+              {isSam && <NoticeTypeBadge noticeType={sol.notice_type} />}
               {isSam && (sol.document_count ?? 0) > 0 && (
                 <SamDocumentsButton
                   oppId={sol.solicitation_id}

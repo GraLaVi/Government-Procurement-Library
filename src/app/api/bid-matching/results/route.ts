@@ -51,6 +51,9 @@ export async function GET(request: NextRequest) {
       params.set('search', search);
     }
     if (searchParams.get('interested_only') === 'true') params.set('interested_only', 'true');
+    // Hides early-stage SAM notices (Presolicitation / Sources Sought). The
+    // backend ignores it on source=dibbs.
+    if (searchParams.get('biddable_only') === 'true') params.set('biddable_only', 'true');
 
     const backendUrl = `${AUTH_CONFIG.API_BASE_URL}/bid-matching/results?${params.toString()}`;
 

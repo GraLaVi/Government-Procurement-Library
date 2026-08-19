@@ -48,35 +48,8 @@ import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { SamDocumentsButton } from "@/components/library/SamDocumentsButton";
 import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
-import { RowBadge, rowBadgeClass, ROW_BADGE_BASE } from "@/components/library/RowBadge";
-
-// Maps a SAM.gov notice_type to the compact label + tint used in the
-// segmented source/type pill on the Open Solicitations tab. "Biddable"
-// notices (an actual solicitation is on the street) read green; earlier-stage
-// notices (pre-solicitation / market research) read amber. Unknown/missing
-// types fall back to a neutral chip carrying the raw value.
-function samNoticeMeta(noticeType: string | null | undefined): {
-  label: string;
-  className: string;
-} {
-  // Border colours are explicit: the shared row-badge base sets border-width
-  // only, and Tailwind v4 defaults an uncoloured border to currentColor —
-  // which would draw a hard emerald/amber rule around the chip.
-  const biddable = "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/30";
-  const early = "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30";
-  switch (noticeType) {
-    case "Solicitation":
-      return { label: "Solicitation", className: biddable };
-    case "Combined Synopsis/Solicitation":
-      return { label: "Combined", className: biddable };
-    case "Presolicitation":
-      return { label: "Presolicitation", className: early };
-    case "Sources Sought":
-      return { label: "Sources Sought", className: early };
-    default:
-      return { label: noticeType || "Opportunity", className: "bg-muted/20 text-muted border-border" };
-  }
-}
+import { NoticeTypeBadge } from "@/components/library/NoticeTypeBadge";
+import { RowBadge, rowBadgeClass } from "@/components/library/RowBadge";
 
 // Module-scope CSV column specs for the vendor-detail tab exports.
 // Kept outside the component bodies so the parent-level export button
@@ -1591,19 +1564,11 @@ function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRet
               ) : (
                 <span className="text-xs font-mono font-semibold select-text">{sol.solicitation_number}</span>
               )}
-              {isSam && (() => {
-                // Color-coded notice-type chip (green = biddable, amber = early
-                // stage). The tooltip carries the full, unabbreviated notice_type
-                // (and the SAM.gov source) for the long ones.
-                const notice = samNoticeMeta(sol.notice_type);
-                return (
-                  <Tooltip content={sol.notice_type ? `SAM.gov · ${sol.notice_type}` : "SAM.gov opportunity"}>
-                    <span className={`${ROW_BADGE_BASE} ${notice.className}`}>
-                      {notice.label}
-                    </span>
-                  </Tooltip>
-                );
-              })()}
+              {/* Color-coded notice-type chip (green = biddable, amber = not
+                  yet biddable). showBiddable because on this tab the chip is
+                  also the row's only SAM.gov source marker — the solicitation
+                  number beside it looks the same for both sources. */}
+              {isSam && <NoticeTypeBadge noticeType={sol.notice_type} showBiddable />}
               {isSam && (sol.document_count ?? 0) > 0 && (
                 <SamDocumentsButton
                   oppId={sol.solicitation_id}
