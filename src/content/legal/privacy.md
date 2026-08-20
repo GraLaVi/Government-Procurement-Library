@@ -1,6 +1,6 @@
 ---
 title: "Privacy Policy"
-last_updated: "2026-05-06"
+last_updated: "2026-08-20"
 ---
 
 Government Procurement Hub LLC ("GPH," "we," "us," or "our") operates the procurement intelligence platform at www.gphusa.com (the "Service"). This Privacy Policy explains how we collect, use, share, and protect your personal information when you use our Service.
@@ -39,7 +39,7 @@ We do not sell your personal information to third parties.
 
 We share your information only in the following circumstances:
 
-- **Service providers:** We use third-party services to operate the platform, including Stripe (payment processing), [EMAIL PROVIDER — e.g., Loops] (transactional email), and [HELP DESK PROVIDER — e.g., Jira Service Management] (customer support). These providers access your information only to perform services on our behalf and are bound by their own privacy commitments.
+- **Service providers:** We use third-party services to operate the platform, including Stripe (payment processing), Resend (transactional email), and Atlassian Jira Service Management (customer support). These providers access your information only to perform services on our behalf and are bound by their own privacy commitments.
 - **Legal requirements:** We may disclose your information if required by law, legal process, or government request.
 - **Business transfers:** In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction. We will notify you of any such change.
 
@@ -68,7 +68,7 @@ Depending on your jurisdiction, you may have the right to:
 - Object to or restrict certain processing of your information.
 - Request a copy of your data in a portable format.
 
-To exercise any of these rights, contact us at [SUPPORT EMAIL]. We will respond within 30 days.
+To exercise any of these rights, contact us at support@gphusa.com. We will respond within 30 days.
 ## 8. California Residents
 If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA), including the right to know what personal information we collect, the right to request deletion, and the right to opt out of the sale of personal information. We do not sell personal information.
 
