@@ -650,21 +650,14 @@ export default function UsersPage() {
               </div>
             )}
 
-            {atSeatCap && (
-              <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5 text-warning shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                  </svg>
-                  <p className="text-sm font-medium text-warning">
-                    You&apos;re using all {userCap!.cap} seat{userCap!.cap === 1 ? "" : "s"} on your plan.
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => router.push(capCtaHref)}>
-                  {capCtaLabel}
-                </Button>
-              </div>
-            )}
+            {/* No at-cap banner here by design. Being at cap is the normal
+                resting state for anyone who bought exactly the seats they
+                need — a two-seat customer with two users is not in a
+                problem state, and warning them on every visit trains them
+                to ignore the warning colour. The amber `used/cap` pill
+                above still marks it, and the real prompt to buy a seat
+                appears in the at-cap dialog when "+ Add User" is actually
+                clicked, which is the only moment the cap blocks anything. */}
           </>
         );
       })()}
