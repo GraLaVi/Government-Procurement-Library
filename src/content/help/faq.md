@@ -26,9 +26,7 @@ Each user sets their own alert frequency on the [Notifications](/help/notificati
 
 ### What's the difference between the bell and email alerts?
 
-<!-- HIDDEN UNTIL RFQ LAUNCH: the sentence below should read "... shows new bid matches (and RFQ responses) without email; ..." -->
-
-They're independent. The in-app **notification bell** (🔔) shows new bid matches without email; email **Bid Matching Alerts** land in your inbox on the schedule you choose. You can turn on either, both, or neither. See [The notification bell](/help/notifications#the-notification-bell-in-app-alerts) to configure the bell.
+They're independent. The in-app **notification bell** (🔔) shows new bid matches (and RFQ responses) without email; email **Bid Matching Alerts** land in your inbox on the schedule you choose. You can turn on either, both, or neither. See [The notification bell](/help/notifications#the-notification-bell-in-app-alerts) to configure the bell.
 
 ### Does bid matching cover SAM.gov as well as DIBBS?
 

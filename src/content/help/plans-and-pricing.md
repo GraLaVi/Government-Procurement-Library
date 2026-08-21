@@ -16,11 +16,13 @@ Paid plans are **priced per seat**: you choose how many users (seats) you need �
 
 **Advanced** — Everything in Basic plus the features power users rely on: full procurement history on parts, open solicitations on vendor profiles, pinned searches, CSV exports, immediate match notifications, and up to 20 bid-matching profiles.
 
-<!-- HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: restore the "Add-ons" section below, and add "Add-ons" to the Related articles list at the bottom.
-
 ## Add-ons
 
-Add-ons stack on top of a paid plan rather than replacing it, and are **assigned per user**: you buy a number of add-on seats, then your account admin decides which team members get them under **Account \> Users**. A ten-person team can put two people on Procurement Analytics without paying for ten.
+Add-ons stack on top of a paid plan rather than replacing it, and are **assigned per user**: you buy a number of add-on seats, then your account admin decides which team members get them under **Account \> Users**. A ten-person team can put two people on an add-on without paying for ten.
+
+**Request for Quote** — [Send structured RFQs to vendors](/help/requests-for-quote) from a part's Manufacturers tab and collect quotes, with a shared batch cart, a private vendor contact book, and response tracking. Available on any paid plan.
+
+<!-- HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: restore the paragraph below into the section above, and add the analytics articles to the Related articles list at the bottom.
 
 **Procurement Analytics** — The [Procurement Analytics dashboard](/help/procurement-analytics) plus [DLA demand & stock intelligence](/help/demand-intelligence) on every part. Requires the Advanced plan.
 
@@ -63,9 +65,7 @@ If you move to a plan with a lower profile limit, your existing profiles aren't 
 
 Go to **Account \> Billing** to see everything about your subscription in one place. Your plan appears as **Procurement Intelligence — Free**, **— Basic**, or **— Advanced**.
 
-<!-- HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: restore the sentence below.
 Any add-ons you've bought are listed under **Add-ons** on the same page, separately from your plan.
--->
 
 *Note: Billing is available to account admins only. If you're a member and don't see Billing under Account, ask your account admin to make plan, seat, or payment changes.*
 
@@ -119,5 +119,6 @@ To review past charges, open the **Invoice history** tab on the same page — ea
 ## Related articles
 
 - [Setting Up Bid-Matching Profiles](/help/bid-matching-profiles) — Create and manage profiles, including reactivating after a downgrade  
+- [Sending RFQs to Vendors](/help/requests-for-quote) — What the RFQ add-on includes and how to use it  
 - [Notifications](/help/notifications) — Configure email alerts and notification frequency  
 - [Managing Your Account](/help/account-settings) — Profile, team members, and contacts
