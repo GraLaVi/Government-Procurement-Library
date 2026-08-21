@@ -92,26 +92,20 @@ export const HELP_ARTICLES: HelpArticleMeta[] = [
   //   group: "platform",
   //   spokeOf: "procurement-analytics",
   // },
-  // HIDDEN UNTIL RFQ LAUNCH: RFQ add-on isn't ready to deploy. Uncomment to
-  // relist; src/content/help/requests-for-quote.md is unchanged on disk. Also
-  // restore the RFQ passages commented out in parts-search.md,
-  // notifications.md, and faq.md.
-  // {
-  //   slug: "requests-for-quote",
-  //   title: "Sending RFQs to Vendors",
-  //   blurb:
-  //     "Send requests for quote to vendors from a part's Manufacturers tab and collect structured quotes.",
-  //   group: "platform",
-  // },
-  // HIDDEN UNTIL RFQ ENTERPRISE LAUNCH: uncomment with the entry above when
-  // the add-ons ship; src/content/help/rfq-enterprise.md renders as-is.
-  // {
-  //   slug: "rfq-enterprise",
-  //   title: "The RFQ Enterprise Work Queue",
-  //   blurb:
-  //     "Disburse matched solicitations to buyers by CAGE, quote private vendors, and compare quotes side by side.",
-  //   group: "platform",
-  // },
+  {
+    slug: "requests-for-quote",
+    title: "Sending RFQs to Vendors",
+    blurb:
+      "Send requests for quote to vendors from a part's Manufacturers tab and collect structured quotes.",
+    group: "platform",
+  },
+  {
+    slug: "rfq-enterprise",
+    title: "The RFQ Enterprise Work Queue",
+    blurb:
+      "Disburse matched solicitations to buyers by CAGE, quote private vendors, and compare quotes side by side.",
+    group: "platform",
+  },
   {
     slug: "solicitations-and-contracts",
     title: "Viewing Solicitations and Contracts",

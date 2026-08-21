@@ -123,13 +123,19 @@ export function Products() {
   // aren't subscription tiers and avoids the "single-card row looks lonely"
   // problem you get from folding either into the tier grid.
   //
-  // Both add-ons are temporarily hidden from the landing page (kept in
-  // `products` and still live on /pricing, which self-hides them via each
-  // product's billing_enabled flag). Resurface an add-on by rendering it in
-  // the panel grid below; for analytics, do it when ANALYTICS_ADDON_PUBLIC
-  // flips in @/lib/analytics/tier.
+  // The RFQ add-on is public and renders in the panel grid below. Procurement
+  // Analytics stays hidden (kept in `products`, and still self-hiding on
+  // /pricing via its billing_enabled flag) — surface it here when
+  // ANALYTICS_ADDON_PUBLIC flips in @/lib/analytics/tier.
+  //
+  // Unlike /pricing, this list is static copy with no billing_enabled to key
+  // off, so the split is by family name. Landing and /pricing must be flipped
+  // together: showing a panel here while the product is still
+  // billing_enabled=false sends visitors to a pricing page that doesn't list it.
   const tierProducts = products.filter((p) => p.tier !== "Add-on" && p.tier !== "Quote");
+  const rfqProduct = products.find((p) => p.family === "Request for Quote");
   const customReportsProduct = products.find((p) => p.family === "Data Reports");
+  const nonTierCount = (rfqProduct ? 1 : 0) + (customReportsProduct ? 1 : 0);
 
   // Large-screen column count tracks how many tier cards are actually
   // rendered, so the grid shrinks instead of leaving an empty slot at the
@@ -237,10 +243,17 @@ export function Products() {
         {/* Non-tier offers. Different shape from the tier grid on purpose
             (subdued background) to signal "and here's what stacks alongside
             / beyond the tiers above" without reading as a second row of the
-            same CTA repeated. With the RFQ add-on hidden, Data Reports —
-            the bespoke "nothing above fits? talk to us" path — takes the
-            full width rather than leaving a half-empty row. */}
-        <div className="mt-6 grid grid-cols-1 gap-6">
+            same CTA repeated. The RFQ add-on sits beside Data Reports — the
+            bespoke "nothing above fits? talk to us" path. Columns track how
+            many panels actually render, so hiding one collapses the row
+            instead of leaving a half-empty slot (same pattern as /pricing).
+            Literal class strings so Tailwind's JIT keeps them. */}
+        <div
+          className={`mt-6 grid gap-6 ${
+            nonTierCount >= 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+          }`}
+        >
+          {rfqProduct && <NonTierPanel product={rfqProduct} />}
           {customReportsProduct && <NonTierPanel product={customReportsProduct} />}
         </div>
 

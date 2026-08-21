@@ -17,9 +17,7 @@ GPH keeps you informed about new matches, system updates, and other events relat
 
 ## The notification bell (in-app alerts)
 
-The bell (🔔) at the top of the page shows in-app alerts without sending you email. Click it to see your recent items and open the one you want; **Mark all read** clears the badge.
-
-<!-- HIDDEN UNTIL RFQ LAUNCH: restore the trailing sentence on the paragraph above — "Today the bell carries two kinds of alert, each with its own on/off switch in a different place." -->
+The bell (🔔) at the top of the page shows in-app alerts without sending you email. Click it to see your recent items and open the one you want; **Mark all read** clears the badge. Today the bell carries two kinds of alert, each with its own on/off switch in a different place.
 
 ### Bid-match alerts
 
@@ -43,8 +41,6 @@ There's no email equivalent; this alert is bell-only.
 
 -->
 
-<!-- HIDDEN UNTIL RFQ LAUNCH: restore this whole section
-
 ### RFQ response alerts
 
 If you use [RFQs](/help/requests-for-quote) — the tool for sending requests for quote to vendors from a part's **Manufacturers** tab — the bell alerts you when **a vendor responds to an RFQ you sent**. (That's the only RFQ bell event; there are no alerts for creating an RFQ or other status changes.) An alert reads like *Acme Corp responded to "Hydraulic Valve Assembly"* and opens that RFQ when clicked.
@@ -55,8 +51,6 @@ Manage these under **RFQ \> Settings**, in **My notifications**:
 - **How the bell groups response alerts** — **One alert per response**, **One alert per RFQ** (responses to the same RFQ collapse into one item with a count), or **A single rolling summary** (one item totaling all new responses).
 
 Account admins can also set **who** gets response alerts on the same Settings page — **Only the RFQ creator** or **Everyone on the team** — and that choice applies to both the bell and email.
-
--->
 
 ## Your notification preferences
 
@@ -118,10 +112,9 @@ The Notifications page controls in-app notifications only. You may also receive:
 
 ## Related articles
 
-<!-- HIDDEN UNTIL RFQ LAUNCH: restore as the third list item — "- [Sending RFQs to Vendors](/help/requests-for-quote) — Configure and act on RFQ response alerts" -->
-
 <!-- HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: restore as a list item — "- [Reading Demand & Stock Data](/help/demand-intelligence) — What the DLA buy signals in the bell mean" -->
 
 - [How Solicitation Matching Works](/help/solicitation-matching) — How bid-matching alerts are generated  
 - [Setting Up Bid-Matching Profiles](/help/bid-matching-profiles) — Define the profiles that drive your matches  
+- [Sending RFQs to Vendors](/help/requests-for-quote) — Configure and act on RFQ response alerts  
 - [Managing Your Account](/help/account-settings) — Add and edit non-login contacts
