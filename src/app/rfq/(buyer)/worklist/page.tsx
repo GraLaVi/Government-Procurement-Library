@@ -110,6 +110,16 @@ const REFRESH_MINUTES_STORAGE_KEY = "rfq-worklist-refresh-minutes";
 const REFRESH_MINUTE_OPTIONS = [1, 2, 5, 10, 15, 30] as const;
 const DEFAULT_REFRESH_MINUTES = 5;
 const SOL_STATUS_OPTIONS = ["open", "awarded", "closed", "cancelled", "removed", "unavailable", "all"] as const;
+
+/** Fields the queue search can target — values match the API's search_field
+ *  (same control as the bid-matching results page). */
+const SEARCH_FIELDS = [
+  { value: "solicitation", label: "Solicitation #", placeholder: "Search solicitation #…" },
+  { value: "nsn", label: "NSN / part #", placeholder: "Search NSN, NIIN or part #…" },
+  { value: "description", label: "Description", placeholder: "Search item description…" },
+  { value: "pr", label: "PR #", placeholder: "Search PR number…" },
+] as const;
+type SearchField = (typeof SEARCH_FIELDS)[number]["value"];
 type SolStatusFilter = (typeof SOL_STATUS_OPTIONS)[number];
 
 type Scope = "mine" | "unassigned" | "all";
@@ -161,6 +171,11 @@ export default function RfqWorklistPage() {
   const [scopeInitialized, setScopeInitialized] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [solStatus, setSolStatus] = useState<SolStatusFilter>("open");
+  // Field-scoped queue search (same control as the bid-matching results
+  // page): the typed term applies after a short debounce.
+  const [searchField, setSearchField] = useState<SearchField>("solicitation");
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("close_date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
@@ -288,7 +303,7 @@ export default function RfqWorklistPage() {
     } catch { /* ignore */ }
   }, [scope, statusFilter, solStatus, autoRefresh, refreshMinutes, scopeInitialized]);
 
-  useEffect(() => { setPage(1); setSelected(new Set()); }, [scope, statusFilter, solStatus, sortBy, sortDir]);
+  useEffect(() => { setPage(1); setSelected(new Set()); }, [scope, statusFilter, solStatus, sortBy, sortDir, appliedSearch, searchField]);
 
   // Server-side sort (client-side would only sort the visible page).
   const toggleSort = (key: SortKey) => {
@@ -298,6 +313,12 @@ export default function RfqWorklistPage() {
       setSortDir("asc");
     }
   };
+
+  // Debounced apply, mirroring the bid-matching page (300ms).
+  useEffect(() => {
+    const t = setTimeout(() => setAppliedSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   // silent skips the full-page spinner — an auto-refresh replaces the rows in
   // place, leaving selection, expanded rows and scroll position alone.
@@ -310,6 +331,10 @@ export default function RfqWorklistPage() {
         sort_by: sortBy, sort_dir: sortDir, sol_status: solStatus,
       });
       if (statusFilter) params.set("work_status", statusFilter);
+      if (appliedSearch) {
+        params.set("search_field", searchField);
+        params.set("search", appliedSearch);
+      }
       const res = await fetch(`/api/rfq/worklist?${params.toString()}`);
       const body = await res.json();
       if (!res.ok) {
@@ -323,7 +348,7 @@ export default function RfqWorklistPage() {
     } finally {
       setLoading(false);
     }
-  }, [scope, statusFilter, solStatus, page, sortBy, sortDir]);
+  }, [scope, statusFilter, solStatus, page, sortBy, sortDir, appliedSearch, searchField]);
 
   useEffect(() => {
     if (scopeInitialized && !authLoading && hasEnterprise) load();
@@ -703,6 +728,48 @@ export default function RfqWorklistPage() {
                   ))}
                 </select>
               </label>
+              {/* Field selector + term as ONE bordered control (select and
+                  input are border-0), copied from the bid-matching results
+                  page so the two queue pages search identically. */}
+              <div className="flex-1 min-w-[240px] max-w-md flex items-stretch rounded-lg border border-border overflow-hidden focus-within:border-primary">
+                <div className="relative flex items-stretch">
+                  <select
+                    value={searchField}
+                    onChange={(e) => setSearchField(e.target.value as SearchField)}
+                    aria-label="Field to search"
+                    title="Which field the search term applies to"
+                    className="appearance-none border-0 bg-muted-light text-foreground text-xs pl-2 pr-6 py-1 focus:outline-none cursor-pointer"
+                  >
+                    {SEARCH_FIELDS.map((f) => (
+                      <option key={f.value} value={f.value}>{f.label}</option>
+                    ))}
+                  </select>
+                  <svg
+                    className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+                <span className="w-px bg-border shrink-0" aria-hidden="true" />
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder={SEARCH_FIELDS.find((f) => f.value === searchField)?.placeholder}
+                  className="flex-1 min-w-0 border-0 bg-card-bg text-foreground text-xs px-2.5 py-1 focus:outline-none"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchInput("")}
+                    className="px-2 text-muted hover:text-foreground"
+                    aria-label="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
               <span className="ml-auto text-xs text-muted">
                 {myMinEst != null && (
                   <span
