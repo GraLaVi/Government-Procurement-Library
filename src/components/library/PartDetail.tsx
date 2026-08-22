@@ -76,6 +76,8 @@ import { SolicitationVersionsModal } from "@/components/library/SolicitationVers
 import { SolicitationTypeBadge } from "@/components/library/SolicitationTypeBadge";
 import { NoticeTypeBadge } from "@/components/library/NoticeTypeBadge";
 import { RowBadge } from "@/components/library/RowBadge";
+import { InventoryPanel } from "@/components/library/InventoryPanel";
+import type { PartInventory } from "@/lib/inventory/types";
 
 // Map UI tabId -> audit `view` name (matches FastAPI _VALID_TAB_VIEWS)
 const TAB_VIEW_MAP: Record<string, string> = {
@@ -83,6 +85,7 @@ const TAB_VIEW_MAP: Record<string, string> = {
   procurement: 'procurement_history',
   solicitations: 'solicitations',
   manufacturers: 'manufacturers',
+  inventory: 'inventory',
   technical: 'technical_characteristics',
   enduse: 'end_use_description',
   packaging: 'packaging',
@@ -380,7 +383,7 @@ interface PartDetailProps {
   part: PartDetailType;
 }
 
-type TabId = "overview" | "procurement" | "solicitations" | "manufacturers" | "technical" | "enduse" | "packaging" | "procurementitemdesc";
+type TabId = "overview" | "procurement" | "solicitations" | "manufacturers" | "inventory" | "technical" | "enduse" | "packaging" | "procurementitemdesc";
 
 export function PartDetail({ part }: PartDetailProps) {
   const { hasProductAccess, hasAnyProductAccess } = useAuth();
@@ -430,6 +433,13 @@ export function PartDetail({ part }: PartDetailProps) {
   const [isLoadingManufacturers, setIsLoadingManufacturers] = useState(false);
   const [manufacturersError, setManufacturersError] = useState<string | null>(null);
   const [manufacturersFetched, setManufacturersFetched] = useState(false);
+
+  // Supplier Stock state (Inventory Upload — my_stock at any tier;
+  // network_stock comes back null when the viewer lacks network access)
+  const [inventory, setInventory] = useState<PartInventory | null>(null);
+  const [isLoadingInventory, setIsLoadingInventory] = useState(false);
+  const [inventoryError, setInventoryError] = useState<string | null>(null);
+  const [inventoryFetched, setInventoryFetched] = useState(false);
 
   // Demand intelligence state (DLA forecast + stock; Advanced tier)
   const [demand, setDemand] = useState<PartDemand | null>(null);
@@ -641,6 +651,31 @@ export function PartDetail({ part }: PartDetailProps) {
     }
   }, [partReqKey, manufacturersFetched, isLoadingManufacturers]);
 
+  // Fetch supplier stock when tab is clicked (lazy loading)
+  const fetchInventory = useCallback(async () => {
+    if (inventoryFetched || isLoadingInventory) return;
+
+    setIsLoadingInventory(true);
+    setInventoryError(null);
+
+    try {
+      const response = await fetch(`/api/library/parts/${encodeURIComponent(partReqKey)}/inventory`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load supplier stock');
+      }
+
+      setInventory(data as PartInventory);
+      setInventoryFetched(true);
+    } catch (error) {
+      console.error('Supplier stock fetch error:', error);
+      setInventoryError(error instanceof Error ? error.message : 'Failed to load supplier stock');
+    } finally {
+      setIsLoadingInventory(false);
+    }
+  }, [partReqKey, inventoryFetched, isLoadingInventory]);
+
   // Fetch demand intelligence when tab is clicked (lazy loading, Advanced tier)
   const fetchDemand = useCallback(async () => {
     if (demandFetched || isLoadingDemand) return;
@@ -826,6 +861,8 @@ export function PartDetail({ part }: PartDetailProps) {
       if (tierMeets(tier, "advanced")) fetchSolicitations();
     } else if (tabId === 'manufacturers' && !manufacturersFetched) {
       fetchManufacturers();
+    } else if (tabId === 'inventory' && !inventoryFetched) {
+      fetchInventory();
     } else if (tabId === 'technical' && !technicalFetched) {
       fetchTechnicalCharacteristics();
     } else if (tabId === 'enduse' && !endUseFetched) {
@@ -835,7 +872,7 @@ export function PartDetail({ part }: PartDetailProps) {
     } else if (tabId === 'procurementitemdesc' && !procurementItemDescFetched) {
       fetchProcurementItemDescription();
     }
-  }, [partReqKey, tier, procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
+  }, [partReqKey, tier, procurementFetched, fetchProcurementHistory, solicitationsFetched, fetchSolicitations, manufacturersFetched, fetchManufacturers, inventoryFetched, fetchInventory, technicalFetched, fetchTechnicalCharacteristics, endUseFetched, fetchEndUseDescriptions, packagingFetched, fetchPackaging, procurementItemDescFetched, fetchProcurementItemDescription]);
 
   // Demand & Stock now lives on the Overview tab (analytics add-on), so fetch
   // it eagerly on mount rather than on a tab click. fetchDemand self-guards
@@ -866,6 +903,15 @@ export function PartDetail({ part }: PartDetailProps) {
     : tabCounts
       ? `Manufacturers (${tabCounts.manufacturers_count})`
       : "Manufacturers";
+
+  // Supplier Stock count = the viewer's own lines + network listings they can
+  // see. tabCounts sends inventory_count null (not 0) when the viewer lacks
+  // network access, so the ?? 0 fallbacks make the label degrade cleanly.
+  const inventoryLabel = inventoryFetched && inventory
+    ? `Supplier Stock (${inventory.my_stock.length + (inventory.network_stock?.length ?? 0)})`
+    : tabCounts && (tabCounts.inventory_count != null || tabCounts.my_inventory_count != null)
+      ? `Supplier Stock (${(tabCounts.inventory_count ?? 0) + (tabCounts.my_inventory_count ?? 0)})`
+      : "Supplier Stock";
 
   const technicalLabel = technicalFetched
     ? `Technical Characteristics (${technicalTotal})`
@@ -920,6 +966,9 @@ export function PartDetail({ part }: PartDetailProps) {
     { id: "procurement", label: procurementLabel, disabled: false, visible: tierMeets(tier, "advanced") },
     { id: "solicitations", label: solicitationsLabelForTier, disabled: false, visible: isFreeOnly || tierMeets(tier, "advanced") },
     { id: "manufacturers", label: manufacturersLabel, disabled: false, visible: tierMeets(tier, "basic") },
+    // Supplier Stock is visible at every tier: my_stock always renders, and
+    // the panel itself shows the unlock prompt when network access is absent.
+    { id: "inventory", label: inventoryLabel, disabled: false, visible: true },
     { id: "technical", label: technicalLabel, disabled: false, visible: tierMeets(tier, "basic") },
     { id: "enduse", label: endUseLabel, disabled: false, visible: tierMeets(tier, "basic") },
     { id: "packaging", label: packagingLabel, disabled: false, visible: tierMeets(tier, "advanced") },
@@ -956,6 +1005,10 @@ export function PartDetail({ part }: PartDetailProps) {
       trackView("manufacturers");
       fetchManufacturers();
     }
+    if (!inventoryFetched) {
+      trackView("inventory");
+      fetchInventory();
+    }
     if (tierMeets(tier, "basic") && !technicalFetched) {
       trackView("technical_characteristics");
       fetchTechnicalCharacteristics();
@@ -974,9 +1027,9 @@ export function PartDetail({ part }: PartDetailProps) {
     }
   }, [
     layout, tier, isFreeOnly, partReqKey,
-    procurementFetched, solicitationsFetched, manufacturersFetched, technicalFetched,
+    procurementFetched, solicitationsFetched, manufacturersFetched, inventoryFetched, technicalFetched,
     endUseFetched, packagingFetched, procurementItemDescFetched,
-    fetchProcurementHistory, fetchSolicitations, fetchManufacturers,
+    fetchProcurementHistory, fetchSolicitations, fetchManufacturers, fetchInventory,
     fetchTechnicalCharacteristics, fetchEndUseDescriptions, fetchPackaging,
     fetchProcurementItemDescription,
   ]);
@@ -1028,6 +1081,14 @@ export function PartDetail({ part }: PartDetailProps) {
         isLoading={isLoadingManufacturers}
         error={manufacturersError}
         onRetry={fetchManufacturers}
+      />
+    ),
+    inventory: (
+      <InventoryPanel
+        inventory={inventory}
+        isLoading={isLoadingInventory}
+        error={inventoryError}
+        onRetry={fetchInventory}
       />
     ),
     technical: (
@@ -1112,6 +1173,7 @@ export function PartDetail({ part }: PartDetailProps) {
     if (tierMeets(tier, "advanced")) jobs.push(fetchProcurementHistory());
     if (tierMeets(tier, "advanced")) jobs.push(fetchSolicitations());
     if (tierMeets(tier, "basic")) jobs.push(fetchManufacturers());
+    jobs.push(fetchInventory());
     if (canSeeDemand) jobs.push(fetchDemand());
     if (tierMeets(tier, "basic")) jobs.push(fetchTechnicalCharacteristics());
     if (tierMeets(tier, "basic")) jobs.push(fetchEndUseDescriptions());
@@ -1120,7 +1182,7 @@ export function PartDetail({ part }: PartDetailProps) {
     await Promise.all(jobs);
   }, [
     tier, canSeeDemand,
-    fetchProcurementHistory, fetchSolicitations, fetchManufacturers, fetchDemand,
+    fetchProcurementHistory, fetchSolicitations, fetchManufacturers, fetchInventory, fetchDemand,
     fetchTechnicalCharacteristics, fetchEndUseDescriptions, fetchPackaging,
     fetchProcurementItemDescription,
   ]);

@@ -783,6 +783,11 @@ export interface PartTabCounts {
   // Free-tier-only: count of solicitations posted in the last 30 days.
   // Null for Basic and Advanced.
   solicitations_count_30d?: number | null;
+  // Supplier Stock tab (Inventory Upload). inventory_count is null when the
+  // viewer lacks network access; my_inventory_count is the viewer's own
+  // lines for this part and populates at every tier.
+  inventory_count?: number | null;
+  my_inventory_count?: number | null;
 }
 
 // ============================================================================

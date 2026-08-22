@@ -20,6 +20,7 @@ import {
   partKey,
 } from "@/lib/library/types";
 import { PartsSearchActionData, RecentActionEntry } from "@/lib/preferences/types";
+import type { PartAvailability } from "@/lib/inventory/types";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 
 export default function PartsSearchPage() {
@@ -66,6 +67,35 @@ function PartsSearchPageContent() {
 
   // Client-side search result cache (5-min TTL, max 50 entries)
   const searchCache = useRef<Map<string, { results: PartSearchResult[]; total: number; timestamp: number }>>(new Map());
+
+  // Supplier-stock availability for the current results page (drives the
+  // "In stock" badge). Best-effort enrichment: fetched after results land,
+  // never blocks or fails the search itself.
+  const [availability, setAvailability] = useState<Record<number, PartAvailability>>({});
+  useEffect(() => {
+    const partIds = searchResults.map((r) => r.id).filter(Boolean);
+    setAvailability({});
+    if (partIds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch('/api/inventory/availability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ part_ids: partIds }),
+        });
+        if (!response.ok || cancelled) return;
+        const data = (await response.json()) as { availability?: PartAvailability[] };
+        if (cancelled || !data.availability) return;
+        const byId: Record<number, PartAvailability> = {};
+        for (const row of data.availability) byId[row.part_id] = row;
+        setAvailability(byId);
+      } catch {
+        // Badges are enrichment; the results list renders fine without them.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [searchResults]);
 
   // Defers non-urgent state updates inside handleSearch so React paints
   // the spinner before working through the rest of the cascade.
@@ -492,6 +522,7 @@ function PartsSearchPageContent() {
               selectedNSN={undefined}
               isLoading={isSearching}
               tier={tier}
+              availability={availability}
             />
           )}
         </>
