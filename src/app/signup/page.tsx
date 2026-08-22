@@ -10,17 +10,42 @@ import { PasswordRulesChecklist } from "@/components/auth/PasswordRulesChecklist
 import { firstPasswordViolation } from "@/lib/auth/passwordRules";
 import { useAuth } from "@/contexts/AuthContext";
 import { TOS_VERSION } from "@/components/billing/TermsAcceptanceModal";
-
-type ValidateResponse = {
-  eligible: boolean;
-  reason: string | null;
-  prefill: {
-    legal_business_name: string | null;
-    dba_name: string | null;
-  } | null;
-};
+import { formatMoney, computeTotalCents } from "@/lib/billing/pricing";
+import type { CatalogPlan } from "@/lib/billing/resolveOffer";
+import {
+  validateCageCode,
+  type CageValidateResponse as ValidateResponse,
+} from "@/lib/signup/validateCage";
 
 type Step = "cage" | "account";
+
+// What the visitor is buying, resolved from the live catalog by the ?plan=
+// price id in the URL. Replaces a hardcoded tier→name map that had drifted
+// out of step with the catalog (it still said "Parts and Vendor Library").
+type OfferSummary = {
+  productName: string;
+  totalCents: number | null;
+  currency: string;
+  intervalMonths: number;
+  seats: number;
+  trialDays: number | null;
+};
+
+// Period noun that reads after a figure: "$1,008 / year".
+function periodNoun(months: number): string {
+  switch (months) {
+    case 1:
+      return "month";
+    case 3:
+      return "quarter";
+    case 6:
+      return "6 months";
+    case 12:
+      return "year";
+    default:
+      return `${months} months`;
+  }
+}
 
 // Red asterisk shown next to each required-field label. The full
 // "required fields…" explanation is surfaced in the top error banner
@@ -58,21 +83,27 @@ function SignupPageContent() {
   const tierParam = searchParams.get("tier");
   const planParam = searchParams.get("plan");
   const seatsParam = searchParams.get("seats");
+  // Campaign pages (/start/<slug>) validate the CAGE before sending the
+  // visitor here, so step 1 is already answered — see the prefill effect below.
+  const cageParam = searchParams.get("cage");
   const intentIsFree = tierParam === "free";
   const intentIsPaid = planParam !== null && planParam !== "";
   const hasUrlIntent = intentIsFree || intentIsPaid;
-  // Map the URL ?tier= slug to the public product name. Slugs come from
-  // /pricing (free / basic / advanced); paid arrivals without a tier
-  // slug fall back to a generic label.
-  const TIER_PRODUCT_NAMES: Record<string, string> = {
-    free: "Parts and Vendor Library — Free",
-    basic: "Parts and Vendor Library — Basic",
-    advanced: "Parts and Vendor Library — Advanced",
-  };
-  const intentProductName = tierParam
-    ? TIER_PRODUCT_NAMES[tierParam.toLowerCase()] ?? null
+
+  // The plan being bought, priced from the live catalog. Null until the
+  // fetch lands (or if it fails — the badge then falls back to the tier slug).
+  const [offer, setOffer] = useState<OfferSummary | null>(null);
+
+  // Fallback chain for the badge heading: catalog name → the ?tier= slug
+  // title-cased → a generic label. Never a hardcoded product name, which is
+  // what previously let this page disagree with the catalog and the invoice.
+  const tierFallbackLabel = tierParam
+    ? `${tierParam.charAt(0).toUpperCase()}${tierParam.slice(1).toLowerCase()} plan`
     : null;
-  const intentLabel = intentProductName ?? (intentIsPaid ? "the plan you selected" : null);
+  const intentLabel =
+    offer?.productName ??
+    tierFallbackLabel ??
+    (intentIsPaid ? "the plan you selected" : null);
 
   // Already-logged-in visitors don't need to sign up. A tier must be chosen
   // first: a bare /signup (no ?tier/?plan intent) would silently drop the
@@ -136,43 +167,85 @@ function SignupPageContent() {
     }
   }, [error, submitAttempt]);
 
-  const validateCage = useCallback(async (raw: string) => {
-    const code = raw.trim().toUpperCase();
-    if (!code) {
+  // Returns whether the code came back eligible, so callers that need to act
+  // on the outcome (the ?cage= prefill below) don't have to wait on state.
+  const validateCage = useCallback(async (raw: string): Promise<boolean> => {
+    if (!raw.trim()) {
       setCageResult(null);
-      return;
+      return false;
     }
     setCageValidating(true);
     setError(null);
     try {
-      const resp = await fetch("/api/billing/signup/validate-cage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cage_code: code }),
-      });
-      if (!resp.ok) {
-        const errBody = await resp.json().catch(() => ({}));
-        setError(
-          errBody.error ||
-            (resp.status >= 500
-              ? "We couldn't reach the eligibility service. Please try again."
-              : "Validation failed."),
-        );
+      const outcome = await validateCageCode(raw);
+      if (!outcome.ok) {
+        setError(outcome.error);
         setCageResult(null);
-        return;
+        return false;
       }
-      const data: ValidateResponse = await resp.json();
-      setCageResult(data);
-      if (data.eligible && data.prefill?.legal_business_name) {
-        setCompanyName(data.prefill.legal_business_name);
+      setCageResult(outcome.data);
+      if (outcome.data.eligible && outcome.data.prefill?.legal_business_name) {
+        setCompanyName(outcome.data.prefill.legal_business_name);
       }
-    } catch {
-      setError("Network error. Please try again.");
-      setCageResult(null);
+      return outcome.data.eligible;
     } finally {
       setCageValidating(false);
     }
   }, []);
+
+  // Arriving from a campaign page (/start/<slug>) with a CAGE already checked:
+  // prefill it and re-validate server-side — the query string is visitor-
+  // editable, so the code still has to earn its way past the eligibility API
+  // — then drop straight onto step 2. An ineligible or tampered code just
+  // leaves them on step 1 with the normal error.
+  const cagePrefilled = useRef(false);
+  useEffect(() => {
+    if (cagePrefilled.current) return;
+    const code = cageParam?.trim().toUpperCase();
+    if (!code) return;
+    cagePrefilled.current = true;
+    setCageInput(code);
+    validateCage(code).then((eligible) => {
+      if (eligible) setStep("account");
+    });
+  }, [cageParam, validateCage]);
+
+  // Resolve what the ?plan= price id actually is, so the badge can name the
+  // product and quote the price instead of asserting a hardcoded name.
+  useEffect(() => {
+    if (!intentIsPaid || !planParam) {
+      setOffer(null);
+      return;
+    }
+    const priceId = parseInt(planParam, 10);
+    if (!Number.isFinite(priceId)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetch("/api/billing/plans");
+        if (!resp.ok || cancelled) return;
+        const plans = (await resp.json()) as CatalogPlan[];
+        if (cancelled || !Array.isArray(plans)) return;
+        const plan = plans.find((p) => p.prices.some((pr) => pr.id === priceId));
+        const price = plan?.prices.find((pr) => pr.id === priceId);
+        if (!plan || !price) return;
+        const seats = seatsParam ? Math.max(1, parseInt(seatsParam, 10) || 1) : 1;
+        setOffer({
+          productName: plan.name,
+          totalCents: computeTotalCents(price, seats),
+          currency: price.currency,
+          intervalMonths: price.interval_count,
+          seats,
+          trialDays: plan.default_trial_days,
+        });
+      } catch {
+        // Badge falls back to the tier slug — not worth blocking signup over.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [intentIsPaid, planParam, seatsParam]);
 
   const checkEmailAvailable = useCallback(async (raw: string) => {
     const value = raw.trim().toLowerCase();
@@ -511,6 +584,21 @@ function SignupPageContent() {
                   <div className="text-base sm:text-lg font-semibold text-primary mt-0.5">
                     {intentLabel}
                   </div>
+                  {/* Price, quoted from the catalog. The visitor may have come
+                      straight from a campaign link without passing /pricing,
+                      so this can be the first figure they've seen. */}
+                  {offer !== null && offer.totalCents !== null && (
+                    <div className="text-sm text-foreground mt-1">
+                      <span className="font-semibold">
+                        {formatMoney(offer.totalCents, offer.currency)}
+                      </span>{" "}
+                      / {periodNoun(offer.intervalMonths)} · {offer.seats} user
+                      {offer.seats === 1 ? "" : "s"}
+                      {offer.trialDays !== null && offer.trialDays > 0 && (
+                        <> · free for {offer.trialDays} days, no card required</>
+                      )}
+                    </div>
+                  )}
                   {intentIsPaid && (
                     <div className="text-xs text-muted mt-1.5">
                       Checkout starts right after you create your account.
