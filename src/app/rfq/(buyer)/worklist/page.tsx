@@ -220,15 +220,10 @@ export default function RfqWorklistPage() {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [partsBySol, setPartsBySol] = useState<Record<number, { loading: boolean; error: string | null; parts: PartSearchResult[]; myStock?: Record<number, MyStockSummary> }>>({});
 
-  const toggleExpanded = (item: RfqWorkItem) => {
+  // Lazy-fetch a solicitation's parts (+ own-stock detail) once; cached
+  // afterward. Shared by row expansion and the stock glyph's popover.
+  const ensurePartsLoaded = (item: RfqWorkItem) => {
     const id = item.solicitation_id;
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    // Lazy-fetch the parts on first expand; cached afterward.
     if (partsBySol[id] || !item.solicitation_number) return;
     setPartsBySol((prev) => ({ ...prev, [id]: { loading: true, error: null, parts: [] } }));
     (async () => {
@@ -264,6 +259,17 @@ export default function RfqWorklistPage() {
         setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: "Network error loading parts.", parts: [] } }));
       }
     })();
+  };
+
+  const toggleExpanded = (item: RfqWorkItem) => {
+    const id = item.solicitation_id;
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    ensurePartsLoaded(item);
   };
 
   // Initial scope: an explicit ?scope= wins (coverage tiles and the
@@ -866,10 +872,25 @@ export default function RfqWorklistPage() {
                           )}
                           {/* Own-inventory coverage (Inventory Upload). The
                               counts are null for customers with no inventory,
-                              so the glyph simply never renders for them. */}
+                              so the glyph simply never renders for them.
+                              Click opens a popover; the detail rides the same
+                              lazy fetch row expansion uses. */}
                           <StockCoverageGlyph
                             stocked={item.stocked_part_count}
                             quotable={item.quotable_part_count}
+                            onOpen={() => ensurePartsLoaded(item)}
+                            loading={!partsState || partsState.loading || (!partsState.error && !partsState.myStock)}
+                            entries={
+                              partsState?.myStock
+                                ? partsState.parts
+                                    .filter((p) => partsState.myStock?.[p.id])
+                                    .map((p) => ({
+                                      key: p.id,
+                                      identity: formatPartIdentity(p),
+                                      summary: partsState.myStock![p.id],
+                                    }))
+                                : undefined
+                            }
                           />
                           {/* One "Amended" pill, not two — the merge now lives
                               inside SolicitationRowBadges, so this passes the
