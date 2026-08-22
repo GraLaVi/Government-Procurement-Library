@@ -35,7 +35,7 @@ export default function InventoryPage() {
           <span className="text-foreground">Inventory</span>
         </nav>
         <h1 className="text-2xl font-bold text-foreground">Inventory</h1>
-        <p className="text-sm text-muted mt-1 max-w-2xl">
+        <p className="text-sm text-muted mt-1">
           Upload your stock so it appears on the parts your team researches —
           and, if you choose to share it, on the parts every GPH subscriber
           researches. Sharing is opt-in and column-by-column; contributing also

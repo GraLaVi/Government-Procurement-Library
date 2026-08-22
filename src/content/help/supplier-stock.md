@@ -5,15 +5,21 @@ description: "Upload your inventory to GPH, control exactly what other subscribe
 ---
 
 <!--
-  HIDDEN UNTIL INVENTORY UPLOAD LAUNCH (backend shipped 2026-08-22; frontend
-  pending). This article is deliberately NOT registered in src/lib/help.ts —
-  the registry drives the /help route allowlist, so this file renders
-  nothing until an entry is added. At launch, add to HELP_ARTICLES:
-    { slug: "supplier-stock", title: "Sharing and Finding Supplier Stock",
-      blurb: "Upload your inventory, control what other subscribers see, and find parts that are on the shelf right now.",
-      group: "platform" }
-  and add a Supplier Stock passage to plans-and-pricing.md (viewing requires
-  Basic+ or being a sharing contributor; contributing is free).
+  HIDDEN UNTIL INVENTORY UPLOAD LAUNCH. This article is deliberately NOT
+  registered in src/lib/help.ts — the registry drives the /help route
+  allowlist, so this file renders nothing until an entry is added.
+
+  Launch checklist (do these together):
+  1. Add to HELP_ARTICLES in src/lib/help.ts:
+       { slug: "supplier-stock", title: "Sharing and Finding Supplier Stock",
+         blurb: "Upload your inventory, control what other subscribers see, and find parts that are on the shelf right now.",
+         group: "platform" }
+  2. Restore the two commented-out inventory passages in
+     src/content/help/rfq-enterprise.md (row badge + "Your stock" column).
+  3. Add a Supplier Stock passage to plans-and-pricing.md (viewing requires
+     Basic+ or being a sharing contributor; contributing is free).
+  4. Flip INVENTORY_UPLOAD_PUBLIC in src/lib/inventory/launch.ts (unhides
+     the Account -> Inventory card outside dev).
 -->
 
 GPH's part records tell you what the government knows about a part — procurement history, open solicitations, DLA demand and stock. **Supplier Stock** adds the one thing missing from that picture: what the supply chain actually has on the shelf right now. Suppliers upload their inventory, and — only if they choose to share — their stock becomes visible to other GPH customers on the part's **Supplier Stock** tab, with an **In stock** badge in search results.
@@ -28,6 +34,7 @@ Contributing your inventory is **free on every plan**. Viewing *other* companies
 - [Sharing: who sees what](#sharing-who-sees-what)
 - [Freshness: the stale badge and auto-hide](#freshness-the-stale-badge-and-auto-hide)
 - [Finding supplier stock as a buyer](#finding-supplier-stock-as-a-buyer)
+- [Your stock on the Send RFQs page](#your-stock-on-the-send-rfqs-page)
 - [Fixing rejected rows](#fixing-rejected-rows)
 - [Who can do what](#who-can-do-what)
 
@@ -111,6 +118,15 @@ On any part record, the **Supplier Stock** tab shows two sections:
 Search results show an **In stock** badge on parts with live network listings, so you can spot sourceable parts while scanning solicitations.
 
 If your plan doesn't include network viewing, the tab still shows your own stock — and shows how to unlock the network: upgrade, or start sharing your own inventory.
+
+## Your stock on the Send RFQs page
+
+If your company also uses the **RFQ Enterprise** add-on, your uploaded inventory shows up right where bid decisions get made: the [Send RFQs worklist](/help/rfq-enterprise#the-send-rfqs-page).
+
+- Solicitations whose parts are already on your shelf carry a **green cube badge** with a fraction — say, **2/4** means two of the four solicited parts are in your inventory. Solid green means everything is stocked; an outline means some of it is. No badge simply means none of it is.
+- Expanding the row adds a **Your stock** column to the solicited items: how many you have and in what condition, plus the warehouse and the date of the count. A **partial** tag warns when your on-hand quantity covers only part of what's solicited, and an old count date is flagged so you can recount before quoting from it.
+
+This view is **your own inventory only** — other suppliers' shared stock never appears on the Send RFQs page. It also doesn't require sharing: even with network sharing off, your private catalog powers these badges for your own team.
 
 ## Fixing rejected rows
 
