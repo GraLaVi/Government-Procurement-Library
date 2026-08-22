@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import {
+  formatContractDate,
   formatCurrency,
   formatPartIdentity,
   type PartSearchResponse,
@@ -35,6 +36,12 @@ import {
   type RfqWorklistClaimResponse,
   type RfqWorklistPage,
 } from "@/lib/rfq/types";
+import { StockCoverageGlyph } from "@/components/inventory/StockCoverageGlyph";
+import {
+  summarizeMyStock,
+  type MyStockResponse,
+  type MyStockSummary,
+} from "@/lib/inventory/types";
 
 const PAGE_SIZE = 50;
 
@@ -49,6 +56,47 @@ const PAGE_SIZE = 50;
 const DIBBS_PLACEHOLDER_CAGE = "0001S";
 function isQuotableLine(p: PartSearchResult): boolean {
   return !(p.mfg_cage === DIBBS_PLACEHOLDER_CAGE && !p.nsn?.trim());
+}
+
+/**
+ * "Your stock" cell in the expanded parts table: quantity · condition on the
+ * first line, warehouse · as-of on the second — the two facts a buyer checks
+ * before quoting from stock. Undefined summary covers both "no stock for
+ * this part" and "detail still loading"; either way the cell stays quiet.
+ */
+function MyStockCell({
+  summary,
+  solicitedQty,
+}: {
+  summary: MyStockSummary | undefined;
+  solicitedQty: number | null | undefined;
+}) {
+  if (!summary) return <span className="text-muted">—</span>;
+  const partial = solicitedQty != null && summary.totalQuantity < solicitedQty;
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 font-semibold text-green-800 dark:text-green-300 whitespace-nowrap">
+        <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" aria-hidden="true" />
+        {summary.totalQuantity.toLocaleString()} {summary.unitOfMeasure}
+        {summary.conditionCode ? ` · cond ${summary.conditionCode}` : ""}
+        {partial && (
+          <span
+            className={`${ROW_BADGE_BASE} bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30`}
+            title={`Covers ${summary.totalQuantity.toLocaleString()} of the ${solicitedQty?.toLocaleString()} solicited — you would need to source the balance.`}
+          >
+            partial
+          </span>
+        )}
+      </div>
+      <div className={`text-[11px] ${summary.isStale ? "text-amber-700 dark:text-amber-300" : "text-muted"}`}>
+        {summary.warehouse || "—"}
+        {summary.otherLocations > 0 && ` +${summary.otherLocations} more`}
+        {" · as of "}
+        {formatContractDate(summary.asOfDate)}
+        {summary.isStale && " — stale, recount before quoting"}
+      </div>
+    </div>
+  );
 }
 const SCOPE_STORAGE_KEY = "rfq-worklist-scope";
 const STATUS_FILTER_STORAGE_KEY = "rfq-worklist-status-filter";
@@ -155,7 +203,7 @@ export default function RfqWorklistPage() {
   // qty/unit, unit price, Quote) render in a dropdown under the row —
   // mirrors the bid-matching page's matched-conditions expander.
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
-  const [partsBySol, setPartsBySol] = useState<Record<number, { loading: boolean; error: string | null; parts: PartSearchResult[] }>>({});
+  const [partsBySol, setPartsBySol] = useState<Record<number, { loading: boolean; error: string | null; parts: PartSearchResult[]; myStock?: Record<number, MyStockSummary> }>>({});
 
   const toggleExpanded = (item: RfqWorkItem) => {
     const id = item.solicitation_id;
@@ -178,7 +226,25 @@ export default function RfqWorklistPage() {
           return;
         }
         const data = body as PartSearchResponse;
-        setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: null, parts: data.results.filter(isQuotableLine) } }));
+        const parts = data.results.filter(isQuotableLine);
+        setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: null, parts } }));
+        // Own-stock detail for the "Your stock" column. Only fetched when
+        // the row glyph said something is stocked; best-effort — the parts
+        // list renders fine without it.
+        if ((item.stocked_part_count ?? 0) > 0 && parts.length > 0) {
+          try {
+            const stockRes = await fetch("/api/inventory/my-stock", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ part_ids: parts.map((p) => p.id) }),
+            });
+            if (stockRes.ok) {
+              const stockBody = (await stockRes.json()) as MyStockResponse;
+              const myStock = summarizeMyStock(stockBody.items);
+              setPartsBySol((prev) => ({ ...prev, [id]: { ...prev[id], myStock } }));
+            }
+          } catch { /* enrichment only */ }
+        }
       } catch {
         setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: "Network error loading parts.", parts: [] } }));
       }
@@ -731,6 +797,13 @@ export default function RfqWorklistPage() {
                               </svg>
                             </button>
                           )}
+                          {/* Own-inventory coverage (Inventory Upload). The
+                              counts are null for customers with no inventory,
+                              so the glyph simply never renders for them. */}
+                          <StockCoverageGlyph
+                            stocked={item.stocked_part_count}
+                            quotable={item.quotable_part_count}
+                          />
                           {/* One "Amended" pill, not two — the merge now lives
                               inside SolicitationRowBadges, so this passes the
                               signals through raw instead of OR-ing them here.
@@ -880,6 +953,12 @@ export default function RfqWorklistPage() {
                                   <th className={thClass}>NSN</th>
                                   <th className={thClass}>Description</th>
                                   <th className={`${thClass} !text-right whitespace-nowrap`}>Qty / Unit</th>
+                                  {/* Between what they want and what it goes
+                                      for. Only when the customer has
+                                      inventory at all (counts non-null). */}
+                                  {item.quotable_part_count != null && (
+                                    <th className={`${thClass} whitespace-nowrap`}>Your stock</th>
+                                  )}
                                   <th className={`${thClass} !text-right`}>Unit Price</th>
                                   <th className={`${thClass} !text-right`} aria-label="Actions" />
                                 </tr>
@@ -924,6 +1003,14 @@ export default function RfqWorklistPage() {
                                         ? `${p.quantity.toLocaleString()}${p.unit_of_issue ? `/${p.unit_of_issue}` : ""}`
                                         : p.unit_of_issue || "—"}
                                     </td>
+                                    {item.quotable_part_count != null && (
+                                      <td className={`${tdClass} whitespace-nowrap`}>
+                                        <MyStockCell
+                                          summary={partsState.myStock?.[p.id]}
+                                          solicitedQty={p.quantity}
+                                        />
+                                      </td>
+                                    )}
                                     <td className={`${tdClass} text-right whitespace-nowrap font-mono tabular-nums`}>
                                       {formatCurrency(p.unit_price)}
                                     </td>

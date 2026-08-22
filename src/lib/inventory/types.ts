@@ -226,6 +226,62 @@ export interface InventoryAvailabilityResponse {
   availability: PartAvailability[];
 }
 
+/** One of the caller's OWN live inventory lines for a part — from
+ *  POST /api/inventory/my-stock. Multiple lines per part are possible (one
+ *  per warehouse/condition); callers aggregate for display. */
+export interface MyStockLine {
+  part_id: number;
+  item_id: number;
+  quantity_on_hand: string;
+  quantity_available: string | null;
+  unit_of_measure: string;
+  condition_code: string | null;
+  warehouse_location: string | null;
+  as_of_date: string;
+  is_stale: boolean;
+}
+
+export interface MyStockResponse {
+  items: MyStockLine[];
+}
+
+/** Per-part rollup of MyStockLine rows for a compact one-cell display:
+ *  total quantity, the biggest line's condition/warehouse/as-of, and how
+ *  many other locations there are. */
+export interface MyStockSummary {
+  totalQuantity: number;
+  unitOfMeasure: string;
+  conditionCode: string | null;
+  warehouse: string | null;
+  otherLocations: number;
+  asOfDate: string;
+  isStale: boolean;
+}
+
+export function summarizeMyStock(lines: MyStockLine[]): Record<number, MyStockSummary> {
+  const byPart: Record<number, MyStockLine[]> = {};
+  for (const line of lines) {
+    (byPart[line.part_id] ??= []).push(line);
+  }
+  const out: Record<number, MyStockSummary> = {};
+  for (const [partId, group] of Object.entries(byPart)) {
+    // Lines arrive quantity-desc from the API; the first is the primary.
+    const primary = group[0];
+    const total = group.reduce(
+      (sum, l) => sum + Number(l.quantity_available ?? l.quantity_on_hand), 0);
+    out[Number(partId)] = {
+      totalQuantity: total,
+      unitOfMeasure: primary.unit_of_measure,
+      conditionCode: primary.condition_code,
+      warehouse: primary.warehouse_location,
+      otherLocations: group.length - 1,
+      asOfDate: primary.as_of_date,
+      isStale: group.some((l) => l.is_stale),
+    };
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Display helpers
 // ---------------------------------------------------------------------------
