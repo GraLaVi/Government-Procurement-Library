@@ -39,6 +39,8 @@ export const AUTH_CONFIG = {
     LOGIN: '/login',
     ACCOUNT: '/account',
     CHANGE_PASSWORD: '/account/change-password',
-    PUBLIC: ['/', '/login', '/signup', '/pricing', '/about', '/contact', '/legal', '/support', '/help', '/forgot-password', '/reset-password', '/verify-email', '/rfq/respond'],
+    // '/start' covers the campaign landing pages (/start/<slug>) — they are
+    // the top of the funnel, so they must never bounce to /login.
+    PUBLIC: ['/', '/login', '/signup', '/start', '/pricing', '/about', '/contact', '/legal', '/support', '/help', '/forgot-password', '/reset-password', '/verify-email', '/rfq/respond'],
   },
 } as const;
