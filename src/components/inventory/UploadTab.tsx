@@ -227,7 +227,7 @@ export function UploadTab({ isAdmin, onImportQueued }: UploadTabProps) {
   // Step 1: pick a file
   // ------------------------------------------------------------------
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4">
       <div className="flex items-center gap-6">
         <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
           <input
