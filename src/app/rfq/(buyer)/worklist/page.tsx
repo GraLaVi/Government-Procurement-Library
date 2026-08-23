@@ -501,6 +501,43 @@ export default function RfqWorklistPage() {
     }
   };
 
+  // "Use my stock": create an internal quote from the buyer's own inventory
+  // (no vendor contacted). Idempotent server-side — a second click surfaces
+  // the existing quote instead of duplicating it.
+  const [stockQuoteBusy, setStockQuoteBusy] = useState<number | null>(null);
+  const createStockQuote = async (item: RfqWorkItem, part: PartSearchResult) => {
+    setStockQuoteBusy(part.id);
+    try {
+      // Starting a stock quote is starting the work — same claim rule as
+      // Get quotes.
+      if (item.assigned_user_id == null) {
+        claim(item, { silent: true });
+      } else if (user && item.assigned_user_id !== user.id) {
+        setToast(`Heads up: ${item.assigned_user_name || "another buyer"} is already working on this solicitation.`);
+      }
+      const res = await fetch(`/api/rfq/worklist/${item.solicitation_id}/stock-quote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ part_id: part.id }),
+      });
+      const body = (await res.json()) as { rfq_id?: number; reference_number?: number; created?: boolean; error?: string };
+      if (!res.ok) {
+        setError(body.error || "Failed to create the stock quote.");
+        return;
+      }
+      setToast(
+        body.created
+          ? `RFQ-${body.reference_number} created from your stock — open View quotes to set markup and shipping.`
+          : `RFQ-${body.reference_number} already covers this part from stock — open View quotes to price it.`
+      );
+      load({ silent: true });
+    } catch {
+      setError("Network error creating the stock quote.");
+    } finally {
+      setStockQuoteBusy(null);
+    }
+  };
+
   const patchStatus = async (item: RfqWorkItem, work_status: RfqWorkStatus) => {
     // Optimistic pill update; reload on failure.
     setData((prev) =>
@@ -1102,25 +1139,42 @@ export default function RfqWorklistPage() {
                                     <td className={`${tdClass} text-right whitespace-nowrap font-mono tabular-nums`}>
                                       {formatCurrency(p.unit_price)}
                                     </td>
-                                    <td className={`${tdClass} text-right`}>
-                                      <Button
-                                        variant="primary"
-                                        size="sm"
-                                        onClick={() => {
-                                          setQuoteContext({ part: p, item });
-                                          // Starting a quote is starting the work:
-                                          // claim an unowned solicitation right away
-                                          // (not at send), and warn when another
-                                          // buyer already holds it.
-                                          if (item.assigned_user_id == null) {
-                                            claim(item, { silent: true });
-                                          } else if (user && item.assigned_user_id !== user.id) {
-                                            setToast(`Heads up: ${item.assigned_user_name || "another buyer"} is already working on this solicitation.`);
-                                          }
-                                        }}
-                                      >
-                                        Get quotes
-                                      </Button>
+                                    <td className={`${tdClass} text-right whitespace-nowrap`}>
+                                      <span className="inline-flex items-center gap-1.5">
+                                        {/* "Use my stock" only on lines the
+                                            buyer actually stocks. Creates an
+                                            internal quote (no vendor emailed)
+                                            that rides the normal pricing
+                                            pipeline; idempotent server-side. */}
+                                        {partsState.myStock?.[p.id] && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={stockQuoteBusy === p.id}
+                                            onClick={() => createStockQuote(item, p)}
+                                          >
+                                            {stockQuoteBusy === p.id ? "Creating…" : "Use my stock"}
+                                          </Button>
+                                        )}
+                                        <Button
+                                          variant="primary"
+                                          size="sm"
+                                          onClick={() => {
+                                            setQuoteContext({ part: p, item });
+                                            // Starting a quote is starting the work:
+                                            // claim an unowned solicitation right away
+                                            // (not at send), and warn when another
+                                            // buyer already holds it.
+                                            if (item.assigned_user_id == null) {
+                                              claim(item, { silent: true });
+                                            } else if (user && item.assigned_user_id !== user.id) {
+                                              setToast(`Heads up: ${item.assigned_user_name || "another buyer"} is already working on this solicitation.`);
+                                            }
+                                          }}
+                                        >
+                                          Get quotes
+                                        </Button>
+                                      </span>
                                     </td>
                                   </tr>
                                 ))}

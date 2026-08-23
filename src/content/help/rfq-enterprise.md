@@ -149,6 +149,16 @@ and the date of the count. An amber **partial** tag means your on-hand
 quantity covers only part of what's solicited, and a stale count date is
 called out so you can recount before quoting from it. This is your own
 inventory only — other suppliers' shared stock never appears on this page.
+
+Stocked lines also carry a **Use my stock** button beside Get quotes. It
+creates an internal quote from your shelf — no vendor is contacted and no
+email goes out — prefilled with your recorded unit cost, total quantity
+across warehouses, and a per-warehouse breakdown. From there it behaves
+exactly like a vendor quote: open **View quotes** to apply markup and
+shipping, the work status moves to *Quotes in*, and the bidder reads it in
+the same place as everything else. On a partially stocked line, use both
+buttons — quote the shelf and RFQ vendors for the balance, then compare
+them side by side.
 -->
 
 
