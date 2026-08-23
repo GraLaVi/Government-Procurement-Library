@@ -234,7 +234,12 @@ From the comparison table, click **Price** on the winning quote line. Enter
 your markup percentage (pre-filled from your company default), shipping, and
 any other charges — GPH computes your per-unit price to the government
 (vendor price × markup, plus shipping and charges spread over the quantity)
-and shows the extended total. Saving marks the solicitation **Priced**.
+and shows the extended total. The solicitation is marked **Priced** once
+every one of its items has a priced quote line — on a one-item solicitation
+that's your first save; on a multi-item one the status waits until the last
+item is priced, so "Priced" always means the bid is ready to hand off. If
+you're deliberately bidding only some of the items, set Priced yourself from
+the status dropdown when you're done.
 
 ## Private vendors
 
