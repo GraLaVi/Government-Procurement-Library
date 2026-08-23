@@ -958,12 +958,16 @@ export default function RfqWorklistPage() {
                             awards={item.won_parts ?? []}
                             mode="solicitation"
                           />
-                          {item.rfq_count > 0 && (
+                          {/* rfq_count counts vendor RFQs only, but internal
+                              stock quotes still land in quote_count — the
+                              pill must render for a stock-quote-only row or
+                              there is no way to open/price it from here. */}
+                          {(item.rfq_count > 0 || item.quote_count > 0) && (
                             <button
                               type="button"
                               onClick={() => setQuotesFor(item)}
                               className={`${ROW_BADGE_BASE} border-primary/40 text-primary hover:bg-primary/10 cursor-pointer transition-colors`}
-                              title={`${item.rfq_count} RFQ${item.rfq_count !== 1 ? "s" : ""} sent · ${item.quote_count} quote${item.quote_count !== 1 ? "s" : ""} received — open the side-by-side comparison`}
+                              title={`${item.rfq_count} vendor RFQ${item.rfq_count !== 1 ? "s" : ""} sent · ${item.quote_count} quote${item.quote_count !== 1 ? "s" : ""} (own-stock quotes included) — open the side-by-side comparison`}
                             >
                               View quotes ({item.quote_count})
                             </button>
