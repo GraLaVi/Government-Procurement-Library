@@ -125,7 +125,7 @@ If your company also uses the **RFQ Enterprise** add-on, your uploaded inventory
 
 - Solicitations whose parts are already on your shelf carry a **green cube badge** with a fraction — say, **2/4** means two of the four solicited parts are in your inventory. Solid green means everything is stocked; an outline means some of it is. No badge simply means none of it is.
 - Expanding the row adds a **Your stock** column to the solicited items: how many you have and in what condition, plus the warehouse and the date of the count. A **partial** tag warns when your on-hand quantity covers only part of what's solicited, and an old count date is flagged so you can recount before quoting from it.
-- Stocked lines get a **Use my stock** button: one click creates an internal quote from your shelf — no vendor contacted — prefilled with your recorded cost and per-warehouse quantities. Price it (markup, shipping) exactly like a vendor quote and the bidder picks it up in the same place. Partially stocked? Use both buttons and compare your shelf against vendor quotes side by side.
+- Stocked lines get a **Use my stock** button: one click creates an internal quote from your shelf — no vendor contacted — prefilled with your recorded cost and per-warehouse quantities, and the quote view opens immediately so you can set markup and shipping on the spot. The button then shows a green **Using my stock** check and reopens the quote on click. Partially stocked? Use both buttons and compare your shelf against vendor quotes side by side.
 
 This view is **your own inventory only** — other suppliers' shared stock never appears on the Send RFQs page. It also doesn't require sharing: even with network sharing off, your private catalog powers these badges for your own team.
 

@@ -153,12 +153,14 @@ inventory only — other suppliers' shared stock never appears on this page.
 Stocked lines also carry a **Use my stock** button beside Get quotes. It
 creates an internal quote from your shelf — no vendor is contacted and no
 email goes out — prefilled with your recorded unit cost, total quantity
-across warehouses, and a per-warehouse breakdown. From there it behaves
-exactly like a vendor quote: open **View quotes** to apply markup and
-shipping, the work status moves to *Quotes in*, and the bidder reads it in
-the same place as everything else. On a partially stocked line, use both
-buttons — quote the shelf and RFQ vendors for the balance, then compare
-them side by side.
+across warehouses, and a per-warehouse breakdown. The quote view opens
+right away with the new quote (labeled *Own inventory*) so you can apply
+your markup and shipping on the spot; the work status moves to *Quotes
+in*, and the bidder reads the priced line in the same place as everything
+else. The button then shows a green **Using my stock** check — clicking it
+reopens the quote rather than creating another. On a partially stocked
+line, use both buttons — quote the shelf and RFQ vendors for the balance,
+then compare them side by side.
 -->
 
 
