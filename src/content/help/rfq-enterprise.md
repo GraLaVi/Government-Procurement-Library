@@ -58,7 +58,7 @@ working it at once, any solicitation without a named assignee can be
   queue and shows your name — with a "(you)" marker in your own view. If a
   teammate claims it a moment before you, you'll see who got it instead.
 - **Claiming also happens automatically when work starts**: clicking
-  **Quote** on an unowned solicitation makes it yours right away, and so
+  **Get quotes** on an unowned solicitation makes it yours right away, and so
   does saving items from it to the batch cart or sending an RFQ. If you
   start quoting a solicitation someone else already owns, a heads-up names
   them before you invest any time.
@@ -134,7 +134,7 @@ background, so a row can't move out from under you mid-task. **Refresh**
 re-checks immediately.
 
 Click a solicitation number to see its quotable items — NSN, description,
-quantity, and unit price — with a **Quote** button on each row. Each NSN is
+quantity, and unit price — with a **Get quotes** button on each row. Each NSN is
 a link that opens that part in Parts Search in a new tab. DIBBS "first
 article test" placeholder lines (GOVERNMENT/CONTRACTOR FIRST ARTICLE)
 aren't real purchasable items, so they don't appear here.
@@ -167,7 +167,7 @@ setting it in either place moves both.
 
 ## Requesting quotes
 
-The **Quote** button opens a vendor picker with two sources of vendors:
+The **Get quotes** button opens a vendor picker with two sources of vendors:
 
 - **Suggested from my vendors** — the private vendors that match *this*
   part, chosen from your whole book (even thousands of vendors) using the

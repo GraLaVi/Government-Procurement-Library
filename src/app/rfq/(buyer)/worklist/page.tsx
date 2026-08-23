@@ -561,7 +561,7 @@ export default function RfqWorklistPage() {
           <h1 className="text-2xl font-bold text-foreground">Send RFQs</h1>
           <p className="text-muted mt-1 text-sm">
             Matched solicitations as a work queue. Click a solicitation for its parts, then
-            Quote to request vendor pricing.
+            Get quotes to request vendor pricing.
           </p>
         </div>
 
@@ -1119,7 +1119,7 @@ export default function RfqWorklistPage() {
                                           }
                                         }}
                                       >
-                                        Quote
+                                        Get quotes
                                       </Button>
                                     </td>
                                   </tr>
