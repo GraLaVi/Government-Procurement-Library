@@ -234,6 +234,8 @@ export interface MyStockLine {
   item_id: number;
   quantity_on_hand: string;
   quantity_available: string | null;
+  /** Recorded cost — own stock, full fidelity (cost basis for pricing). */
+  unit_price: string | null;
   unit_of_measure: string;
   condition_code: string | null;
   warehouse_location: string | null;
@@ -250,6 +252,8 @@ export interface MyStockResponse {
  *  many other locations there are. */
 export interface MyStockSummary {
   totalQuantity: number;
+  /** The primary (largest) line's recorded cost; null when none on file. */
+  unitPrice: number | null;
   unitOfMeasure: string;
   conditionCode: string | null;
   warehouse: string | null;
@@ -271,6 +275,7 @@ export function summarizeMyStock(lines: MyStockLine[]): Record<number, MyStockSu
       (sum, l) => sum + Number(l.quantity_available ?? l.quantity_on_hand), 0);
     out[Number(partId)] = {
       totalQuantity: total,
+      unitPrice: primary.unit_price != null ? Number(primary.unit_price) : null,
       unitOfMeasure: primary.unit_of_measure,
       conditionCode: primary.condition_code,
       warehouse: primary.warehouse_location,

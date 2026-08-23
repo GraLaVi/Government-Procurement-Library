@@ -37,6 +37,7 @@ import {
   type RfqWorklistPage,
 } from "@/lib/rfq/types";
 import { StockCoverageGlyph } from "@/components/inventory/StockCoverageGlyph";
+import { StockQuoteModal, type StockQuoteSubmit } from "@/components/inventory/StockQuoteModal";
 import {
   summarizeMyStock,
   type MyStockResponse,
@@ -214,6 +215,11 @@ export default function RfqWorklistPage() {
   // Quote comparison modal (opened from the "N RFQs" pill).
   const [quotesFor, setQuotesFor] = useState<RfqWorkItem | null>(null);
 
+  // "Use my stock" pricing form (see openStockQuote/submitStockQuote below).
+  const [stockQuoteFor, setStockQuoteFor] = useState<{ item: RfqWorkItem; part: PartSearchResult } | null>(null);
+  const [stockQuoteBusy, setStockQuoteBusy] = useState(false);
+  const [stockQuotedLocal, setStockQuotedLocal] = useState<Set<string>>(new Set());
+
   // Inline row expansion: the solicitation's parts (NSN, description,
   // qty/unit, unit price, Quote) render in a dropdown under the row —
   // mirrors the bid-matching page's matched-conditions expander.
@@ -364,9 +370,9 @@ export default function RfqWorklistPage() {
   const suspendRefreshRef = useRef(false);
   useEffect(() => {
     suspendRefreshRef.current = Boolean(
-      quoteContext || composeSelections || quotesFor || pdfFor || amendmentSolId != null || bulkBusy
+      quoteContext || composeSelections || quotesFor || pdfFor || amendmentSolId != null || bulkBusy || stockQuoteFor
     );
-  }, [quoteContext, composeSelections, quotesFor, pdfFor, amendmentSolId, bulkBusy]);
+  }, [quoteContext, composeSelections, quotesFor, pdfFor, amendmentSolId, bulkBusy, stockQuoteFor]);
 
   useEffect(() => {
     if (!autoRefresh || !scopeInitialized || authLoading || !hasEnterprise) return;
@@ -501,50 +507,66 @@ export default function RfqWorklistPage() {
     }
   };
 
-  // "Use my stock": create an internal quote from the buyer's own inventory
-  // (no vendor contacted). Idempotent server-side. On success the quote view
-  // opens IMMEDIATELY — the pricing editor (markup / shipping / other) is in
-  // there, and a top-of-page toast alone proved invisible from an expanded
-  // row. stockQuotedLocal flips the button to its done state without waiting
-  // for the reload (the server echoes it via stock_quoted_part_ids).
-  const [stockQuoteBusy, setStockQuoteBusy] = useState<number | null>(null);
-  const [stockQuotedLocal, setStockQuotedLocal] = useState<Set<string>>(new Set());
+  // "Use my stock": the button opens a small pricing form (cost basis from
+  // inventory, markup prefilled from the company default, shipping/other),
+  // and ONE submit creates the internal quote already priced — no
+  // create-then-find-the-Price-link second step. stockQuotedLocal flips the
+  // button to its done state without waiting for the reload (the server
+  // echoes it via stock_quoted_part_ids). State lives up with the other
+  // modal states; the handlers are here because they lean on claim().
   const hasStockQuote = (item: RfqWorkItem, partId: number) =>
     (item.stock_quoted_part_ids ?? []).includes(partId) ||
     stockQuotedLocal.has(`${item.solicitation_id}:${partId}`);
-  const createStockQuote = async (item: RfqWorkItem, part: PartSearchResult) => {
-    setStockQuoteBusy(part.id);
+  const openStockQuote = (item: RfqWorkItem, part: PartSearchResult) => {
+    // Starting a stock quote is starting the work — same claim rule as
+    // Get quotes.
+    if (item.assigned_user_id == null) {
+      claim(item, { silent: true });
+    } else if (user && item.assigned_user_id !== user.id) {
+      setToast(`Heads up: ${item.assigned_user_name || "another buyer"} is already working on this solicitation.`);
+    }
+    setStockQuoteFor({ item, part });
+  };
+  const submitStockQuote = async (payload: StockQuoteSubmit) => {
+    if (!stockQuoteFor) return;
+    const { item, part } = stockQuoteFor;
+    setStockQuoteBusy(true);
     try {
-      // Starting a stock quote is starting the work — same claim rule as
-      // Get quotes.
-      if (item.assigned_user_id == null) {
-        claim(item, { silent: true });
-      } else if (user && item.assigned_user_id !== user.id) {
-        setToast(`Heads up: ${item.assigned_user_name || "another buyer"} is already working on this solicitation.`);
-      }
       const res = await fetch(`/api/rfq/worklist/${item.solicitation_id}/stock-quote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ part_id: part.id }),
+        body: JSON.stringify({
+          part_id: part.id,
+          quantity: payload.quantity,
+          ...(payload.notes ? { notes: payload.notes } : {}),
+          ...(payload.pricing ?? {}),
+        }),
       });
-      const body = (await res.json()) as { rfq_id?: number; reference_number?: number; created?: boolean; error?: string };
+      const body = (await res.json()) as {
+        rfq_id?: number; reference_number?: number; created?: boolean;
+        priced?: boolean; price_to_gov?: string | number | null; error?: string;
+      };
       if (!res.ok) {
         setError(body.error || "Failed to create the stock quote.");
         return;
       }
       setStockQuotedLocal((prev) => new Set(prev).add(`${item.solicitation_id}:${part.id}`));
-      setToast(
-        body.created
-          ? `RFQ-${body.reference_number} created from your stock — set your markup and shipping below.`
-          : `RFQ-${body.reference_number} already covers this part from stock.`
-      );
-      // Straight into the pricing surface — this is the signal AND the task.
-      setQuotesFor(item);
+      setStockQuoteFor(null);
+      if (body.priced && body.price_to_gov != null) {
+        setToast(
+          `RFQ-${body.reference_number} ${body.created ? "created" : "updated"} from your stock — priced at ${Number(body.price_to_gov).toLocaleString("en-US", { style: "currency", currency: "USD" })}/unit.`
+        );
+      } else {
+        // No cost basis: the quote exists unpriced — put the buyer in the
+        // quote view to set the unit price.
+        setToast(`RFQ-${body.reference_number} created — set the unit price, markup and shipping below.`);
+        setQuotesFor(item);
+      }
       load({ silent: true });
     } catch {
       setError("Network error creating the stock quote.");
     } finally {
-      setStockQuoteBusy(null);
+      setStockQuoteBusy(false);
     }
   };
 
@@ -971,15 +993,21 @@ export default function RfqWorklistPage() {
                           {/* rfq_count counts vendor RFQs only, but internal
                               stock quotes still land in quote_count — the
                               pill must render for a stock-quote-only row or
-                              there is no way to open/price it from here. */}
+                              there is no way to open/price it from here.
+                              Icon + count, not a phrase: four badges on one
+                              row were widening the whole column. */}
                           {(item.rfq_count > 0 || item.quote_count > 0) && (
                             <button
                               type="button"
                               onClick={() => setQuotesFor(item)}
+                              aria-label={`View quotes (${item.quote_count})`}
                               className={`${ROW_BADGE_BASE} border-primary/40 text-primary hover:bg-primary/10 cursor-pointer transition-colors`}
                               title={`${item.rfq_count} vendor RFQ${item.rfq_count !== 1 ? "s" : ""} sent · ${item.quote_count} quote${item.quote_count !== 1 ? "s" : ""} (own-stock quotes included) — open the side-by-side comparison`}
                             >
-                              View quotes ({item.quote_count})
+                              <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              </svg>
+                              {item.quote_count}
                             </button>
                           )}
                           {item.staged_count > 0 && (
@@ -1180,10 +1208,9 @@ export default function RfqWorklistPage() {
                                             <Button
                                               variant="outline"
                                               size="sm"
-                                              disabled={stockQuoteBusy === p.id}
-                                              onClick={() => createStockQuote(item, p)}
+                                              onClick={() => openStockQuote(item, p)}
                                             >
-                                              {stockQuoteBusy === p.id ? "Creating…" : "Use my stock"}
+                                              Use my stock
                                             </Button>
                                           )
                                         )}
@@ -1242,6 +1269,22 @@ export default function RfqWorklistPage() {
           </div>
         </div>
       )}
+
+      {stockQuoteFor && (() => {
+        const summary = partsBySol[stockQuoteFor.item.solicitation_id]?.myStock?.[stockQuoteFor.part.id];
+        return summary ? (
+          <StockQuoteModal
+            partLabel={formatPartIdentity(stockQuoteFor.part)}
+            partDescription={stockQuoteFor.part.description}
+            solicitedQty={stockQuoteFor.part.quantity ?? null}
+            summary={summary}
+            defaultMarkup={settings?.default_markup_percent ?? null}
+            busy={stockQuoteBusy}
+            onSubmit={submitStockQuote}
+            onClose={() => setStockQuoteFor(null)}
+          />
+        ) : null;
+      })()}
 
       {quotesFor && (
         <QuoteComparisonModal

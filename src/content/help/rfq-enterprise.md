@@ -151,16 +151,19 @@ called out so you can recount before quoting from it. This is your own
 inventory only — other suppliers' shared stock never appears on this page.
 
 Stocked lines also carry a **Use my stock** button beside Get quotes. It
-creates an internal quote from your shelf — no vendor is contacted and no
-email goes out — prefilled with your recorded unit cost, total quantity
-across warehouses, and a per-warehouse breakdown. The quote view opens
-right away with the new quote (labeled *Own inventory*) so you can apply
-your markup and shipping on the spot; the work status moves to *Quotes
-in*, and the bidder reads the priced line in the same place as everything
-else. The button then shows a green **Using my stock** check — clicking it
-reopens the quote rather than creating another. On a partially stocked
-line, use both buttons — quote the shelf and RFQ vendors for the balance,
-then compare them side by side.
+opens a small form — no vendor is contacted and no email goes out — with
+your cost and per-warehouse stock as the basis: choose **how many to quote
+from the shelf** (it defaults to what you can cover, capped at the
+solicited quantity), set your **markup and shipping** with a live
+price-to-government preview, and add an optional **note** the bidder will
+read first on the quote line. One click creates the quote already priced
+(labeled *Own inventory*); the button then shows a green **Using my
+stock** check and reopens the quote on click. Quote fewer than solicited
+and the form tells you the balance left — use **Get quotes** to RFQ
+vendors for the rest, then compare shelf and vendors side by side. The
+solicitation only reads *Priced* once its full solicited quantities are
+covered by priced quotes, so a partial stock quote never marks it done
+early.
 -->
 
 
@@ -237,11 +240,12 @@ your markup percentage (pre-filled from your company default), shipping, and
 any other charges — GPH computes your per-unit price to the government
 (vendor price × markup, plus shipping and charges spread over the quantity)
 and shows the extended total. The solicitation is marked **Priced** once
-every one of its items has a priced quote line — on a one-item solicitation
-that's your first save; on a multi-item one the status waits until the last
-item is priced, so "Priced" always means the bid is ready to hand off. If
-you're deliberately bidding only some of the items, set Priced yourself from
-the status dropdown when you're done.
+every one of its items is fully covered by priced quote lines — for the
+usual full-quantity quote that's your first save; when an item's quantity
+is split across quotes, the status waits until the priced quantities add up
+to what's solicited, so "Priced" always means the bid is ready to hand off.
+If you're deliberately bidding only some of the items or quantities, set
+Priced yourself from the status dropdown when you're done.
 
 ## Private vendors
 
