@@ -502,9 +502,16 @@ export default function RfqWorklistPage() {
   };
 
   // "Use my stock": create an internal quote from the buyer's own inventory
-  // (no vendor contacted). Idempotent server-side — a second click surfaces
-  // the existing quote instead of duplicating it.
+  // (no vendor contacted). Idempotent server-side. On success the quote view
+  // opens IMMEDIATELY — the pricing editor (markup / shipping / other) is in
+  // there, and a top-of-page toast alone proved invisible from an expanded
+  // row. stockQuotedLocal flips the button to its done state without waiting
+  // for the reload (the server echoes it via stock_quoted_part_ids).
   const [stockQuoteBusy, setStockQuoteBusy] = useState<number | null>(null);
+  const [stockQuotedLocal, setStockQuotedLocal] = useState<Set<string>>(new Set());
+  const hasStockQuote = (item: RfqWorkItem, partId: number) =>
+    (item.stock_quoted_part_ids ?? []).includes(partId) ||
+    stockQuotedLocal.has(`${item.solicitation_id}:${partId}`);
   const createStockQuote = async (item: RfqWorkItem, part: PartSearchResult) => {
     setStockQuoteBusy(part.id);
     try {
@@ -525,11 +532,14 @@ export default function RfqWorklistPage() {
         setError(body.error || "Failed to create the stock quote.");
         return;
       }
+      setStockQuotedLocal((prev) => new Set(prev).add(`${item.solicitation_id}:${part.id}`));
       setToast(
         body.created
-          ? `RFQ-${body.reference_number} created from your stock — open View quotes to set markup and shipping.`
-          : `RFQ-${body.reference_number} already covers this part from stock — open View quotes to price it.`
+          ? `RFQ-${body.reference_number} created from your stock — set your markup and shipping below.`
+          : `RFQ-${body.reference_number} already covers this part from stock.`
       );
+      // Straight into the pricing surface — this is the signal AND the task.
+      setQuotesFor(item);
       load({ silent: true });
     } catch {
       setError("Network error creating the stock quote.");
@@ -1149,16 +1159,33 @@ export default function RfqWorklistPage() {
                                             buyer actually stocks. Creates an
                                             internal quote (no vendor emailed)
                                             that rides the normal pricing
-                                            pipeline; idempotent server-side. */}
+                                            pipeline. Once one exists the
+                                            button wears its done state and
+                                            opens the quote view instead of
+                                            re-creating. */}
                                         {partsState.myStock?.[p.id] && (
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            disabled={stockQuoteBusy === p.id}
-                                            onClick={() => createStockQuote(item, p)}
-                                          >
-                                            {stockQuoteBusy === p.id ? "Creating…" : "Use my stock"}
-                                          </Button>
+                                          hasStockQuote(item, p.id) ? (
+                                            <button
+                                              type="button"
+                                              onClick={() => setQuotesFor(item)}
+                                              title="A stock quote exists for this line — open it to set markup and shipping."
+                                              className="inline-flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg border border-green-300 text-green-800 hover:bg-green-500/10 dark:text-green-300 dark:border-green-500/30 dark:hover:bg-green-500/20 cursor-pointer transition-colors"
+                                            >
+                                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                              </svg>
+                                              Using my stock
+                                            </button>
+                                          ) : (
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              disabled={stockQuoteBusy === p.id}
+                                              onClick={() => createStockQuote(item, p)}
+                                            >
+                                              {stockQuoteBusy === p.id ? "Creating…" : "Use my stock"}
+                                            </Button>
+                                          )
                                         )}
                                         <Button
                                           variant="primary"

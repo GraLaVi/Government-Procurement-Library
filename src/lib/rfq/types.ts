@@ -321,6 +321,9 @@ export interface RfqWorkItem {
    * page renders as before the feature existed. */
   quotable_part_count?: number | null;
   stocked_part_count?: number | null;
+  /** Parts that already carry an internal stock quote ("Use my stock"
+   * clicked) — drives the button's done state. */
+  stock_quoted_part_ids?: number[];
 }
 
 /** One part on the solicitation the customer has been awarded before. */
