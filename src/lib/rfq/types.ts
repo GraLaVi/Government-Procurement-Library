@@ -315,6 +315,15 @@ export interface RfqWorkItem {
   won_part_count?: number;
   last_won_on?: string | null;
   won_parts?: RfqWonPart[];
+  /** Inventory Upload integration: of this solicitation's quotable lines,
+   * how many exist and how many are in the customer's OWN live inventory.
+   * Both null when the customer has no inventory — no glyph, no column,
+   * page renders as before the feature existed. */
+  quotable_part_count?: number | null;
+  stocked_part_count?: number | null;
+  /** Parts that already carry an internal stock quote ("Use my stock"
+   * clicked) — drives the button's done state. */
+  stock_quoted_part_ids?: number[];
 }
 
 /** One part on the solicitation the customer has been awarded before. */

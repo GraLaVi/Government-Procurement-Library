@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import {
+  formatContractDate,
   formatCurrency,
   formatPartIdentity,
   type PartSearchResponse,
@@ -35,6 +36,12 @@ import {
   type RfqWorklistClaimResponse,
   type RfqWorklistPage,
 } from "@/lib/rfq/types";
+import { StockCoverageGlyph } from "@/components/inventory/StockCoverageGlyph";
+import {
+  summarizeMyStock,
+  type MyStockResponse,
+  type MyStockSummary,
+} from "@/lib/inventory/types";
 
 const PAGE_SIZE = 50;
 
@@ -50,6 +57,47 @@ const DIBBS_PLACEHOLDER_CAGE = "0001S";
 function isQuotableLine(p: PartSearchResult): boolean {
   return !(p.mfg_cage === DIBBS_PLACEHOLDER_CAGE && !p.nsn?.trim());
 }
+
+/**
+ * "Your stock" cell in the expanded parts table: quantity · condition on the
+ * first line, warehouse · as-of on the second — the two facts a buyer checks
+ * before quoting from stock. Undefined summary covers both "no stock for
+ * this part" and "detail still loading"; either way the cell stays quiet.
+ */
+function MyStockCell({
+  summary,
+  solicitedQty,
+}: {
+  summary: MyStockSummary | undefined;
+  solicitedQty: number | null | undefined;
+}) {
+  if (!summary) return <span className="text-muted">—</span>;
+  const partial = solicitedQty != null && summary.totalQuantity < solicitedQty;
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 font-semibold text-green-800 dark:text-green-300 whitespace-nowrap">
+        <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" aria-hidden="true" />
+        {summary.totalQuantity.toLocaleString()} {summary.unitOfMeasure}
+        {summary.conditionCode ? ` · cond ${summary.conditionCode}` : ""}
+        {partial && (
+          <span
+            className={`${ROW_BADGE_BASE} bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/30`}
+            title={`Covers ${summary.totalQuantity.toLocaleString()} of the ${solicitedQty?.toLocaleString()} solicited — you would need to source the balance.`}
+          >
+            partial
+          </span>
+        )}
+      </div>
+      <div className={`text-[11px] ${summary.isStale ? "text-amber-700 dark:text-amber-300" : "text-muted"}`}>
+        {summary.warehouse || "—"}
+        {summary.otherLocations > 0 && ` +${summary.otherLocations} more`}
+        {" · as of "}
+        {formatContractDate(summary.asOfDate)}
+        {summary.isStale && " — stale, recount before quoting"}
+      </div>
+    </div>
+  );
+}
 const SCOPE_STORAGE_KEY = "rfq-worklist-scope";
 const STATUS_FILTER_STORAGE_KEY = "rfq-worklist-status-filter";
 const SOL_STATUS_STORAGE_KEY = "rfq-worklist-sol-status";
@@ -62,6 +110,16 @@ const REFRESH_MINUTES_STORAGE_KEY = "rfq-worklist-refresh-minutes";
 const REFRESH_MINUTE_OPTIONS = [1, 2, 5, 10, 15, 30] as const;
 const DEFAULT_REFRESH_MINUTES = 5;
 const SOL_STATUS_OPTIONS = ["open", "awarded", "closed", "cancelled", "removed", "unavailable", "all"] as const;
+
+/** Fields the queue search can target — values match the API's search_field
+ *  (same control as the bid-matching results page). */
+const SEARCH_FIELDS = [
+  { value: "solicitation", label: "Solicitation #", placeholder: "Search solicitation #…" },
+  { value: "nsn", label: "NSN / part #", placeholder: "Search NSN, NIIN or part #…" },
+  { value: "description", label: "Description", placeholder: "Search item description…" },
+  { value: "pr", label: "PR #", placeholder: "Search PR number…" },
+] as const;
+type SearchField = (typeof SEARCH_FIELDS)[number]["value"];
 type SolStatusFilter = (typeof SOL_STATUS_OPTIONS)[number];
 
 type Scope = "mine" | "unassigned" | "all";
@@ -113,6 +171,11 @@ export default function RfqWorklistPage() {
   const [scopeInitialized, setScopeInitialized] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [solStatus, setSolStatus] = useState<SolStatusFilter>("open");
+  // Field-scoped queue search (same control as the bid-matching results
+  // page): the typed term applies after a short debounce.
+  const [searchField, setSearchField] = useState<SearchField>("solicitation");
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortKey>("close_date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
@@ -155,17 +218,12 @@ export default function RfqWorklistPage() {
   // qty/unit, unit price, Quote) render in a dropdown under the row —
   // mirrors the bid-matching page's matched-conditions expander.
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
-  const [partsBySol, setPartsBySol] = useState<Record<number, { loading: boolean; error: string | null; parts: PartSearchResult[] }>>({});
+  const [partsBySol, setPartsBySol] = useState<Record<number, { loading: boolean; error: string | null; parts: PartSearchResult[]; myStock?: Record<number, MyStockSummary> }>>({});
 
-  const toggleExpanded = (item: RfqWorkItem) => {
+  // Lazy-fetch a solicitation's parts (+ own-stock detail) once; cached
+  // afterward. Shared by row expansion and the stock glyph's popover.
+  const ensurePartsLoaded = (item: RfqWorkItem) => {
     const id = item.solicitation_id;
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    // Lazy-fetch the parts on first expand; cached afterward.
     if (partsBySol[id] || !item.solicitation_number) return;
     setPartsBySol((prev) => ({ ...prev, [id]: { loading: true, error: null, parts: [] } }));
     (async () => {
@@ -178,11 +236,40 @@ export default function RfqWorklistPage() {
           return;
         }
         const data = body as PartSearchResponse;
-        setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: null, parts: data.results.filter(isQuotableLine) } }));
+        const parts = data.results.filter(isQuotableLine);
+        setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: null, parts } }));
+        // Own-stock detail for the "Your stock" column. Only fetched when
+        // the row glyph said something is stocked; best-effort — the parts
+        // list renders fine without it.
+        if ((item.stocked_part_count ?? 0) > 0 && parts.length > 0) {
+          try {
+            const stockRes = await fetch("/api/inventory/my-stock", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ part_ids: parts.map((p) => p.id) }),
+            });
+            if (stockRes.ok) {
+              const stockBody = (await stockRes.json()) as MyStockResponse;
+              const myStock = summarizeMyStock(stockBody.items);
+              setPartsBySol((prev) => ({ ...prev, [id]: { ...prev[id], myStock } }));
+            }
+          } catch { /* enrichment only */ }
+        }
       } catch {
         setPartsBySol((prev) => ({ ...prev, [id]: { loading: false, error: "Network error loading parts.", parts: [] } }));
       }
     })();
+  };
+
+  const toggleExpanded = (item: RfqWorkItem) => {
+    const id = item.solicitation_id;
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    ensurePartsLoaded(item);
   };
 
   // Initial scope: an explicit ?scope= wins (coverage tiles and the
@@ -222,7 +309,7 @@ export default function RfqWorklistPage() {
     } catch { /* ignore */ }
   }, [scope, statusFilter, solStatus, autoRefresh, refreshMinutes, scopeInitialized]);
 
-  useEffect(() => { setPage(1); setSelected(new Set()); }, [scope, statusFilter, solStatus, sortBy, sortDir]);
+  useEffect(() => { setPage(1); setSelected(new Set()); }, [scope, statusFilter, solStatus, sortBy, sortDir, appliedSearch, searchField]);
 
   // Server-side sort (client-side would only sort the visible page).
   const toggleSort = (key: SortKey) => {
@@ -232,6 +319,12 @@ export default function RfqWorklistPage() {
       setSortDir("asc");
     }
   };
+
+  // Debounced apply, mirroring the bid-matching page (300ms).
+  useEffect(() => {
+    const t = setTimeout(() => setAppliedSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   // silent skips the full-page spinner — an auto-refresh replaces the rows in
   // place, leaving selection, expanded rows and scroll position alone.
@@ -244,6 +337,10 @@ export default function RfqWorklistPage() {
         sort_by: sortBy, sort_dir: sortDir, sol_status: solStatus,
       });
       if (statusFilter) params.set("work_status", statusFilter);
+      if (appliedSearch) {
+        params.set("search_field", searchField);
+        params.set("search", appliedSearch);
+      }
       const res = await fetch(`/api/rfq/worklist?${params.toString()}`);
       const body = await res.json();
       if (!res.ok) {
@@ -257,7 +354,7 @@ export default function RfqWorklistPage() {
     } finally {
       setLoading(false);
     }
-  }, [scope, statusFilter, solStatus, page, sortBy, sortDir]);
+  }, [scope, statusFilter, solStatus, page, sortBy, sortDir, appliedSearch, searchField]);
 
   useEffect(() => {
     if (scopeInitialized && !authLoading && hasEnterprise) load();
@@ -404,6 +501,53 @@ export default function RfqWorklistPage() {
     }
   };
 
+  // "Use my stock": create an internal quote from the buyer's own inventory
+  // (no vendor contacted). Idempotent server-side. On success the quote view
+  // opens IMMEDIATELY — the pricing editor (markup / shipping / other) is in
+  // there, and a top-of-page toast alone proved invisible from an expanded
+  // row. stockQuotedLocal flips the button to its done state without waiting
+  // for the reload (the server echoes it via stock_quoted_part_ids).
+  const [stockQuoteBusy, setStockQuoteBusy] = useState<number | null>(null);
+  const [stockQuotedLocal, setStockQuotedLocal] = useState<Set<string>>(new Set());
+  const hasStockQuote = (item: RfqWorkItem, partId: number) =>
+    (item.stock_quoted_part_ids ?? []).includes(partId) ||
+    stockQuotedLocal.has(`${item.solicitation_id}:${partId}`);
+  const createStockQuote = async (item: RfqWorkItem, part: PartSearchResult) => {
+    setStockQuoteBusy(part.id);
+    try {
+      // Starting a stock quote is starting the work — same claim rule as
+      // Get quotes.
+      if (item.assigned_user_id == null) {
+        claim(item, { silent: true });
+      } else if (user && item.assigned_user_id !== user.id) {
+        setToast(`Heads up: ${item.assigned_user_name || "another buyer"} is already working on this solicitation.`);
+      }
+      const res = await fetch(`/api/rfq/worklist/${item.solicitation_id}/stock-quote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ part_id: part.id }),
+      });
+      const body = (await res.json()) as { rfq_id?: number; reference_number?: number; created?: boolean; error?: string };
+      if (!res.ok) {
+        setError(body.error || "Failed to create the stock quote.");
+        return;
+      }
+      setStockQuotedLocal((prev) => new Set(prev).add(`${item.solicitation_id}:${part.id}`));
+      setToast(
+        body.created
+          ? `RFQ-${body.reference_number} created from your stock — set your markup and shipping below.`
+          : `RFQ-${body.reference_number} already covers this part from stock.`
+      );
+      // Straight into the pricing surface — this is the signal AND the task.
+      setQuotesFor(item);
+      load({ silent: true });
+    } catch {
+      setError("Network error creating the stock quote.");
+    } finally {
+      setStockQuoteBusy(null);
+    }
+  };
+
   const patchStatus = async (item: RfqWorkItem, work_status: RfqWorkStatus) => {
     // Optimistic pill update; reload on failure.
     setData((prev) =>
@@ -464,7 +608,7 @@ export default function RfqWorklistPage() {
           <h1 className="text-2xl font-bold text-foreground">Send RFQs</h1>
           <p className="text-muted mt-1 text-sm">
             Matched solicitations as a work queue. Click a solicitation for its parts, then
-            Quote to request vendor pricing.
+            Get quotes to request vendor pricing.
           </p>
         </div>
 
@@ -637,6 +781,48 @@ export default function RfqWorklistPage() {
                   ))}
                 </select>
               </label>
+              {/* Field selector + term as ONE bordered control (select and
+                  input are border-0), copied from the bid-matching results
+                  page so the two queue pages search identically. */}
+              <div className="flex-1 min-w-[240px] max-w-md flex items-stretch rounded-lg border border-border overflow-hidden focus-within:border-primary">
+                <div className="relative flex items-stretch">
+                  <select
+                    value={searchField}
+                    onChange={(e) => setSearchField(e.target.value as SearchField)}
+                    aria-label="Field to search"
+                    title="Which field the search term applies to"
+                    className="appearance-none border-0 bg-muted-light text-foreground text-xs pl-2 pr-6 py-1 focus:outline-none cursor-pointer"
+                  >
+                    {SEARCH_FIELDS.map((f) => (
+                      <option key={f.value} value={f.value}>{f.label}</option>
+                    ))}
+                  </select>
+                  <svg
+                    className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+                <span className="w-px bg-border shrink-0" aria-hidden="true" />
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder={SEARCH_FIELDS.find((f) => f.value === searchField)?.placeholder}
+                  className="flex-1 min-w-0 border-0 bg-card-bg text-foreground text-xs px-2.5 py-1 focus:outline-none"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchInput("")}
+                    className="px-2 text-muted hover:text-foreground"
+                    aria-label="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
               <span className="ml-auto text-xs text-muted">
                 {myMinEst != null && (
                   <span
@@ -731,6 +917,28 @@ export default function RfqWorklistPage() {
                               </svg>
                             </button>
                           )}
+                          {/* Own-inventory coverage (Inventory Upload). The
+                              counts are null for customers with no inventory,
+                              so the glyph simply never renders for them.
+                              Click opens a popover; the detail rides the same
+                              lazy fetch row expansion uses. */}
+                          <StockCoverageGlyph
+                            stocked={item.stocked_part_count}
+                            quotable={item.quotable_part_count}
+                            onOpen={() => ensurePartsLoaded(item)}
+                            loading={!partsState || partsState.loading || (!partsState.error && !partsState.myStock)}
+                            entries={
+                              partsState?.myStock
+                                ? partsState.parts
+                                    .filter((p) => partsState.myStock?.[p.id])
+                                    .map((p) => ({
+                                      key: p.id,
+                                      identity: formatPartIdentity(p),
+                                      summary: partsState.myStock![p.id],
+                                    }))
+                                : undefined
+                            }
+                          />
                           {/* One "Amended" pill, not two — the merge now lives
                               inside SolicitationRowBadges, so this passes the
                               signals through raw instead of OR-ing them here.
@@ -760,12 +968,16 @@ export default function RfqWorklistPage() {
                             awards={item.won_parts ?? []}
                             mode="solicitation"
                           />
-                          {item.rfq_count > 0 && (
+                          {/* rfq_count counts vendor RFQs only, but internal
+                              stock quotes still land in quote_count — the
+                              pill must render for a stock-quote-only row or
+                              there is no way to open/price it from here. */}
+                          {(item.rfq_count > 0 || item.quote_count > 0) && (
                             <button
                               type="button"
                               onClick={() => setQuotesFor(item)}
                               className={`${ROW_BADGE_BASE} border-primary/40 text-primary hover:bg-primary/10 cursor-pointer transition-colors`}
-                              title={`${item.rfq_count} RFQ${item.rfq_count !== 1 ? "s" : ""} sent · ${item.quote_count} quote${item.quote_count !== 1 ? "s" : ""} received — open the side-by-side comparison`}
+                              title={`${item.rfq_count} vendor RFQ${item.rfq_count !== 1 ? "s" : ""} sent · ${item.quote_count} quote${item.quote_count !== 1 ? "s" : ""} (own-stock quotes included) — open the side-by-side comparison`}
                             >
                               View quotes ({item.quote_count})
                             </button>
@@ -880,6 +1092,12 @@ export default function RfqWorklistPage() {
                                   <th className={thClass}>NSN</th>
                                   <th className={thClass}>Description</th>
                                   <th className={`${thClass} !text-right whitespace-nowrap`}>Qty / Unit</th>
+                                  {/* Between what they want and what it goes
+                                      for. Only when the customer has
+                                      inventory at all (counts non-null). */}
+                                  {item.quotable_part_count != null && (
+                                    <th className={`${thClass} whitespace-nowrap`}>Your stock</th>
+                                  )}
                                   <th className={`${thClass} !text-right`}>Unit Price</th>
                                   <th className={`${thClass} !text-right`} aria-label="Actions" />
                                 </tr>
@@ -924,28 +1142,70 @@ export default function RfqWorklistPage() {
                                         ? `${p.quantity.toLocaleString()}${p.unit_of_issue ? `/${p.unit_of_issue}` : ""}`
                                         : p.unit_of_issue || "—"}
                                     </td>
+                                    {item.quotable_part_count != null && (
+                                      <td className={`${tdClass} whitespace-nowrap`}>
+                                        <MyStockCell
+                                          summary={partsState.myStock?.[p.id]}
+                                          solicitedQty={p.quantity}
+                                        />
+                                      </td>
+                                    )}
                                     <td className={`${tdClass} text-right whitespace-nowrap font-mono tabular-nums`}>
                                       {formatCurrency(p.unit_price)}
                                     </td>
-                                    <td className={`${tdClass} text-right`}>
-                                      <Button
-                                        variant="primary"
-                                        size="sm"
-                                        onClick={() => {
-                                          setQuoteContext({ part: p, item });
-                                          // Starting a quote is starting the work:
-                                          // claim an unowned solicitation right away
-                                          // (not at send), and warn when another
-                                          // buyer already holds it.
-                                          if (item.assigned_user_id == null) {
-                                            claim(item, { silent: true });
-                                          } else if (user && item.assigned_user_id !== user.id) {
-                                            setToast(`Heads up: ${item.assigned_user_name || "another buyer"} is already working on this solicitation.`);
-                                          }
-                                        }}
-                                      >
-                                        Quote
-                                      </Button>
+                                    <td className={`${tdClass} text-right whitespace-nowrap`}>
+                                      <span className="inline-flex items-center gap-1.5">
+                                        {/* "Use my stock" only on lines the
+                                            buyer actually stocks. Creates an
+                                            internal quote (no vendor emailed)
+                                            that rides the normal pricing
+                                            pipeline. Once one exists the
+                                            button wears its done state and
+                                            opens the quote view instead of
+                                            re-creating. */}
+                                        {partsState.myStock?.[p.id] && (
+                                          hasStockQuote(item, p.id) ? (
+                                            <button
+                                              type="button"
+                                              onClick={() => setQuotesFor(item)}
+                                              title="A stock quote exists for this line — open it to set markup and shipping."
+                                              className="inline-flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg border border-green-300 text-green-800 hover:bg-green-500/10 dark:text-green-300 dark:border-green-500/30 dark:hover:bg-green-500/20 cursor-pointer transition-colors"
+                                            >
+                                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                              </svg>
+                                              Using my stock
+                                            </button>
+                                          ) : (
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              disabled={stockQuoteBusy === p.id}
+                                              onClick={() => createStockQuote(item, p)}
+                                            >
+                                              {stockQuoteBusy === p.id ? "Creating…" : "Use my stock"}
+                                            </Button>
+                                          )
+                                        )}
+                                        <Button
+                                          variant="primary"
+                                          size="sm"
+                                          onClick={() => {
+                                            setQuoteContext({ part: p, item });
+                                            // Starting a quote is starting the work:
+                                            // claim an unowned solicitation right away
+                                            // (not at send), and warn when another
+                                            // buyer already holds it.
+                                            if (item.assigned_user_id == null) {
+                                              claim(item, { silent: true });
+                                            } else if (user && item.assigned_user_id !== user.id) {
+                                              setToast(`Heads up: ${item.assigned_user_name || "another buyer"} is already working on this solicitation.`);
+                                            }
+                                          }}
+                                        >
+                                          Get quotes
+                                        </Button>
+                                      </span>
                                     </td>
                                   </tr>
                                 ))}

@@ -4,7 +4,9 @@ import { useMemo } from "react";
 import { PartSearchResult, formatCurrency, partKey, formatPartIdentity, isPartNumberOnly } from "@/lib/library/types";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
+import { RowBadge } from "@/components/library/RowBadge";
 import type { LibraryTier } from "@/lib/library/tier";
+import type { PartAvailability } from "@/lib/inventory/types";
 
 interface PartsResultsListProps {
   results: PartSearchResult[];
@@ -17,6 +19,10 @@ interface PartsResultsListProps {
    *  hidden when null). Resolved by the parent page from
    *  `resolvePartsTier(hasAnyProductAccess)`. */
   tier?: LibraryTier;
+  /** Supplier-stock availability by part id (Inventory Upload). Best-effort
+   *  enrichment fetched by the parent after results land — the badge simply
+   *  doesn't render for parts (or viewers) without it. */
+  availability?: Record<number, PartAvailability>;
 }
 
 export function PartsResultsList({
@@ -25,6 +31,7 @@ export function PartsResultsList({
   onSelect,
   isLoading,
   tier = null,
+  availability,
 }: PartsResultsListProps) {
   // Define columns using TanStack Table column definitions
   const columns = useMemo<ColumnDef<PartSearchResult>[]>(
@@ -45,6 +52,22 @@ export function PartsResultsList({
               >
                 P/N only
               </span>
+            )}
+            {availability?.[row.original.id]?.network_in_stock && (
+              <RowBadge
+                tone="green"
+                title="One or more GPH suppliers report this part in stock — see the Supplier Stock tab."
+              >
+                In stock
+              </RowBadge>
+            )}
+            {(availability?.[row.original.id]?.my_listings ?? 0) > 0 && (
+              <RowBadge
+                tone="sky"
+                title="Your company's inventory includes this part."
+              >
+                My stock
+              </RowBadge>
             )}
           </span>
         ),
@@ -103,7 +126,7 @@ export function PartsResultsList({
         size: 40,
       },
     ],
-    []
+    [availability]
   );
 
   // CSV column spec — mirrors the on-screen columns the user sees.

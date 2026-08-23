@@ -58,7 +58,7 @@ working it at once, any solicitation without a named assignee can be
   queue and shows your name — with a "(you)" marker in your own view. If a
   teammate claims it a moment before you, you'll see who got it instead.
 - **Claiming also happens automatically when work starts**: clicking
-  **Quote** on an unowned solicitation makes it yours right away, and so
+  **Get quotes** on an unowned solicitation makes it yours right away, and so
   does saving items from it to the batch cart or sending an RFQ. If you
   start quoting a solicitation someone else already owns, a heads-up names
   them before you invest any time.
@@ -101,6 +101,17 @@ the number opens it right there — same viewer as Parts Search.
   badge shows as an outline, since the price is old enough to mislead.
 - **View quotes** and **In cart** — work already in flight on the
   solicitation. See [Work in progress you can see](#work-in-progress-you-can-see).
+<!-- HIDDEN UNTIL INVENTORY UPLOAD LAUNCH: restore the bullet below into the
+     list above (see INVENTORY_UPLOAD_PUBLIC in @/lib/inventory/launch).
+- **A green cube with a fraction** (say, 2/4) — that many of the
+  solicitation's quotable parts are already in [your uploaded
+  inventory](/help/supplier-stock). Solid green means every part is on your
+  shelf; an outline means some are. Expand the row to see quantities and
+  warehouse locations. The badge only appears if your company uploads its
+  inventory to GPH — and it always reflects your own stock, never another
+  supplier's.
+-->
+
 
 Two filters sit above the table: your **work status**, and the
 **solicitation status** — it defaults to open solicitations, but you can
@@ -123,10 +134,35 @@ background, so a row can't move out from under you mid-task. **Refresh**
 re-checks immediately.
 
 Click a solicitation number to see its quotable items — NSN, description,
-quantity, and unit price — with a **Quote** button on each row. Each NSN is
+quantity, and unit price — with a **Get quotes** button on each row. Each NSN is
 a link that opens that part in Parts Search in a new tab. DIBBS "first
 article test" placeholder lines (GOVERNMENT/CONTRACTOR FIRST ARTICLE)
 aren't real purchasable items, so they don't appear here.
+<!-- HIDDEN UNTIL INVENTORY UPLOAD LAUNCH: restore the paragraph below after
+     the paragraph above, and add supplier-stock to Related articles if the
+     article has such a list.
+
+If your company [uploads its inventory](/help/supplier-stock), the expanded
+items also gain a **Your stock** column between the quantity and the unit
+price: how many you have on hand and in what condition, then the warehouse
+and the date of the count. An amber **partial** tag means your on-hand
+quantity covers only part of what's solicited, and a stale count date is
+called out so you can recount before quoting from it. This is your own
+inventory only — other suppliers' shared stock never appears on this page.
+
+Stocked lines also carry a **Use my stock** button beside Get quotes. It
+creates an internal quote from your shelf — no vendor is contacted and no
+email goes out — prefilled with your recorded unit cost, total quantity
+across warehouses, and a per-warehouse breakdown. The quote view opens
+right away with the new quote (labeled *Own inventory*) so you can apply
+your markup and shipping on the spot; the work status moves to *Quotes
+in*, and the bidder reads the priced line in the same place as everything
+else. The button then shows a green **Using my stock** check — clicking it
+reopens the quote rather than creating another. On a partially stocked
+line, use both buttons — quote the shelf and RFQ vendors for the balance,
+then compare them side by side.
+-->
+
 
 ## Work status
 
@@ -143,7 +179,7 @@ setting it in either place moves both.
 
 ## Requesting quotes
 
-The **Quote** button opens a vendor picker with two sources of vendors:
+The **Get quotes** button opens a vendor picker with two sources of vendors:
 
 - **Suggested from my vendors** — the private vendors that match *this*
   part, chosen from your whole book (even thousands of vendors) using the
@@ -200,7 +236,12 @@ From the comparison table, click **Price** on the winning quote line. Enter
 your markup percentage (pre-filled from your company default), shipping, and
 any other charges — GPH computes your per-unit price to the government
 (vendor price × markup, plus shipping and charges spread over the quantity)
-and shows the extended total. Saving marks the solicitation **Priced**.
+and shows the extended total. The solicitation is marked **Priced** once
+every one of its items has a priced quote line — on a one-item solicitation
+that's your first save; on a multi-item one the status waits until the last
+item is priced, so "Priced" always means the bid is ready to hand off. If
+you're deliberately bidding only some of the items, set Priced yourself from
+the status dropdown when you're done.
 
 ## Private vendors
 
