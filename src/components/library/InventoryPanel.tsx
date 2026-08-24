@@ -272,7 +272,7 @@ export function InventoryPanel({ inventory, isLoading, error, onRetry }: Invento
             <h3 className="text-sm font-semibold text-foreground">
               My stock ({inventory.my_stock.length})
             </h3>
-            <Link href="/account/inventory" className="text-xs text-primary hover:underline">
+            <Link href="/library/inventory" className="text-xs text-primary hover:underline">
               Manage inventory
             </Link>
           </div>
@@ -304,7 +304,7 @@ export function InventoryPanel({ inventory, isLoading, error, onRetry }: Invento
               <Link href="/pricing" className="text-xs text-primary hover:underline">
                 View plans
               </Link>
-              <Link href="/account/inventory" className="text-xs text-primary hover:underline">
+              <Link href="/library/inventory" className="text-xs text-primary hover:underline">
                 Share my inventory
               </Link>
             </div>
@@ -316,7 +316,7 @@ export function InventoryPanel({ inventory, isLoading, error, onRetry }: Invento
               suppliers publish their inventory
               {inventory.my_stock.length === 0 && (
                 <>
-                  {" "}— <Link href="/account/inventory" className="text-primary hover:underline">including yours</Link>
+                  {" "}— <Link href="/library/inventory" className="text-primary hover:underline">including yours</Link>
                 </>
               )}
               .

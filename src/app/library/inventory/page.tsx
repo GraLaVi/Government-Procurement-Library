@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { UploadTab } from "@/components/inventory/UploadTab";
 import { ItemsTab } from "@/components/inventory/ItemsTab";
@@ -29,11 +28,6 @@ export default function InventoryPage() {
   return (
     <div>
       <div className="mb-6">
-        <nav className="text-xs text-muted mb-2">
-          <Link href="/account" className="hover:text-foreground">Account</Link>
-          <span className="mx-1.5">/</span>
-          <span className="text-foreground">Inventory</span>
-        </nav>
         <h1 className="text-2xl font-bold text-foreground">Inventory</h1>
         <p className="text-sm text-muted mt-1">
           Upload your stock so it appears on the parts your team researches —

@@ -9,10 +9,12 @@ import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanne
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { showAnalyticsNav } from "@/lib/analytics/tier";
+import { showInventorySurfaces } from "@/lib/inventory/launch";
 
-const librarySearchItems = [
+const libraryItems = [
   { href: "/library/parts", label: "Parts Search" },
   { href: "/library/vendor-search", label: "Vendor Search" },
+  { href: "/library/inventory", label: "Inventory" },
 ];
 
 const helpItems = [
@@ -96,7 +98,14 @@ export function Header({ showAccountLink = true }: HeaderProps) {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname() || "/";
 
-  const libraryGroupActive = isGroupActive(librarySearchItems, pathname);
+  // Inventory is unannounced: hidden until INVENTORY_UPLOAD_PUBLIC flips
+  // (dev builds always show it). No responder check needed here — this whole
+  // dropdown is already hidden for responder-only accounts.
+  const visibleLibraryItems = libraryItems.filter(
+    (item) => item.href !== "/library/inventory" || showInventorySurfaces()
+  );
+
+  const libraryGroupActive = isGroupActive(visibleLibraryItems, pathname);
   const helpGroupActive = isGroupActive(helpItems, pathname);
   const rfqGroupActive = isGroupActive(rfqItems, pathname);
 
@@ -197,14 +206,14 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 Dashboard
               </Link>
               )}
-              {/* Library Search Dropdown */}
+              {/* Library Dropdown */}
               {!isRfqResponderOnly && (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsLibraryDropdownOpen(!isLibraryDropdownOpen)}
                   className={`flex items-center gap-1 ${topLinkClass(libraryGroupActive)}`}
                 >
-                  Library Search
+                  Library
                   <svg
                     className={`w-4 h-4 transition-transform duration-200 ${isLibraryDropdownOpen ? "rotate-180" : ""}`}
                     fill="none"
@@ -217,7 +226,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 </button>
                 {isLibraryDropdownOpen && (
                   <div className="absolute top-full left-0 mt-2 w-48 bg-card-bg rounded-lg shadow-xl border border-border py-2 z-[100]">
-                    {librarySearchItems.map((item) => (
+                    {visibleLibraryItems.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
@@ -376,14 +385,14 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 </Link>
               )}
 
-              {/* Library Search expandable section */}
+              {/* Library expandable section */}
               {!isRfqResponderOnly && (
               <>
               <button
                 onClick={() => setIsMobileLibraryOpen(!isMobileLibraryOpen)}
                 className={`flex items-center justify-between w-full text-left ${mobileRowClass(libraryGroupActive)}`}
               >
-                <span>Library Search</span>
+                <span>Library</span>
                 <svg
                   className={`w-4 h-4 transition-transform duration-200 ${isMobileLibraryOpen ? "rotate-180" : ""}`}
                   fill="none"
@@ -396,7 +405,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               </button>
               {isMobileLibraryOpen && (
                 <div className="pl-4">
-                  {librarySearchItems.map((item) => (
+                  {visibleLibraryItems.map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}

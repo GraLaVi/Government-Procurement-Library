@@ -8,6 +8,7 @@ import { MenuIcon, CloseIcon } from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { showAnalyticsNav } from "@/lib/analytics/tier";
+import { showInventorySurfaces } from "@/lib/inventory/launch";
 
 // Whether the given href should render as "current". Real routes match
 // on exact path or sub-path (so /library/parts/123 still highlights the
@@ -23,7 +24,7 @@ function isLinkActive(href: string, pathname: string): boolean {
 
 // A dropdown trigger is "active" when any of its child items is the
 // current page — so navigating to /library/parts highlights the
-// "Library Search" button.
+// "Library" button.
 function isGroupActive(items: { href: string }[], pathname: string): boolean {
   return items.some((it) => isLinkActive(it.href, pathname));
 }
@@ -44,9 +45,10 @@ const visitorNavLinks = [
   { href: "/pricing", label: "Pricing" },
 ];
 
-const librarySearchItems = [
+const libraryItems = [
   { href: "/library/parts", label: "Parts Search" },
   { href: "/library/vendor-search", label: "Vendor Search" },
+  { href: "/library/inventory", label: "Inventory" },
 ];
 
 const helpItems = [
@@ -67,7 +69,7 @@ export function Navbar() {
   const [isMobileHelpOpen, setIsMobileHelpOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const helpDropdownRef = useRef<HTMLDivElement>(null);
-  const { user, isAuthenticated, isLoading, hasProductAccess, hasAnyProductAccess } = useAuth();
+  const { user, isAuthenticated, isLoading, isRfqResponderOnly, hasProductAccess, hasAnyProductAccess } = useAuth();
   const pathname = usePathname() || "/";
 
   const userInitial = user?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || "U";
@@ -111,7 +113,16 @@ export function Navbar() {
     (item) => item.href !== "/library/code-definitions" || (!isLoading && isAuthenticated)
   );
 
-  const libraryGroupActive = isGroupActive(librarySearchItems, pathname);
+  // Inventory mirrors the Account-page card's gating: hidden until
+  // INVENTORY_UPLOAD_PUBLIC flips (dev builds always show it) and hidden for
+  // free RFQ-responder accounts, which have no inventory surface.
+  const visibleLibraryItems = libraryItems.filter(
+    (item) =>
+      item.href !== "/library/inventory" ||
+      (showInventorySurfaces() && !isRfqResponderOnly)
+  );
+
+  const libraryGroupActive = isGroupActive(visibleLibraryItems, pathname);
   const helpGroupActive = isGroupActive(visibleHelpItems, pathname);
 
   // Close dropdowns when clicking outside
@@ -154,14 +165,14 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
-            {/* Library Search Dropdown - Only for authenticated users */}
+            {/* Library Dropdown - Only for authenticated users */}
             {!isLoading && isAuthenticated && (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsLibraryDropdownOpen(!isLibraryDropdownOpen)}
                   className={`flex items-center gap-1 ${topLinkClass(libraryGroupActive)}`}
                 >
-                  Library Search
+                  Library
                   <svg
                     className={`w-4 h-4 transition-transform duration-200 ${isLibraryDropdownOpen ? "rotate-180" : ""}`}
                     fill="none"
@@ -174,7 +185,7 @@ export function Navbar() {
                 </button>
                 {isLibraryDropdownOpen && (
                   <div className="absolute top-full left-0 mt-2 w-48 bg-card-bg rounded-lg shadow-xl border border-border py-2 z-[100]">
-                    {librarySearchItems.map((item) => (
+                    {visibleLibraryItems.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
@@ -310,14 +321,14 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              {/* Mobile Library Search - Only for authenticated users */}
+              {/* Mobile Library - Only for authenticated users */}
               {!isLoading && isAuthenticated && (
                 <div>
                   <button
                     onClick={() => setIsMobileLibraryOpen(!isMobileLibraryOpen)}
                     className={`flex items-center justify-between w-full ${mobileLinkClass(libraryGroupActive)}`}
                   >
-                    <span>Library Search</span>
+                    <span>Library</span>
                     <svg
                       className={`w-4 h-4 transition-transform duration-200 ${isMobileLibraryOpen ? "rotate-180" : ""}`}
                       fill="none"
@@ -330,7 +341,7 @@ export function Navbar() {
                   </button>
                   {isMobileLibraryOpen && (
                     <div className="pl-4 mt-2 space-y-2 border-l-2 border-border">
-                      {librarySearchItems.map((item) => (
+                      {visibleLibraryItems.map((item) => (
                         <Link
                           key={item.href}
                           href={item.href}

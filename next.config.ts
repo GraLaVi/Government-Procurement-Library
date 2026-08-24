@@ -32,6 +32,14 @@ const nextConfig: NextConfig = {
         destination: '/help',
         permanent: true,
       },
+      // Inventory moved from the account area to the Library (August 2026,
+      // pre-launch — external links barely exist, this is insurance for
+      // bookmarks and stored notifications).
+      {
+        source: '/account/inventory',
+        destination: '/library/inventory',
+        permanent: true,
+      },
     ];
   },
 };

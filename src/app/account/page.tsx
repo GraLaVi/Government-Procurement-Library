@@ -81,7 +81,7 @@ const accountSections = [
   {
     title: "Inventory",
     description: "Upload your stock, keep it current, and control what other subscribers can see",
-    href: "/account/inventory",
+    href: "/library/inventory",
     // Free RFQ responder accounts have no inventory surface.
     responderHidden: true,
     // Unannounced: dev-only until INVENTORY_UPLOAD_PUBLIC flips
