@@ -24,7 +24,7 @@ GPH offers two entry points for vendor search.
 
 **Dashboard quick search.** The **Look up a vendor by CAGE** bar at the top of your dashboard is the fastest way to research a vendor when you have their CAGE code. Enter the code and click **Go**.
 
-**Library Search.** For broader options, click **Library Search** in the main navigation, then select the vendor search type. You can search by **CAGE Code**, **UEI** (Unique Entity Identifier), or **Entity Name**. Entity name search is useful when you know the company but not their CAGE.
+**Vendor Search.** For broader options, open **Library → Vendor Search** in the main navigation. You can search by **CAGE Code**, **UEI** (Unique Entity Identifier), or **Entity Name**. Entity name search is useful when you know the company but not their CAGE.
 
 ## Reading a vendor profile
 

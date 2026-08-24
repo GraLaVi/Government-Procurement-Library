@@ -4,7 +4,7 @@ meta_title: "Searching for Parts | GPH Help"
 description: "Learn how to search for parts in Government Procurement Hub, read part records, and use the data tabs that provide complete part intelligence."
 ---
 
-The Library Search lets you look up any part in the federal procurement catalog by its NSN, NIIN, solicitation number, manufacturer part number, contract number, or description. Once you've found a part, GPH shows everything it knows about that item across a set of detailed tabs — from procurement history and recent solicitations to manufacturers, technical specs, and packaging requirements. How many tabs you see depends on your plan; the tabs below are listed in the order they appear.
+Parts Search lets you look up any part in the federal procurement catalog by its NSN, NIIN, solicitation number, manufacturer part number, contract number, or description. Once you've found a part, GPH shows everything it knows about that item across a set of detailed tabs — from procurement history and recent solicitations to manufacturers, technical specs, and packaging requirements. How many tabs you see depends on your plan; the tabs below are listed in the order they appear.
 
 ## In this article
 
@@ -29,11 +29,11 @@ GPH offers two entry points for part search.
 
 **Dashboard quick search.** The **Search by NSN/NIIN** bar at the top of your dashboard is the fastest way to look up a part by its NSN or NIIN. Type or paste the number and click **Go**.
 
-**Library Search.** For full search options, click **Library Search** in the main navigation. The Library Search page lets you search by any of five fields, view recent searches, and pin frequently used searches.
+**Parts Search.** For full search options, open **Library → Parts Search** in the main navigation. The Parts Search page lets you search by any of five fields, view recent searches, and pin frequently used searches.
 
 ## The five search types
 
-On the Library Search page, choose a search type using the radio buttons above the search bar:
+On the Parts Search page, choose a search type using the radio buttons above the search bar:
 
 - **NSN/NIIN** — Search by National Stock Number or National Item Identification Number. Either format works. You can paste a full 13-digit NSN (e.g., `5306-001234567`) or just the 9-digit NIIN (e.g., `00-001-0882`).  
 - **Solicitation number** — Look up a specific solicitation by its identifier.  
@@ -134,7 +134,7 @@ This is dense, formal content. If you're preparing a bid, treat this as the auth
 
 ## Recent and pinned searches
 
-The Library Search page displays your recent searches as clickable chips below the search bar. Click any chip to re-run the search.
+The Parts Search page displays your recent searches as clickable chips below the search bar. Click any chip to re-run the search.
 
 On the Advanced plan, click the pin icon next to a recent search to save it. Pinned searches stay accessible regardless of how many other searches you run, which is useful for parts, vendors, or solicitations you check frequently.
 

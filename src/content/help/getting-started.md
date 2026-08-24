@@ -10,7 +10,7 @@ When you sign in, your dashboard shows a **Get started** checklist with three st
 
 ## Step 1: Search a part
 
-The dashboard's **Search by NSN/NIIN** bar is the fastest way to look up a part you make or sell. For more options, open **Library Search** in the navigation — you can search by NSN/NIIN, Solicitation number, Mfg Part Number, Contract number, or Description.
+The dashboard's **Search by NSN/NIIN** bar is the fastest way to look up a part you make or sell. For more options, open **Library → Parts Search** in the navigation — you can search by NSN/NIIN, Solicitation number, Mfg Part Number, Contract number, or Description.
 
 A part record opens with detailed information across eight tabs, including procurement history, recent solicitations, manufacturers, and technical specifications.
 
@@ -18,7 +18,7 @@ A part record opens with detailed information across eight tabs, including procu
 
 ## Step 2: Look up a vendor
 
-Use the dashboard's **Look up a vendor by CAGE** bar to research any government contractor by their CAGE code. To search by company name or UEI instead, open the full **Library Search**.
+Use the dashboard's **Look up a vendor by CAGE** bar to research any government contractor by their CAGE code. To search by company name or UEI instead, open **Library → Vendor Search**.
 
 A vendor profile shows business details, SAM registration, contacts, recent awards, and a 13-month contract history broken down by DLA distribution center.
 

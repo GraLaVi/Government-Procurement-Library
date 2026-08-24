@@ -19,7 +19,7 @@ description: "Upload your inventory to GPH, control exactly what other subscribe
   3. Add a Supplier Stock passage to plans-and-pricing.md (viewing requires
      Basic+ or being a sharing contributor; contributing is free).
   4. Flip INVENTORY_UPLOAD_PUBLIC in src/lib/inventory/launch.ts (unhides
-     the Account -> Inventory card outside dev).
+     the Library -> Inventory nav item and the Account card outside dev).
 -->
 
 GPH's part records tell you what the government knows about a part — procurement history, open solicitations, DLA demand and stock. **Supplier Stock** adds the one thing missing from that picture: what the supply chain actually has on the shelf right now. Suppliers upload their inventory, and — only if they choose to share — their stock becomes visible to other GPH customers on the part's **Supplier Stock** tab, with an **In stock** badge in search results.
@@ -29,6 +29,7 @@ Contributing your inventory is **free on every plan**. Viewing *other* companies
 ## In this article
 
 - [Uploading your inventory](#uploading-your-inventory)
+- [Every field, in detail](#every-field-in-detail)
 - [The preview screen](#the-preview-screen)
 - [Keeping your stock current](#keeping-your-stock-current)
 - [Sharing: who sees what](#sharing-who-sees-what)
@@ -40,7 +41,7 @@ Contributing your inventory is **free on every plan**. Viewing *other* companies
 
 ## Uploading your inventory
 
-Go to **Account → Inventory** and drop in a CSV export from your ERP or spreadsheet. Only account admins can upload.
+Go to **Library → Inventory** and drop in a CSV export from your ERP or spreadsheet. Only account admins can upload.
 
 Three things are required on every line:
 
@@ -61,6 +62,57 @@ You don't need to match our column names. The first time you upload, GPH shows y
 **A note on Excel.** Most CSVs come out of Excel, which quietly damages part numbers — stripping leading zeros from NSNs and collapsing long part numbers into scientific notation (`5.4E+11`). GPH repairs lost leading zeros automatically. Scientific-notation part numbers are unrecoverable and those rows are rejected with a clear message: format the column as **Text** in Excel and re-export.
 
 Limits: 20 MB / 100,000 rows per file, 100,000 live lines per company.
+
+## Every field, in detail
+
+Column names below are the canonical ones (the downloadable template uses them); common variants — `Qty`, `P/N`, `U/M`, `Cond`, `Bin`, `Mfr CAGE`, and many more — are recognized automatically, and anything unrecognized is simply ignored (you'll see it marked *ignored* on the preview). Dates accept `YYYY-MM-DD` and common US formats like `MM/DD/YYYY`; yes/no fields accept `yes`/`no`, `y`/`n`, `true`/`false`, `1`/`0`.
+
+**Required — a row is rejected without these:**
+
+| Column | Details |
+|---|---|
+| `nsn` *or* `part_number` | At least one must identify the item. NSN/NIIN may be dashed or undashed, 13-digit NSN or 9-digit NIIN; digits only (lost leading zeros are repaired). `part_number` is the manufacturer part number, any text. |
+| `quantity_on_hand` | A number, zero or more. Zero is a legitimate listing when paired with a lead time ("can source in N days"). |
+
+**Strongly recommended — imported with a default and a warning when missing:**
+
+| Column | Details | Default |
+|---|---|---|
+| `customer_sku` | Your own stock-record ID — how GPH recognizes the same line across uploads (per warehouse). Without it, updates match on part identity and can duplicate if details change. | — |
+| `cage_code` | The **manufacturer's** CAGE. Paired with the part number it roughly doubles clean-match rates. | — |
+| `unit_of_measure` | EA, BX, FT, KT, PR… | `EA` |
+| `condition_code` | Federal Supply Condition Code (A, B, F…). **Required for a line to be visible to other customers.** | `A` |
+| `as_of_date` | The date the count was taken — drives the freshness badge and auto-hide. | upload date |
+
+**Commercial (optional; each shareable on its own toggle):**
+
+| Column | Details |
+|---|---|
+| `unit_price`, `currency`, `price_valid_until` | Your price; 3-letter currency code, default `USD`. |
+| `quantity_committed` | Already-allocated stock; available = on hand − committed. |
+| `minimum_order_quantity`, `package_quantity` | Numbers. |
+| `lead_time_days` | Whole days; 0 = on-the-shelf. |
+
+**Compliance & traceability (optional — but what makes a listing quotable):**
+
+| Column | Accepted values |
+|---|---|
+| `country_of_origin`, `ship_from_country` | Two-letter ISO code (`US`, `GB`, `DE`…). |
+| `material_source` | `oem`, `authorized_distributor`, `broker`, `government_surplus`, `unknown` |
+| `traceability` | `coc`, `coc_plus_test_reports`, `dd1348_dd250`, `mill_certs`, `none` |
+| `lot_number`, `serial_number`, `shelf_life_code` | Free text / SLC code. |
+| `date_of_manufacture`, `cure_date`, `expiration_date` | Dates. Cure dates matter for elastomers — DLA rejects material outside the cure window. |
+| `dfars_compliant`, `export_controlled`, `hazmat` | Yes/no. |
+
+**Logistics & notes (optional):**
+
+| Column | Details |
+|---|---|
+| `warehouse_location` | Your bin/warehouse code. **Never shared with anyone**, but part of the line's identity — the same SKU may appear once per warehouse. |
+| `ship_from_region` | Shown on shared listings when location sharing is on (e.g. `US-East`). |
+| `condition_notes`, `notes` | Free text ("NOS, original sealed packaging"). |
+
+An invalid value in an optional column never rejects the row — it's ignored with a warning you'll see on the preview and in the error report.
 
 ## The preview screen
 
@@ -88,7 +140,7 @@ An API for nightly automated pushes from your ERP is planned; snapshot re-upload
 
 Sharing is **off by default**. Until an admin turns it on (and accepts the sharing terms), your inventory is visible only inside your own company — you can use GPH purely as a private stock lookup against part records.
 
-When you do share, you control the exposure column by column, from **Account → Inventory → Settings**:
+When you do share, you control the exposure column by column, from **Library → Inventory → Sharing settings**:
 
 - **Quantity** — show the exact number, a range ("100–499"), or just "in stock."
 - **Price, MOQ, lead time, condition, traceability, ship-from region** — each independently on or off. Prices are **off** by default.
