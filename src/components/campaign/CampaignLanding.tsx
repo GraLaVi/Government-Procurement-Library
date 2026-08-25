@@ -10,6 +10,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/Button";
 import { CheckIcon } from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
+import { resolveCampaignTitle } from "@/lib/campaigns";
 import { formatMoney } from "@/lib/billing/pricing";
 import {
   isOfferInterval,
@@ -23,7 +24,10 @@ import {
 } from "@/lib/signup/validateCage";
 
 interface CampaignLandingProps {
+  /** H1 from the campaign file; may carry the {trial_days} placeholder. */
   title: string;
+  /** H1 to fall back to when there is no trial length to quote. */
+  titleNoTrial?: string;
   eyebrow?: string;
   ctaLabel?: string;
   /** Markdown body of the campaign file — selling copy and benefit bullets. */
@@ -94,6 +98,7 @@ export function CampaignLanding(props: CampaignLandingProps) {
 
 function CampaignLandingContent({
   title,
+  titleNoTrial,
   eyebrow,
   ctaLabel,
   content,
@@ -114,6 +119,14 @@ function CampaignLandingContent({
       ? requestedInterval
       : defaultInterval;
   const offer = offers[interval] ?? null;
+
+  // A campaign may lead with the trial offer; the length comes from the
+  // resolved price, so switching ?interval= (or losing the catalog) can
+  // never leave the headline quoting a figure the card disagrees with.
+  const headline = resolveCampaignTitle(
+    { title, title_no_trial: titleNoTrial },
+    offer?.trialDays ?? null,
+  );
 
   const [cageInput, setCageInput] = useState("");
   const [checking, setChecking] = useState(false);
@@ -170,8 +183,12 @@ function CampaignLandingContent({
                 {eyebrow}
               </span>
             )}
-            <h1 className="text-3xl sm:text-4xl font-bold text-foreground mt-4 leading-tight">
-              {title}
+            <h1
+              className={`text-3xl sm:text-4xl font-bold text-foreground leading-tight ${
+                eyebrow ? "mt-4" : ""
+              }`}
+            >
+              {headline}
             </h1>
             <div className="mt-4">
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -207,11 +224,10 @@ function CampaignLandingContent({
                     Save {formatMoney(offer.savingsVsMonthlyCents, offer.currency)} vs. paying monthly
                   </span>
                 )}
-                {offer.trialDays !== null && offer.trialDays > 0 && (
-                  <p className="text-sm text-primary font-semibold mt-4">
-                    Free for {offer.trialDays} days. No card required.
-                  </p>
-                )}
+                {/* The trial is the headline now (campaigns lead with
+                    "Free for {trial_days} days…"), so the card doesn't repeat
+                    it — it leads with the price and the annual saving. The
+                    reassurance strip below the fold still states the terms. */}
               </>
             ) : (
               // Catalog unreachable at render. Never invent a figure — point
@@ -314,10 +330,21 @@ function CampaignLandingContent({
                   className="w-full"
                   disabled={checking || (eligible && !offer)}
                 >
+                  {/* Once the CAGE clears, keep the offer's promise instead of
+                      switching to process language ("create your account") —
+                      the ✓ Eligible panel above already signals the step
+                      changed, and the arrow marks this as the click that
+                      leaves the page. Not derived from ctaLabel: that reads
+                      as nonsense for a campaign whose CTA is "Check my CAGE
+                      code". Falls back to neutral wording on a price that
+                      sells without a trial, so the button never promises one
+                      that isn't on offer. */}
                   {checking
                     ? "Checking…"
                     : eligible
-                      ? "Continue to create your account →"
+                      ? offer?.trialDays
+                        ? "Start my free trial →"
+                        : "Continue to create your account →"
                       : ctaLabel || "Check my CAGE code"}
                 </Button>
 
@@ -343,7 +370,6 @@ function CampaignLandingContent({
           {offer !== null && offer.trialDays !== null && offer.trialDays > 0 && (
             <span>{offer.trialDays}-day trial, no payment method up front</span>
           )}
-          <span>Cancel any time before the trial ends</span>
           <span>Payments processed securely by Stripe</span>
         </div>
       </main>

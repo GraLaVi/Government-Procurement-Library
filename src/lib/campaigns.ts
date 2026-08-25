@@ -38,10 +38,27 @@ export function getCampaign(slug: string): CampaignMeta | undefined {
   return CAMPAIGNS.find((c) => c.slug === slug);
 }
 
+/**
+ * Placeholder a campaign may use inside `title` to lead with the trial
+ * offer. Filled from the live catalog at render time — the same rule the
+ * rest of this page follows: the file says what is sold, never the numbers.
+ */
+export const TRIAL_DAYS_TOKEN = "{trial_days}";
+
 /** Frontmatter contract for src/content/campaigns/<slug>.md. */
 export interface CampaignFrontmatter {
-  /** On-page H1. */
+  /**
+   * On-page H1. May contain {@link TRIAL_DAYS_TOKEN}, which is replaced with
+   * the resolved price's trial length so the headline can never drift from
+   * the offer card beside it.
+   */
   title: string;
+  /**
+   * H1 used when there is no trial length to quote — the billing service was
+   * unreachable, or the resolved price sells without a trial. Required when
+   * `title` uses {@link TRIAL_DAYS_TOKEN}.
+   */
+  title_no_trial?: string;
   /** Small pill above the headline, e.g. "Limited launch offer". Optional. */
   eyebrow?: string;
   /** Label on the button under the CAGE field. Optional. */
@@ -107,8 +124,20 @@ export function parseCampaignFrontmatter(
     );
   }
 
+  const title = requireString("title");
+  const titleNoTrial = optionalString("title_no_trial");
+  if (title.includes(TRIAL_DAYS_TOKEN) && !titleNoTrial) {
+    throw new Error(
+      `${where}: frontmatter "title" uses ${TRIAL_DAYS_TOKEN}, so ` +
+        `"title_no_trial" is required — it is the headline shown when there ` +
+        `is no trial length to quote (billing unreachable, or the price ` +
+        `sells without a trial).`,
+    );
+  }
+
   return {
-    title: requireString("title"),
+    title,
+    title_no_trial: titleNoTrial,
     eyebrow: optionalString("eyebrow"),
     cta_label: optionalString("cta_label"),
     offer_product: requireString("offer_product"),
@@ -117,4 +146,25 @@ export function parseCampaignFrontmatter(
     meta_title: optionalString("meta_title"),
     description: optionalString("description"),
   };
+}
+
+/**
+ * The headline to render for a campaign.
+ *
+ * A campaign that leads with the trial offer writes it as
+ * `Free for {trial_days} days. No card required.` — the sentence is the
+ * file's to edit, the number is the catalog's to supply, so the H1 can never
+ * disagree with the price card beside it. When no trial length is available
+ * (billing unreachable, or the price sells without one), the campaign's
+ * `title_no_trial` headline is used instead; `parseCampaignFrontmatter`
+ * guarantees one exists whenever the token is used.
+ */
+export function resolveCampaignTitle(
+  frontmatter: Pick<CampaignFrontmatter, "title" | "title_no_trial">,
+  trialDays: number | null,
+): string {
+  const { title, title_no_trial: titleNoTrial } = frontmatter;
+  if (!title.includes(TRIAL_DAYS_TOKEN)) return title;
+  if (trialDays === null || trialDays <= 0) return titleNoTrial ?? title;
+  return title.split(TRIAL_DAYS_TOKEN).join(String(trialDays));
 }

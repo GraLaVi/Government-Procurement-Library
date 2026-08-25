@@ -1,11 +1,15 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { after } from "next/server";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import matter from "gray-matter";
 import type { Metadata } from "next";
+import { recordCampaignLanding } from "@/lib/campaignLanding";
 import {
   CAMPAIGN_SLUGS,
   parseCampaignFrontmatter,
+  resolveCampaignTitle,
   type CampaignFrontmatter,
 } from "@/lib/campaigns";
 import { fetchCatalog } from "@/lib/billing/catalog";
@@ -60,19 +64,43 @@ export async function generateMetadata({
   const campaign = await loadCampaign(slug);
   if (!campaign) return {};
   return {
-    title: campaign.frontmatter.meta_title ?? campaign.frontmatter.title,
+    // Metadata is generated without the catalog, so a title leading with the
+    // trial offer has no figure to interpolate — resolveCampaignTitle falls
+    // back to the campaign's no-trial headline rather than leaking the
+    // placeholder into a <title>. Campaigns that care set meta_title anyway.
+    title:
+      campaign.frontmatter.meta_title ??
+      resolveCampaignTitle(campaign.frontmatter, null),
     description: campaign.frontmatter.description,
   };
 }
 
 export default async function CampaignPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
   const campaign = await loadCampaign(slug);
   if (!campaign) notFound();
+
+  // Count the landing server-side, after the response is sent. GA4 can't do
+  // this job — it stays unloaded until the visitor accepts the cookie
+  // banner, so it never sees the ones who decline or ignore it, which on
+  // cold campaign traffic is most of them. Runs only for a real campaign
+  // page (after the notFound above), and never delays the render.
+  const query = await searchParams;
+  // Read the request headers HERE, in request scope — inside after() the
+  // request APIs are gone, and the failure is silent (the logger swallows
+  // its own errors so a marketing page can't 500 over a metric).
+  const headerList = await headers();
+  const requestInfo = {
+    referrer: headerList.get("referer") ?? undefined,
+    userAgent: headerList.get("user-agent") ?? undefined,
+  };
+  after(() => recordCampaignLanding(slug, query, requestInfo));
 
   const { frontmatter, content } = campaign;
 
@@ -108,6 +136,7 @@ export default async function CampaignPage({
   return (
     <CampaignLanding
       title={frontmatter.title}
+      titleNoTrial={frontmatter.title_no_trial}
       eyebrow={frontmatter.eyebrow}
       ctaLabel={frontmatter.cta_label}
       content={content}

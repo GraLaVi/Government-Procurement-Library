@@ -71,6 +71,58 @@ declare global {
   }
 }
 
+/**
+ * Campaign parameters from the URL the visitor actually arrived on.
+ *
+ * The pageview cannot fire until analytics is accepted, and by then the
+ * visitor may have clicked off the landing page — at which point
+ * `window.location.href` no longer carries the `utm_*` that identify the
+ * campaign, and GA4 books the whole session as direct/none. That is the
+ * single biggest attribution leak on campaign traffic: someone arrives from
+ * an email, reads, browses to /pricing, accepts the banner there, and the
+ * campaign gets no credit for a visit it paid for.
+ *
+ * So the parameters are read once on entry — before any consent decision,
+ * because reading the URL the browser already navigated to is not tracking —
+ * and replayed onto the first pageview GA ever sees.
+ *
+ * Deliberately a module variable and NOT a cookie or storage: this lives in
+ * the tab's JS memory for the life of the document, so nothing is written to
+ * the visitor's device and the consent promise in /legal/cookies holds.
+ */
+let landingCampaign: Record<string, string> | null = null;
+let landingCaptured = false;
+/** Only the first pageview may carry replayed params; after that the URL
+ *  speaks for itself and re-appending would attribute later pages twice. */
+let firstPageViewSent = false;
+
+/** `utm_*` plus the click ids GA4 attributes from. */
+function campaignParamsOf(search: string): Record<string, string> | null {
+  const found: Record<string, string> = {};
+  new URLSearchParams(search).forEach((value, key) => {
+    if (key.startsWith("utm_") || ["gclid", "gbraid", "wbraid"].includes(key)) {
+      found[key] = value;
+    }
+  });
+  return Object.keys(found).length > 0 ? found : null;
+}
+
+/** The current URL, with the landing campaign params restored if this page
+ *  lost them.
+ *
+ *  All or nothing: a URL that carries any campaign parameter of its own is
+ *  left exactly as it is. Merging the two would invent a hybrid that never
+ *  existed — the current page's source with the landing page's campaign —
+ *  and a wrong attribution is worse than the direct/none it replaces. */
+function locationWithLandingCampaign(): string {
+  const url = new URL(window.location.href);
+  if (!landingCampaign || campaignParamsOf(url.search)) return url.href;
+  for (const [key, value] of Object.entries(landingCampaign)) {
+    url.searchParams.set(key, value);
+  }
+  return url.href;
+}
+
 /** Define window.gtag ourselves rather than waiting for gtag.js. Calls
  *  made before the remote script loads queue in dataLayer and replay on
  *  load, so this removes any ordering dependency between the <Script>
@@ -104,6 +156,17 @@ export function GoogleAnalytics() {
     consent.analytics &&
     isPublicPath(pathname ?? "/");
 
+  // Capture the entry URL's campaign params. Declared first so it has run
+  // before the pageview effect on any commit, and deliberately NOT gated on
+  // `enabled`: a visitor who accepts the banner a page or two later is
+  // exactly the case this exists to rescue. Reads the URL only — no network
+  // call, no storage, nothing that needs consent.
+  useEffect(() => {
+    if (landingCaptured) return;
+    landingCaptured = true;
+    landingCampaign = campaignParamsOf(window.location.search);
+  }, []);
+
   // Bootstrap. Separate from the page_view effect so it can't re-run on
   // navigation — a second `config` for the same property would restart
   // the session and double-count.
@@ -119,10 +182,15 @@ export function GoogleAnalytics() {
   // queued ahead of this.
   useEffect(() => {
     if (!enabled) return;
+    // The first pageview is the one GA attributes the session from, so it
+    // gets the landing campaign params restored if consent arrived after
+    // the visitor moved on. Every later pageview reports its real URL.
+    const isFirst = !firstPageViewSent;
+    firstPageViewSent = true;
     ensureGtag()("event", "page_view", {
       // Full href, not pathname: campaign links carry their utm_* in the
       // query string and GA4 reads attribution off page_location.
-      page_location: window.location.href,
+      page_location: isFirst ? locationWithLandingCampaign() : window.location.href,
       // Correct on entry (the case that matters for campaign landings);
       // on a client-side navigation the App Router applies the new
       // <title> after this commit, so this can lag by one page. Reading

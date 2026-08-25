@@ -64,9 +64,10 @@ front, and a price id resolved from the live catalog at render time.
 
    ```yaml
    ---
-   title: The complete procurement picture     # on-page H1
+   title: "Free for {trial_days} days. No card required."   # on-page H1
+   title_no_trial: The complete procurement picture         # H1 when no trial to quote
    eyebrow: Limited launch offer               # optional pill above the H1
-   cta_label: Check my CAGE code               # optional button label
+   cta_label: Start my free trial              # optional button label
    offer_product: library_search_advanced      # products.key
    offer_interval: annual                      # monthly | quarterly | semiannual | annual
    offer_seats: 1
@@ -79,6 +80,15 @@ front, and a price id resolved from the live catalog at render time.
    - Benefit bullet
    - Benefit bullet
    ```
+
+   **Leading with the trial.** A headline may quote the trial length with the
+   `{trial_days}` placeholder — the sentence is yours to edit, the number
+   comes from the catalog, so the H1 can never disagree with the offer card
+   beside it. Using the placeholder makes `title_no_trial` required: it is
+   the headline shown when there is no figure to quote (billing unreachable,
+   or a price that sells without a trial). Quote the value in YAML, since it
+   contains braces. Nothing else may carry a figure — a price written into
+   `title` or `description` is still a price that can go stale.
 
 2. Add the slug to `CAMPAIGNS` in `src/lib/campaigns.ts`. **A markdown file
    alone does not publish a page** — the registry is the allowlist, so a
