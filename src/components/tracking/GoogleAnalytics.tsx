@@ -6,11 +6,25 @@
  * Three things this component is careful about, all of which are easy
  * to get wrong with the copy-paste snippet Google hands you:
  *
- * 1. **Consent.** The snippet loads unconditionally. We don't: gtag.js
- *    is never injected until the visitor accepts the `analytics`
- *    category, so a visitor who declines has no Google request in their
- *    network log at all — not a cookieless ping, nothing. That's what
- *    /legal/cookies now promises, so keep it that way.
+ * 1. **Consent, with one deliberate exception.** The snippet loads
+ *    unconditionally. We don't: on the rest of the site gtag.js is never
+ *    injected until the visitor accepts the `analytics` category, so a
+ *    decliner has no Google request in their network log at all — not a
+ *    cookieless ping, nothing.
+ *
+ *    The exception is campaign traffic. A session that STARTS on a
+ *    campaign landing page (`/start/...`) is measured without waiting for
+ *    the banner, because a campaign whose visitors are invisible cannot
+ *    be judged: GA4 only counts people who accept, and on cold email
+ *    traffic that is a small and self-selecting minority. Consent Mode's
+ *    "denied" pings are not an alternative — they never surface as users
+ *    or sessions in reports below Google's modelling thresholds.
+ *
+ *    An explicit decline still wins: click "Reject non-essential" and the
+ *    events stop, campaign session or not (see `declined` below). What is
+ *    NOT waited for is a decision that may never come. /legal/cookies,
+ *    the banner and the preferences modal all state this carve-out —
+ *    if this logic changes, change those first.
  *
  * 2. **Behind-gate pages are out of scope.** The tag exists to measure
  *    acquisition (landing → signup), and signed-in usage is measured by
@@ -29,7 +43,7 @@
 
 import Script from "next/script";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useConsent } from "@/contexts/ConsentContext";
 
 /** Public by design — it ships in the page source of every GA4 site.
@@ -57,6 +71,9 @@ const GATED_PREFIXES = [
   "/library",
   "/rfq",
 ];
+
+/** Campaign landing pages. Entering here starts a measured session. */
+const CAMPAIGN_PREFIX = "/start";
 
 function isPublicPath(pathname: string): boolean {
   return !GATED_PREFIXES.some(
@@ -92,9 +109,20 @@ declare global {
  */
 let landingCampaign: Record<string, string> | null = null;
 let landingCaptured = false;
+/** True when this document was ENTERED on a campaign landing page. Held for
+ *  the life of the tab's JS context, so the whole session that began there
+ *  is measured — the visitor who lands from an email, reads, and clicks
+ *  through to pricing and signup is the funnel marketing is buying. A hard
+ *  reload elsewhere ends it, which errs toward measuring less. */
+let landedOnCampaign = false;
 /** Only the first pageview may carry replayed params; after that the URL
  *  speaks for itself and re-appending would attribute later pages twice. */
 let firstPageViewSent = false;
+/** `config` must run at most once per document. Measurement can now switch
+ *  off and back on within a visit (decline, then accept), and re-running
+ *  config for the same property would restart the session and double-count
+ *  the entry page. */
+let configured = false;
 
 /** `utm_*` plus the click ids GA4 attributes from. */
 function campaignParamsOf(search: string): Record<string, string> | null {
@@ -140,20 +168,33 @@ function ensureGtag(): NonNullable<Window["gtag"]> {
 }
 
 export function GoogleAnalytics() {
-  const { consent } = useConsent();
+  const { consent, hasDecided } = useConsent();
   const pathname = usePathname();
+  // Mirrors the module flag into render state: the capture effect below sets
+  // the flag, and without state nothing would re-render to act on it.
+  const [campaignEntry, setCampaignEntry] = useState(false);
 
   // `consent.analytics` is false pre-decision (see DEFAULT_PRE_DECISION),
-  // so this stays false until the visitor actively accepts.
+  // so acceptance is the only thing that turns measurement on everywhere
+  // outside a campaign session.
+  //
+  // A campaign session is measured while the visitor has not decided.
+  // `declined` is the brake: an explicit "Reject non-essential" (or
+  // unticking Analytics) stops the events immediately, so the reject
+  // button means what it says even on a campaign page.
   //
   // The NODE_ENV check keeps `npm run dev` out of the property. That
   // matters more than usual here: the whole point of this tag is to
   // compare its human count against nginx's request count, and a few
   // hundred dev pageviews would quietly bias the bot estimate. It's a
   // build-time constant, so it can't cause a hydration mismatch.
+  const declined = hasDecided && !consent.analytics;
   const enabled =
     process.env.NODE_ENV === "production" &&
-    consent.analytics &&
+    (consent.analytics || (campaignEntry && !declined)) &&
+    // Signed-in routes stay excluded either way — that exclusion is about
+    // keeping solicitation and CAGE identifiers out of Google, which has
+    // nothing to do with consent.
     isPublicPath(pathname ?? "/");
 
   // Capture the entry URL's campaign params. Declared first so it has run
@@ -162,16 +203,21 @@ export function GoogleAnalytics() {
   // exactly the case this exists to rescue. Reads the URL only — no network
   // call, no storage, nothing that needs consent.
   useEffect(() => {
-    if (landingCaptured) return;
-    landingCaptured = true;
-    landingCampaign = campaignParamsOf(window.location.search);
+    if (!landingCaptured) {
+      landingCaptured = true;
+      landingCampaign = campaignParamsOf(window.location.search);
+      landedOnCampaign = window.location.pathname.startsWith(CAMPAIGN_PREFIX);
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCampaignEntry(landedOnCampaign);
   }, []);
 
   // Bootstrap. Separate from the page_view effect so it can't re-run on
   // navigation — a second `config` for the same property would restart
   // the session and double-count.
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || configured) return;
+    configured = true;
     const gtag = ensureGtag();
     gtag("js", new Date());
     gtag("config", MEASUREMENT_ID, { send_page_view: false });

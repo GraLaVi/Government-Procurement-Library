@@ -32,8 +32,11 @@ export function ConsentBanner({
               choice) are always on. Functional storage (preferences,
               in-progress forms) is on by default — you can disable it
               from the preferences modal. Analytics (Google Analytics, on
-              our public pages only) is off unless you turn it on. We use
-              no marketing or advertising storage at all. Read our{" "}
+              our public pages only) is off unless you turn it on —
+              except on our campaign landing pages, where we measure the
+              visit so we know which campaign brought you. Rejecting
+              stops that too. We use no marketing or advertising storage
+              at all. Read our{" "}
               <Link href="/legal/cookies" className="text-primary hover:underline">
                 cookie policy
               </Link>{" "}

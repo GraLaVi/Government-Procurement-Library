@@ -102,9 +102,13 @@ export default function CookiePolicyPage() {
           any kind — no advertising pixels, no cross-site tracking, and
           we don&rsquo;t sell or share what we collect. We do use Google
           Analytics, but only on our public pages (the home page,
-          pricing, signup, help and legal pages) and only if you turn
-          the Analytics category on — it is off by default and never
-          loads on signed-in pages. The categories you can toggle are
+          pricing, signup, help and legal pages) and never on signed-in
+          pages. It is off by default and stays off unless you turn the
+          Analytics category on — with one exception: if you arrive on
+          one of our campaign landing pages (addresses beginning
+          /start), we measure that visit so we can tell which campaign
+          brought you. Choosing &ldquo;Reject non-essential&rdquo; stops
+          that too. The categories you can toggle are
           functional (on by default) and analytics (off by default);
           strictly-necessary is always on.
         </p>
@@ -209,10 +213,15 @@ export default function CookiePolicyPage() {
             Google Analytics
           </a>{" "}
           (GA4) to measure how many people reach the site. If you leave
-          Analytics off, the Google script is never loaded at all — no
-          request is made to Google and no analytics cookies are set.
-          Any cookies it does set are governed by Google&rsquo;s privacy
-          policy, not ours.
+          Analytics off, the Google script is never loaded — no request
+          is made to Google and no analytics cookies are set — on every
+          page except our campaign landing pages (addresses beginning
+          /start). Arriving on one of those starts a measured visit
+          straight away, without waiting for a choice, because a
+          campaign we cannot count is a campaign we cannot judge. If you
+          decline, either on the banner or in preferences, measurement
+          stops there and then. Any cookies Google does set are governed
+          by Google&rsquo;s privacy policy, not ours.
         </p>
 
         <h2 className="text-xl font-semibold text-foreground mt-10">

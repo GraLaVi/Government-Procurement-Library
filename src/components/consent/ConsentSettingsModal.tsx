@@ -35,7 +35,7 @@ const CATEGORIES: CategoryDef[] = [
     key: "analytics",
     label: "Analytics",
     description:
-      "Google Analytics, on our public pages only — never on signed-in pages. Tells us how many people reach the site and which pages they land on, so we can tell real visitors apart from automated scanners. Off unless you turn it on.",
+      "Google Analytics, on our public pages only — never on signed-in pages. Tells us how many people reach the site and which pages they land on, so we can tell real visitors apart from automated scanners. Off unless you turn it on, except on our campaign landing pages (/start…), where a visit is measured so we know which campaign brought you — unchecking this stops that too.",
     examples: "_ga, _ga_GB3CHK3839 (Google Analytics)",
   },
 ];

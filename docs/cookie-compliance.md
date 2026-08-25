@@ -2,7 +2,9 @@
 
 Customer-facing consent layer for `Government-Procurement-Library`. Visitors see a banner on first load, can opt in/out of categories, and can change their mind any time from the footer. Decision is persisted in a first-party cookie.
 
-Scope today: there are no analytics or marketing trackers on this site — the banner discloses what we already store (auth + a few functional entries) and gates the functional storage behind opt-in. The architecture is ready for analytics/marketing tools to plug in later without re-architecting.
+Scope today: GA4 (added 2026-08-19) is the only third-party tracker, on public pages only; there are no marketing/advertising trackers. The banner discloses what we store and gates functional storage and analytics behind opt-in.
+
+**One deliberate exception to opt-in (2026-08-25):** a session that *starts* on a campaign landing page (`/start/…`) is measured without waiting for the banner — GA4 otherwise counts only the minority who accept, which makes paid campaigns unjudgeable, and Consent Mode's "denied" pings never surface as users or sessions below Google's modelling thresholds. An explicit "Reject non-essential" stops it. The carve-out is stated in `/legal/cookies`, the banner and the preferences modal; the logic is `src/components/tracking/GoogleAnalytics.tsx`. Scoped to a US-only audience (Cloudflare showed two bot-flagged EU hits at the time of the decision); a geo gate was considered and deliberately not built.
 
 ## Why we built it instead of using CookieYes / OneTrust / Cookiebot
 
