@@ -1718,7 +1718,7 @@ function DemandPanel({ demand, isLoading, error, onRetry }: DemandPanelProps) {
       </div>
 
       {/* KPI tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <KPICard
           label="Months of supply"
           value={d.months_of_supply != null ? `${d.months_of_supply}` : "—"}
@@ -1732,16 +1732,22 @@ function DemandPanel({ demand, isLoading, error, onRetry }: DemandPanelProps) {
           tooltip="Units DLA had on hand at its latest wholesale inventory snapshot."
         />
         <KPICard
-          label="Annual demand"
-          value={d.annual_demand_qty != null ? formatNumber(d.annual_demand_qty) : "—"}
-          subtitle="DLA ADQ (realized)"
-          tooltip="DLA's annual demand quantity — the realized (backward-looking) annual usage rate."
+          label="On backorder"
+          value={d.has_stock ? formatNumber(d.backorder_qty ?? 0) : "—"}
+          subtitle={d.has_stock && (d.backorder_qty ?? 0) > 0 ? "units DLA owes out" : "none outstanding"}
+          tooltip="Demand DLA has accepted but not yet filled. A zero here is a real reading — DLA owed nothing on this item at the latest snapshot. A dash means no inventory snapshot is on file at all."
         />
         <KPICard
-          label="Forecast (12 mo)"
+          label="Annual demand"
+          value={d.annual_demand_qty != null ? formatNumber(d.annual_demand_qty) : "—"}
+          subtitle="historical rate (DLA ADQ)"
+          tooltip="DLA's annual demand quantity: the realized, backward-looking rate at which the item has actually been issued. This is a measured rate, not a projection — do not multiply it out to estimate future buys; use the forecast tile for that."
+        />
+        <KPICard
+          label="Forecast demand (12 mo)"
           value={d.has_forecast && d.forecast_next_12mo != null ? formatNumber(d.forecast_next_12mo) : "—"}
           subtitle={d.coverage_ratio != null ? `coverage ${d.coverage_ratio}×` : "projected demand"}
-          tooltip="DLA's projected demand over the next 12 months. Coverage = on-hand ÷ forecast; below 1× means DLA holds less than it expects to need."
+          tooltip="DLA's own forward projection of demand over the next 12 months — the forward-looking counterpart to the annual demand tile. Coverage = on-hand ÷ forecast; below 1× means DLA holds less than it expects to need."
         />
       </div>
 
@@ -1773,7 +1779,7 @@ function DemandPanel({ demand, isLoading, error, onRetry }: DemandPanelProps) {
         <div className="bg-card-bg rounded-xl border border-border p-4">
           <h3 className="text-sm font-semibold text-card-foreground mb-1">DLA demand forecast</h3>
           <p className="text-xs text-muted mb-4">
-            Projected monthly demand{d.forecast_total_24mo != null ? ` — ${formatNumber(d.forecast_total_24mo)} units over 24 months` : ""}
+            Projected monthly demand{d.forecast_total_24mo != null ? ` — ${formatNumber(d.forecast_total_24mo)} units over the remaining ${chartData.length}-month forecast window` : ""}
           </p>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>

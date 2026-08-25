@@ -91,14 +91,13 @@ export const HELP_ARTICLES: HelpArticleMeta[] = [
   //     "Understand every section of the Analytics dashboard — market pulse, act-now signals, your win history, and prospecting — and how to act on each.",
   //   group: "platform",
   // },
-  // {
-  //   slug: "demand-intelligence",
-  //   title: "Reading Demand & Stock Data",
-  //   blurb:
-  //     "Use DLA's demand forecast and inventory signals on a part's Demand & Stock tab to decide what to bid on and how to price.",
-  //   group: "platform",
-  //   spokeOf: "procurement-analytics",
-  // },
+  {
+    slug: "demand-intelligence",
+    title: "Reading Demand & Stock Data",
+    blurb:
+      "Use DLA's demand forecast and inventory signals on a part's Demand & Stock tab to decide what to bid on and how to price.",
+    group: "platform",
+  },
   {
     slug: "requests-for-quote",
     title: "Sending RFQs to Vendors",
