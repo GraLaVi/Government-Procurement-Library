@@ -4,24 +4,6 @@ meta_title: "Supplier Stock | GPH Help"
 description: "Upload your inventory to GPH, control exactly what other subscribers can see, and use the Supplier Stock tab to find parts that are on the shelf right now."
 ---
 
-<!--
-  HIDDEN UNTIL INVENTORY UPLOAD LAUNCH. This article is deliberately NOT
-  registered in src/lib/help.ts — the registry drives the /help route
-  allowlist, so this file renders nothing until an entry is added.
-
-  Launch checklist (do these together):
-  1. Add to HELP_ARTICLES in src/lib/help.ts:
-       { slug: "supplier-stock", title: "Sharing and Finding Supplier Stock",
-         blurb: "Upload your inventory, control what other subscribers see, and find parts that are on the shelf right now.",
-         group: "platform" }
-  2. Restore the two commented-out inventory passages in
-     src/content/help/rfq-enterprise.md (row badge + "Your stock" column).
-  3. Add a Supplier Stock passage to plans-and-pricing.md (viewing requires
-     Basic+ or being a sharing contributor; contributing is free).
-  4. Flip INVENTORY_UPLOAD_PUBLIC in src/lib/inventory/launch.ts (unhides
-     the Library -> Inventory nav item and the Account card outside dev).
--->
-
 GPH's part records tell you what the government knows about a part — procurement history, open solicitations, DLA demand and stock. **Supplier Stock** adds the one thing missing from that picture: what the supply chain actually has on the shelf right now. Suppliers upload their inventory, and — only if they choose to share — their stock becomes visible to other GPH customers on the part's **Supplier Stock** tab, with an **In stock** badge in search results.
 
 Contributing your inventory is **free on every plan**. Viewing *other* companies' stock requires a Basic or Advanced plan — **or** being a sharing contributor yourself: if you feed the network, you see the network, whatever your plan.

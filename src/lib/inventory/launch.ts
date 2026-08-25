@@ -7,7 +7,7 @@
 //   - restoring the commented-out inventory passages in
 //     src/content/help/rfq-enterprise.md,
 //   - the worker's inventory_process_upload task being live in prod.
-export const INVENTORY_UPLOAD_PUBLIC = false;
+export const INVENTORY_UPLOAD_PUBLIC = true;
 
 /**
  * Whether inventory surfaces (the Account card) render for this build.

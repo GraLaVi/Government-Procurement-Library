@@ -14,7 +14,7 @@ Paid plans are **priced per seat**: you choose how many users (seats) you need �
 
 **Basic** — Unlock the full data picture: complete part records (manufacturers, technical specifications, packaging, end-use data) and vendor profiles (contacts, recent awards, and the 13-month Contracts Booked breakdown). Up to 5 bid-matching profiles. Up to daily match notifications.
 
-**Advanced** — Everything in Basic plus the features power users rely on: full procurement history on parts, open solicitations on vendor profiles, pinned searches, CSV exports, immediate match notifications, and up to 20 bid-matching profiles.
+**Advanced** — Everything in Basic plus the features power users rely on: full procurement history on parts, open solicitations on vendor profiles, pinned searches, CSV exports, immediate match notifications, and the highest bid-matching profile allowance.
 
 ## Add-ons
 
@@ -27,6 +27,14 @@ Add-ons stack on top of a paid plan rather than replacing it, and are **assigned
 **Procurement Analytics** — The [Procurement Analytics dashboard](/help/procurement-analytics) plus [DLA demand & stock intelligence](/help/demand-intelligence) on every part. Requires the Advanced plan.
 
 -->
+
+## Supplier stock
+
+[Uploading your inventory](/help/supplier-stock) is **free on every plan**, including Free. Your own stock then shows up on every part record you research — and on the Send RFQs queue if you use RFQ Enterprise — so you always know what you can quote from the shelf.
+
+Seeing *other* suppliers' stock is included with **Basic and Advanced** — or on any plan, including Free, if you share your own inventory. Feed the network and you see the network.
+
+Nothing leaves your account until an admin turns sharing on, and each field (quantity, price, lead time, condition, location) is shared or withheld separately. Your warehouse locations are never shared.
 
 ## Features available only on Advanced
 

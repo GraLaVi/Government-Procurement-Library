@@ -101,8 +101,6 @@ the number opens it right there — same viewer as Parts Search.
   badge shows as an outline, since the price is old enough to mislead.
 - **View quotes** and **In cart** — work already in flight on the
   solicitation. See [Work in progress you can see](#work-in-progress-you-can-see).
-<!-- HIDDEN UNTIL INVENTORY UPLOAD LAUNCH: restore the bullet below into the
-     list above (see INVENTORY_UPLOAD_PUBLIC in @/lib/inventory/launch).
 - **A green cube with a fraction** (say, 2/4) — that many of the
   solicitation's quotable parts are already in [your uploaded
   inventory](/help/supplier-stock). Solid green means every part is on your
@@ -110,7 +108,6 @@ the number opens it right there — same viewer as Parts Search.
   warehouse locations. The badge only appears if your company uploads its
   inventory to GPH — and it always reflects your own stock, never another
   supplier's.
--->
 
 
 Two filters sit above the table: your **work status**, and the
@@ -138,10 +135,6 @@ quantity, and unit price — with a **Get quotes** button on each row. Each NSN 
 a link that opens that part in Parts Search in a new tab. DIBBS "first
 article test" placeholder lines (GOVERNMENT/CONTRACTOR FIRST ARTICLE)
 aren't real purchasable items, so they don't appear here.
-<!-- HIDDEN UNTIL INVENTORY UPLOAD LAUNCH: restore the paragraph below after
-     the paragraph above, and add supplier-stock to Related articles if the
-     article has such a list.
-
 If your company [uploads its inventory](/help/supplier-stock), the expanded
 items also gain a **Your stock** column between the quantity and the unit
 price: how many you have on hand and in what condition, then the warehouse
@@ -164,7 +157,6 @@ vendors for the rest, then compare shelf and vendors side by side. The
 solicitation only reads *Priced* once its full solicited quantities are
 covered by priced quotes, so a partial stock quote never marks it done
 early.
--->
 
 
 ## Work status

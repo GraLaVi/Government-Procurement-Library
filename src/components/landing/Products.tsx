@@ -25,6 +25,7 @@ const products: Array<{
       "See which vendors are registered and active on the parts you sell",
       "Bid-matching: 1 profile (match alerts, no solicitation detail)",
       "Weekly match notifications",
+      "Upload your inventory free — share it to see other suppliers' stock",
       "3 users",
     ],
   },
@@ -41,6 +42,7 @@ const products: Array<{
       "Recent solicitation detail",
       "Bid-matching: 5 profiles with full solicitation view",
       "Daily match notifications",
+      "Supplier stock — your inventory on every part, and what others have on the shelf",
       "$59 per user / mo — volume discounts for teams",
     ],
   },
@@ -50,11 +52,12 @@ const products: Array<{
     tier: "Advanced",
     tagline: "The complete procurement picture.",
     description:
-      "Everything in Basic plus full procurement history, open solicitation detail, 20 bid-matching profiles, saved searches, exports, and real-time notifications.",
+      "Everything in Basic plus full procurement history, open solicitation detail, bid-matching profiles, saved searches, exports, and real-time notifications.",
     features: [
       "Full procurement history and open solicitation intelligence",
       "Open solicitation intelligence by vendor — active opportunities on parts they've won before",
-      "20 bid-matching profiles with full solicitation view",
+      "Bid-matching profiles with full solicitation view",
+      "Supplier stock — your inventory on every part, and what others have on the shelf",
       "Saved searches, pinned items, and CSV exports",
       "Immediate match notifications",
       "$99 per user / mo — volume discounts for teams",
@@ -161,7 +164,7 @@ export function Products() {
           <p className="mt-4 text-lg text-muted dark:text-foreground/70">
             Start free, then upgrade as your pipeline grows. Paid plans are
             priced per user with volume discounts for teams, and every one
-            includes bid-matching — Advanced unlocks 20 profiles and
+            includes bid-matching — Advanced unlocks the most profiles and
             immediate notifications.
           </p>
         </div>

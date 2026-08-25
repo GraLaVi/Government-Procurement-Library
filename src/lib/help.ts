@@ -71,6 +71,13 @@ export const HELP_ARTICLES: HelpArticleMeta[] = [
       "Investigate any government contractor's awards, contracts, and active solicitations by CAGE code or name.",
     group: "platform",
   },
+  {
+    slug: "supplier-stock",
+    title: "Sharing and Finding Supplier Stock",
+    blurb:
+      "Upload your inventory, control what other subscribers see, and find parts that are on the shelf right now.",
+    group: "platform",
+  },
   // HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: both articles below cover features
   // gated by the gph_analytics add-on, which isn't announced yet. Uncomment
   // BOTH at the same time as ANALYTICS_ADDON_PUBLIC in @/lib/analytics/tier —
