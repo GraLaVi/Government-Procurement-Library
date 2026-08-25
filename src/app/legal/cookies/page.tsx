@@ -220,8 +220,10 @@ export default function CookiePolicyPage() {
           straight away, without waiting for a choice, because a
           campaign we cannot count is a campaign we cannot judge. If you
           decline, either on the banner or in preferences, measurement
-          stops there and then. Any cookies Google does set are governed
-          by Google&rsquo;s privacy policy, not ours.
+          stops there and then — and we remove the Google Analytics
+          cookies already on your device. Any cookies Google does set
+          while measurement is on are governed by Google&rsquo;s privacy
+          policy, not ours.
         </p>
 
         <h2 className="text-xl font-semibold text-foreground mt-10">

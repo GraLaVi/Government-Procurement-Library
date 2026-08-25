@@ -45,6 +45,7 @@ import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useConsent } from "@/contexts/ConsentContext";
+import { clearGaCookies } from "@/lib/tracking/gaCookies";
 
 /** Public by design — it ships in the page source of every GA4 site.
  *  Overridable so a staging deploy can point at a throwaway property
@@ -211,6 +212,16 @@ export function GoogleAnalytics() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCampaignEntry(landedOnCampaign);
   }, []);
+
+  // Declining removes what was already set. On a campaign session
+  // measurement starts before the banner is answered, so by the time
+  // someone clicks "Reject non-essential" there is a real `_ga` cookie to
+  // clear — leaving it would make the reject button a half-truth. Runs on
+  // mount for anyone who declined previously too, which cleans up cookies
+  // set before this behaviour existed.
+  useEffect(() => {
+    if (declined) clearGaCookies();
+  }, [declined]);
 
   // Bootstrap. Separate from the page_view effect so it can't re-run on
   // navigation — a second `config` for the same property would restart
