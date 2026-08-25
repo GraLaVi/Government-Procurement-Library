@@ -65,6 +65,7 @@ import type { RfqManufacturerSelection } from "@/lib/rfq/types";
 import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
 import { resolvePartsTier, tierMeets } from "@/lib/library/tier";
 import { hasAnalyticsAccess } from "@/lib/analytics/tier";
+import { HELP_SLUGS } from "@/lib/help";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
 import { usePreferences } from "@/lib/hooks/usePreferences";
 import { resolveResultsLayout } from "@/lib/preferences/resultsLayout";
@@ -1846,11 +1847,18 @@ function DemandPanel({ demand, isLoading, error, onRetry }: DemandPanelProps) {
           )}
           Figures are DLA estimates published monthly and are not a guarantee of a solicitation.
         </p>
-        <p>
-          <Link href="/help/demand-intelligence" className="text-primary hover:underline">
-            How to read demand &amp; stock data →
-          </Link>
-        </p>
+        {/* The article is gated behind ANALYTICS_ADDON_PUBLIC (see @/lib/analytics/tier),
+            so it is absent from HELP_SLUGS — which is also the /help/[slug] allowlist —
+            until the add-on is announced. Seat-holders see this panel today regardless,
+            so linking unconditionally sent them to a 404. Keying off the allowlist means
+            the link reappears on its own the moment the article is published. */}
+        {HELP_SLUGS.includes("demand-intelligence") && (
+          <p>
+            <Link href="/help/demand-intelligence" className="text-primary hover:underline">
+              How to read demand &amp; stock data →
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   );
