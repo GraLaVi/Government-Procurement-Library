@@ -35,6 +35,10 @@ export interface InventorySettings {
   share_location: boolean;
   show_company_identity: boolean;
   public_display_name: string | null;
+  /** Opt-in to a browsable catalog on this company's vendor-search profile.
+   *  Separate from show_company_identity on purpose — see migration 050.
+   *  The API rejects turning it on without an identity and display name. */
+  list_in_vendor_search: boolean;
   inquiry_routing: InquiryRouting;
   inquiry_email: string | null;
   default_currency: string;
@@ -186,6 +190,12 @@ export interface NetworkStockItem {
   listing_id: number;
   supplier_label: string;
   supplier_customer_id: number | null;
+  /** Part identity travels with the listing: the vendor-search catalog has
+   *  no part context to borrow one from. */
+  part_id: number | null;
+  niin: string | null;
+  fsc: string | null;
+  part_number: string | null;
   quantity: string | null;
   quantity_band: string | null;
   in_stock: boolean;
@@ -204,6 +214,19 @@ export interface NetworkStockItem {
   is_stale: boolean;
   inquiry_routing: InquiryRouting;
   inquiry_email: string | null;
+}
+
+/** GET /api/library/vendor/[cage]/inventory — one supplier's whole shared
+ *  catalog. 404s unless the vendor is a GPH customer who opted into
+ *  vendor-search listing, so "no stock" and "not a customer" look identical
+ *  from outside. */
+export interface VendorInventory {
+  cage_code: string;
+  supplier_label: string;
+  listings: NetworkStockItem[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 export interface PartInventory {

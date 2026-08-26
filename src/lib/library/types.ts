@@ -153,6 +153,11 @@ export interface VendorTabCounts {
   awards_count: number;
   bookings_count: number;
   solicitations_count: number;
+  /** Shared stock listings, when this vendor is a GPH customer who opted into
+   *  vendor-search listing AND the viewer can see network stock. null in every
+   *  other case — including "not a customer" — so the tab is hidden entirely.
+   *  A present-but-empty tab would itself reveal that the CAGE is a customer. */
+  inventory_count: number | null;
 }
 
 export interface VendorCageSummaryResponse {

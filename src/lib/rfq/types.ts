@@ -13,13 +13,19 @@ import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bid
  */
 export const PLACEHOLDER_LINE_DESCRIPTION = "Requested item";
 
-/** A manufacturer row selected from the parts Manufacturers tab. */
+/** A row selected for an RFQ — a manufacturer, a private vendor, or a shared
+ *  stock listing. */
 export interface RfqManufacturerSelection {
   /** CAGE vendor (Manufacturers tab). Exactly one of cage_code /
-   * rfq_vendor_id identifies the vendor. */
+   * rfq_vendor_id / inventory_listing_id identifies the vendor. */
   cage_code: string | null;
   /** Private rfq_vendors row (Enterprise picker). */
   rfq_vendor_id?: number | null;
+  /** A shared network stock listing (Supplier Stock tab / vendor Inventory
+   * tab). The owner stays anonymous: the backend resolves the listing to its
+   * customer and takes the delivery address from THEIR inquiry settings, so
+   * no contact is ever collected for these. */
+  inventory_listing_id?: number | null;
   vendor_name: string | null;
   part_number: string | null;
   nsn: string | null;
@@ -32,9 +38,19 @@ export interface RfqManufacturerSelection {
 }
 
 /** Stable grouping key for a vendor identity: "cage:<CAGE>" for SAM/DLA
- * vendors, "vendor:<id>" for private rfq_vendors rows. Mirrors the backend's
- * VendorKey discriminator in src/rfq/service.py. */
-export function rfqVendorKey(ref: { cage_code?: string | null; rfq_vendor_id?: number | null }): string {
+ * vendors, "vendor:<id>" for private rfq_vendors rows, "stock:<listing>" for
+ * a shared stock listing. Mirrors the backend's VendorKey discriminator in
+ * src/rfq/service.py — with one deliberate difference: the backend groups
+ * stock by OWNING CUSTOMER (three listings from one supplier are one RFQ),
+ * which the client cannot know because owners are anonymous. Keying by
+ * listing here means the compose modal shows one card per listing; the send
+ * still produces one RFQ per supplier. */
+export function rfqVendorKey(ref: {
+  cage_code?: string | null;
+  rfq_vendor_id?: number | null;
+  inventory_listing_id?: number | null;
+}): string {
+  if (ref.inventory_listing_id != null) return `stock:${ref.inventory_listing_id}`;
   return ref.rfq_vendor_id != null ? `vendor:${ref.rfq_vendor_id}` : `cage:${ref.cage_code ?? ""}`;
 }
 
@@ -119,6 +135,9 @@ export interface RfqSuggestedVendorsResponse {
 export interface RfqLineInput {
   cage_code?: string | null;
   rfq_vendor_id?: number | null;
+  /** Exactly one target per line. Contact fields are ignored (and stripped
+   *  server-side) when this is set. */
+  inventory_listing_id?: number | null;
   vendor_name?: string | null;
   source_part_number?: string | null;
   contact_name?: string | null;
@@ -150,7 +169,10 @@ export interface RfqSendResultItem {
   rfq_vendor_id?: number | null;
   vendor_name: string | null;
   line_item_count: number;
+  /** Always null for supplier-stock sends — the address came from the
+   *  owner's inquiry settings and is never echoed back. */
   contact_email: string | null;
+  is_supplier_stock?: boolean;
 }
 
 export interface RfqSendResponse {

@@ -6,7 +6,7 @@ description: "Upload your inventory to GPH, control exactly what other subscribe
 
 GPH's part records tell you what the government knows about a part — procurement history, open solicitations, DLA demand and stock. **Supplier Stock** adds the one thing missing from that picture: what the supply chain actually has on the shelf right now. Suppliers upload their inventory, and — only if they choose to share — their stock becomes visible to other GPH customers on the part's **Supplier Stock** tab, with an **In stock** badge in search results.
 
-Contributing your inventory is **free on every plan**. Viewing *other* companies' stock requires a Basic or Advanced plan — **or** being a sharing contributor yourself: if you feed the network, you see the network, whatever your plan.
+Contributing your inventory is **free on every plan**. Viewing *other* companies' stock requires the Advanced plan — **or** being a sharing contributor yourself: if you feed the network with current stock, you see the network, whatever your plan.
 
 ## In this article
 
@@ -16,6 +16,8 @@ Contributing your inventory is **free on every plan**. Viewing *other* companies
 - [Keeping your stock current](#keeping-your-stock-current)
 - [Sharing: who sees what](#sharing-who-sees-what)
 - [Freshness: the stale badge and auto-hide](#freshness-the-stale-badge-and-auto-hide)
+- [Quoting stock you find](#quoting-stock-you-find)
+- [Listing your stock on your vendor profile](#listing-your-stock-on-your-vendor-profile)
 - [Finding supplier stock as a buyer](#finding-supplier-stock-as-a-buyer)
 - [Your stock on the Send RFQs page](#your-stock-on-the-send-rfqs-page)
 - [Fixing rejected rows](#fixing-rejected-rows)
@@ -142,6 +144,52 @@ Every listing shows its as-of date. From there:
 
 Both thresholds and the auto-hide behavior are adjustable by your admin. Auto-hide exists to protect you: a buyer who chases stock you sold three months ago won't come back.
 
+Freshness also decides whether sharing earns you a view of the network. If you're relying on contributor access rather than an Advanced plan, you need at least one shared line that is still inside your own stale threshold — 30 days by default. Let every line go stale and network access lapses with them; a single fresh upload brings it straight back.
+
+## Quoting stock you find
+
+Every shared listing can be turned into a real RFQ without knowing who posted
+it. Tick the listings you want on the **Supplier Stock** tab and choose
+**Create RFQ** — the same composer the Manufacturers tab uses, minus the
+contact fields, because there is no address for you to enter.
+
+GPH delivers the request using whatever the supplier chose under *How buyers
+reach you*: their direct email if they published one, otherwise their account
+contact. They stay anonymous unless they reply. If you pick several listings
+from the same supplier, they get one RFQ, not one per line — exactly as
+several parts from one manufacturer do.
+
+Two things to know:
+
+- **Sending needs the RFQ add-on** (either tier), on top of being able to see
+  the listing in the first place.
+- **Stock listings can't be saved to a batch.** A cart row can't re-check that
+  a listing is still shared, still fresh, and still yours to see when the
+  batch goes out days later, so supplier stock is send-now only.
+
+If a listing has gone stale or been withdrawn between loading the page and
+hitting send, the whole send is refused with a prompt to refresh — nothing is
+sent on a listing that no longer exists.
+
+## Listing your stock on your vendor profile
+
+By default your shared stock only shows up on the **parts** it matches: a
+buyer researching an NSN sees your line among the others. Turning on **List my
+stock on my vendor profile** additionally adds a **Supplier Stock** tab to
+your company's page in Vendor Search, showing the same shared lines as a
+browsable catalog.
+
+This is a separate switch from showing your company name, and deliberately so.
+Being named on a line someone found by searching a part is narrower than
+publishing a catalog under your own CAGE — the second also tells anyone who
+looks your company up that you are a GPH customer. So it is **off by default**,
+even if you already show your name, and it needs a public display name to list
+under.
+
+Nothing else changes: the tab shows the same lines, through the same
+per-column sharing settings, to the same people who can see network stock
+anywhere else. Turning your company name back off turns this off with it.
+
 ## Finding supplier stock as a buyer
 
 On any part record, the **Supplier Stock** tab shows two sections:
@@ -173,6 +221,8 @@ The upload history offers an **error report** download for every upload — a CS
 |---|---|
 | Upload, confirm, roll back, edit or delete items, change settings | Account **admins** only |
 | View your company's own stock, uploads, and settings (read-only) | Everyone on your account |
-| View network stock | Basic and Advanced plans — or any account actively sharing its own inventory |
+| View network stock | The **Advanced** plan — or any account actively sharing current stock of its own |
+| Send an RFQ from a stock listing | The **RFQ** or **RFQ Enterprise** add-on, on top of being able to see the listing |
+| List your stock on your vendor profile | Account **admins**, and only with a company name showing |
 
 Inventory is treated as a company asset: it belongs to your account, not to the person who uploaded it.

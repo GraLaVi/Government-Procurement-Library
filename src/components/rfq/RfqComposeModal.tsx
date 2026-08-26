@@ -55,6 +55,10 @@ const emptyLine: LineState = {
 const inputClass =
   "w-full px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm placeholder-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
 
+/** A stock listing routes through GPH: no contact is collected, and the
+ *  owner's identity is whatever the listing chose to show. */
+const isStock = (sel: RfqManufacturerSelection) => sel.inventory_listing_id != null;
+
 /** Distinct vendors in a selection, preserving order. */
 function dedupeVendors(selections: RfqManufacturerSelection[]): RfqManufacturerSelection[] {
   const seen = new Set<string>();
@@ -116,7 +120,15 @@ function ComposeForm({
   // True when at least one active vendor's contact is hand-typed rather than
   // picked from their saved/SAM.gov options — that contact has no other home
   // to live in, so it's always saved (no opt-out, no checkbox for it).
-  const anyCustomContact = vendors.some((v) => (contactSel[rfqVendorKey(v)] || "custom") === "custom");
+  const anyCustomContact = vendors.some(
+    (v) => !isStock(v) && (contactSel[rfqVendorKey(v)] || "custom") === "custom"
+  );
+
+  // Supplier stock is quick-send only: a staged cart row cannot re-check that
+  // the listing is still shared, still fresh, and still visible at send time,
+  // and the backend rejects inventory targets in the batch schema for exactly
+  // that reason.
+  const anyStock = vendors.some(isStock);
   const effectiveSaveContacts = anyCustomContact || saveContacts;
 
   // Async prefills, once per open (mounted == open). Line/contact state
@@ -149,6 +161,9 @@ function ComposeForm({
 
     (async () => {
       for (const v of allVendors) {
+        // Stock listings have no vendor book entry and no SAM identity to
+        // look up — asking would also leak which CAGE we think they are.
+        if (isStock(v)) continue;
         const key = rfqVendorKey(v);
         try {
           const param =
@@ -214,7 +229,7 @@ function ComposeForm({
   const activeSelections = () => selections.filter((s) => !removed.has(rfqVendorKey(s)));
 
   const vendorDisplayName = (v: RfqManufacturerSelection): string =>
-    v.vendor_name || v.cage_code || "Unknown vendor";
+    v.vendor_name || v.cage_code || (isStock(v) ? "Supplier" : "Unknown vendor");
 
   const validate = (requireContact: boolean): string | null => {
     const active = activeSelections();
@@ -228,6 +243,7 @@ function ComposeForm({
     }
     if (requireContact) {
       for (const v of vendors) {
+        if (isStock(v)) continue; // routed through GPH, no address to enter
         const c = contacts[rfqVendorKey(v)];
         if (!c?.contact_email?.trim()) {
           return `Enter a contact email for ${vendorDisplayName(v)}.`;
@@ -248,9 +264,10 @@ function ComposeForm({
         return {
           cage_code: sel.cage_code,
           rfq_vendor_id: sel.rfq_vendor_id ?? null,
+          inventory_listing_id: sel.inventory_listing_id ?? null,
           vendor_name: sel.vendor_name,
           source_part_number: sel.part_number,
-          ...(withContact
+          ...(withContact && !isStock(sel)
             ? {
                 contact_name: contact?.contact_name || null,
                 contact_email: contact?.contact_email?.trim() || null,
@@ -281,6 +298,7 @@ function ComposeForm({
     await Promise.all(
       vendors
         .filter((v) => {
+          if (isStock(v)) return false;
           const key = rfqVendorKey(v);
           return contacts[key]?.contact_email?.trim() && contactSel[key] === "custom";
         })
@@ -384,6 +402,7 @@ function ComposeForm({
 
         {vendors.map((vendor) => {
           const vendorKey = rfqVendorKey(vendor);
+          const stock = isStock(vendor);
           const vendorLines = selections
             .map((sel, idx) => ({ sel, idx }))
             .filter(({ sel }) => rfqVendorKey(sel) === vendorKey);
@@ -394,8 +413,10 @@ function ComposeForm({
             <div key={vendorKey} className="rounded-lg border border-border p-4 space-y-3">
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold text-foreground">
-                  {vendor.vendor_name || "Unknown vendor"}
-                  {vendor.cage_code ? (
+                  {vendorDisplayName(vendor)}
+                  {stock ? (
+                    <span className="ml-2 text-xs text-muted">Supplier stock</span>
+                  ) : vendor.cage_code ? (
                     <span className="ml-2 text-xs font-mono text-muted">CAGE {vendor.cage_code}</span>
                   ) : (
                     <span className="ml-2 text-xs text-muted">Private vendor</span>
@@ -412,8 +433,15 @@ function ComposeForm({
                 )}
               </div>
 
-              {/* Recipient picker */}
-              {hasOptions && (
+              {stock && (
+                <p className="rounded-md bg-card-bg/50 border border-border/60 px-3 py-2 text-[11px] text-muted">
+                  GPH delivers this request to the supplier using the contact
+                  details they chose. They stay anonymous unless they reply.
+                </p>
+              )}
+
+              {/* Recipient picker — vendors only; stock has no address to pick */}
+              {!stock && hasOptions && (
                 <div>
                   <label className="block text-xs font-medium text-muted mb-1">Recipient</label>
                   <select
@@ -434,7 +462,7 @@ function ComposeForm({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3${stock ? " hidden" : ""}`}>
                 <div>
                   <label className="block text-xs font-medium text-muted mb-1">Contact name</label>
                   <input
@@ -455,7 +483,7 @@ function ComposeForm({
                   />
                 </div>
               </div>
-              <p className="text-[11px] text-muted">{sourceLabel(vendorKey)}</p>
+              {!stock && <p className="text-[11px] text-muted">{sourceLabel(vendorKey)}</p>}
 
               <div className="space-y-2">
                 {vendorLines.map(({ sel, idx }) => (
@@ -510,7 +538,7 @@ function ComposeForm({
           );
         })}
 
-        {anyCustomContact ? (
+        {vendors.every(isStock) ? null : anyCustomContact ? (
           <p className="text-xs text-muted">
             Custom contacts are automatically saved as the vendor&apos;s default for future RFQs.
           </p>
@@ -528,7 +556,9 @@ function ComposeForm({
 
       <div className="mt-5 flex items-center justify-end gap-3 border-t border-border pt-4">
         <Button variant="ghost" size="sm" onClick={onClose} disabled={submitting}>Cancel</Button>
-        <Button variant="outline" size="sm" onClick={handleSaveToBatch} disabled={submitting}>Save to batch</Button>
+        {!anyStock && (
+          <Button variant="outline" size="sm" onClick={handleSaveToBatch} disabled={submitting}>Save to batch</Button>
+        )}
         <Button variant="primary" size="sm" onClick={handleSend} disabled={submitting}>
           {submitting ? "Sending…" : "Send now"}
         </Button>

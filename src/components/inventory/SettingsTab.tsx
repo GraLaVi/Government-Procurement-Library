@@ -183,6 +183,13 @@ export function SettingsTab({ isAdmin }: SettingsTabProps) {
         share_location: form.share_location,
         show_company_identity: form.show_company_identity,
         public_display_name: form.public_display_name || undefined,
+        // Never send true without an identity to list under — the API
+        // rejects that pairing, and the toggle is hidden in that state, but
+        // a stale form value must not survive turning identity back off.
+        list_in_vendor_search:
+          form.show_company_identity && (form.public_display_name ?? "").trim() !== ""
+            ? form.list_in_vendor_search
+            : false,
         inquiry_routing: form.inquiry_routing,
         inquiry_email: form.inquiry_email || undefined,
         auto_hide_stale_enabled: form.auto_hide_stale_enabled,
@@ -326,6 +333,20 @@ export function SettingsTab({ isAdmin }: SettingsTabProps) {
                 placeholder="e.g. ACME Defense Supply"
               />
             </label>
+          )}
+          {/* A second, narrower consent. Being named on a listing someone
+              found by searching a part is not the same as publishing a
+              browsable catalog under your CAGE — that also tells anyone who
+              looks you up that you're a GPH customer. Only offered once a
+              name exists to list under, which is what the API requires. */}
+          {form.show_company_identity && (form.public_display_name ?? "").trim() !== "" && (
+            <Toggle
+              label="List my stock on my vendor profile"
+              hint="Adds a Supplier Stock tab to your company's CAGE page in Vendor Search, showing the same shared lines. Off by default — this is a separate choice from being named on a listing."
+              checked={form.list_in_vendor_search}
+              disabled={disabled}
+              onChange={(v) => set("list_in_vendor_search", v)}
+            />
           )}
           <div className="py-2">
             <span className="block text-xs text-muted mb-1">How buyers reach you</span>

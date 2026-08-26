@@ -32,8 +32,8 @@ export default function InventoryPage() {
         <p className="text-sm text-muted mt-1">
           Upload your stock so it appears on the parts your team researches —
           and, if you choose to share it, on the parts every GPH subscriber
-          researches. Sharing is opt-in and column-by-column; contributing also
-          unlocks other suppliers&apos; network stock on any plan.
+          researches. Sharing is opt-in and column-by-column; keeping your stock
+          current also unlocks other suppliers&apos; network stock on any plan.
         </p>
       </div>
 

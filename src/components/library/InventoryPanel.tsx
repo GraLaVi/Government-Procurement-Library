@@ -5,13 +5,10 @@ import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/DataTable";
 import { RowBadge } from "@/components/library/RowBadge";
+import { NetworkStockTable } from "@/components/inventory/NetworkStockTable";
 import {
   type InventoryItem,
-  type NetworkStockItem,
   type PartInventory,
-  MATERIAL_SOURCE_LABELS,
-  TRACEABILITY_LABELS,
-  formatNetworkQuantity,
 } from "@/lib/inventory/types";
 
 interface InventoryPanelProps {
@@ -109,136 +106,6 @@ export function InventoryPanel({ inventory, isLoading, error, onRetry }: Invento
     []
   );
 
-  const networkColumns = useMemo<ColumnDef<NetworkStockItem, unknown>[]>(
-    () => [
-      {
-        id: "supplier",
-        header: "Supplier",
-        cell: ({ row }) => (
-          <span className="font-medium text-foreground">{row.original.supplier_label}</span>
-        ),
-      },
-      {
-        id: "quantity",
-        header: () => <span className="w-full text-right block">Qty</span>,
-        cell: ({ row }) => (
-          <span className="text-right block font-medium whitespace-nowrap">
-            {formatNetworkQuantity(row.original)}
-            {row.original.unit_of_measure ? ` ${row.original.unit_of_measure}` : ""}
-          </span>
-        ),
-      },
-      {
-        id: "condition",
-        header: "Cond",
-        cell: ({ row }) => <span>{row.original.condition_code || "—"}</span>,
-      },
-      {
-        id: "source",
-        header: "Source",
-        cell: ({ row }) => (
-          <span className="text-muted">
-            {row.original.material_source
-              ? MATERIAL_SOURCE_LABELS[row.original.material_source] ?? row.original.material_source
-              : "—"}
-          </span>
-        ),
-        meta: { className: "hidden md:table-cell" },
-      },
-      {
-        id: "unit_price",
-        header: () => <span className="w-full text-right block">Unit price</span>,
-        cell: ({ row }) => (
-          <span className="text-right block">
-            {formatMoney(row.original.unit_price, row.original.currency)}
-          </span>
-        ),
-        meta: { className: "hidden md:table-cell" },
-      },
-      {
-        id: "moq",
-        header: () => <span className="w-full text-right block">MOQ</span>,
-        cell: ({ row }) => (
-          <span className="text-right block">
-            {row.original.minimum_order_quantity != null
-              ? Number(row.original.minimum_order_quantity).toLocaleString()
-              : "—"}
-          </span>
-        ),
-        meta: { className: "hidden lg:table-cell" },
-      },
-      {
-        id: "lead_time",
-        header: "Lead time",
-        cell: ({ row }) => (
-          <span className="whitespace-nowrap">
-            {row.original.lead_time_days != null ? `${row.original.lead_time_days} days` : "—"}
-          </span>
-        ),
-        meta: { className: "hidden lg:table-cell" },
-      },
-      {
-        id: "traceability",
-        header: "Traceability",
-        cell: ({ row }) => (
-          <span className="text-muted">
-            {row.original.traceability
-              ? TRACEABILITY_LABELS[row.original.traceability] ?? row.original.traceability
-              : "—"}
-          </span>
-        ),
-        meta: { className: "hidden xl:table-cell" },
-      },
-      {
-        id: "ships_from",
-        header: "Ships from",
-        cell: ({ row }) => (
-          <span className="text-muted">
-            {row.original.ship_from_region || row.original.ship_from_country || "—"}
-          </span>
-        ),
-        meta: { className: "hidden lg:table-cell" },
-      },
-      {
-        id: "as_of",
-        header: "As of",
-        cell: ({ row }) => (
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-            {formatDate(row.original.as_of_date)}
-            {row.original.is_stale && (
-              <RowBadge tone="amber" title="This listing has not been refreshed recently — confirm availability with the supplier.">
-                stale
-              </RowBadge>
-            )}
-          </span>
-        ),
-      },
-      {
-        id: "inquiry",
-        header: "Inquiry",
-        cell: ({ row }) =>
-          row.original.inquiry_routing === "email" && row.original.inquiry_email ? (
-            <a
-              href={`mailto:${row.original.inquiry_email}`}
-              className="text-xs text-primary hover:underline whitespace-nowrap"
-              onClick={(e) => e.stopPropagation()}
-            >
-              Email supplier
-            </a>
-          ) : (
-            <RowBadge
-              tone="indigo"
-              title="This supplier receives inquiries through GPH's RFQ tools; their identity stays private until they respond."
-            >
-              via GPH RFQ
-            </RowBadge>
-          ),
-        enableSorting: false,
-      },
-    ],
-    []
-  );
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -297,8 +164,8 @@ export function InventoryPanel({ inventory, isLoading, error, onRetry }: Invento
             </p>
             <p className="text-xs text-muted max-w-md mx-auto mb-3">
               Other GPH suppliers share live stock for parts like this one. Network
-              stock is included on Basic and Advanced plans — or unlock it on any
-              plan by sharing your own inventory.
+              stock is included on the Advanced plan — or unlock it on any plan by
+              sharing your own inventory.
             </p>
             <div className="flex items-center justify-center gap-4">
               <Link href="/pricing" className="text-xs text-primary hover:underline">
@@ -324,10 +191,9 @@ export function InventoryPanel({ inventory, isLoading, error, onRetry }: Invento
           </div>
         ) : (
           <>
-            <DataTable
-              data={inventory.network_stock}
-              columns={networkColumns}
-              getRowId={(r) => String(r.listing_id)}
+            <NetworkStockTable
+              rows={inventory.network_stock}
+              nsn={inventory.nsn}
               emptyMessage="No shared supplier stock for this part"
             />
             <p className="text-[11px] text-muted mt-2">

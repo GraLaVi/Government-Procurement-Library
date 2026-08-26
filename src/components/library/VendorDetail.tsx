@@ -34,6 +34,8 @@ import {
   formatNumber,
   formatAwardDate,
 } from "@/lib/library/types";
+import type { VendorInventory } from "@/lib/inventory/types";
+import { VendorInventoryPanel } from "@/components/library/VendorInventoryPanel";
 import { DetailSections, DetailToolbar } from "@/components/library/DetailSections";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
@@ -116,7 +118,7 @@ const VENDOR_SOLICITATIONS_CSV_COLUMNS: CsvColumn<VendorSolicitation>[] = [
   { header: "Solicitation Type", value: (r) => r.solicitation_type_label ?? "" },
 ];
 
-export type TabId = "demographics" | "contacts" | "awards" | "bookings" | "solicitations";
+export type TabId = "demographics" | "contacts" | "awards" | "bookings" | "solicitations" | "inventory";
 
 interface VendorDetailProps {
   vendor: VendorDetailType;
@@ -200,6 +202,58 @@ export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: Vendor
   const contactCount = vendor.contacts?.length || 0;
 
   // Fetch awards when tab is clicked (lazy loading)
+  // Supplier stock (Inventory Upload). Paginated: a distributor's catalog can
+  // run to thousands of lines, unlike the other tabs.
+  const [vendorInventory, setVendorInventory] = useState<VendorInventory | null>(null);
+  const [isLoadingInventory, setIsLoadingInventory] = useState(false);
+  const [isLoadingMoreInventory, setIsLoadingMoreInventory] = useState(false);
+  const [inventoryError, setInventoryError] = useState<string | null>(null);
+  const [inventoryFetched, setInventoryFetched] = useState(false);
+
+  const INVENTORY_PAGE = 50;
+
+  const fetchInventory = useCallback(async () => {
+    if (inventoryFetched || isLoadingInventory) return;
+    setIsLoadingInventory(true);
+    setInventoryError(null);
+    try {
+      const response = await fetch(
+        `/api/library/vendor/${encodeURIComponent(vendor.cage_code)}/inventory?limit=${INVENTORY_PAGE}&offset=0`
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to load supplier stock');
+      setVendorInventory(data as VendorInventory);
+      setInventoryFetched(true);
+    } catch (error) {
+      console.error('Vendor inventory fetch error:', error);
+      setInventoryError(error instanceof Error ? error.message : 'Failed to load supplier stock');
+    } finally {
+      setIsLoadingInventory(false);
+    }
+  }, [vendor.cage_code, inventoryFetched, isLoadingInventory]);
+
+  const loadMoreInventory = useCallback(async () => {
+    if (!vendorInventory || isLoadingMoreInventory) return;
+    setIsLoadingMoreInventory(true);
+    try {
+      const offset = vendorInventory.listings.length;
+      const response = await fetch(
+        `/api/library/vendor/${encodeURIComponent(vendor.cage_code)}/inventory?limit=${INVENTORY_PAGE}&offset=${offset}`
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to load more stock');
+      const next = data as VendorInventory;
+      setVendorInventory((prev) =>
+        prev ? { ...next, listings: [...prev.listings, ...next.listings] } : next
+      );
+    } catch (error) {
+      console.error('Vendor inventory page fetch error:', error);
+      setInventoryError(error instanceof Error ? error.message : 'Failed to load more stock');
+    } finally {
+      setIsLoadingMoreInventory(false);
+    }
+  }, [vendor.cage_code, vendorInventory, isLoadingMoreInventory]);
+
   const fetchAwards = useCallback(async () => {
     if (awardsFetched || isLoadingAwards) return;
 
@@ -287,6 +341,7 @@ export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: Vendor
     awards: 'awards',
     bookings: 'bookings',
     solicitations: 'solicitations',
+    inventory: 'inventory',
   };
 
   // Handle tab change with lazy loading
@@ -307,8 +362,10 @@ export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: Vendor
       fetchBookings();
     } else if (tabId === 'solicitations' && !solicitationsFetched) {
       fetchSolicitations();
+    } else if (tabId === 'inventory' && !inventoryFetched) {
+      fetchInventory();
     }
-  }, [vendor?.cage_code, awardsFetched, fetchAwards, bookingsFetched, fetchBookings, solicitationsFetched, fetchSolicitations]);
+  }, [vendor?.cage_code, awardsFetched, fetchAwards, bookingsFetched, fetchBookings, solicitationsFetched, fetchSolicitations, inventoryFetched, fetchInventory]);
 
   // A deep-linked initialTab seeds activeTab directly (see useState above),
   // bypassing the click-triggered lazy fetch in handleTabChange — without
@@ -364,6 +421,21 @@ export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: Vendor
   ];
   const tabs = allTabs.filter((t) => tierMeets(tier, t.minTier));
 
+  // Supplier Stock is appended rather than declared above because it is NOT
+  // tier-gated in the same way: the backend returns a count only when the
+  // vendor opted into vendor-search listing AND this viewer can see network
+  // stock (Advanced, or contributor reciprocity). A null count means render
+  // no tab at all — an empty tab that appears only for GPH customers would
+  // itself disclose that the CAGE is one.
+  if (tabCounts?.inventory_count != null) {
+    tabs.push({
+      id: "inventory",
+      label: `Supplier Stock (${tabCounts.inventory_count})`,
+      disabled: false,
+      minTier: "free",
+    });
+  }
+
   useEffect(() => {
     if (!tabs.some((t) => t.id === activeTab)) {
       setActiveTab("demographics");
@@ -388,10 +460,17 @@ export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: Vendor
       if (!bookingsFetched) { trackView("bookings"); fetchBookings(); }
       if (!solicitationsFetched) { trackView("solicitations"); fetchSolicitations(); }
     }
+    // Supplier Stock is gated by the vendor's opt-in, not by tier — the tab
+    // only exists when tab-counts returned a number.
+    if (tabCounts?.inventory_count != null && !inventoryFetched) {
+      trackView("inventory");
+      fetchInventory();
+    }
   }, [
     layout, tier, vendor?.cage_code,
     awardsFetched, bookingsFetched, solicitationsFetched,
     fetchAwards, fetchBookings, fetchSolicitations,
+    tabCounts?.inventory_count, inventoryFetched, fetchInventory,
   ]);
 
   // Section content + per-section export actions, shared by both layouts.
@@ -420,6 +499,16 @@ export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: Vendor
         isLoading={isLoadingBookings}
         error={bookingsError}
         onRetry={fetchBookings}
+      />
+    ),
+    inventory: (
+      <VendorInventoryPanel
+        inventory={vendorInventory}
+        isLoading={isLoadingInventory}
+        error={inventoryError}
+        onRetry={() => { setInventoryFetched(false); fetchInventory(); }}
+        onLoadMore={loadMoreInventory}
+        isLoadingMore={isLoadingMoreInventory}
       />
     ),
     solicitations: (

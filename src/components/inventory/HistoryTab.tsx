@@ -22,8 +22,28 @@ const STATUS_TONES: Record<UploadStatus, RowBadgeTone> = {
 };
 
 // The processing -> completed transition happens in the worker, so this tab
-// polls (lightly) while any upload is in flight.
-const POLL_MS = 8000;
+// polls while an upload is in flight. Three limits, because "in flight" is not
+// guaranteed to end: a hard-killed worker leaves an upload in `processing`
+// forever (nothing re-dispatches it, and cancel refuses that status), so an
+// unbounded poll means a browser hitting the API every 8s until the tab
+// closes.
+//
+//   1. Back off.   8s while a normal import is running, stretching to a minute.
+//   2. Give up.    ~35 minutes of visible polling, then stop and offer a
+//                  manual refresh — by then it is a support case, not a wait.
+//   3. Stay quiet while hidden. A backgrounded tab re-arms its timer but
+//      issues no request and burns no budget, so returning to it still has
+//      polls left.
+const POLL_STEPS_MS = [8000, 15000, 30000, 60000];
+const MAX_POLL_ATTEMPTS = 60;
+
+/** 8s for the first ~2 minutes, then progressively longer. */
+function pollDelay(attempt: number): number {
+  if (attempt < 15) return POLL_STEPS_MS[0];
+  if (attempt < 25) return POLL_STEPS_MS[1];
+  if (attempt < 35) return POLL_STEPS_MS[2];
+  return POLL_STEPS_MS[3];
+}
 
 interface HistoryTabProps {
   isAdmin: boolean;
@@ -58,12 +78,65 @@ export function HistoryTab({ isAdmin, refreshKey }: HistoryTabProps) {
 
   useEffect(() => { load(); }, [load, refreshKey]);
 
-  const hasInFlight = uploads.some((u) => u.status === "processing" || u.status === "validating");
+  // Identity of what we're waiting on, not just "is something in flight" — a
+  // new upload starting must get a fresh budget even if a previous one was
+  // given up on.
+  const inFlightKey = useMemo(
+    () =>
+      uploads
+        .filter((u) => u.status === "processing" || u.status === "validating")
+        .map((u) => u.id)
+        .sort((a, b) => a - b)
+        .join(","),
+    [uploads]
+  );
+
+  // Which set of uploads we stopped polling for. Derived rather than reset in
+  // an effect, so a new in-flight set is automatically un-exhausted.
+  const [exhaustedFor, setExhaustedFor] = useState<string | null>(null);
+  const pollExhausted = inFlightKey !== "" && exhaustedFor === inFlightKey;
+  const hasInFlight = inFlightKey !== "";
+
   useEffect(() => {
-    if (!hasInFlight) return;
-    const t = setInterval(() => load(true), POLL_MS);
-    return () => clearInterval(t);
-  }, [hasInFlight, load]);
+    if (!inFlightKey || pollExhausted) return;
+    let cancelled = false;
+    let attempt = 0;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const arm = (delay: number) => {
+      timer = setTimeout(tick, delay);
+    };
+
+    const tick = async () => {
+      if (cancelled) return;
+      // Hidden tab: re-arm slowly, fetch nothing, spend no budget.
+      if (document.visibilityState !== "visible") {
+        arm(POLL_STEPS_MS[POLL_STEPS_MS.length - 1]);
+        return;
+      }
+      if (attempt >= MAX_POLL_ATTEMPTS) {
+        setExhaustedFor(inFlightKey);
+        return;
+      }
+      attempt += 1;
+      await load(true);
+      if (!cancelled) arm(pollDelay(attempt));
+    };
+
+    arm(pollDelay(0));
+
+    // Coming back to the tab is the moment the answer is most wanted.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") load(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [inFlightKey, pollExhausted, load]);
 
   const act = useCallback(async (upload: InventoryUpload, action: "confirm" | "cancel" | "rollback") => {
     setBusyId(upload.id);
@@ -195,12 +268,33 @@ export function HistoryTab({ isAdmin, refreshKey }: HistoryTabProps) {
 
   return (
     <div className="space-y-3">
-      {hasInFlight && (
+      {hasInFlight && !pollExhausted && (
         <p className="text-xs text-muted flex items-center gap-2">
           <span className="w-3 h-3 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
           An import is running — results appear here and you&apos;ll get an email
           when it finishes.
         </p>
+      )}
+      {pollExhausted && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 space-y-1">
+          <p className="text-xs text-foreground font-medium">
+            This import is taking longer than usual.
+          </p>
+          <p className="text-xs text-muted">
+            We&apos;ve stopped checking automatically. Your existing stock is
+            unchanged. Refresh to check again, or contact support with the upload
+            name if it stays like this.
+          </p>
+          <button
+            className="text-xs text-primary hover:underline"
+            onClick={() => {
+              setExhaustedFor(null);
+              load();
+            }}
+          >
+            Check again
+          </button>
+        </div>
       )}
       {error && <p className="text-xs text-error">{error}</p>}
       <DataTable

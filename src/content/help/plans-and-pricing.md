@@ -32,9 +32,11 @@ Add-ons stack on top of a paid plan rather than replacing it, and are **assigned
 
 [Uploading your inventory](/help/supplier-stock) is **free on every plan**, including Free. Your own stock then shows up on every part record you research — and on the Send RFQs queue if you use RFQ Enterprise — so you always know what you can quote from the shelf.
 
-Seeing *other* suppliers' stock is included with **Basic and Advanced** — or on any plan, including Free, if you share your own inventory. Feed the network and you see the network.
+Seeing *other* suppliers' stock is included with **Advanced** — or on any plan, including Free, if you share current stock of your own. Feed the network and you see the network.
 
 Nothing leaves your account until an admin turns sharing on, and each field (quantity, price, lead time, condition, location) is shared or withheld separately. Your warehouse locations are never shared.
+
+Sending an RFQ to a supplier whose stock you found needs the **RFQ** or **RFQ Enterprise** add-on, the same as quoting a manufacturer. The supplier stays anonymous — GPH routes the request using the contact details they chose.
 
 ## Features available only on Advanced
 
