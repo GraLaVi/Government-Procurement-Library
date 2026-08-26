@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ANALYTICS_PRODUCT_KEY, hasAnalyticsAccess } from "@/lib/analytics/tier";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { Tabs, TabPanel, type Tab } from "@/components/ui/Tabs";
-import { useMarketAnalytics, useMyBusinessAnalytics, useBidMatchAnalytics, useMarketPrioritization } from '@/lib/hooks/useAnalytics';
+import { useMarketAnalytics, useMyBusinessAnalytics, useMyBusinessSummary, useBidMatchAnalytics, useMarketPrioritization } from '@/lib/hooks/useAnalytics';
 import {
   KPICard,
   KPICardSkeleton,
@@ -108,11 +108,37 @@ function AnalyticsUpsell() {
   );
 }
 
+// The heavy /my-business call backs most of the detail widgets. When it fails
+// its widgets render nothing, which reads as "this customer has no data"
+// rather than "the request died" — so each affected tab says so and offers a
+// retry, instead of one page-wide banner standing in for all of them.
+function DetailLoadError({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="bg-error/10 border border-error/30 rounded-xl p-4 text-error text-sm">
+      <p>Couldn&apos;t load the detailed analytics for this section: {error}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-2 underline underline-offset-2 hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-error rounded"
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
 function FullAnalytics() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const market = useMarketAnalytics();
+  // Two calls, deliberately. /my-business-summary is the three KPIs plus the
+  // next-five closing, and returns in seconds; /my-business recomputes ~13
+  // aggregations and, for a large CAGE, runs long enough to blow the proxy's
+  // fetch timeout. Driving the pinned strip off the summary means the top of
+  // the page — and Act Now's first two widgets — land quickly and survive the
+  // heavy call failing.
+  const summary = useMyBusinessSummary();
   const business = useMyBusinessAnalytics();
   const bidMatch = useBidMatchAnalytics();
   const marketPrioritization = useMarketPrioritization();
@@ -182,7 +208,7 @@ function FullAnalytics() {
 
   return (
     <>
-      <PageHeader companyName={business.data?.company_name} />
+      <PageHeader companyName={summary.data?.company_name ?? business.data?.company_name} />
 
       {/* ================================================================ */}
       {/* Pinned: the customer's own headline numbers.                     */}
@@ -191,31 +217,31 @@ function FullAnalytics() {
       {/* counts that aren't about the customer at all.                    */}
       {/* ================================================================ */}
       <section className="mb-6">
-        {business.isLoading ? (
+        {summary.isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 3 }).map((_, i) => <KPICardSkeleton key={i} />)}
           </div>
-        ) : business.error ? (
+        ) : summary.error ? (
           <div className="bg-error/10 border border-error/30 rounded-xl p-4 text-error text-sm">
-            Failed to load business data: {business.error}
+            Failed to load business data: {summary.error}
           </div>
-        ) : business.data ? (
+        ) : summary.data ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <KPICard
               label="Historical Contract Value"
-              value={formatCurrency(business.data.procurement_history_total)}
+              value={formatCurrency(summary.data.procurement_history_total)}
               subtitle="Lifetime procurement total"
               tooltip="Lifetime total value of contracts awarded to your CAGE. Source: DIBBS procurement history."
             />
             <KPICard
               label="Open Matched Solicitations"
-              value={formatNumber(business.data.open_solicitations_count)}
+              value={formatNumber(summary.data.open_solicitations_count)}
               subtitle="Matching your manufactured parts"
               tooltip="Currently open solicitations matching parts you manufacture. Source: DIBBS/SAM, matched to your procurement history."
             />
             <KPICard
               label="Competitors on Your Parts"
-              value={formatNumber(business.data.competitor_count)}
+              value={formatNumber(summary.data.competitor_count)}
               subtitle="Distinct vendors on same parts"
               tooltip="Distinct vendors who've also won awards on the same parts as you, last 2 years. Source: DIBBS award history."
             />
@@ -231,17 +257,23 @@ function FullAnalytics() {
       {/* you, what DLA is about to buy.                                   */}
       {/* ================================================================ */}
       <TabPanel tabId="act-now" activeTab={activeTab}>
+        {business.error && (
+          <div className="mb-6">
+            <DetailLoadError error={business.error} onRetry={business.refetch} />
+          </div>
+        )}
+
         {business.isLoading ? (
           <ChartSkeleton height="h-32" />
         ) : business.data ? (
           <ResponseWindowChips data={business.data.response_window} />
         ) : null}
 
-        {business.isLoading ? (
+        {summary.isLoading ? (
           <div className="mt-6"><ChartSkeleton height="h-48" /></div>
-        ) : business.data ? (
+        ) : summary.data ? (
           <div className="mt-6">
-            <UpcomingSolicitationsTable data={business.data.upcoming_solicitations} />
+            <UpcomingSolicitationsTable data={summary.data.upcoming_solicitations} />
           </div>
         ) : null}
 
@@ -268,6 +300,12 @@ function FullAnalytics() {
       {/* Opportunities — what to pursue, inside the catalog then out.     */}
       {/* ================================================================ */}
       <TabPanel tabId="opportunities" activeTab={activeTab}>
+        {business.error && (
+          <div className="mb-6">
+            <DetailLoadError error={business.error} onRetry={business.refetch} />
+          </div>
+        )}
+
         {business.isLoading ? (
           <ChartSkeleton height="h-64" />
         ) : business.data ? (
@@ -294,6 +332,12 @@ function FullAnalytics() {
       {/* title.                                                           */}
       {/* ================================================================ */}
       <TabPanel tabId="competitive" activeTab={activeTab}>
+        {business.error && (
+          <div className="mb-6">
+            <DetailLoadError error={business.error} onRetry={business.refetch} />
+          </div>
+        )}
+
         <div id="your-business" className="scroll-mt-8">
           {business.isLoading ? (
             <ChartSkeleton height="h-64" />
