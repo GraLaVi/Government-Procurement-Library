@@ -1,8 +1,11 @@
 "use client";
 
+import { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { ANALYTICS_PRODUCT_KEY, hasAnalyticsAccess } from "@/lib/analytics/tier";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
+import { Tabs, TabPanel, type Tab } from "@/components/ui/Tabs";
 import { useMarketAnalytics, useMyBusinessAnalytics, useBidMatchAnalytics, useMarketPrioritization } from '@/lib/hooks/useAnalytics';
 import {
   KPICard,
@@ -32,7 +35,34 @@ import {
   formatNumber,
 } from '@/components/analytics';
 
+type TabId = "act-now" | "opportunities" | "competitive" | "bid-matching" | "market-pulse";
+
+const TAB_IDS: readonly TabId[] = ["act-now", "opportunities", "competitive", "bid-matching", "market-pulse"];
+const DEFAULT_TAB: TabId = "act-now";
+
+// In-page anchors that predate the tabs. The bell's "buy is coming" alert
+// links to /analytics#buy-signals (customer_notifications/service.py), and
+// that link is out of this repo's control — so the hash has to be able to
+// open whichever tab now holds the widget, or the alert lands on the default
+// view with a dead anchor.
+const ANCHOR_TABS: Record<string, TabId> = {
+  "buy-signals": "act-now",
+  "your-business": "competitive",
+};
+
+function isTabId(value: string | null): value is TabId {
+  return !!value && (TAB_IDS as readonly string[]).includes(value);
+}
+
 export default function AnalyticsPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted">Loading…</div>}>
+      <AnalyticsPageContent />
+    </Suspense>
+  );
+}
+
+function AnalyticsPageContent() {
   const { hasProductAccess, hasAnyProductAccess } = useAuth();
   // Resolved client-side from the product list useAuth() already loaded
   // before this page rendered — no network call, and no doomed-to-403
@@ -40,18 +70,23 @@ export default function AnalyticsPage() {
   // who can't use them.
   const canUseAnalytics = hasAnalyticsAccess(hasProductAccess, hasAnyProductAccess);
 
-  return (
+  return canUseAnalytics ? <FullAnalytics /> : (
     <>
-      {/* Page header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">Procurement Analytics</h1>
-        <p className="text-muted mt-1">
-          Decision-driving intel to help you win your next bid.
-        </p>
-      </div>
-
-      {canUseAnalytics ? <FullAnalytics /> : <AnalyticsUpsell />}
+      <PageHeader />
+      <AnalyticsUpsell />
     </>
+  );
+}
+
+function PageHeader({ companyName }: { companyName?: string | null }) {
+  return (
+    <div className="mb-6">
+      <h1 className="text-2xl font-bold text-foreground">Procurement Analytics</h1>
+      <p className="text-muted mt-1">
+        Decision-driving intel to help you win your next bid.
+        {companyName && <span className="ml-1">Scoped to {companyName}.</span>}
+      </p>
+    </div>
   );
 }
 
@@ -74,144 +109,98 @@ function AnalyticsUpsell() {
 }
 
 function FullAnalytics() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const market = useMarketAnalytics();
   const business = useMyBusinessAnalytics();
   const bidMatch = useBidMatchAnalytics();
   const marketPrioritization = useMarketPrioritization();
 
-  const showResponseWindow = business.isLoading || !!business.data;
-  const showMatchStrength = bidMatch.isLoading || !!bidMatch.data;
-  const soloResponseWindow = showResponseWindow && !showMatchStrength;
-  const soloMatchStrength = showMatchStrength && !showResponseWindow;
+  const showBidMatching = !bidMatch.forbidden;
+
+  // The URL is the only source of truth for the selection — nothing mirrored
+  // in state to drift out of sync, and ?tab= stays linkable and navigable.
+  const tabParam = searchParams.get("tab");
+  const requestedTab: TabId = isTabId(tabParam) ? tabParam : DEFAULT_TAB;
+  // forbidden isn't known until the bid-match request resolves, so a linked
+  // ?tab=bid-matching can name a tab that turns out not to be there.
+  const activeTab: TabId =
+    requestedTab === "bid-matching" && !showBidMatching ? DEFAULT_TAB : requestedTab;
+
+  // Anchor we still owe a scroll to. A ref rather than state: the target
+  // widget doesn't exist until its tab is mounted AND its data has landed, so
+  // this has to outlive several renders — but clearing it must not cause one.
+  const pendingAnchor = useRef<string | null>(null);
+  const hashHandled = useRef(false);
+
+  // A hash beats ?tab= — it's the more specific request, and it's what the
+  // notification bell sends. replace(), not push(), so Back doesn't drop the
+  // user straight back into this redirect.
+  useEffect(() => {
+    if (hashHandled.current) return;
+    hashHandled.current = true;
+    const hash = window.location.hash.replace(/^#/, "");
+    if (!hash) return;
+    pendingAnchor.current = hash;
+    const target = ANCHOR_TABS[hash];
+    const params = new URLSearchParams(window.location.search);
+    if (target && params.get("tab") !== target) {
+      params.set("tab", target);
+      router.replace(`/analytics?${params.toString()}#${hash}`, { scroll: false });
+    }
+  }, [router]);
+
+  useEffect(() => {
+    const anchor = pendingAnchor.current;
+    if (!anchor) return;
+    const el = document.getElementById(anchor);
+    if (!el) return; // data still loading — retry when the deps below change
+    pendingAnchor.current = null;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [activeTab, business.data, bidMatch.data]);
+
+  const handleTabChange = useCallback((tabId: string) => {
+    if (!isTabId(tabId)) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tabId);
+    // push() so Back returns to the previous tab; scroll: false keeps the
+    // pinned KPI strip where it is instead of jumping to the top.
+    router.push(`/analytics?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
+
+  const tabs: Tab[] = useMemo(() => {
+    const all: Tab[] = [
+      { id: "act-now", label: "Act Now" },
+      { id: "opportunities", label: "Opportunities" },
+      { id: "competitive", label: "Competitive Intel" },
+      { id: "bid-matching", label: "Bid Matching" },
+      { id: "market-pulse", label: "Market Pulse" },
+    ];
+    return showBidMatching ? all : all.filter((t) => t.id !== "bid-matching");
+  }, [showBidMatching]);
 
   return (
     <>
-      {/* ================================================================ */}
-      {/* Section 1: Market Pulse                                          */}
-      {/* ================================================================ */}
-      <section className="mb-10">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Market Pulse</h2>
-
-        {market.isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            {Array.from({ length: 3 }).map((_, i) => <KPICardSkeleton key={i} />)}
-          </div>
-        ) : market.error ? (
-          <div className="bg-error/10 border border-error/30 rounded-xl p-4 mb-6 text-error text-sm">
-            Failed to load market data: {market.error}
-          </div>
-        ) : market.data ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <KPICard
-              label="DIBBS Open Solicitations"
-              value={formatNumber(market.data.dibbs_open_solicitations_count)}
-              source="Source: DIBBS"
-              tooltip="Solicitations currently open across DIBBS, DLA's parts-buying system. Source: DIBBS, live count."
-            />
-            <KPICard
-              label="SAM.gov DoD Open Solicitations"
-              value={formatNumber(market.data.sam_dod_open_solicitations_count)}
-              source="Source: SAM.gov"
-              tooltip="Open Department of Defense opportunities posted on SAM.gov (agency code DLA). Source: SAM.gov, refreshed every 5 minutes."
-            />
-            <KPICard
-              label="Recent DIBBS Awards (90d)"
-              value={formatCurrency(market.data.dibbs_recent_awards_total)}
-              source="Source: DIBBS"
-              tooltip="Total dollar value of DIBBS contract awards market-wide in the last 90 days — not specific to you. Source: DIBBS award data."
-            />
-          </div>
-        ) : null}
-
-        {/* Set-Aside compact table + SAM trend (demoted from hero) */}
-        {market.isLoading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartSkeleton />
-            <ChartSkeleton />
-          </div>
-        ) : market.data ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <SetAsideMarketTable data={market.data.set_aside_market} />
-            <OpportunitiesTrendChart data={market.data.sam_opportunities_trend} />
-          </div>
-        ) : null}
-      </section>
+      <PageHeader companyName={business.data?.company_name} />
 
       {/* ================================================================ */}
-      {/* Section 2: Act Now (urgency + match-quality alerts)              */}
+      {/* Pinned: the customer's own headline numbers.                     */}
+      {/* Above the tabs so they read on every tab — these are the         */}
+      {/* at-a-glance figures, and they used to sit below the market-wide  */}
+      {/* counts that aren't about the customer at all.                    */}
       {/* ================================================================ */}
-      {(business.isLoading || business.data || !bidMatch.forbidden) && (
-        <section id="buy-signals" className="mb-10 scroll-mt-8">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Act Now</h2>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Response Window (E) — from /my-business */}
-            {business.isLoading ? (
-              <div className={soloResponseWindow ? "lg:col-span-2" : undefined}>
-                <ChartSkeleton height="h-32" />
-              </div>
-            ) : business.data ? (
-              <div className={soloResponseWindow ? "lg:col-span-2" : undefined}>
-                <ResponseWindowChips data={business.data.response_window} />
-              </div>
-            ) : null}
-
-            {/* Match Strength split (F) — bid-matching only */}
-            {bidMatch.isLoading ? (
-              <div className={soloMatchStrength ? "lg:col-span-2" : undefined}>
-                <ChartSkeleton height="h-32" />
-              </div>
-            ) : bidMatch.data ? (
-              <div className={soloMatchStrength ? "lg:col-span-2" : undefined}>
-                <MatchStrengthChart data={bidMatch.data.match_strength_split} />
-              </div>
-            ) : null}
-          </div>
-
-          {/* Amendment Alerts (G) — bid-matching only, full-width */}
-          {bidMatch.data && (
-            <div className="mt-6">
-              <AmendmentAlertsTable data={bidMatch.data.amendment_alerts} />
-            </div>
-          )}
-
-          {/* Buy Signals — parts you supply that DLA is flagging for a
-              near-term buy. Also the destination the bell's "buy is coming"
-              alert links to. */}
-          {business.isLoading ? (
-            <div className="mt-6"><ChartSkeleton height="h-48" /></div>
-          ) : business.data ? (
-            <div className="mt-6">
-              <BuySignalsTable data={business.data.buy_signals} />
-            </div>
-          ) : null}
-        </section>
-      )}
-
-      {/* ================================================================ */}
-      {/* Section 3: Competitive Intel                                     */}
-      {/* ================================================================ */}
-      <section id="your-business" className="mb-10 scroll-mt-8">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          Competitive Intel
-          {business.data?.company_name && (
-            <span className="text-muted font-normal text-base ml-2">
-              ({business.data.company_name})
-            </span>
-          )}
-        </h2>
-
-        {/* KPI strip */}
+      <section className="mb-6">
         {business.isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 3 }).map((_, i) => <KPICardSkeleton key={i} />)}
           </div>
         ) : business.error ? (
-          <div className="bg-error/10 border border-error/30 rounded-xl p-4 mb-6 text-error text-sm">
+          <div className="bg-error/10 border border-error/30 rounded-xl p-4 text-error text-sm">
             Failed to load business data: {business.error}
           </div>
         ) : business.data ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <KPICard
               label="Historical Contract Value"
               value={formatCurrency(business.data.procurement_history_total)}
@@ -232,93 +221,133 @@ function FullAnalytics() {
             />
           </div>
         ) : null}
-
-        {/* Hero: Winning Price Benchmark (A) */}
-        {business.isLoading ? (
-          <div className="mb-6"><ChartSkeleton height="h-64" /></div>
-        ) : business.data ? (
-          <div className="mb-6">
-            <WinningPriceBenchmarkTable data={business.data.winning_price_benchmarks} />
-          </div>
-        ) : null}
-
-        {/* Competitor Leaderboard (B) + Set-Aside Win Rate (C) */}
-        {business.isLoading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartSkeleton />
-            <ChartSkeleton />
-          </div>
-        ) : business.data ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <CompetitorLeaderboard data={business.data.competitor_leaderboard} />
-            <SetAsideWinRateTable data={business.data.set_aside_win_rate} />
-          </div>
-        ) : null}
       </section>
 
+      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} className="mb-6" />
+
       {/* ================================================================ */}
-      {/* Section 4: Opportunity Targeting                                 */}
+      {/* Act Now — everything with a clock on it, ordered by how soon it  */}
+      {/* bites: deadline spread, what closes next, what changed under     */}
+      {/* you, what DLA is about to buy.                                   */}
       {/* ================================================================ */}
-      <section className="mb-10">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Opportunity Targeting</h2>
-
-        {/* Hot Parts (D) */}
+      <TabPanel tabId="act-now" activeTab={activeTab}>
         {business.isLoading ? (
-          <div className="mb-6"><ChartSkeleton height="h-64" /></div>
+          <ChartSkeleton height="h-32" />
         ) : business.data ? (
-          <div className="mb-6">
-            <HotPartsTable data={business.data.hot_parts} />
-          </div>
+          <ResponseWindowChips data={business.data.response_window} />
         ) : null}
 
-        {/* Bookings + Awards Over Time */}
         {business.isLoading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <ChartSkeleton />
-            <ChartSkeleton />
-          </div>
+          <div className="mt-6"><ChartSkeleton height="h-48" /></div>
         ) : business.data ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <BookingsTrendChart data={business.data.bookings_trend} />
-            <AwardsOverTimeChart data={business.data.awards_over_time} />
-          </div>
-        ) : null}
-
-        {/* Top Awarded Parts */}
-        {business.isLoading ? (
-          <div className="mb-6"><ChartSkeleton height="h-48" /></div>
-        ) : business.data ? (
-          <div className="mb-6">
-            <TopAwardedPartsChart data={business.data.top_awarded_parts} />
-          </div>
-        ) : null}
-
-        {/* Upcoming Solicitations Table */}
-        {business.isLoading ? (
-          <div className="mb-6"><ChartSkeleton height="h-48" /></div>
-        ) : business.data ? (
-          <div className="mb-6">
+          <div className="mt-6">
             <UpcomingSolicitationsTable data={business.data.upcoming_solicitations} />
           </div>
+        ) : null}
+
+        {/* Amendment Alerts — bid-matching only */}
+        {bidMatch.data && (
+          <div className="mt-6">
+            <AmendmentAlertsTable data={bidMatch.data.amendment_alerts} />
+          </div>
+        )}
+
+        {/* Buy Signals — parts you supply that DLA is flagging for a
+            near-term buy. Also the destination the bell's "buy is coming"
+            alert links to; the id here is what ANCHOR_TABS resolves. */}
+        {business.isLoading ? (
+          <div className="mt-6"><ChartSkeleton height="h-48" /></div>
+        ) : business.data ? (
+          <div id="buy-signals" className="mt-6 scroll-mt-8">
+            <BuySignalsTable data={business.data.buy_signals} />
+          </div>
+        ) : null}
+      </TabPanel>
+
+      {/* ================================================================ */}
+      {/* Opportunities — what to pursue, inside the catalog then out.     */}
+      {/* ================================================================ */}
+      <TabPanel tabId="opportunities" activeTab={activeTab}>
+        {business.isLoading ? (
+          <ChartSkeleton height="h-64" />
+        ) : business.data ? (
+          <HotPartsTable data={business.data.hot_parts} />
         ) : null}
 
         {/* Market Prioritization — prospecting parts outside the customer's
             catalog, ranked by DLA buy-imminence x estimated value. */}
         {marketPrioritization.isLoading ? (
-          <ChartSkeleton height="h-48" />
+          <div className="mt-6"><ChartSkeleton height="h-48" /></div>
         ) : marketPrioritization.data ? (
-          <MarketPrioritizationTable data={marketPrioritization.data.market_prioritization} />
+          <div className="mt-6">
+            <MarketPrioritizationTable data={marketPrioritization.data.market_prioritization} />
+          </div>
         ) : null}
-      </section>
+      </TabPanel>
 
       {/* ================================================================ */}
-      {/* Section 5: Bid-Matching Health (only if entitled)                */}
+      {/* Competitive Intel — can I win it and at what price, followed by  */}
+      {/* the track record that says how I've done so far. The three       */}
+      {/* history charts used to sit under "Opportunity Targeting", which  */}
+      {/* they aren't: all three look backwards, and bookings_trend is     */}
+      {/* filtered by the customer's own CAGE despite its market-sounding  */}
+      {/* title.                                                           */}
       {/* ================================================================ */}
-      {!bidMatch.forbidden && (bidMatch.isLoading || bidMatch.data || bidMatch.error) && (
-        <section className="mt-10">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Bid-Matching Health</h2>
+      <TabPanel tabId="competitive" activeTab={activeTab}>
+        <div id="your-business" className="scroll-mt-8">
+          {business.isLoading ? (
+            <ChartSkeleton height="h-64" />
+          ) : business.data ? (
+            <WinningPriceBenchmarkTable data={business.data.winning_price_benchmarks} />
+          ) : null}
+        </div>
 
-          {/* KPI Cards */}
+        {business.isLoading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <ChartSkeleton />
+            <ChartSkeleton />
+          </div>
+        ) : business.data ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <CompetitorLeaderboard data={business.data.competitor_leaderboard} />
+            <SetAsideWinRateTable data={business.data.set_aside_win_rate} />
+          </div>
+        ) : null}
+
+        {(business.isLoading || business.data) && (
+          <h3 className="text-sm font-semibold text-muted uppercase tracking-wider mt-10 mb-4">
+            Your Track Record
+          </h3>
+        )}
+
+        {business.isLoading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartSkeleton />
+            <ChartSkeleton />
+          </div>
+        ) : business.data ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <AwardsOverTimeChart data={business.data.awards_over_time} />
+            <BookingsTrendChart data={business.data.bookings_trend} />
+          </div>
+        ) : null}
+
+        {business.isLoading ? (
+          <div className="mt-6"><ChartSkeleton height="h-48" /></div>
+        ) : business.data ? (
+          <div className="mt-6">
+            <TopAwardedPartsChart data={business.data.top_awarded_parts} />
+          </div>
+        ) : null}
+      </TabPanel>
+
+      {/* ================================================================ */}
+      {/* Bid Matching — is the matching tuned right. Match Strength moves */}
+      {/* here from "Act Now": it's a 30-day distribution, not an alert,   */}
+      {/* and it pairs with Match Trend over the same window.              */}
+      {/* ================================================================ */}
+      {showBidMatching && (
+        <TabPanel tabId="bid-matching" activeTab={activeTab}>
           {bidMatch.isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {Array.from({ length: 3 }).map((_, i) => <KPICardSkeleton key={i} />)}
@@ -352,24 +381,77 @@ function FullAnalytics() {
                 />
               </div>
 
-              {/* Profile Health (H) + Time-to-Close (I) */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Wide table gets the full row; the two distributions and the
+                  two 30-day daily-count charts pair off below it. */}
+              <div className="mb-6">
                 <ProfileHealthTable data={bidMatch.data.profile_health} />
-                <TimeToCloseChips data={bidMatch.data.time_to_close} />
               </div>
 
-              {/* Existing charts row */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <MatchTrendChart data={bidMatch.data.match_trend} />
+                <TimeToCloseChips data={bidMatch.data.time_to_close} />
                 <ConditionTypeChart data={bidMatch.data.condition_type_distribution} />
               </div>
 
-              {/* Recent Matches Table */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <MatchTrendChart data={bidMatch.data.match_trend} />
+                <MatchStrengthChart data={bidMatch.data.match_strength_split} />
+              </div>
+
               <RecentMatchesTable data={bidMatch.data.recent_matches} />
             </>
           ) : null}
-        </section>
+        </TabPanel>
       )}
+
+      {/* ================================================================ */}
+      {/* Market Pulse — market-wide context, none of it specific to the   */}
+      {/* customer. Last tab by design: useful, but not what anyone opens  */}
+      {/* the page to find out.                                            */}
+      {/* ================================================================ */}
+      <TabPanel tabId="market-pulse" activeTab={activeTab}>
+        {market.isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            {Array.from({ length: 3 }).map((_, i) => <KPICardSkeleton key={i} />)}
+          </div>
+        ) : market.error ? (
+          <div className="bg-error/10 border border-error/30 rounded-xl p-4 mb-6 text-error text-sm">
+            Failed to load market data: {market.error}
+          </div>
+        ) : market.data ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <KPICard
+              label="DIBBS Open Solicitations"
+              value={formatNumber(market.data.dibbs_open_solicitations_count)}
+              source="Source: DIBBS"
+              tooltip="Solicitations currently open across DIBBS, DLA's parts-buying system. Source: DIBBS, live count."
+            />
+            <KPICard
+              label="SAM.gov DoD Open Solicitations"
+              value={formatNumber(market.data.sam_dod_open_solicitations_count)}
+              source="Source: SAM.gov"
+              tooltip="Open Department of Defense opportunities posted on SAM.gov (agency code DLA). Source: SAM.gov, refreshed every 5 minutes."
+            />
+            <KPICard
+              label="Recent DIBBS Awards (90d)"
+              value={formatCurrency(market.data.dibbs_recent_awards_total)}
+              source="Source: DIBBS"
+              tooltip="Total dollar value of DIBBS contract awards market-wide in the last 90 days — not specific to you. Source: DIBBS award data."
+            />
+          </div>
+        ) : null}
+
+        {market.isLoading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartSkeleton />
+            <ChartSkeleton />
+          </div>
+        ) : market.data ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SetAsideMarketTable data={market.data.set_aside_market} />
+            <OpportunitiesTrendChart data={market.data.sam_opportunities_trend} />
+          </div>
+        ) : null}
+      </TabPanel>
     </>
   );
 }
