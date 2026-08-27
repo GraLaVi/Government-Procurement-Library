@@ -415,16 +415,32 @@ function BillingPageContent() {
   // needs it.) We just enable Portal whenever there's at least one sub.
   const hasStripeCustomer = subscriptions.length > 0;
 
-  // Add-ons only make sense alongside a paid tier — a Free-tier customer
-  // can't add one yet (matches the same gate on /pricing's RFQ panel).
-  const hasPaidTier = subscriptions.some((s) => {
-    if (!LIVE_SUB_STATUSES.has(s.status)) return false;
-    const matchedPlan = plans.find((p) =>
+  // The catalog row behind a subscription. Prefers the plan_kind/plan_id pair
+  // and falls back to the display name for rows that predate it.
+  const planForSubscription = (s: Subscription) =>
+    plans.find((p) =>
       s.plan_kind && s.plan_id !== null
         ? p.kind === s.plan_kind && p.id === s.plan_id
         : (!!s.product_name && p.kind === "product" && p.name === s.product_name) ||
           (!!s.product_group_name && p.kind === "product_group" && p.name === s.product_group_name),
     );
+
+  // Is this row an add-on riding the tier's subscription, rather than a plan
+  // of its own? Same test the API uses (products.category === 'feature'), and
+  // it decides which cancel flow the customer gets — an add-on ends
+  // immediately with credit, a tier can be scheduled for period end.
+  // Defaults to false while the catalog is still loading, which keeps the
+  // cancel modal on the safe, reversible "schedule it" default.
+  const isAddonSubscription = (s: Subscription) => {
+    const matched = planForSubscription(s);
+    return matched ? isAddonPlan(matched) : false;
+  };
+
+  // Add-ons only make sense alongside a paid tier — a Free-tier customer
+  // can't add one yet (matches the same gate on /pricing's RFQ panel).
+  const hasPaidTier = subscriptions.some((s) => {
+    if (!LIVE_SUB_STATUSES.has(s.status)) return false;
+    const matchedPlan = planForSubscription(s);
     // Unknown plan (e.g. plans still loading) — don't block on it either way.
     return matchedPlan ? !isAddonPlan(matchedPlan) : true;
   });
@@ -435,12 +451,7 @@ function BillingPageContent() {
   const hostTierInterval = (() => {
     const tier = subscriptions.find((s) => {
       if (!LIVE_SUB_STATUSES.has(s.status)) return false;
-      const matchedPlan = plans.find((p) =>
-        s.plan_kind && s.plan_id !== null
-          ? p.kind === s.plan_kind && p.id === s.plan_id
-          : (!!s.product_name && p.kind === "product" && p.name === s.product_name) ||
-            (!!s.product_group_name && p.kind === "product_group" && p.name === s.product_group_name),
-      );
+      const matchedPlan = planForSubscription(s);
       return matchedPlan ? !isAddonPlan(matchedPlan) : false;
     });
     return tier?.interval_count ?? null;
@@ -802,6 +813,7 @@ function BillingPageContent() {
       {modal?.kind === "cancel" && (
         <CancelModal
           sub={modal.sub}
+          isAddon={isAddonSubscription(modal.sub)}
           onClose={() => setModal(null)}
           onSaved={(next) => { replaceSub(next); setModal(null); }}
           onError={setError}
@@ -1869,14 +1881,23 @@ function CloseAccountModal({
 }
 
 function CancelModal({
-  sub, onClose, onSaved, onError,
+  sub, isAddon, onClose, onSaved, onError,
 }: {
   sub: Subscription;
+  /**
+   * True when this row is an add-on riding the tier's Stripe subscription
+   * rather than a plan of its own. Stripe has no per-item
+   * cancel_at_period_end (that needs a subscription schedule), so the API
+   * REFUSES at_period_end for an add-on rather than silently mapping it to
+   * something the customer didn't ask for. Offering the choice here would
+   * hand them a red error on their first click.
+   */
+  isAddon: boolean;
   onClose: () => void;
   onSaved: (s: Subscription) => void;
   onError: (msg: string | null) => void;
 }) {
-  const [atPeriodEnd, setAtPeriodEnd] = useState(true);
+  const [atPeriodEnd, setAtPeriodEnd] = useState(!isAddon);
   const [saving, setSaving] = useState(false);
   // Same fallback as SubscriptionCard: trialing subs carry the period end only
   // as trial_end, and a row with no window at all must not render "until —".
@@ -1901,8 +1922,41 @@ function CancelModal({
     }
   };
 
+  const planName = sub.product_name || sub.product_group_name || "Plan";
+
+  // Removing an add-on is a different action from downgrading a plan: the
+  // tier keeps running, only this one entitlement ends. Different copy, no
+  // timing choice, and no talk of the Free tier.
+  if (isAddon) {
+    return (
+      <ModalShell title={`Remove ${planName}`} subtitle={planName} onClose={onClose}>
+        <p className="text-sm text-muted mb-2">
+          This removes <span className="font-medium text-card-foreground">{planName}</span> from
+          your subscription. Your plan and everything else on it carry on unchanged.
+        </p>
+        <p className="text-xs text-muted mb-4">
+          Add-ons end immediately — unused time is credited against your next
+          invoice. Anyone assigned a seat on it loses access straight away. You
+          can add it again at any time.
+        </p>
+        <div className="flex justify-end gap-2 mt-5">
+          <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>Keep it</Button>
+          <Button
+            variant="primary"
+            size="sm"
+            className="bg-error hover:bg-error/90 border-error"
+            onClick={save}
+            disabled={saving}
+          >
+            {saving ? "Removing…" : `Remove ${planName}`}
+          </Button>
+        </div>
+      </ModalShell>
+    );
+  }
+
   return (
-    <ModalShell title="Downgrade to Free" subtitle={sub.product_name || sub.product_group_name || "Plan"} onClose={onClose}>
+    <ModalShell title="Downgrade to Free" subtitle={planName} onClose={onClose}>
       <p className="text-sm text-muted mb-2">
         Ending your paid plan moves your account to the <span className="font-medium text-card-foreground">Free tier</span> — it doesn&apos;t close your account.
       </p>

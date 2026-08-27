@@ -14,8 +14,8 @@ import { resolveCampaignTitle } from "@/lib/campaigns";
 import { formatMoney } from "@/lib/billing/pricing";
 import {
   isOfferInterval,
+  type BundleVariants,
   type OfferInterval,
-  type OfferVariants,
 } from "@/lib/billing/resolveOffer";
 import {
   normalizeCage,
@@ -24,6 +24,8 @@ import {
 } from "@/lib/signup/validateCage";
 
 interface CampaignLandingProps {
+  /** Campaign slug. Carried into signup for basket campaigns. */
+  slug: string;
   /** H1 from the campaign file; may carry the {trial_days} placeholder. */
   title: string;
   /** H1 to fall back to when there is no trial length to quote. */
@@ -33,13 +35,22 @@ interface CampaignLandingProps {
   /** Markdown body of the campaign file — selling copy and benefit bullets. */
   content: string;
   /**
-   * Every interval this product sells, priced from the live catalog. Empty
+   * Every interval this basket sells, priced from the live catalog. Empty
    * only when the billing service was unreachable at render time; the page
    * then sends visitors to /pricing rather than inventing a number.
+   *
+   * A single-product campaign is a basket of one, so there is only one shape
+   * to render here.
    */
-  offers: OfferVariants;
+  offers: BundleVariants;
   /** The interval the campaign file sells, used when ?interval= is absent. */
   defaultInterval: OfferInterval;
+  /**
+   * True when this campaign sells several products on one subscription. The
+   * handoff then carries the SLUG instead of a price id — the API resolves
+   * the basket itself, so nobody can widen it by editing the URL.
+   */
+  isBasket: boolean;
 }
 
 // The period a price is quoted for, as a noun that reads naturally after a
@@ -97,6 +108,7 @@ export function CampaignLanding(props: CampaignLandingProps) {
 }
 
 function CampaignLandingContent({
+  slug,
   title,
   titleNoTrial,
   eyebrow,
@@ -104,6 +116,7 @@ function CampaignLandingContent({
   content,
   offers,
   defaultInterval,
+  isBasket,
 }: CampaignLandingProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -148,17 +161,32 @@ function CampaignLandingContent({
     setResult(outcome.data);
   };
 
-  // Hand off to the existing signup funnel. The price id is resolved from the
-  // catalog at render, so this link is always current — nothing here is
-  // hardcoded the way a pasted ?plan=4 campaign URL was.
+  // Hand off to the existing signup funnel.
+  //
+  // Single product: the price id is resolved from the catalog at render, so
+  // this link is always current — nothing here is hardcoded the way a pasted
+  // ?plan=4 campaign URL was.
+  //
+  // Basket: the SLUG goes over instead. The API resolves which prices that
+  // means (src/billing/campaigns.py), so a visitor can't widen their own
+  // basket into a free trial of everything we sell by editing the URL — and
+  // the three price ids never have to survive a round trip through a query
+  // string they can edit.
   const continueToSignup = () => {
     if (!offer) return;
+    const cage = normalizeCage(cageInput);
+    if (isBasket) {
+      const qs = new URLSearchParams({ campaign: slug, cage });
+      router.push(`/signup?${qs.toString()}`);
+      return;
+    }
+    const [only] = offer.items;
     const qs = new URLSearchParams({
-      plan: String(offer.priceId),
-      seats: String(offer.seats),
-      cage: normalizeCage(cageInput),
+      plan: String(only.priceId),
+      seats: String(only.seats),
+      cage,
     });
-    if (offer.tierSlug) qs.set("tier", offer.tierSlug);
+    if (only.tierSlug) qs.set("tier", only.tierSlug);
     router.push(`/signup?${qs.toString()}`);
   };
 
@@ -201,7 +229,39 @@ function CampaignLandingContent({
           <div className="bg-card-bg border-2 border-primary rounded-xl p-6 shadow-lg shadow-primary/10 lg:sticky lg:top-28">
             {offer ? (
               <>
-                <p className="text-sm font-semibold text-foreground">{offer.productName}</p>
+                {offer.items.length === 1 ? (
+                  <p className="text-sm font-semibold text-foreground">
+                    {offer.items[0].productName}
+                  </p>
+                ) : (
+                  // A basket bills as one subscription, so it prices as one
+                  // figure — but the visitor is being signed up to three
+                  // separate things and the card has to say which. Itemised
+                  // above the total, in the order they'll appear on the
+                  // invoice (tier first).
+                  <>
+                    <p className="text-sm font-semibold text-foreground">
+                      Everything below, on one plan
+                    </p>
+                    <ul className="mt-3 space-y-2">
+                      {offer.items.map((item) => (
+                        <li
+                          key={item.priceId}
+                          className="flex items-start justify-between gap-3 text-sm"
+                        >
+                          <span className="flex items-start gap-2 text-foreground">
+                            <CheckIcon className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                            {item.productName}
+                          </span>
+                          <span className="text-muted whitespace-nowrap">
+                            {formatMoney(item.totalCents, item.currency)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <hr className="border-0 border-t border-border my-4" />
+                  </>
+                )}
                 <div className="mt-3 flex items-baseline gap-2 flex-wrap">
                   <span className="text-4xl font-bold text-foreground">
                     {formatMoney(offer.totalCents, offer.currency)}

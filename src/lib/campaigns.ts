@@ -14,6 +14,27 @@
 
 import { isOfferInterval, type OfferInterval } from "@/lib/billing/resolveOffer";
 
+/**
+ * A campaign that sells several products on ONE subscription.
+ *
+ * Declared here rather than in the markdown because, unlike a single-product
+ * campaign, a basket is not something marketing can launch on its own: the
+ * same basket must exist in the API's registry (`src/billing/campaigns.py`)
+ * under the same slug, and that is what actually decides the charge. Keeping
+ * it in TypeScript also lets `/signup` name the products on its confirmation
+ * badge, which it cannot do from a markdown file.
+ *
+ * The checkout handoff for these campaigns carries the SLUG, never price ids
+ * — the API resolves the basket itself. A basket assembled from query
+ * parameters would be a free trial of anything the visitor cared to name.
+ */
+export interface CampaignBasket {
+  /** products.key of the library tier. Leads the offer card and owns the trial. */
+  tierProductKey: string;
+  /** products.key of each add-on riding the same subscription. */
+  addonProductKeys: string[];
+}
+
 export interface CampaignMeta {
   /** URL slug — also the markdown filename stem (`<slug>.md`). */
   slug: string;
@@ -22,12 +43,30 @@ export interface CampaignMeta {
    * Never rendered — it's here so the registry stays readable a year from now.
    */
   note: string;
+  /**
+   * Present when this campaign sells more than one product. The markdown then
+   * omits `offer_product` — the basket is declared here instead, so there is
+   * exactly one place per campaign that says what is sold.
+   */
+  basket?: CampaignBasket;
 }
 
 export const CAMPAIGNS: CampaignMeta[] = [
   {
     slug: "advanced-annual-q4",
     note: "Email + paid social. Advanced tier sold on the annual discount.",
+  },
+  {
+    slug: "advanced-trial-all-access",
+    note:
+      "All-access trial: Advanced + RFQ + Analytics on one 14-day trial, no " +
+      "card. MUST stay in sync with CAMPAIGNS in the API's " +
+      "src/billing/campaigns.py — that registry decides the charge, this one " +
+      "only decides what the page says.",
+    basket: {
+      tierProductKey: "library_search_advanced",
+      addonProductKeys: ["request_for_quote", "gph_analytics"],
+    },
   },
 ];
 
@@ -63,8 +102,12 @@ export interface CampaignFrontmatter {
   eyebrow?: string;
   /** Label on the button under the CAGE field. Optional. */
   cta_label?: string;
-  /** products.key of the tier being sold, e.g. "library_search_advanced". */
-  offer_product: string;
+  /**
+   * products.key of the tier being sold, e.g. "library_search_advanced".
+   * Omitted by basket campaigns — those declare their products in the
+   * `CAMPAIGNS` registry above, so the two can't drift.
+   */
+  offer_product?: string;
   /** monthly | quarterly | semiannual | annual. */
   offer_interval: OfferInterval;
   /** Seats to quote and pre-fill at checkout. Defaults to 1. */
@@ -88,6 +131,7 @@ export function parseCampaignFrontmatter(
   raw: Record<string, unknown>,
 ): CampaignFrontmatter {
   const where = `src/content/campaigns/${slug}.md`;
+  const basket = getCampaign(slug)?.basket;
 
   const requireString = (field: string): string => {
     const value = raw[field];
@@ -140,7 +184,23 @@ export function parseCampaignFrontmatter(
     title_no_trial: titleNoTrial,
     eyebrow: optionalString("eyebrow"),
     cta_label: optionalString("cta_label"),
-    offer_product: requireString("offer_product"),
+    // A basket campaign names its products in the registry, so requiring the
+    // field here would create a second place to say the same thing — and the
+    // first one to go stale would be the one nobody is looking at. A basket
+    // campaign that names one anyway is a mistake worth stopping.
+    offer_product: basket
+      ? (() => {
+          if (raw.offer_product !== undefined) {
+            throw new Error(
+              `${where}: "${slug}" is a basket campaign — its products are ` +
+                `declared in CAMPAIGNS (src/lib/campaigns.ts). Remove ` +
+                `"offer_product" from the frontmatter so there is only one ` +
+                `place that says what this campaign sells.`,
+            );
+          }
+          return undefined;
+        })()
+      : requireString("offer_product"),
     offer_interval: interval,
     offer_seats: seats,
     meta_title: optionalString("meta_title"),

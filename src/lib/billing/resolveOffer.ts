@@ -182,3 +182,116 @@ export function resolveOffer(
     savingsVsMonthlyCents,
   };
 }
+
+
+// ============================================================================
+// Bundles — one campaign, several products, one subscription
+// ============================================================================
+
+/**
+ * A campaign basket priced for display: the tier plus the add-ons that ride
+ * the same Stripe subscription.
+ *
+ * Display only. The prices the customer is actually charged are resolved
+ * server-side from the campaign slug (`src/billing/campaigns.py` in the API),
+ * so nothing here can change what gets billed — which is the point: a basket
+ * assembled from query parameters would be a free trial of anything the
+ * visitor cared to name.
+ */
+export type ResolvedBundle = {
+  /** Tier first, then add-ons in the campaign's declared order. */
+  items: ResolvedOffer[];
+  seats: number;
+  intervalMonths: number;
+  currency: string;
+  /** What the customer pays per billing period for the whole basket. */
+  totalCents: number;
+  perMonthCents: number;
+  /**
+   * The TIER's trial length. One Stripe subscription has one trial clock, so
+   * every item in the basket starts and ends its trial together — quoting an
+   * add-on's own default here would promise a second, separate trial that
+   * does not exist.
+   */
+  trialDays: number | null;
+  /** Summed across items; null when nothing in the basket is discounted. */
+  savingsVsMonthlyCents: number | null;
+};
+
+export type BundleVariants = Partial<Record<OfferInterval, ResolvedBundle>>;
+
+/**
+ * The intervals EVERY product in the basket sells — the intersection, not the
+ * union. One Stripe subscription has one billing cycle, so an interval only
+ * one of the products offers cannot be bought as a bundle at all.
+ */
+export function availableBundleIntervals(
+  plans: CatalogPlan[],
+  productKeys: string[],
+): OfferInterval[] {
+  if (productKeys.length === 0) return [];
+  return productKeys
+    .map((key) => availableIntervals(plans, key))
+    .reduce((shared, next) => shared.filter((i) => next.includes(i)));
+}
+
+/**
+ * Price a basket at one interval. `productKeys[0]` is the tier — it supplies
+ * the trial and leads the itemised list.
+ */
+export function resolveBundle(
+  plans: CatalogPlan[],
+  productKeys: string[],
+  interval: OfferInterval,
+  seats: number,
+): ResolvedBundle {
+  if (productKeys.length === 0) {
+    throw new OfferResolutionError("A campaign basket must name at least one product.");
+  }
+
+  const items = productKeys.map((key) => resolveOffer(plans, key, interval, seats));
+  const [tier] = items;
+
+  // Mixed currencies can't be summed into one figure, and Stripe would refuse
+  // the subscription anyway. Louder as a build-time throw than as a total
+  // that quietly adds dollars to pounds.
+  const currencies = new Set(items.map((i) => i.currency));
+  if (currencies.size > 1) {
+    throw new OfferResolutionError(
+      `Campaign basket mixes currencies (${[...currencies].join(", ")}). ` +
+        `Every product in a basket bills on one subscription, in one currency.`,
+    );
+  }
+
+  const totalCents = items.reduce((sum, i) => sum + i.totalCents, 0);
+  const savings = items.reduce((sum, i) => sum + (i.savingsVsMonthlyCents ?? 0), 0);
+
+  return {
+    items,
+    // resolveOffer clamps each product to its own max_seat_count, so read the
+    // seat count back off the tier rather than trusting what we asked for.
+    seats: tier.seats,
+    intervalMonths: tier.intervalMonths,
+    currency: tier.currency,
+    totalCents,
+    perMonthCents: Math.round(totalCents / tier.intervalMonths),
+    trialDays: tier.trialDays,
+    savingsVsMonthlyCents: savings > 0 ? savings : null,
+  };
+}
+
+/**
+ * Price the basket at every interval all of its products share, so one
+ * campaign page can switch between them without another catalog round trip.
+ */
+export function resolveBundleVariants(
+  plans: CatalogPlan[],
+  productKeys: string[],
+  seats: number,
+): BundleVariants {
+  const variants: BundleVariants = {};
+  for (const interval of availableBundleIntervals(plans, productKeys)) {
+    variants[interval] = resolveBundle(plans, productKeys, interval, seats);
+  }
+  return variants;
+}

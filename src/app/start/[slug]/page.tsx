@@ -8,12 +8,13 @@ import type { Metadata } from "next";
 import { recordCampaignLanding } from "@/lib/campaignLanding";
 import {
   CAMPAIGN_SLUGS,
+  getCampaign,
   parseCampaignFrontmatter,
   resolveCampaignTitle,
   type CampaignFrontmatter,
 } from "@/lib/campaigns";
 import { fetchCatalog } from "@/lib/billing/catalog";
-import { resolveOfferVariants, type OfferVariants } from "@/lib/billing/resolveOffer";
+import { resolveBundleVariants, type BundleVariants } from "@/lib/billing/resolveOffer";
 import { CampaignLanding } from "@/components/campaign/CampaignLanding";
 
 // Rendered per request, NOT prerendered at build.
@@ -112,18 +113,28 @@ export default async function CampaignPage({
   //     markdown, and a 500 on the campaign page is a far louder signal than
   //     quietly serving one with the price missing.
   const plans = await fetchCatalog(CATALOG_TTL_SECONDS);
-  let offers: OfferVariants = {};
+
+  // A single-product campaign is a basket of one, so the page only ever has
+  // one shape to render. `basket` (from the registry) wins when present; the
+  // markdown's offer_product covers every campaign that sells one thing.
+  const basket = getCampaign(slug)?.basket;
+  const productKeys = basket
+    ? [basket.tierProductKey, ...basket.addonProductKeys]
+    : [frontmatter.offer_product!];
+
+  let offers: BundleVariants = {};
   if (plans) {
-    // Every interval the product sells is priced here, not just the campaign's
+    // Every interval the basket sells is priced here, not just the campaign's
     // default, so ?interval= can switch between them client-side without
-    // another catalog round trip.
-    offers = resolveOfferVariants(plans, frontmatter.offer_product, frontmatter.offer_seats);
+    // another catalog round trip. For a multi-product basket that set is the
+    // INTERSECTION — one Stripe subscription has one billing cycle.
+    offers = resolveBundleVariants(plans, productKeys, frontmatter.offer_seats);
     if (!offers[frontmatter.offer_interval]) {
       const sold = Object.keys(offers).join(", ") || "none";
       throw new Error(
         `src/content/campaigns/${slug}.md: offer_interval is ` +
-          `"${frontmatter.offer_interval}", but "${frontmatter.offer_product}" ` +
-          `only sells: ${sold}.`,
+          `"${frontmatter.offer_interval}", but ${productKeys.map((k) => `"${k}"`).join(" + ")} ` +
+          `${productKeys.length > 1 ? "share only these intervals" : "only sells"}: ${sold}.`,
       );
     }
   } else {
@@ -135,6 +146,7 @@ export default async function CampaignPage({
 
   return (
     <CampaignLanding
+      slug={slug}
       title={frontmatter.title}
       titleNoTrial={frontmatter.title_no_trial}
       eyebrow={frontmatter.eyebrow}
@@ -142,6 +154,7 @@ export default async function CampaignPage({
       content={content}
       offers={offers}
       defaultInterval={frontmatter.offer_interval}
+      isBasket={Boolean(basket)}
     />
   );
 }

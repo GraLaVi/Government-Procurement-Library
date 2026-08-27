@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 
 // POST /api/billing/signup-and-checkout — public.
-// Body: { cage_code, email, password, first_name, last_name, company_name?, price_id, seat_quantity }
+// Body: { cage_code, email, password, first_name, last_name, company_name?,
+//         and EITHER price_id + seat_quantity (one product) OR campaign
+//         (a slug the API resolves into a basket of products on one
+//         subscription — see src/billing/campaigns.py) }
 // Returns: { checkout_url, session_id, customer_id, user_id }
 //
 // Critically does NOT set auth cookies — visitor isn't logged in until they

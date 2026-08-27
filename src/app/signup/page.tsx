@@ -11,7 +11,12 @@ import { firstPasswordViolation } from "@/lib/auth/passwordRules";
 import { useAuth } from "@/contexts/AuthContext";
 import { TOS_VERSION } from "@/components/billing/TermsAcceptanceModal";
 import { formatMoney, computeTotalCents } from "@/lib/billing/pricing";
-import type { CatalogPlan } from "@/lib/billing/resolveOffer";
+import {
+  resolveBundleVariants,
+  type CatalogPlan,
+  type OfferInterval,
+} from "@/lib/billing/resolveOffer";
+import { getCampaign } from "@/lib/campaigns";
 import {
   validateCageCode,
   type CageValidateResponse as ValidateResponse,
@@ -86,8 +91,14 @@ function SignupPageContent() {
   // Campaign pages (/start/<slug>) validate the CAGE before sending the
   // visitor here, so step 1 is already answered — see the prefill effect below.
   const cageParam = searchParams.get("cage");
+  // A multi-product campaign hands over its SLUG, not price ids: the API
+  // resolves which prices that means, so the basket can't be widened by
+  // editing the URL. Everything downstream treats it as a paid intent.
+  const campaignParam = searchParams.get("campaign");
+  const campaign = campaignParam ? getCampaign(campaignParam) : undefined;
   const intentIsFree = tierParam === "free";
-  const intentIsPaid = planParam !== null && planParam !== "";
+  const intentIsCampaign = Boolean(campaign?.basket);
+  const intentIsPaid = (planParam !== null && planParam !== "") || intentIsCampaign;
   const hasUrlIntent = intentIsFree || intentIsPaid;
 
   // The plan being bought, priced from the live catalog. Null until the
@@ -210,15 +221,21 @@ function SignupPageContent() {
     });
   }, [cageParam, validateCage]);
 
-  // Resolve what the ?plan= price id actually is, so the badge can name the
-  // product and quote the price instead of asserting a hardcoded name.
+  // Resolve what is being bought, so the badge can name the product(s) and
+  // quote the price instead of asserting a hardcoded name.
+  //
+  // Two shapes: a ?plan= price id (the /pricing path), or a campaign basket
+  // whose products come from the registry. The basket's prices are resolved
+  // for DISPLAY only — the API resolves them again from the slug when it
+  // creates the Checkout session, and that resolution is the one that bills.
   useEffect(() => {
-    if (!intentIsPaid || !planParam) {
+    if (!intentIsPaid) {
       setOffer(null);
       return;
     }
-    const priceId = parseInt(planParam, 10);
-    if (!Number.isFinite(priceId)) return;
+    const basket = campaign?.basket;
+    const priceId = planParam ? parseInt(planParam, 10) : NaN;
+    if (!basket && !Number.isFinite(priceId)) return;
     let cancelled = false;
     (async () => {
       try {
@@ -226,6 +243,29 @@ function SignupPageContent() {
         if (!resp.ok || cancelled) return;
         const plans = (await resp.json()) as CatalogPlan[];
         if (cancelled || !Array.isArray(plans)) return;
+
+        if (basket) {
+          const keys = [basket.tierProductKey, ...basket.addonProductKeys];
+          const resolved = resolveBundleVariants(plans, keys, 1);
+          // The campaign page has already picked an interval; without it here
+          // we quote the longest term the basket shares, which is the one the
+          // campaign sells.
+          const intervals = Object.keys(resolved) as OfferInterval[];
+          const bundle = intervals.length
+            ? resolved[intervals[intervals.length - 1]]
+            : undefined;
+          if (!bundle) return;
+          setOffer({
+            productName: bundle.items.map((i) => i.productName).join(" + "),
+            totalCents: bundle.totalCents,
+            currency: bundle.currency,
+            intervalMonths: bundle.intervalMonths,
+            seats: bundle.seats,
+            trialDays: bundle.trialDays,
+          });
+          return;
+        }
+
         const plan = plans.find((p) => p.prices.some((pr) => pr.id === priceId));
         const price = plan?.prices.find((pr) => pr.id === priceId);
         if (!plan || !price) return;
@@ -245,7 +285,7 @@ function SignupPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [intentIsPaid, planParam, seatsParam]);
+  }, [intentIsPaid, planParam, seatsParam, campaign]);
 
   const checkEmailAvailable = useCallback(async (raw: string) => {
     const value = raw.trim().toLowerCase();
@@ -335,10 +375,16 @@ function SignupPageContent() {
     if (intentIsPaid) {
       const priceIdNum = planParam ? parseInt(planParam, 10) : NaN;
       const seatQuantity = seatsParam ? Math.max(1, parseInt(seatsParam, 10) || 1) : 1;
-      if (!Number.isFinite(priceIdNum)) {
+      if (!intentIsCampaign && !Number.isFinite(priceIdNum)) {
         setError("This plan link looks invalid. Please return to the pricing page and pick a plan again.");
         return;
       }
+      // A campaign sends its slug and nothing else about the purchase — the
+      // API owns the basket. Sending price ids alongside it is refused
+      // server-side, so the two forms stay mutually exclusive here too.
+      const purchase = intentIsCampaign
+        ? { campaign: campaignParam }
+        : { price_id: priceIdNum, seat_quantity: seatQuantity };
       setSubmitting(true);
       try {
         const resp = await fetch("/api/billing/signup-and-checkout", {
@@ -351,8 +397,7 @@ function SignupPageContent() {
             first_name: firstName.trim(),
             last_name: lastName.trim(),
             company_name: companyName.trim() || undefined,
-            price_id: priceIdNum,
-            seat_quantity: seatQuantity,
+            ...purchase,
             tos_version: TOS_VERSION,
             tos_accepted_at: new Date().toISOString(),
           }),
