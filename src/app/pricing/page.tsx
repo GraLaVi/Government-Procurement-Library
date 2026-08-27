@@ -978,7 +978,7 @@ function PricingPageContent() {
             features={[
               "Procurement history, win rate, and competitor leaderboard",
               "Market prioritization — parts worth getting qualified on",
-              "DLA demand forecasts and stock levels on every part",
+              "DLA demand forecasts and stock levels",
             ]}
             hasPaidTier={hasPaidTier}
             isSignedIn={!!user}

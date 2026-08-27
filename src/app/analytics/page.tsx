@@ -101,7 +101,7 @@ function AnalyticsUpsell() {
       benefits={[
         "Your procurement history, win rate, and competitor leaderboard",
         "Market prioritization — parts worth getting qualified on",
-        "DLA demand forecasts and stock levels on every part",
+        "DLA demand forecasts and stock levels",
         "Buy-signal alerts when your parts go on backorder",
       ]}
     />

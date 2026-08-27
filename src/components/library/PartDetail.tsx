@@ -894,10 +894,10 @@ export function PartDetail({ part }: PartDetailProps) {
       : "Procurement History";
 
   const solicitationsLabel = solicitationsFetched
-    ? `Recent Solicitations (${solicitationsTotal})`
+    ? `Solicitations (${solicitationsTotal})`
     : tabCounts
-      ? `Recent Solicitations (${tabCounts.solicitations_count})`
-      : "Recent Solicitations";
+      ? `Solicitations (${tabCounts.solicitations_count})`
+      : "Solicitations";
 
   const manufacturersLabel = manufacturersFetched
     ? `Manufacturers (${manufacturersTotal})`
@@ -943,10 +943,10 @@ export function PartDetail({ part }: PartDetailProps) {
       : "Packaging";
 
   const pidLabel = procurementItemDescFetched
-    ? `Procurement Item Description (${procurementItemDescription?.has_description && procurementItemDescription?.description?.trim() ? 1 : 0})`
+    ? `PID (${procurementItemDescription?.has_description && procurementItemDescription?.description?.trim() ? 1 : 0})`
     : tabCounts
-      ? `Procurement Item Description (${tabCounts.has_procurement_item_description ? 1 : 0})`
-      : "Procurement Item Description";
+      ? `PID (${tabCounts.has_procurement_item_description ? 1 : 0})`
+      : "PID";
 
   // Tab visibility by tier:
   //   free     → Overview + (light) Solicitations teaser
@@ -1847,11 +1847,11 @@ function DemandPanel({ demand, isLoading, error, onRetry }: DemandPanelProps) {
           )}
           Figures are DLA estimates published monthly and are not a guarantee of a solicitation.
         </p>
-        {/* The article is gated behind ANALYTICS_ADDON_PUBLIC (see @/lib/analytics/tier),
-            so it is absent from HELP_SLUGS — which is also the /help/[slug] allowlist —
-            until the add-on is announced. Seat-holders see this panel today regardless,
-            so linking unconditionally sent them to a 404. Keying off the allowlist means
-            the link reappears on its own the moment the article is published. */}
+        {/* Keyed off HELP_SLUGS — which is also the /help/[slug] allowlist — rather
+            than linked unconditionally. The article was unlisted before the add-on was
+            announced, while seat-holders saw this panel regardless, so a bare link sent
+            them to a 404. It is listed now; the guard stays because the relationship it
+            encodes (link only what /help will actually serve) still holds. */}
         {HELP_SLUGS.includes("demand-intelligence") && (
           <p>
             <Link href="/help/demand-intelligence" className="text-primary hover:underline">

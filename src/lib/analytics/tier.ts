@@ -20,14 +20,19 @@ export const ANALYTICS_PRODUCT_KEY = "gph_analytics";
 
 // Launch switch for the add-on's public surfaces: the /pricing panel copy,
 // the landing-page card, the nav upsell for non-holders, and the Demand &
-// Stock help article. Flip to `true` when you're ready to announce, at the
-// same time as `billing_enabled` on the `gph_analytics` product (which is
-// what actually lets anyone buy it — GET /billing/plans filters on it, so
-// the /pricing and /account/billing panels stay empty until then).
+// Stock help article. Now announced — flipped for the add-on's public
+// release, together with the help articles in @/lib/help and the analytics
+// passages in the plans-and-pricing and notifications articles.
+//
+// What this flag does NOT do is let anyone buy the add-on: that is
+// `billing_enabled` on the `gph_analytics` product, which GET /billing/plans
+// filters on. If the /pricing and /account/billing panels are empty while
+// the nav and landing card are showing, billing_enabled is still false on
+// the backend product row.
 //
 // Seat-holders are never affected by this flag: a customer who's been
-// granted the add-on sees Analytics today, announced or not.
-export const ANALYTICS_ADDON_PUBLIC = false;
+// granted the add-on saw Analytics before the announcement too.
+export const ANALYTICS_ADDON_PUBLIC = true;
 
 type HasAccess = (key: string) => boolean;
 type HasAnyAccess = (keys: string[]) => boolean;

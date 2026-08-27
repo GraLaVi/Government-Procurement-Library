@@ -22,11 +22,7 @@ Add-ons stack on top of a paid plan rather than replacing it, and are **assigned
 
 **Request for Quote** — [Send structured RFQs to vendors](/help/requests-for-quote) from a part's Manufacturers tab and collect quotes, with a shared batch cart, a private vendor contact book, and response tracking. Available on any paid plan.
 
-<!-- HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: restore the paragraph below into the section above, and add the analytics articles to the Related articles list at the bottom.
-
 **Procurement Analytics** — The [Procurement Analytics dashboard](/help/procurement-analytics) plus [DLA demand & stock intelligence](/help/demand-intelligence) on every part. Requires the Advanced plan.
-
--->
 
 ## Supplier stock
 
@@ -130,5 +126,7 @@ To review past charges, open the **Invoice history** tab on the same page — ea
 
 - [Setting Up Bid-Matching Profiles](/help/bid-matching-profiles) — Create and manage profiles, including reactivating after a downgrade  
 - [Sending RFQs to Vendors](/help/requests-for-quote) — What the RFQ add-on includes and how to use it  
+- [Reading the Procurement Analytics Dashboard](/help/procurement-analytics) — What the Procurement Analytics add-on includes and how to use it  
+- [Reading Demand & Stock Data](/help/demand-intelligence) — The DLA demand and stock signals the add-on puts on every part  
 - [Notifications](/help/notifications) — Configure email alerts and notification frequency  
 - [Managing Your Account](/help/account-settings) — Profile, team members, and contacts

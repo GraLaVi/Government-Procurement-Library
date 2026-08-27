@@ -9,6 +9,7 @@ GPH keeps you informed about new matches, system updates, and other events relat
 ## In this article
 
 - [The notification bell (in-app alerts)](#the-notification-bell-in-app-alerts)  
+- [DLA buy-signal alerts](#dla-buy-signal-alerts)  
 - [Your notification preferences](#your-notification-preferences)  
 - [About notification frequencies](#about-notification-frequencies)  
 - [Team Notifications (admin only)](#team-notifications-admin-only)  
@@ -17,7 +18,7 @@ GPH keeps you informed about new matches, system updates, and other events relat
 
 ## The notification bell (in-app alerts)
 
-The bell (🔔) at the top of the page shows in-app alerts without sending you email. Click it to see your recent items and open the one you want; **Mark all read** clears the badge. Today the bell carries two kinds of alert, each with its own on/off switch in a different place.
+The bell (🔔) at the top of the page shows in-app alerts without sending you email. Click it to see your recent items and open the one you want; **Mark all read** clears the badge. Today the bell carries three kinds of alert, each with its own on/off switch in a different place.
 
 ### Bid-match alerts
 
@@ -28,9 +29,6 @@ These appear when new solicitations match your saved bid-matching profiles. Turn
 
 Clicking a bid-match alert opens your [Bid-Matching results page](/help/solicitation-matching). Email alerts for bid matches are separate — see [Bid Matching Alerts](#bid-matching-alerts) below.
 
-<!-- HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: restore this whole section, and add
-"DLA buy-signal alerts" to the "In this article" list at the top.
-
 ### DLA buy-signal alerts
 
 If you hold a [Procurement Analytics](/help/procurement-analytics) seat, the bell tells you when parts you supply go **on backorder** or drop **below DLA's reorder point** — the two strongest signs that a purchase is coming. Turn them on or off under **Account \> Notifications**, in the **In-App Notifications** card, using the **DLA buy-signal alerts** switch.
@@ -38,8 +36,6 @@ If you hold a [Procurement Analytics](/help/procurement-analytics) seat, the bel
 This arrives as a single rolling summary rather than one alert per part, and it stays unread until you clear it or the next monthly DLA snapshot lands — the underlying data is published monthly, so there's nothing new to say in between. See [Reading Demand & Stock Data](/help/demand-intelligence) for what the signals mean.
 
 There's no email equivalent; this alert is bell-only.
-
--->
 
 ### RFQ response alerts
 
@@ -112,8 +108,7 @@ The Notifications page controls in-app notifications only. You may also receive:
 
 ## Related articles
 
-<!-- HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: restore as a list item — "- [Reading Demand & Stock Data](/help/demand-intelligence) — What the DLA buy signals in the bell mean" -->
-
+- [Reading Demand & Stock Data](/help/demand-intelligence) — What the DLA buy signals in the bell mean  
 - [How Solicitation Matching Works](/help/solicitation-matching) — How bid-matching alerts are generated  
 - [Setting Up Bid-Matching Profiles](/help/bid-matching-profiles) — Define the profiles that drive your matches  
 - [Sending RFQs to Vendors](/help/requests-for-quote) — Configure and act on RFQ response alerts  

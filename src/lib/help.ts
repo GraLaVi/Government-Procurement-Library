@@ -78,27 +78,24 @@ export const HELP_ARTICLES: HelpArticleMeta[] = [
       "Upload your inventory, control what other subscribers see, and find parts that are on the shelf right now.",
     group: "platform",
   },
-  // HIDDEN UNTIL ANALYTICS ADD-ON LAUNCH: both articles below cover features
-  // gated by the gph_analytics add-on, which isn't announced yet. Uncomment
-  // BOTH at the same time as ANALYTICS_ADDON_PUBLIC in @/lib/analytics/tier —
-  // they cross-link to each other, so relisting one alone leaves a dead link.
-  // Their markdown is unchanged on disk and renders as-is once restored. Also
-  // restore the analytics passages commented out in plans-and-pricing.md.
-  // {
-  //   slug: "procurement-analytics",
-  //   title: "Reading the Procurement Analytics Dashboard",
-  //   blurb:
-  //     "Understand every section of the Analytics dashboard — market pulse, act-now signals, your win history, and prospecting — and how to act on each.",
-  //   group: "platform",
-  // },
-  // {
-  //   slug: "demand-intelligence",
-  //   title: "Reading Demand & Stock Data",
-  //   blurb:
-  //     "Use DLA's demand forecast and inventory signals on a part's Demand & Stock tab to decide what to bid on and how to price.",
-  //   group: "platform",
-  //   spokeOf: "procurement-analytics",
-  // },
+  // Both articles cover features gated by the gph_analytics add-on, public
+  // since its launch. They cross-link to each other, so they are listed —
+  // and would be unlisted — as a pair; dropping one alone leaves a dead link.
+  {
+    slug: "procurement-analytics",
+    title: "Reading the Procurement Analytics Dashboard",
+    blurb:
+      "Understand every section of the Analytics dashboard — market pulse, act-now signals, your win history, and prospecting — and how to act on each.",
+    group: "platform",
+  },
+  {
+    slug: "demand-intelligence",
+    title: "Reading Demand & Stock Data",
+    blurb:
+      "Use DLA's demand forecast and inventory signals on a part's Demand & Stock tab to decide what to bid on and how to price.",
+    group: "platform",
+    spokeOf: "procurement-analytics",
+  },
   {
     slug: "requests-for-quote",
     title: "Sending RFQs to Vendors",
