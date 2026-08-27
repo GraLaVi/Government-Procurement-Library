@@ -14,7 +14,11 @@ import { showInventorySurfaces } from "@/lib/inventory/launch";
 const libraryItems = [
   { href: "/library/parts", label: "Parts Search" },
   { href: "/library/vendor-search", label: "Vendor Search" },
-  { href: "/library/inventory", label: "Inventory" },
+  // "Supplier Stock" is the platform-wide name for this feature (the part and
+  // vendor tabs, the help article, and the pricing copy all use it). The route
+  // stays /library/inventory — it is not a branding surface, and the label is
+  // what customers navigate by.
+  { href: "/library/inventory", label: "Supplier Stock" },
 ];
 
 const helpItems = [

@@ -5,6 +5,9 @@ import {
   TargetIcon,
   UsersIcon,
   DatabaseIcon,
+  ZapIcon,
+  BoxIcon,
+  SendIcon,
 } from "@/components/icons";
 
 const features = [
@@ -43,6 +46,29 @@ const features = [
     title: "Unified Federal Data",
     description:
       "DIBBS, DLA, and SAM.gov solicitations aggregated into a single searchable platform. No more toggling between portals or running the same search three different ways.",
+  },
+  // The last three are the add-ons and Supplier Stock. Each names how it is
+  // sold in its closing sentence, the way the alerts card names its tiers —
+  // a feature grid that reads as "all of this is included" sets up the wrong
+  // expectation at the pricing table. The wording tracks the cards in
+  // Products.tsx and the panels on /pricing; change them together.
+  {
+    icon: ZapIcon,
+    title: "Procurement Analytics",
+    description:
+      "See your market and your place in it: win rate, competitor leaderboard, the parts worth getting qualified on, and DLA demand forecasts and stock levels on the parts you supply — with alerts when one goes on backorder. An add-on on the Advanced plan.",
+  },
+  {
+    icon: BoxIcon,
+    title: "Supplier Stock",
+    description:
+      "Upload your inventory and it shows up on every part record you research, so you always know what you can quote off the shelf. Sharing is free on every plan, each field shared or withheld separately — share your stock and you see what the rest of the network has.",
+  },
+  {
+    icon: SendIcon,
+    title: "Requests for Quote",
+    description:
+      "Send structured RFQs to manufacturers and stocking suppliers without leaving the part record, and collect their quotes in one place — with a shared batch cart, a private vendor contact book, and response tracking. An add-on on any paid plan.",
   },
 ];
 

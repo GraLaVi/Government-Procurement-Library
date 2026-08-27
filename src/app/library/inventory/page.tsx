@@ -13,7 +13,7 @@ const TABS: Array<{ id: TabId; label: string }> = [
   { id: "upload", label: "Upload" },
   { id: "items", label: "Items" },
   { id: "history", label: "Upload history" },
-  { id: "settings", label: "Sharing settings" },
+  { id: "settings", label: "Settings" },
 ];
 
 export default function InventoryPage() {
@@ -28,7 +28,7 @@ export default function InventoryPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Inventory</h1>
+        <h1 className="text-2xl font-bold text-foreground">Supplier Stock</h1>
         <p className="text-sm text-muted mt-1">
           Upload your stock so it appears on the parts your team researches —
           and, if you choose to share it, on the parts every GPH subscriber
