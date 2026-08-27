@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { createPortal } from "react-dom";
 import { MatchStrengthBadge } from "@/components/ui/MatchStrengthBadge";
 import { Modal } from "@/components/ui/Modal";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
@@ -10,7 +11,9 @@ import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/Soli
 import { PendingOutcomeFlag } from "@/components/library/PendingOutcomeFlag";
 import { NoticeTypeBadge } from "@/components/library/NoticeTypeBadge";
 import { RowBadge, ROW_BADGE_BASE } from "@/components/library/RowBadge";
-import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
+import {
+  FirstArticleBadge, WinHistoryBadge, useAnchoredPopover,
+} from "@/components/library/WinAndFirstArticleBadges";
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
 import { PrintButton } from "@/components/ui/PrintButton";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
@@ -162,28 +165,91 @@ interface BidMatchResult {
   estimated_value?: number | null;
 }
 
-// Small demand chip for the results table. Neutral, descriptive labels.
-const DEMAND_SIGNAL_CHIP: Record<string, { label: string; cls: string }> = {
+// Small demand chip for the results table.
+//
+// The chip carries an ABBREVIATION, not the descriptive label, for the same
+// reason the fast-award and IDC pills beside it do (SolicitationTypeBadge):
+// the solicitation column can already hold five or six badges, and
+// "Below reorder point" alone was wider than the solicitation number it sits
+// next to — enough to stretch the column whenever a row also had an amendment
+// or notice-type pill. The full wording still reaches the user through the
+// popover, so nothing is lost.
+//
+// `description` is the customer-value copy behind the click: unlike a set-aside
+// code, these say something about WHY the row is worth quoting, and an
+// abbreviation that goes unexplained is worse than a long label. It is
+// deliberately NOT mirrored into a native title= — the browser renders that as
+// its own tooltip on top of the popover, so the copy shows up twice (same
+// reasoning as SolicitationTypeBadge).
+//
+// The wording is the part detail page's (PartDetail.tsx DEMAND_SIGNAL_META), so
+// a customer who meets a signal here and again on the part reads one
+// explanation, not two. Kept as its own copy rather than imported, matching how
+// the analytics chips already treat that table.
+const DEMAND_SIGNAL_CHIP: Record<
+  string,
+  { short: string; label: string; description: string; cls: string; hover: string }
+> = {
   on_backorder: {
+    short: "B/O",
     label: "On backorder",
+    description:
+      "DLA has orders for this item it hasn't been able to fill. Shortages like this often lead to expedited or priority buys.",
     cls: "border-amber-300 dark:border-amber-500/40 text-amber-700 dark:text-amber-300 bg-amber-50/60 dark:bg-amber-500/5",
+    hover: "hover:bg-amber-100 dark:hover:bg-amber-500/15",
   },
   below_reorder_point: {
+    short: "Below ROP",
     label: "Below reorder point",
+    description:
+      "On-hand stock has dropped below the level at which DLA's system triggers a replenishment buy.",
     cls: "border-rose-300 dark:border-rose-500/40 text-rose-700 dark:text-rose-300 bg-rose-50/60 dark:bg-rose-500/5",
+    hover: "hover:bg-rose-100 dark:hover:bg-rose-500/15",
   },
   recurring: {
+    short: "Recurring",
     label: "Recurring demand",
+    description:
+      "DLA has both a standing annual demand and a forward forecast for this item, so it's bought again and again — not a one-time purchase. Winning a recurring NSN can be worth pricing competitively for the repeat business.",
     cls: "border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 bg-emerald-50/60 dark:bg-emerald-500/5",
+    hover: "hover:bg-emerald-100 dark:hover:bg-emerald-500/15",
   },
 };
 
+// Click to open, not hover — the same click-anchored popover the fast-award,
+// win and First Article badges in these rows already use, so the whole cluster
+// behaves alike in a dense table.
 function DemandSignalChip({ signal }: { signal?: string | null }) {
+  const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
+
   if (!signal) return null;
   const c = DEMAND_SIGNAL_CHIP[signal];
   if (!c) return null;
+
   return (
-    <span className={`${ROW_BADGE_BASE} ${c.cls}`}>{c.label}</span>
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        aria-label={`${c.label} — what this means`}
+        className={`${ROW_BADGE_BASE} ${c.cls} ${c.hover} cursor-pointer transition-colors`}
+      >
+        {c.short}
+      </button>
+      {open && coords && createPortal(
+        <div
+          ref={panelRef}
+          style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 60 }}
+          className="w-72 rounded-md border border-border bg-background shadow-lg p-3"
+        >
+          <div className="text-xs font-semibold text-foreground mb-1">{c.label}</div>
+          <p className="text-xs text-foreground leading-relaxed">{c.description}</p>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
 
