@@ -56,6 +56,13 @@ interface SolicitationRowBadgesProps {
    * renders nothing — never a negative. */
   solicitationType?: string | null;
   solicitationTypeLabel?: string | null;
+  /**
+   * Set false on a page that states the Automated IDC vehicle in its expanded
+   * row instead (see /rfq/worklist, where BidTermsPanel takes it). Suppresses
+   * the 'I' pill only: 'F' is urgency — a fast award can be awarded before the
+   * return date — so it must stay readable without expanding anything.
+   */
+  idcBadge?: boolean;
 }
 
 /**
@@ -70,6 +77,7 @@ export function SolicitationRowBadges({
   onShowAmendments,
   solicitationType,
   solicitationTypeLabel,
+  idcBadge = true,
 }: SolicitationRowBadgesProps) {
   // ONE amber "Amended" pill, never two. The separate "Updated 3h ago" badge
   // said much the same thing and made an already-crowded column unreadable,
@@ -80,6 +88,11 @@ export function SolicitationRowBadges({
   // distinction between the two — and every timestamp — still lives in the
   // tooltip and in the timeline behind the pill.
   const isAmended = hasAmendmentIndicator || hasPostMatchAmendment;
+  // Withholding the code, rather than the rendered pill, keeps the badge's own
+  // rule intact: it decides what a code is worth showing, this decides which
+  // codes it gets to see.
+  const typeCode =
+    !idcBadge && solicitationType?.trim().toUpperCase() === "I" ? null : solicitationType;
   const explanation = hasPostMatchAmendment
     ? `This solicitation was updated after your match was generated.${
         latestPostMatchAmendmentAt
@@ -109,7 +122,7 @@ export function SolicitationRowBadges({
           </span>
         )
       )}
-      <SolicitationTypeBadge code={solicitationType} label={solicitationTypeLabel} />
+      <SolicitationTypeBadge code={typeCode} label={typeCode ? solicitationTypeLabel : null} />
     </>
   );
 }

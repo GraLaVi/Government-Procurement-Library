@@ -7,7 +7,7 @@ import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
 import { ROW_BADGE_BASE } from "@/components/library/RowBadge";
-import { FirstArticleBadge, WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
+import { WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
 import { WorkStatusSelect } from "@/components/rfq/WorkStatusSelect";
@@ -976,11 +976,13 @@ export default function RfqWorklistPage() {
                             }}
                             solicitationType={item.solicitation_type}
                             solicitationTypeLabel={item.solicitation_type_label}
+                            // Both bid-cost facts — First Article and the
+                            // Automated IDC vehicle — are stated in the bid
+                            // qualification panel of the expanded row instead
+                            // of badged here. Fast award stays: it is a
+                            // deadline, not a term.
+                            idcBadge={false}
                           />
-                          {/* The quotable-items list hides First Article
-                              placeholder lines, so this badge is the only
-                              place the requirement surfaces on this page. */}
-                          <FirstArticleBadge firstArticle={item.first_article} />
                           {/* Counted per part: a row here is a whole
                               solicitation, so this reads "you have made N of
                               these lines before". */}
@@ -1102,6 +1104,12 @@ export default function RfqWorklistPage() {
                           <BidTermsPanel
                             terms={item.bid_terms}
                             definitions={data?.bid_term_definitions}
+                            // Moved off the row. The quotable-items list below
+                            // hides First Article placeholder lines, so this
+                            // panel is now the only place the requirement
+                            // surfaces on the page.
+                            firstArticle={item.first_article}
+                            solicitationType={item.solicitation_type}
                           />
 
                           {!partsState || partsState.loading ? (

@@ -61,13 +61,16 @@ function TermCell({ term }: { term: ResolvedBidTerm }) {
             4.7:1 there). Boxing the code keeps it at full --foreground — 14:1
             light, 8.4:1 dark on its own chip — while the border and fill say
             "this is the raw value" without spending any contrast to do it. */}
-        <span
-          className="ml-1.5 inline-block align-[1px] rounded border border-border
-            bg-muted-light px-1 py-px text-[10px] leading-none text-foreground
-            data-field font-normal"
-        >
-          {term.code}
-        </span>
+        {/* Absent on First Article, which is not a coded BQ field. */}
+        {term.code && (
+          <span
+            className="ml-1.5 inline-block align-[1px] rounded border border-border
+              bg-muted-light px-1 py-px text-[10px] leading-none text-foreground
+              data-field font-normal"
+          >
+            {term.code}
+          </span>
+        )}
       </div>
       <div className="text-[10px] text-muted leading-tight mt-0.5">{term.hint}</div>
     </div>
@@ -77,25 +80,57 @@ function TermCell({ term }: { term: ResolvedBidTerm }) {
 export function BidTermsPanel({
   terms,
   definitions,
+  firstArticle,
+  solicitationType,
   className = "",
 }: {
   terms: SolicitationBidTerms | null | undefined;
   definitions: BidTermDefinitions | undefined;
+  /**
+   * Contractor First Article requirement. Pass it on a page that does NOT
+   * badge it in the row (see /rfq/worklist): it is a bid cost like any other
+   * term here, and the row it came from was carrying six badges. Omit it and
+   * the panel renders exactly as before — /bidmatching still badges it inline.
+   */
+  firstArticle?: boolean;
+  /**
+   * DLA Solicitation Type Indicator. Only 'I' means anything to this panel:
+   * it names the contract vehicle for the AIDC block below, so the block can
+   * appear on an Automated IDC that states none of the numbers. Same bargain
+   * as firstArticle — pass it where the row does not badge it.
+   */
+  solicitationType?: string | null;
   className?: string;
 }) {
-  // The eight coded BQ fields, then the DPAS rating. The established order
-  // holds — what disqualifies you, then what it costs you — with the rating
-  // after it, since it binds you only once you have won.
+  // First Article, then the eight coded BQ fields, then the DPAS rating. The
+  // established order holds — what disqualifies you, then what it costs you —
+  // with the rating after it, since it binds you only once you have won.
+  // First Article leads because it is the most expensive of the gates: a test
+  // report before production delivery, priced into a bid or not at all.
   const rating = resolveRating(terms, definitions);
-  const resolved = [
+  const resolved: ResolvedBidTerm[] = [
+    ...(firstArticle
+      ? [{
+          field: "first_article" as const,
+          name: "First article",
+          label: "Required",
+          hint: "Tested before production delivery",
+          description:
+            "The bidder must test initial sample units and submit a formal report under FAR 52.209-3 before full production delivery. Expect added cost and lead time.",
+          notable: true,
+        }]
+      : []),
     ...resolveBidTerms(terms, definitions),
     ...(rating ? [rating] : []),
   ];
   const aidc = resolveAidcTerms(terms);
+  // 'I' is the only indicator this panel reads. Null is unknown, as everywhere
+  // else here — an untyped solicitation says nothing about its vehicle.
+  const isAidc = solicitationType?.trim().toUpperCase() === "I";
 
   // Nothing stated on this solicitation — render nothing rather than an empty
   // heading. A SAM-source row lands here too: it never joins `solicitations`.
-  if (resolved.length === 0 && aidc.length === 0) return null;
+  if (resolved.length === 0 && aidc.length === 0 && !isAidc) return null;
 
   return (
     <div className={className}>
@@ -111,25 +146,40 @@ export function BidTermsPanel({
 
       {/* AIDC contract terms. Only Automated Indefinite Delivery Contracts
           (solicitation_type 'I', ~2.6% of solicitations) carry these, so the
-          block is absent rather than empty everywhere else. */}
-      {aidc.length > 0 && (
+          block is absent rather than empty everywhere else.
+
+          It also opens on the indicator alone, for a page that hands us
+          `solicitationType` instead of badging it in the row: the vehicle is
+          worth stating even where none of its numbers are. */}
+      {(aidc.length > 0 || isAidc) && (
         <div className="mt-3 pt-3 border-t border-dashed border-border">
-          <div className="text-xs text-muted mb-2">Automated IDC contract terms</div>
-          <div className="flex flex-wrap gap-x-8 gap-y-3">
-            {aidc.map((term) => (
-              <div key={term.name}>
-                <div className="text-sm font-semibold text-foreground data-field leading-tight">
-                  {term.format === "currency"
-                    ? formatCurrency(term.value)
-                    : term.value.toLocaleString()}
-                </div>
-                <div className="text-[10px] uppercase tracking-wide text-muted leading-tight mt-0.5">
-                  {term.name}
-                </div>
-                <div className="text-[10px] text-muted/80 leading-tight">{term.hint}</div>
-              </div>
-            ))}
+          {/* The heading names what is actually below it: the numbers where
+              they are stated, the vehicle itself where they are not. */}
+          <div className="text-xs text-muted mb-2">
+            {aidc.length > 0 ? "Automated IDC contract terms" : "Contract vehicle"}
           </div>
+          {aidc.length > 0 ? (
+            <div className="flex flex-wrap gap-x-8 gap-y-3">
+              {aidc.map((term) => (
+                <div key={term.name}>
+                  <div className="text-sm font-semibold text-foreground data-field leading-tight">
+                    {term.format === "currency"
+                      ? formatCurrency(term.value)
+                      : term.value.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted leading-tight mt-0.5">
+                    {term.name}
+                  </div>
+                  <div className="text-[10px] text-muted/80 leading-tight">{term.hint}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted leading-snug">
+              An Automated Indefinite Delivery Contract — awards run as
+              delivery orders across its life rather than as one buy.
+            </p>
+          )}
         </div>
       )}
     </div>

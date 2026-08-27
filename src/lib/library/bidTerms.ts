@@ -143,11 +143,14 @@ export const BID_TERM_SPECS: readonly BidTermSpec[] = [
 /** One resolved term, ready to render. */
 export interface ResolvedBidTerm {
   /** Field key, also the React list key. Widened past BidTermField for the
-   *  DPAS rating, which is two codes in one column rather than one. */
-  field: BidTermField | "rating";
+   *  DPAS rating, which is two codes in one column rather than one, and for
+   *  First Article, which DIBBS carries as a placeholder line item rather
+   *  than a coded BQ field. */
+  field: BidTermField | "rating" | "first_article";
   name: string;
   hint: string;
-  code: string;
+  /** The raw DLA value. Absent on a term that has no code to show. */
+  code?: string;
   /** Server label, or the bare code when the vocabulary has no row for it. */
   label: string;
   /** Server description, for the hover tooltip. */
