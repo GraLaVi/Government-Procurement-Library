@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { RFQ_SENDER_KEYS } from "@/lib/rfq/tier";
-import { showInventorySurfaces } from "@/lib/inventory/launch";
 import { Button } from "@/components/ui/Button";
 
 const accountSections = [
@@ -75,21 +74,6 @@ const accountSections = [
     icon: (
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  {
-    title: "Inventory",
-    description: "Upload your stock, keep it current, and control what other subscribers can see",
-    href: "/library/inventory",
-    // Free RFQ responder accounts have no inventory surface.
-    responderHidden: true,
-    // Unannounced: dev-only until INVENTORY_UPLOAD_PUBLIC flips
-    // (@/lib/inventory/launch).
-    devOnly: true,
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
       </svg>
     ),
   },
@@ -357,7 +341,6 @@ export default function AccountPage() {
           .filter((section) => !section.adminOnly || user?.roles?.includes('admin'))
           .filter((section) => !(section.responderHidden && isRfqResponderOnly))
           .filter((section) => !section.rfqOnly || hasRfq)
-          .filter((section) => !section.devOnly || showInventorySurfaces())
           .map((section) => (
             <Link
               key={section.href}
