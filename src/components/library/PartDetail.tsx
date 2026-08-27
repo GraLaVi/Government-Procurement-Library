@@ -921,10 +921,10 @@ export function PartDetail({ part }: PartDetailProps) {
       : "Technical Characteristics";
 
   const endUseLabel = endUseFetched
-    ? `End Use Description (${endUseTotal})`
+    ? `End Use (${endUseTotal})`
     : tabCounts
-      ? `End Use Description (${tabCounts.end_use_description_count})`
-      : "End Use Description";
+      ? `End Use (${tabCounts.end_use_description_count})`
+      : "End Use";
 
   // Count reflects what actually renders: a part_packaging row with at least one
   // non-empty displayable field, OR a supplemental (e.g. solicitation) block.
@@ -937,10 +937,10 @@ export function PartDetail({ part }: PartDetailProps) {
   const packagingCount = (packagingHasStructuredContent || !!packagingSupplemental) ? 1 : 0;
 
   const packagingLabel = packagingFetched
-    ? `Packaging Information (${packagingCount})`
+    ? `Packaging (${packagingCount})`
     : tabCounts
-      ? `Packaging Information (${tabCounts.has_packaging ? 1 : 0})`
-      : "Packaging Information";
+      ? `Packaging (${tabCounts.has_packaging ? 1 : 0})`
+      : "Packaging";
 
   const pidLabel = procurementItemDescFetched
     ? `Procurement Item Description (${procurementItemDescription?.has_description && procurementItemDescription?.description?.trim() ? 1 : 0})`
@@ -2139,6 +2139,10 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
   }, [onEnsureDemand]);
   const [pdfModal, setPdfModal] = useState<{ id: number; number: string } | null>(null);
   const pdfUrl = pdfModal ? `/api/library/solicitations/${pdfModal.id}/pdf` : null;
+  // Award PDF for an awarded row — a different document (and endpoint) from the
+  // solicitation PDF above, so it gets its own viewer state.
+  const [awardPdfModal, setAwardPdfModal] = useState<{ id: number; contract: string } | null>(null);
+  const awardPdfUrl = awardPdfModal ? `/api/library/awards/${awardPdfModal.id}/pdf` : null;
 
   // Amendment indicator: one batch fetch covers every visible sol; the
   // cell renders the pill only when the sol has at least one amendment.
@@ -2313,17 +2317,37 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
         cell: ({ row }) => {
           const award = row.original.award;
           return award?.contract_number ? (
-            <button
-              type="button"
-              title="View contract details"
-              onClick={(e) => {
-                e.stopPropagation();
-                setContractModal(award);
-              }}
-              className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
-            >
-              {award.contract_number}
-            </button>
+            <span className="inline-flex items-center gap-1">
+              <button
+                type="button"
+                title="View contract details"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContractModal(award);
+                }}
+                className="text-xs font-mono font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary cursor-pointer"
+              >
+                {award.contract_number}
+              </button>
+              {/* Same affordance as the Procurement History tab: the number
+                  opens the details, the glyph opens the award document. */}
+              {award.has_pdf && award.order_detail_id && (
+                <button
+                  type="button"
+                  title="View award PDF"
+                  aria-label={`View award PDF for contract ${award.contract_number}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAwardPdfModal({ id: award.order_detail_id!, contract: award.contract_number || "" });
+                  }}
+                  className="text-primary hover:text-primary/80 cursor-pointer shrink-0"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                </button>
+              )}
+            </span>
           ) : (
             // The API now hands back status all-lowercase; `capitalize` is
             // presentation-only, so the raw value still sorts and exports as-is.
@@ -2497,6 +2521,30 @@ function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, 
             <iframe
               src={pdfUrl}
               title={`Solicitation ${pdfModal.number}`}
+              className="w-full border border-border rounded min-h-[70vh]"
+            />
+          </div>
+        </Modal>
+      )}
+      {awardPdfModal && awardPdfUrl && (
+        <Modal
+          isOpen={true}
+          onClose={() => setAwardPdfModal(null)}
+          title={`Contract ${awardPdfModal.contract}`}
+          size="full"
+        >
+          <div className="flex flex-col gap-2">
+            <a
+              href={awardPdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline"
+            >
+              Open in new tab
+            </a>
+            <iframe
+              src={awardPdfUrl}
+              title={`Contract ${awardPdfModal.contract}`}
               className="w-full border border-border rounded min-h-[70vh]"
             />
           </div>

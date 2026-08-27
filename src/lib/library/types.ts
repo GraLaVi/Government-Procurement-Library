@@ -590,6 +590,10 @@ export interface SolicitationAward {
   total_value: number | null;
   awardee_cage: string | null;
   awardee_name: string | null;
+  // Key for /api/library/awards/{id}/pdf; has_pdf is true only when the file
+  // actually exists in storage.
+  order_detail_id?: number | null;
+  has_pdf?: boolean;
 }
 
 // One posting in a SAM.gov repost chain. Offices like NAVSUP WSS publish each
