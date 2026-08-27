@@ -52,8 +52,20 @@ function TermCell({ term }: { term: ResolvedBidTerm }) {
       >
         {term.label}
         {/* The raw code, kept visible: buyers who work the BQ file read these
-            directly, and it is what appears in DIBBS itself. */}
-        <span className="ml-1.5 text-[10px] text-muted/70 data-field font-normal">
+            directly, and it is what appears in DIBBS itself.
+
+            Separated from the label by SHAPE, not by shade. The two previous
+            attempts both tuned the grey, and both failed the same way: any
+            colour dim enough to read as secondary against a bg-muted-light/30
+            row is also too dim to read at all (undimmed --muted tops out near
+            4.7:1 there). Boxing the code keeps it at full --foreground — 14:1
+            light, 8.4:1 dark on its own chip — while the border and fill say
+            "this is the raw value" without spending any contrast to do it. */}
+        <span
+          className="ml-1.5 inline-block align-[1px] rounded border border-border
+            bg-muted-light px-1 py-px text-[10px] leading-none text-foreground
+            data-field font-normal"
+        >
           {term.code}
         </span>
       </div>
