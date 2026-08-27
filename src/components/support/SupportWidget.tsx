@@ -99,60 +99,71 @@ export function SupportWidget() {
   }, [enabled]);
 
   /*
-   * Push our theme into the widget once it exists.
+   * Paint the launcher's canvas to match our theme.
    *
-   * The CSS rule (globals.css, `:root[data-theme="dark"] #jsd-widget`) is the
-   * declarative half and it works — but only for a theme change made while the
-   * widget is already running. It cannot fix startup, because of how the two
-   * sides are sequenced:
+   * The white box was never Atlassian's palette — it is the iframe's own
+   * CANVAS. Measured in-browser (dark theme, white widget): the only painted
+   * element inside is the round teal button (`#help-button.icon`); the inner
+   * <html> and <body> are both rgba(0,0,0,0). What shows through is the UA
+   * base color, and that is chosen by the used `color-scheme` of the EMBEDDED
+   * document's root — which Atlassian never declares, so it computes to
+   * `normal` and the base color is white.
    *
-   *   - layout.tsx renders <html> with NO data-theme, and there is no
-   *     pre-hydration script; ThemeContext adds the attribute in an effect.
-   *   - Atlassian's bundle resolves its palette exactly once at init
-   *     (`useState(resolve(colorMode))` over prefers-color-scheme) and after
-   *     that only reacts to a media-query CHANGE event.
+   * `prefers-color-scheme` inside the frame is already correct (the globals.css
+   * rule on the iframe element propagates it, measured `true` in dark). But a
+   * preference is not an opt-in: a document that declares no `color-scheme`
+   * gets the light canvas regardless of what the media query reports. That is
+   * the whole bug, and it is why the previous attempt could not work — it tried
+   * to drive a matchMedia listener writing `data-color-mode` onto the inner
+   * <html>, and that element carries no attributes at all.
    *
-   * So the widget samples the scheme while the page is still unmarked, latches
-   * light, and never re-reads it. Toggling the theme by hand produces the
-   * change event it was waiting for, which is why that looked fixed until the
-   * next reload.
-   *
-   * The fix is to manufacture that change after the frame exists: set the
-   * opposite scheme, then the real one on the next frame. Two computed-value
-   * changes, so the listener inside the frame fires regardless of what it
-   * latched at init. Only needed for dark — light is what it already assumed,
-   * and flipping through dark there would flash the widget.
+   * The launcher is same-origin (embed.js builds it with document.write and no
+   * src), so we can set the property on the inner root directly. No event to
+   * manufacture, no race against the frame's init: whenever the frame exists
+   * and whenever the theme changes, state the scheme and the canvas follows.
    */
   useEffect(() => {
-    if (!enabled || resolvedTheme !== "dark") return;
+    if (!enabled) return;
 
-    let raf = 0;
-    const force = (frame: HTMLIFrameElement) => {
-      frame.style.colorScheme = "light";
-      raf = window.requestAnimationFrame(() => {
-        frame.style.colorScheme = "dark";
-      });
+    let frame: HTMLIFrameElement | null = null;
+    let observer: MutationObserver | null = null;
+
+    const paint = () => {
+      // Null while the frame is cross-origin or not yet written; the load
+      // handler below covers the second case.
+      const root = frame?.contentDocument?.documentElement;
+      if (root) root.style.colorScheme = resolvedTheme;
     };
 
-    const frame = document.getElementById(WIDGET_IFRAME_ID);
-    if (frame instanceof HTMLIFrameElement) {
-      force(frame);
-      return () => window.cancelAnimationFrame(raf);
+    const attach = (found: HTMLIFrameElement) => {
+      frame = found;
+      // document.write implies document.open(), which wipes whatever we set on
+      // the blank document that preceded it — so paint again once the written
+      // document has loaded, not only on the node appearing.
+      found.addEventListener("load", paint);
+      paint();
+    };
+
+    const existing = document.getElementById(WIDGET_IFRAME_ID);
+    if (existing instanceof HTMLIFrameElement) {
+      attach(existing);
+    } else {
+      // embed.js appends the launcher whenever its bundle lands, with no event
+      // to await — watch for the node instead of polling.
+      observer = new MutationObserver(() => {
+        const added = document.getElementById(WIDGET_IFRAME_ID);
+        if (added instanceof HTMLIFrameElement) {
+          observer?.disconnect();
+          observer = null;
+          attach(added);
+        }
+      });
+      observer.observe(document.body, { childList: true });
     }
 
-    // embed.js appends the launcher to <body> whenever its bundle finishes, so
-    // there is no event to await — watch for the node instead of polling.
-    const observer = new MutationObserver(() => {
-      const added = document.getElementById(WIDGET_IFRAME_ID);
-      if (added instanceof HTMLIFrameElement) {
-        observer.disconnect();
-        force(added);
-      }
-    });
-    observer.observe(document.body, { childList: true });
     return () => {
-      observer.disconnect();
-      window.cancelAnimationFrame(raf);
+      observer?.disconnect();
+      frame?.removeEventListener("load", paint);
     };
   }, [enabled, resolvedTheme]);
 

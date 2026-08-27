@@ -209,19 +209,21 @@ html {
    Jira Service Management help widget (bottom-right launcher)
    --------------------------------------------------------------------- */
 /* The widget renders into an iframe that embed.js writes with document.write
-   (no src), and Atlassian's bundle inside it picks its palette from
-   `prefers-color-scheme` evaluated in THAT document — Atlassian Design System
-   `defaultColorMode: "auto"`, resolved once and then kept live by a
-   matchMedia listener that writes data-color-mode onto its own <html>.
+   (no src), so it is same-origin and we can reach inside it.
 
-   Nothing linked that to our theme, so the widget followed the OS while the
-   app followed data-theme: a user on dark with an OS that switches light by
-   day got a white widget every morning, correct again at night. Mirrored for
-   a light-theme user whose OS goes dark.
+   This rule is only HALF the fix, and not the half that stops the white box.
+   What it does is make `prefers-color-scheme` resolve to our theme inside the
+   embedded document (verified in-browser: with this applied, the frame's own
+   matchMedia reports dark). That is worth keeping so anything in Atlassian's
+   bundle that consults the preference agrees with the app.
 
-   `color-scheme` on the embedding element is the one supported channel for
-   telling an embedded document which palette to use — the widget exposes no
-   theme parameter (embed.js reads only data-key and data-base-url).
+   It cannot fix the background, because the white is the iframe's CANVAS, not
+   an element: inside the frame only the round launcher button paints, and the
+   inner <html>/<body> are transparent. A canvas base color is chosen by the
+   used `color-scheme` of the EMBEDDED document's root, and a preference is not
+   an opt-in — Atlassian declares no `color-scheme`, so it computes to `normal`
+   and the base color stays white however the media query resolves. That root
+   is set directly from SupportWidget.tsx; see the effect there.
 
    Deliberately not scoped under `@media not print` like the `dark:` variant:
    the widget is screen-only chrome and never reaches paper. */
