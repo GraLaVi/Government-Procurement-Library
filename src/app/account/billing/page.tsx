@@ -116,6 +116,11 @@ type BillingDetails = {
     exp_month: number | null;
     exp_year: number | null;
     funding: string | null;
+    // False when the card is attached but is nobody's default: Stripe will not
+    // charge it, so the trial still cancels. Saying nothing here would leave
+    // this row contradicting the trial banner above. Optional because an older
+    // API build omits it.
+    is_default?: boolean;
   } | null;
   next_payment: {
     amount_cents: number | null;
@@ -859,6 +864,9 @@ function PaymentBillingCard({
     card?.exp_month && card?.exp_year
       ? `exp ${card.exp_month}/${String(card.exp_year).slice(-2)}`
       : null;
+  // An older API build has no is_default; treat a missing flag as "fine" so a
+  // version skew warns nobody falsely.
+  const cardNotDefault = !!card?.last4 && card.is_default === false;
 
   const contact =
     billing_name || billing_email
@@ -897,6 +905,12 @@ function PaymentBillingCard({
             <>
               {cardLabel}
               {expLabel && <span className="text-muted font-normal"> · {expLabel}</span>}
+              {cardNotDefault && (
+                <span className="block text-warning font-normal text-xs mt-0.5">
+                  Not set as your default — Stripe won&apos;t charge this card.
+                  Set it as default in the Stripe portal to keep your access.
+                </span>
+              )}
             </>
           ) : (
             <span className="text-muted font-normal">No card on file</span>
