@@ -158,6 +158,13 @@ export function NetworkStockTable({
       {
         id: "part_number",
         header: "Part number",
+        // accessorFn, not just a cell: TanStack only marks a column sortable
+        // when it can read a value off the row, so a display-only column
+        // renders no sort control at all. undefined (not "") for a missing
+        // number, so sortUndefined can sink those rather than parking them at
+        // the top of an ascending sort.
+        accessorFn: (r) => r.part_number || undefined,
+        sortUndefined: "last",
         cell: ({ row }) => (
           <span className="font-mono text-foreground">{row.original.part_number || "—"}</span>
         ),
@@ -195,7 +202,17 @@ export function NetworkStockTable({
       },
       {
         id: "condition",
-        header: "Cond",
+        // Stays abbreviated — the table already runs to eleven columns and
+        // "Condition" is the widest word among them for a value that is one
+        // letter. The hover carries what the abbreviation drops.
+        header: () => (
+          <span
+            title="Condition: federal supply condition code, as reported by the supplier. A/B are serviceable grades; F is unserviceable but reparable."
+            className="whitespace-nowrap"
+          >
+            Cond
+          </span>
+        ),
         cell: ({ row }) => <span>{row.original.condition_code || "—"}</span>,
       },
       {
@@ -213,6 +230,15 @@ export function NetworkStockTable({
       {
         id: "unit_price",
         header: () => <span className="w-full text-right block">Unit price</span>,
+        // Numeric, not the raw string the API sends — "9.50" sorts above
+        // "10.00" as text. Suppressed lines (owners who share no price) and
+        // unparseable values both become undefined and sink.
+        accessorFn: (r) => {
+          if (r.unit_price == null) return undefined;
+          const n = Number(r.unit_price);
+          return Number.isNaN(n) ? undefined : n;
+        },
+        sortUndefined: "last",
         cell: ({ row }) => (
           <span className="text-right block">
             {formatMoney(row.original.unit_price, row.original.currency)}
@@ -257,6 +283,10 @@ export function NetworkStockTable({
       {
         id: "ships_from",
         header: "Ships from",
+        // Sorts on exactly what the cell prints, region-then-country, so a
+        // row that falls back to its country lands where the reader sees it.
+        accessorFn: (r) => r.ship_from_region || r.ship_from_country || undefined,
+        sortUndefined: "last",
         cell: ({ row }) => (
           <span className="text-muted">
             {row.original.ship_from_region || row.original.ship_from_country || "—"}
@@ -267,6 +297,14 @@ export function NetworkStockTable({
       {
         id: "as_of",
         header: "As of",
+        // Parsed to a timestamp rather than sorted as text: the API sends
+        // ISO dates today, which would sort correctly as strings, but that is
+        // a property of the format and not of the column.
+        accessorFn: (r) => {
+          const t = r.as_of_date ? Date.parse(r.as_of_date) : NaN;
+          return Number.isNaN(t) ? undefined : t;
+        },
+        sortUndefined: "last",
         cell: ({ row }) => (
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
             {formatDate(row.original.as_of_date)}
