@@ -646,11 +646,20 @@ function BillingPageContent() {
           ) : (
             <div className="bg-card-bg border border-border rounded-xl p-6 mb-8">
               <p className="text-muted text-sm">You don&apos;t have an active plan yet.</p>
-              <div className="mt-4">
-                <Button href="/pricing" variant="primary" size="sm">
+              {/* Two CTAs, two destinations. One "Browse plans" button landed
+                  at the top of /pricing, which shows tiers only — the add-on
+                  panels sit below the grid and were easy to miss entirely. */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button href="/pricing#plans" variant="primary" size="sm">
                   Browse plans
                 </Button>
+                <Button href="/pricing#add-ons" variant="outline" size="sm">
+                  Browse add-ons
+                </Button>
               </div>
+              <p className="mt-2 text-xs text-muted">
+                Add-ons attach to a paid tier — pick a plan first.
+              </p>
             </div>
           )
         ) : (
@@ -1012,8 +1021,13 @@ function FreePlanCard() {
         matching, and up to 10 users.
       </p>
       <div className="mt-5 pt-4 border-t border-border flex flex-wrap gap-2">
-        <Button href="/pricing" variant="primary" size="sm">
+        <Button href="/pricing#plans" variant="primary" size="sm">
           Upgrade plan
+        </Button>
+        {/* Free customers can't buy an add-on yet, but they can read what one
+            costs — the panel states the paid-tier requirement itself. */}
+        <Button href="/pricing#add-ons" variant="outline" size="sm">
+          Browse add-ons
         </Button>
       </div>
     </div>

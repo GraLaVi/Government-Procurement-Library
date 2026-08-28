@@ -102,7 +102,7 @@ export function BidTermsPanel({
   solicitationType?: string | null;
   className?: string;
 }) {
-  // First Article, then the eight coded BQ fields, then the DPAS rating. The
+  // First Article, then the nine coded fields, then the DPAS rating. The
   // established order holds — what disqualifies you, then what it costs you —
   // with the rating after it, since it binds you only once you have won.
   // First Article leads because it is the most expensive of the gates: a test

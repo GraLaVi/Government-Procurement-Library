@@ -254,7 +254,7 @@ function DemandSignalChip({ signal }: { signal?: string | null }) {
 }
 
 /** Columns the server can sort on. "" = the default newest-first ordering. */
-export type BidSortKey = "" | "interested" | "solicitation" | "quantity" | "estimated_value" | "close_date";
+export type BidSortKey = "" | "interested" | "solicitation" | "nsn" | "quantity" | "estimated_value" | "close_date";
 
 interface BidMatchResultsTableProps {
   results: BidMatchResult[];
@@ -461,7 +461,7 @@ export function BidMatchResultsTable({
               <SortHeader label="★" sortKey="interested" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="w-8" />
               <th className="w-6 px-1.5 py-1.5" aria-label="Expand"></th>
               <SortHeader label="Solicitation" sortKey="solicitation" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-              <th className={thClass}>NSN</th>
+              <SortHeader label="NSN" sortKey="nsn" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className={thClass}>Description</th>
               <SortHeader label="Qty" sortKey="quantity" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
               <th className={thClass}>UOM</th>

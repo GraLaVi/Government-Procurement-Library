@@ -30,6 +30,10 @@ interface BidMatchProfile {
   updated_at: string;
   created_by: number | null;
   notes: string | null;
+  // Opt-in to SAM notices that carry no part link. SAM has no structured NSN
+  // field, so a notice publishing none can never be part-linked — this
+  // profile's keyword conditions are the only thing that could catch it.
+  include_unlinked_sam: boolean;
   conditions: BidMatchCondition[];
 }
 
@@ -327,6 +331,7 @@ export default function BidMatchingPage() {
   const [formName, setFormName] = useState("");
   const [formLogic, setFormLogic] = useState("AND");
   const [formNotes, setFormNotes] = useState("");
+  const [formUnlinkedSam, setFormUnlinkedSam] = useState(false);
   const [formConditions, setFormConditions] = useState<ConditionForm[]>([]);
   const [saving, setSaving] = useState(false);
   const [showOperatorHelp, setShowOperatorHelp] = useState(false);
@@ -405,6 +410,9 @@ export default function BidMatchingPage() {
     setFormName("");
     setFormLogic("AND");
     setFormNotes("");
+    // Off for a new profile, matching the column default: it widens the
+    // profile into noisier ground, so it is opted into rather than out of.
+    setFormUnlinkedSam(false);
     setFormConditions([]);
     setShowModal(true);
   };
@@ -414,6 +422,7 @@ export default function BidMatchingPage() {
     setFormName(profile.profile_name);
     setFormLogic(profile.match_logic);
     setFormNotes(profile.notes || "");
+    setFormUnlinkedSam(!!profile.include_unlinked_sam);
     setFormConditions(
       profile.conditions.map((c) => {
         const op = c.match_operator || defaultOperatorFor(c.condition_type);
@@ -474,6 +483,7 @@ export default function BidMatchingPage() {
               profile_name: formName,
               match_logic: formLogic,
               notes: formNotes || undefined,
+              include_unlinked_sam: formUnlinkedSam,
             }),
           }
         );
@@ -506,6 +516,7 @@ export default function BidMatchingPage() {
             profile_name: formName,
             match_logic: formLogic,
             notes: formNotes || undefined,
+            include_unlinked_sam: formUnlinkedSam,
             conditions: serialized,
           }),
         });
@@ -888,6 +899,17 @@ export default function BidMatchingPage() {
                     >
                       {profile.is_active ? "Active" : "Inactive"}
                     </span>
+                    {/* Only when on. Off is the default and the ordinary case,
+                        so a pill for it would sit on nearly every card and say
+                        nothing — the setting is legible from the edit form. */}
+                    {profile.include_unlinked_sam && (
+                      <span
+                        className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
+                        title="This profile is also evaluated against SAM.gov notices that publish no NSN, which only its keyword conditions can match."
+                      >
+                        No-NSN SAM
+                      </span>
+                    )}
                     <span className="text-xs text-muted">
                       Created {new Date(profile.created_at).toLocaleDateString()}
                     </span>
@@ -1054,6 +1076,32 @@ export default function BidMatchingPage() {
                       : "Any condition can match"}
                   </span>
                 </div>
+              </div>
+
+              {/* No-NSN SAM notices. Its own opt-in rather than a condition,
+                  because it does not narrow what matches — it widens WHERE
+                  this profile looks. */}
+              <div>
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formUnlinkedSam}
+                    onChange={(e) => setFormUnlinkedSam(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-2 focus:ring-primary cursor-pointer"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-foreground">
+                      Include SAM notices with no NSN
+                    </span>
+                    <span className="block text-xs text-muted mt-0.5">
+                      SAM.gov has no structured NSN field, so a notice that
+                      publishes none can never be matched to a part — only this
+                      profile&apos;s keyword conditions can catch it. Off by
+                      default: it finds opportunities the part-linked feed
+                      cannot, and it is noisier.
+                    </span>
+                  </span>
+                </label>
               </div>
 
               {/* Notes */}

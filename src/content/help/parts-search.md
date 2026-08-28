@@ -16,10 +16,10 @@ Parts Search lets you look up any part in the federal procurement catalog by its
 - [Procurement History tab](#procurement-history-tab)  
 - [Solicitations tab](#solicitations-tab)  
 - [Manufacturers tab](#manufacturers-tab)  
-- [Technical Characteristics tab](#technical-characteristics-tab)  
+- [Characteristics tab](#characteristics-tab)  
 - [End Use tab](#end-use-tab)  
 - [Packaging tab](#packaging-tab)  
-- [PID tab](#pid-tab)  
+- [Procurement Item Description tab](#procurement-item-description-tab)  
 - [Recent and pinned searches](#recent-and-pinned-searches)  
 - [Exporting data](#exporting-data)
 
@@ -108,9 +108,9 @@ If you have the RFQ add-on, this tab is also where you start a Request for Quote
 
 *Note: this tab is available starting on the Basic plan.*
 
-## Technical Characteristics tab
+## Characteristics tab
 
-The Technical Characteristics tab shows specifications and attributes of the part — material composition, dimensions, performance characteristics, operating parameters, and other technical details. The format is key-value pairs (for example, *TUBE TYPE: MICROWAVE*).
+The Characteristics tab shows specifications and attributes of the part — material composition, dimensions, performance characteristics, operating parameters, and other technical details. The format is key-value pairs (for example, *TUBE TYPE: MICROWAVE*).
 
 Coverage varies by part: some parts have only one or two characteristics, others have dozens.
 
@@ -126,9 +126,9 @@ The Packaging tab has two parts. A **Packaging Data** section lists the part's p
 
 Below it, a supplemental narrative section (usually titled **Packaging Requirements**) may include military specification references (MIL-DTL-75, FED-STD-313), hazardous material disclosure obligations, and source control directives.
 
-## PID tab
+## Procurement Item Description tab
 
-The PID tab (short for Procurement Item Description) contains the full procurement description for the part — quality requirements, military specifications, compliance standards (including CMMC where applicable), drawing references, and inspection criteria. It's rendered as formatted text with clickable links to referenced standards and documents.
+The Procurement Item Description tab contains the full procurement description for the part — quality requirements, military specifications, compliance standards (including CMMC where applicable), drawing references, and inspection criteria. It's rendered as formatted text with clickable links to referenced standards and documents.
 
 This is dense, formal content. If you're preparing a bid, treat this as the authoritative description of what the government expects from the part you'll supply.
 
