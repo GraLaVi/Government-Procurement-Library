@@ -633,7 +633,11 @@ function PricingPageContent() {
         <span className="h-px w-8 bg-border" aria-hidden="true" />
       </div>
 
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${lgColsClass} gap-6`}>
+      {/* id + scroll-mt: /account/billing links straight here ("Browse plans")
+          and to #add-ons below, so the two CTAs land on different sections of
+          this page instead of both dropping the customer at the top. The
+          offset clears the sticky header. */}
+      <div id="plans" className={`scroll-mt-24 grid grid-cols-1 md:grid-cols-2 ${lgColsClass} gap-6`}>
         {/* Free tier — auto-granted on signup, no Stripe involvement. */}
         <div className="bg-card-bg border border-border rounded-xl p-6 flex flex-col">
           <h2 className="text-xl font-semibold text-card-foreground">Free</h2>
@@ -952,7 +956,7 @@ function PricingPageContent() {
           billing is disabled the plan drops out entirely, so the row
           collapses and Data Reports takes the freed space instead of sitting
           in a half-empty row. */}
-      <div className={`mt-6 grid gap-6 ${addonColsClass}`}>
+      <div id="add-ons" className={`scroll-mt-24 mt-6 grid gap-6 ${addonColsClass}`}>
         {rfqPlan && (
           <AddonPanel
             plan={rfqPlan}
