@@ -1162,7 +1162,7 @@ export function PartDetail({ part }: PartDetailProps) {
   const handleExportAll = () => {
     const csv = buildCombinedCsv([
       { title: "Procurement History", csv: buildCsv(procurementRecords, PROCUREMENT_CSV_COLUMNS) },
-      { title: "Recent Solicitations", csv: buildCsv(solicitations, SOLICITATIONS_CSV_COLUMNS) },
+      { title: "Solicitations", csv: buildCsv(solicitations, SOLICITATIONS_CSV_COLUMNS) },
       { title: "DLA Demand Forecast", csv: buildCsv(demand?.forecast_curve ?? [], DEMAND_CSV_COLUMNS) },
     ]);
     triggerDownload(csv, `part-${partReqKey}-${todayIsoDate()}.csv`);

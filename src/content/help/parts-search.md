@@ -14,12 +14,12 @@ Parts Search lets you look up any part in the federal procurement catalog by its
 - [Tabs or one page](#tabs-or-one-page)  
 - [Overview tab](#overview-tab)  
 - [Procurement History tab](#procurement-history-tab)  
-- [Recent Solicitations tab](#recent-solicitations-tab)  
+- [Solicitations tab](#solicitations-tab)  
 - [Manufacturers tab](#manufacturers-tab)  
 - [Technical Characteristics tab](#technical-characteristics-tab)  
-- [End Use Description tab](#end-use-description-tab)  
-- [Packaging Information tab](#packaging-information-tab)  
-- [Procurement Item Description tab](#procurement-item-description-tab)  
+- [End Use tab](#end-use-tab)  
+- [Packaging tab](#packaging-tab)  
+- [PID tab](#pid-tab)  
 - [Recent and pinned searches](#recent-and-pinned-searches)  
 - [Exporting data](#exporting-data)
 
@@ -74,9 +74,9 @@ The **CAGE** column links to the awarded vendor's profile — useful for researc
 
 *Note: this tab is available on the Advanced plan.*
 
-## Recent Solicitations tab
+## Solicitations tab
 
-The Recent Solicitations tab shows active and recently closed solicitations for the part. Each row includes:
+The Solicitations tab shows active and recently closed solicitations for the part. Each row includes:
 
 - **Close Date** — When the bid window closes  
 - **Solicitation \#** — The solicitation identifier. DLA solicitations with a PDF open it in a viewer; SAM.gov opportunities open on SAM.gov.  
@@ -114,21 +114,21 @@ The Technical Characteristics tab shows specifications and attributes of the par
 
 Coverage varies by part: some parts have only one or two characteristics, others have dozens.
 
-## End Use Description tab
+## End Use tab
 
-The End Use Description tab tells you which military platforms or equipment use the part — for example, HEMTT trucks, Oshkosh M-ATV, light hydraulic cranes, or specific weapons systems.
+The End Use tab tells you which military platforms or equipment use the part — for example, HEMTT trucks, Oshkosh M-ATV, light hydraulic cranes, or specific weapons systems.
 
 For suppliers, this is useful context: it tells you which programs your parts feed into, which can inform both bidding strategy and sales conversations with prime contractors.
 
-## Packaging Information tab
+## Packaging tab
 
-The Packaging Information tab has two parts. A **Packaging Data** section lists the part's packaging and preservation codes following government cataloging conventions — for example QUP, PRES MTHD, CLNG/DRY, PRESV MAT, WRAP MAT, CUSH/DUNN MAT, CUSH/DUNN THKNESS, UNIT CONT, OPI, INTRMDTE CONT, and special marking codes. Each code links to its full definition in the **Code Definitions** reference.
+The Packaging tab has two parts. A **Packaging Data** section lists the part's packaging and preservation codes following government cataloging conventions — for example QUP, PRES MTHD, CLNG/DRY, PRESV MAT, WRAP MAT, CUSH/DUNN MAT, CUSH/DUNN THKNESS, UNIT CONT, OPI, INTRMDTE CONT, and special marking codes. Each code links to its full definition in the **Code Definitions** reference.
 
 Below it, a supplemental narrative section (usually titled **Packaging Requirements**) may include military specification references (MIL-DTL-75, FED-STD-313), hazardous material disclosure obligations, and source control directives.
 
-## Procurement Item Description tab
+## PID tab
 
-The Procurement Item Description tab contains the full procurement description for the part — quality requirements, military specifications, compliance standards (including CMMC where applicable), drawing references, and inspection criteria. It's rendered as formatted text with clickable links to referenced standards and documents.
+The PID tab (short for Procurement Item Description) contains the full procurement description for the part — quality requirements, military specifications, compliance standards (including CMMC where applicable), drawing references, and inspection criteria. It's rendered as formatted text with clickable links to referenced standards and documents.
 
 This is dense, formal content. If you're preparing a bid, treat this as the authoritative description of what the government expects from the part you'll supply.
 
@@ -142,7 +142,7 @@ On the Advanced plan, click the pin icon next to a recent search to save it. Pin
 
 ## Exporting data
 
-Several tabs include an **Export CSV** button that downloads the table's data to a spreadsheet — particularly useful for Procurement History, Recent Solicitations, and Manufacturers, where the tables can be large. The export can include a few fields that aren't shown as on-screen columns; the Recent Solicitations export, for example, also carries the solicitation's DPAS rating, source agency, and solicitation type.
+Several tabs include an **Export CSV** button that downloads the table's data to a spreadsheet — particularly useful for Procurement History, Solicitations, and Manufacturers, where the tables can be large. The export can include a few fields that aren't shown as on-screen columns; the Solicitations export, for example, also carries the solicitation's DPAS rating, source agency, and solicitation type.
 
 For more detailed or custom exports, click the **Request a custom report →** link at the bottom of any data table.
 

@@ -39,7 +39,7 @@ Sending an RFQ to a supplier whose stock you found needs the **RFQ** or **RFQ En
 If you've hit a paywall on one of these features, upgrading to Advanced unlocks all of them:
 
 - **Procurement History tab** on part records — Past contract awards with vendors, prices, and quantities for any part  
-- **Recent Solicitations tab** on part records — Active and recently closed solicitations for the part (Free sees a count and upgrade prompt; Basic doesn't see this tab at all)  
+- **Solicitations tab** on part records — Active and recently closed solicitations for the part (Free sees a count and upgrade prompt; Basic doesn't see this tab at all)  
 - **Open Solicitations tab** on vendor profiles — All currently active solicitations relevant to a vendor's product lines  
 - **Pinned searches** — Save frequent searches for quick access from the Parts Search page  
 - **CSV exports** — Download search results, awards data, and other tables for offline analysis  

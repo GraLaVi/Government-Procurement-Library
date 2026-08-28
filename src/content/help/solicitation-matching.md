@@ -75,7 +75,7 @@ Buyers sometimes change a solicitation after posting it — extending the close 
 - **Amended** (yellow) — the solicitation was changed *before* your match was generated. Often the amendment is the reason the match exists (for example, the set-aside flipped to one of yours).  
 - **Updated** (blue, e.g. *"Updated 3d ago"*) — the solicitation has changed *since* your match was generated. Worth a second look, as the close date or requirements may have moved.
 
-Click either badge to open a timeline showing every recorded change on the solicitation — what changed, when, and via which source. The same **Amended** indicator also appears on the **Open Solicitations** (Vendor results) and **Recent Solicitations** (Parts results) tabs, so you can see amendment activity even on solicitations you weren't matched on. See [Viewing solicitations and contracts](/help/solicitations-and-contracts) for how to open the PDF and review amendment history.
+Click either badge to open a timeline showing every recorded change on the solicitation — what changed, when, and via which source. The same **Amended** indicator also appears on the **Open Solicitations** (Vendor results) and **Solicitations** (Parts results) tabs, so you can see amendment activity even on solicitations you weren't matched on. See [Viewing solicitations and contracts](/help/solicitations-and-contracts) for how to open the PDF and review amendment history.
 
 ## Filtering and searching matches
 

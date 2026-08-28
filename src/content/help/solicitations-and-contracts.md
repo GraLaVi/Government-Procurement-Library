@@ -53,14 +53,14 @@ every matching row are kept to a glyph or a few letters.
 
 **A missing badge does not mean "not a fast award."** GPH began recording this indicator recently, and it can only be applied retroactively to solicitations posted within a short window. Many solicitations — including plenty that are open right now — have no indicator recorded, so no badge appears. Read a badge as a positive signal when it's there, and its absence as *unknown* rather than *no*. Coverage of currently quotable solicitations improves over time as older, unmarked solicitations close.
 
-These badges appear wherever GPH lists solicitations: Bid-Matching results, the **Recent Solicitations** tab on a part record, and the **Open Solicitations** tab on a vendor profile.
+These badges appear wherever GPH lists solicitations: Bid-Matching results, the **Solicitations** tab on a part record, and the **Open Solicitations** tab on a vendor profile.
 
 ## Where to find solicitations and contracts
 
 Doc icons and "Amended" badges appear consistently throughout GPH wherever solicitations or contracts are listed:
 
 - **Bid-Matching results** — In your match history, every matched solicitation has a doc icon and amendment badge (if applicable).  
-- **Part records** — On the Recent Solicitations and Procurement History tabs ([Searching for Parts](/help/parts-search)).  
+- **Part records** — On the Solicitations and Procurement History tabs ([Searching for Parts](/help/parts-search)).  
 - **Vendor profiles** — On the Open Solicitations and Recent Awards tabs ([Researching Vendors](/help/vendor-research)).
 
 ## Related articles
