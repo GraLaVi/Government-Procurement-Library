@@ -915,10 +915,10 @@ export function PartDetail({ part }: PartDetailProps) {
       : "Supplier Stock";
 
   const technicalLabel = technicalFetched
-    ? `Technical Characteristics (${technicalTotal})`
+    ? `Characteristics (${technicalTotal})`
     : tabCounts
-      ? `Technical Characteristics (${tabCounts.technical_characteristics_count})`
-      : "Technical Characteristics";
+      ? `Characteristics (${tabCounts.technical_characteristics_count})`
+      : "Characteristics";
 
   const endUseLabel = endUseFetched
     ? `End Use (${endUseTotal})`
@@ -943,10 +943,10 @@ export function PartDetail({ part }: PartDetailProps) {
       : "Packaging";
 
   const pidLabel = procurementItemDescFetched
-    ? `PID (${procurementItemDescription?.has_description && procurementItemDescription?.description?.trim() ? 1 : 0})`
+    ? `Procurement Item Description (${procurementItemDescription?.has_description && procurementItemDescription?.description?.trim() ? 1 : 0})`
     : tabCounts
-      ? `PID (${tabCounts.has_procurement_item_description ? 1 : 0})`
-      : "PID";
+      ? `Procurement Item Description (${tabCounts.has_procurement_item_description ? 1 : 0})`
+      : "Procurement Item Description";
 
   // Tab visibility by tier:
   //   free     → Overview + (light) Solicitations teaser
