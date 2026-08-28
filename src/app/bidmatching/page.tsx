@@ -283,13 +283,17 @@ export default function BidMatchingPage() {
 
   // First click picks the direction that column is actually useful in: the
   // biggest quantity/value first, but the SOONEST close date (that's the
-  // urgent end) and solicitation numbers A-Z. Clicking again flips.
+  // urgent end) and solicitation numbers and NSNs A-Z — an NSN sorts by FSC
+  // first, so ascending is what groups the same commodity class together.
+  // Clicking again flips.
   const handleSort = (key: BidSortKey) => {
     if (key === sortBy) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortBy(key);
-      setSortDir(key === "close_date" || key === "solicitation" ? "asc" : "desc");
+      setSortDir(
+        key === "close_date" || key === "solicitation" || key === "nsn" ? "asc" : "desc",
+      );
     }
   };
 
