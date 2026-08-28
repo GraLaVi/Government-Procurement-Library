@@ -14,9 +14,15 @@ export default function Home() {
       <main>
         <Hero />
         <WhatGPHDoes />
-        <Products />
+        {/* Features before Products on purpose: the plan cards are written in
+            feature vocabulary ("5 profiles with full solicitation view"), so
+            they only parse once Features has taught it. HowItWorks then sits
+            between the two card grids — it's the only section on the page with
+            a different shape, and its first step ("pick your plan, start free")
+            hands straight off to the plan cards that now follow it. */}
         <Features />
         <HowItWorks />
+        <Products />
         <CTA />
       </main>
       <Footer />

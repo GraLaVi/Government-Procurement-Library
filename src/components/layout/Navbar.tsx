@@ -30,18 +30,21 @@ function isGroupActive(items: { href: string }[], pathname: string): boolean {
 }
 
 // Links shown to authenticated users (excludes Pricing — they reach it via /account/billing).
+// Order mirrors the section order on the landing page (see src/app/page.tsx):
+// Features, How It Works, then Products. A menu that jumps around relative to
+// the page it scrolls is disorienting, so these move together.
 const navLinks = [
-  { href: "/#products", label: "Products" },
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How It Works" },
+  { href: "/#products", label: "Products" },
 ];
 
 // Links shown to unauthenticated visitors. Pricing is surfaced here so visitors
 // can compare plans before signing up.
 const visitorNavLinks = [
-  { href: "/#products", label: "Products" },
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How It Works" },
+  { href: "/#products", label: "Products" },
   { href: "/pricing", label: "Pricing" },
 ];
 

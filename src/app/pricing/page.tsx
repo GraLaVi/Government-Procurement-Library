@@ -9,6 +9,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { TermsAcceptanceModal } from "@/components/billing/TermsAcceptanceModal";
+import { PlanComparison } from "@/components/billing/PlanComparison";
 import { clearPendingSignup, readPendingSignup } from "@/lib/signup/pendingSignup";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { ChartIcon, CheckIcon, TargetIcon, ZapIcon } from "@/components/icons";
@@ -944,6 +945,12 @@ function PricingPageContent() {
         })}
 
       </div>
+
+      {/* Feature comparison — the answer to "what does upgrading actually buy
+          me?", which the three plan cards can't give without becoming walls of
+          bullets. Static copy (see PlanComparison), so it renders whenever
+          plans do; hidden in the empty state where there is nothing to buy. */}
+      {!emptyState && !isLoading && <PlanComparison />}
 
       {/* Add-ons + Data Reports — side by side, not stacked full-width panels,
           so similar-looking CTA cards don't repeat down the page. None of

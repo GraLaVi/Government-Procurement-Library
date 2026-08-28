@@ -1,7 +1,5 @@
 import {
   SearchIcon,
-  BellIcon,
-  ChartIcon,
   TargetIcon,
   UsersIcon,
   DatabaseIcon,
@@ -10,71 +8,95 @@ import {
   SendIcon,
 } from "@/components/icons";
 
-const features = [
+// The grid runs at two weights on purpose. A uniform 9-up gave the visitor
+// nine equal targets and no entry point, so the four features we actually
+// lead with are cards with a filled icon tile, and the platform capabilities
+// underneath them are a plain three-up row with no card chrome — evidence
+// that the data is real, not four more things to evaluate.
+//
+// Two cards were merged in getting here, and the copy still covers both:
+// match alerts live inside Bid-Matching (they're how it delivers, not a
+// separate product), and the old "CAGE Code Intelligence" / "Award & Vendor
+// Intelligence" pair is one "Vendor & award intelligence" entry.
+//
+// How each one is sold is a badge rather than a closing sentence, so the
+// "is this included?" question is answered before the description is read.
+// The wording tracks the cards in Products.tsx and the panels on /pricing;
+// change them together.
+
+type Badge = { label: string; tone: "included" | "addon" };
+
+const heroFeatures: Array<{
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  badge: Badge;
+  description: string;
+}> = [
   {
     icon: TargetIcon,
     title: "Bid-Matching",
+    badge: { label: "Every plan", tone: "included" },
     description:
-      "Set up profiles based on NIIN/NSN, part descriptions, set-asides, and other criteria. GPH automatically matches incoming solicitations from DIBBS, DLA, and SAM.gov against your profiles so relevant opportunities surface without manual searching.",
-  },
-  {
-    icon: BellIcon,
-    title: "Solicitation Match Alerts",
-    description:
-      "Get notified when new solicitations match your bid-matching profiles. Weekly on Free, daily on Basic, immediate on Advanced — delivered by email so you never miss a window.",
-  },
-  {
-    icon: DatabaseIcon,
-    title: "NSN/NIIN Parts Database",
-    description:
-      "Search by NIIN, NSN, part description, solicitation number, contract number, and more. See complete part data, cross-references, management codes, and linked solicitation history — all in one record.",
-  },
-  {
-    icon: ChartIcon,
-    title: "CAGE Code Intelligence",
-    description:
-      "Look up any vendor by CAGE code, entity name, or UEI to see associated contracts, award history, and active solicitations. Understand who is competing and winning.",
-  },
-  {
-    icon: UsersIcon,
-    title: "Award & Vendor Intelligence",
-    description:
-      "See which vendors have won past awards for a specific part and which vendors have previously won on parts with open solicitations now — so you know who you're up against before you bid.",
-  },
-  {
-    icon: SearchIcon,
-    title: "Unified Federal Data",
-    description:
-      "DIBBS, DLA, and SAM.gov solicitations aggregated into a single searchable platform. No more toggling between portals or running the same search three different ways.",
-  },
-  // The last three are the add-ons and Supplier Stock. Each names how it is
-  // sold in its closing sentence, the way the alerts card names its tiers —
-  // a feature grid that reads as "all of this is included" sets up the wrong
-  // expectation at the pricing table. The wording tracks the cards in
-  // Products.tsx and the panels on /pricing; change them together.
-  {
-    icon: ZapIcon,
-    title: "Procurement Analytics",
-    description:
-      "See your market and your place in it: win rate, competitor leaderboard, the parts worth getting qualified on, and DLA demand forecasts and stock levels on the parts you supply — with alerts when one goes on backorder. An add-on on the Advanced plan.",
-  },
-  {
-    icon: BoxIcon,
-    title: "Supplier Stock",
-    description:
-      "Upload your inventory and it shows up on every part record you research, so you always know what you can quote off the shelf. Sharing is free on every plan, each field shared or withheld separately — share your stock and you see what the rest of the network has.",
+      "Profile what you sell by NIIN/NSN, part description, and set-aside. GPH matches every incoming DIBBS, DLA, and SAM.gov solicitation against it and tells you — weekly on Free, daily on Basic, the moment it lands on Advanced.",
   },
   {
     icon: SendIcon,
     title: "Requests for Quote",
+    badge: { label: "Add-on", tone: "addon" },
     description:
-      "Send structured RFQs to manufacturers and stocking suppliers without leaving the part record, and collect their quotes in one place — with a shared batch cart, a private vendor contact book, and response tracking. An add-on on any paid plan.",
+      "Send structured RFQs to manufacturers and stocking suppliers without leaving the part record, and collect every quote in one place — shared batch cart, private vendor contact book, response tracking.",
+  },
+  {
+    icon: ZapIcon,
+    title: "Procurement Analytics",
+    badge: { label: "Add-on", tone: "addon" },
+    description:
+      "Your win rate, the competitor leaderboard, and the parts worth getting qualified on — plus DLA demand forecasts and stock levels on what you supply, with an alert the moment one goes on backorder.",
+  },
+  {
+    icon: BoxIcon,
+    title: "Supplier Stock",
+    badge: { label: "Free on every plan", tone: "included" },
+    description:
+      "Upload your inventory and it appears on every part record you research, so you always know what you can quote off the shelf. Share it — field by field, your call — and you see what the rest of the network has.",
   },
 ];
 
+const supportingFeatures: Array<{
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}> = [
+  {
+    icon: DatabaseIcon,
+    title: "NSN/NIIN parts database",
+    description:
+      "Search by NIIN, NSN, description, solicitation or contract number — full part data, cross-references, and linked history in one record.",
+  },
+  {
+    icon: UsersIcon,
+    title: "Vendor & award intelligence",
+    description:
+      "Look up any vendor by CAGE, name, or UEI: award history, who has won this part before, and what they have open right now.",
+  },
+  {
+    icon: SearchIcon,
+    title: "Unified federal data",
+    description:
+      "DIBBS, DLA, and SAM.gov in one searchable place — no toggling portals or running the same search three times.",
+  },
+];
+
+// Included vs add-on is the distinction the badge exists to draw, so it gets
+// two colors rather than two labels in the same pill.
+const badgeToneClass: Record<Badge["tone"], string> = {
+  included: "bg-success/10 text-success",
+  addon: "bg-primary/10 text-primary",
+};
+
 export function Features() {
   return (
-    <section id="features" className="py-20 lg:py-32 bg-muted-light">
+    <section id="features" className="py-20 lg:py-32">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto">
@@ -82,28 +104,72 @@ export function Features() {
             Everything You Need to Win Federal Contracts
           </h2>
           <p className="mt-4 text-lg text-muted dark:text-foreground/70">
-            Purpose-built tools for defense suppliers working with DLA, DIBBS, and military service branches
+            Purpose-built for suppliers selling parts to DLA, DIBBS, and the military service branches
           </p>
         </div>
 
-        {/* Features Grid */}
-        <div className="mt-16 grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="bg-white dark:bg-card-bg rounded-xl p-6 lg:p-8 border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
-            >
-              <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center">
-                <feature.icon className="w-6 h-6 text-primary" />
+        {/* Lead features — 2-up so the copy has room to breathe. Reading order
+            is the priority order: bid-matching, RFQ, analytics, supplier stock. */}
+        <div className="mt-16 grid md:grid-cols-2 gap-6 lg:gap-8">
+          {heroFeatures.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <div
+                key={feature.title}
+                className="bg-white dark:bg-card-bg rounded-xl p-6 lg:p-8 border border-border hover:border-primary/30 hover:shadow-lg transition-all duration-300"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-xl font-semibold text-secondary dark:text-card-foreground">
+                      {feature.title}
+                    </h3>
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${badgeToneClass[feature.badge.tone]}`}
+                    >
+                      {feature.badge.label}
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-4 text-muted dark:text-card-foreground/80 leading-relaxed">
+                  {feature.description}
+                </p>
               </div>
-              <h3 className="mt-4 text-xl font-semibold text-secondary dark:text-card-foreground">
-                {feature.title}
-              </h3>
-              <p className="mt-2 text-muted dark:text-card-foreground/80 leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
-          ))}
+            );
+          })}
+        </div>
+
+        {/* Supporting capabilities — deliberately not cards. Same content
+            weight as a card would carry, a fraction of the visual weight, so
+            the four above keep the emphasis. */}
+        <div className="mt-14">
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-semibold tracking-widest uppercase text-muted dark:text-foreground/60">
+              Built on the data underneath
+            </span>
+            <span className="h-px flex-1 bg-border" aria-hidden="true" />
+          </div>
+
+          <div className="mt-8 grid md:grid-cols-3 gap-8">
+            {supportingFeatures.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div key={feature.title} className="flex items-start gap-3">
+                  <Icon className="w-5 h-5 text-primary flex-shrink-0 mt-1" />
+                  <div>
+                    <h3 className="text-base font-semibold text-secondary dark:text-foreground">
+                      {feature.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted dark:text-foreground/70 leading-relaxed">
+                      {feature.description}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>

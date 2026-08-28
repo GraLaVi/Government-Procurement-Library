@@ -3,8 +3,9 @@ import { CookiePreferencesLink } from "@/components/layout/CookiePreferencesLink
 
 const footerLinks = {
   Product: [
-    { href: "/#products", label: "Products" },
+    // Same order as the landing page sections and the Navbar.
     { href: "/#features", label: "Features" },
+    { href: "/#products", label: "Products" },
     { href: "/pricing", label: "Pricing" },
     { href: "/pricing", label: "Sign Up" },
   ],
