@@ -169,6 +169,15 @@ const DEFAULT_PAGE_SIZE = 50;
 // DEFAULT_PAGE_SIZE will reach everyone who never picked one.
 const PAGE_SIZE_STORAGE_KEY = "bidmatching-page-size";
 
+// Soonest close date first. Without a sort the API falls back to newest match
+// first, which is not a column — no header could reproduce it, so one click on
+// any other column lost that order until a reload. Close date ascending is the
+// urgent end of the list and IS a column, so the default is now somewhere the
+// user can get back to. NULLs sink in both directions server-side, so
+// solicitations with no stated close date never lead the page.
+const DEFAULT_SORT_BY: BidSortKey = "close_date";
+const DEFAULT_SORT_DIR: "asc" | "desc" = "asc";
+
 export default function BidMatchingPage() {
   const { isLoading: authLoading, hasProductAccessByPrefix } = useAuth();
 
@@ -205,8 +214,8 @@ export default function BidMatchingPage() {
   const [appliedSearch, setAppliedSearch] = useState("");
   // Sorting is server-side: the page holds one slice of N rows, so sorting
   // here would only reorder the slice already on screen.
-  const [sortBy, setSortBy] = useState<BidSortKey>("");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [sortBy, setSortBy] = useState<BidSortKey>(DEFAULT_SORT_BY);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(DEFAULT_SORT_DIR);
   const [interestedOnly, setInterestedOnly] = useState(false);
   // Keep only postings that can actually be quoted. SAM buckets only — every
   // DIBBS row is a solicitation on the street, so the backend ignores it there
@@ -701,15 +710,16 @@ export default function BidMatchingPage() {
                 className="flex-1 min-w-0 border-0 bg-card-bg text-foreground text-sm px-3 py-1.5 focus:outline-none"
               />
             </div>
-            {(hardOnly || appliedSearch || sortBy || interestedOnly || biddableOnly) && (
+            {(hardOnly || appliedSearch || interestedOnly || biddableOnly
+              || sortBy !== DEFAULT_SORT_BY || sortDir !== DEFAULT_SORT_DIR) && (
               <button
                 type="button"
                 onClick={() => {
                   setHardOnly(false);
                   setSearchInput("");
                   setAppliedSearch("");
-                  setSortBy("");
-                  setSortDir("desc");
+                  setSortBy(DEFAULT_SORT_BY);
+                  setSortDir(DEFAULT_SORT_DIR);
                   setInterestedOnly(false);
                   setBiddableOnly(false);
                 }}
