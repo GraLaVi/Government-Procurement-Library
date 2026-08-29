@@ -159,13 +159,15 @@ interface ResultsResponse {
 // 200 is the server's ceiling (page_size is Query(le=200) on the results
 // endpoint), so the widest choice here is the widest one the API will serve.
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
-const DEFAULT_PAGE_SIZE = 100;
-// Key bumped with the default. The old key holds a "50" that most visitors
-// never chose: the size used to be persisted by an effect that also ran on
-// mount, so simply opening the page wrote the default back as a preference.
-// Reading that key would pin every existing user to the old default forever
-// and make this constant unchangeable in practice.
-const PAGE_SIZE_STORAGE_KEY = "bidmatching-page-size-v2";
+const DEFAULT_PAGE_SIZE = 50;
+// The original key, deliberately. It holds a "50" for most visitors — the
+// size used to be persisted by an effect that also ran on mount, so simply
+// opening the page wrote the default back as though it had been chosen — and
+// with the default at 50 that stored value is harmless, while reading the key
+// still honours anyone who genuinely picked 25, 100 or 200. Only a real
+// choice is written now (see handlePageSizeChange), so a future change to
+// DEFAULT_PAGE_SIZE will reach everyone who never picked one.
+const PAGE_SIZE_STORAGE_KEY = "bidmatching-page-size";
 
 export default function BidMatchingPage() {
   const { isLoading: authLoading, hasProductAccessByPrefix } = useAuth();
