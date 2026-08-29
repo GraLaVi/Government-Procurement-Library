@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/DataTable";
+import { TableCard, filterSelectClass } from "@/components/rfq/TableCard";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -53,6 +54,17 @@ export function ItemsTab({ isAdmin }: ItemsTabProps) {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Debounced apply and page reset, mirroring /rfq/worklist: no Search button,
+  // results follow typing. offset resets here rather than in a submit handler
+  // because the query can now change without a submit.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setAppliedQ(q.trim());
+      setOffset(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [q]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -246,35 +258,54 @@ export function ItemsTab({ isAdmin }: ItemsTabProps) {
   }, [isAdmin, openEdit]);
 
   return (
-    <div className="space-y-3">
-      <form
-        className="flex flex-wrap items-center gap-2"
-        onSubmit={(e) => { e.preventDefault(); setOffset(0); setAppliedQ(q.trim()); }}
-      >
-        <input
-          type="search"
-          className="w-64 rounded border border-border bg-card-bg px-2.5 py-1.5 text-sm text-foreground"
-          placeholder="Search SKU, part number, or NSN"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <select
-          className="rounded border border-border bg-card-bg px-2 py-1.5 text-sm text-foreground"
-          value={matchFilter}
-          onChange={(e) => { setOffset(0); setMatchFilter(e.target.value); }}
-        >
-          <option value="">All match states</option>
-          <option value="unmatched">Not matched</option>
-          <option value="ambiguous">Ambiguous</option>
-          <option value="conflict">Conflict</option>
-        </select>
-        <Button size="sm" variant="outline" type="submit">Search</Button>
-        <span className="text-xs text-muted ml-auto">
-          {total.toLocaleString()} line{total === 1 ? "" : "s"}
-        </span>
-      </form>
-
-      {error && <p className="text-xs text-error">{error}</p>}
+    <TableCard
+      header={
+        <>
+          {/* Label and control as one <label>, so the caption reads as part of
+              its own select rather than floating between two. Same shape as
+              the worklist's filter row. */}
+          <label className="inline-flex items-center gap-1.5 text-[11px] text-muted whitespace-nowrap">
+            Match state
+            <select
+              className={filterSelectClass}
+              value={matchFilter}
+              onChange={(e) => { setOffset(0); setMatchFilter(e.target.value); }}
+            >
+              <option value="">All</option>
+              <option value="unmatched">Not matched</option>
+              <option value="ambiguous">Ambiguous</option>
+              <option value="conflict">Conflict</option>
+            </select>
+          </label>
+          {/* One bordered control with a clear button, matching the worklist
+              and bid-matching search. No field selector: this searches SKU,
+              part number and NSN together, so there is nothing to scope. */}
+          <div className="flex-1 min-w-[240px] max-w-md flex items-stretch rounded-lg border border-border overflow-hidden focus-within:border-primary">
+            <input
+              type="text"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search SKU, part number, or NSN"
+              className="flex-1 min-w-0 border-0 bg-card-bg text-foreground text-xs px-2.5 py-1 focus:outline-none"
+            />
+            {q && (
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                className="px-2 text-muted hover:text-foreground"
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <span className="ml-auto text-xs text-muted">
+            {total.toLocaleString()} line{total === 1 ? "" : "s"}
+          </span>
+        </>
+      }
+    >
+      {error && <p className="text-xs text-error mb-3">{error}</p>}
 
       <DataTable
         data={items}
@@ -285,7 +316,7 @@ export function ItemsTab({ isAdmin }: ItemsTabProps) {
       />
 
       {total > PAGE_SIZE && (
-        <div className="flex items-center justify-end gap-2">
+        <div className="mt-3 flex items-center justify-end gap-2">
           <Button size="sm" variant="outline" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>
             Previous
           </Button>
@@ -355,6 +386,6 @@ export function ItemsTab({ isAdmin }: ItemsTabProps) {
         confirmLabel="Remove"
         isLoading={deleting}
       />
-    </div>
+    </TableCard>
   );
 }

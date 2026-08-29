@@ -95,6 +95,13 @@ export function SortHeader<K extends string>({
     </th>
   );
 }
+/** Compact filter <select> in a TableCard header. Lives here rather than in
+ *  one page so every table that grows a filter row looks like the others —
+ *  it was defined privately in the RFQ worklist until the inventory Items tab
+ *  needed the same control. */
+export const filterSelectClass =
+  "px-1.5 py-0.5 rounded border border-border bg-card-bg text-card-foreground text-xs cursor-pointer focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
+
 export function TableCard({
   as: Tag = "div",
   header,
