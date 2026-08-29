@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AccessDeniedPageProps {
   featureName: string;
@@ -15,6 +16,12 @@ export function AccessDeniedPage({
   description,
   benefits,
 }: AccessDeniedPageProps) {
+  // Read here rather than as a prop: every one of this component's call sites
+  // is a gated page that would otherwise have to remember to pass it, and the
+  // one that forgot would be the one showing a member a button they cannot use.
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes("admin") ?? false;
+
   return (
     <div className="bg-card-bg rounded-lg border border-border p-8 max-w-2xl mx-auto">
       <div className="text-center mb-6">
@@ -75,23 +82,32 @@ export function AccessDeniedPage({
         </ul>
       </div>
 
-      {/* How to Get Access */}
+      {/* How to Get Access. Members are told to ask; only an admin is told to
+          buy, because only an admin can. */}
       <div className="bg-muted-light rounded-lg p-4 mb-6">
         <h2 className="text-sm font-semibold text-foreground mb-2">How to Get Access</h2>
         <p className="text-sm text-muted">
-          To access this feature, please contact your account administrator or upgrade your subscription plan.
+          {isAdmin
+            ? "To access this feature, upgrade your subscription plan or add it as an add-on."
+            : "Ask your account administrator to add this to your plan — they manage your subscription and seats."}
         </p>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
-        <Button href="/pricing" variant="primary" size="md">
-          View Pricing
-        </Button>
-        <Button href="/account/billing" variant="outline" size="md">
-          Manage Billing
-        </Button>
-      </div>
+      {/* Admin-only. /account/billing redirects a member straight back to
+          /account ("Billing is managed by your account administrator"), so
+          this button used to be a dead end for exactly the people most likely
+          to hit this page. /pricing would load, but a member cannot act on it
+          either — buying is the admin's to do. */}
+      {isAdmin && (
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button href="/pricing" variant="primary" size="md">
+            View Pricing
+          </Button>
+          <Button href="/account/billing" variant="outline" size="md">
+            Manage Billing
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
