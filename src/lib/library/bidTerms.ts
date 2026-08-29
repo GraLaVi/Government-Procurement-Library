@@ -34,10 +34,8 @@ export interface SolicitationBidTerms {
   hubzone_preference?: string | null;
   clause_fillins?: string | null;
   // Acquisition Method Suffix Code — whether the government holds a technical
-  // data package it can release. Its vocabulary lives in
-  // library_code_definitions rather than code_definitions, but the server
-  // hands it over under the same shape as the other eight, so nothing here
-  // has to know that.
+  // data package it can release. Resolved against the AMSC vocabulary like
+  // any other coded term.
   amsc?: string | null;
   // DPAS priority rating, "<priority>-<program>" (e.g. "DO-C9", "DX-A1").
   // Two codes in one string, resolved against DPAS_PRIORITY and DPAS_PROGRAM.
@@ -106,12 +104,17 @@ export const BID_TERM_SPECS: readonly BidTermSpec[] = [
     // 21 characters it is no wider than "Free trade agreements" already is.
     name: "Technical data (AMSC)",
     hint: "Whether the government can release a data package",
-    // The codes that mean you cannot simply obtain the drawing and make the
-    // part: D/H/Q (no data, insufficient, inadequate) and B/C/P (source
-    // control drawing, engineering source approval, proprietary). G and Z are
-    // the open cases and stay quiet. Grouped the way the column's own DB
-    // comment groups them, rather than by our own reading of the vocabulary.
-    notable: ["B", "C", "D", "H", "P", "Q"],
+    // Every code that stands between you and supplying the part, whether the
+    // obstacle is the data or the approval:
+    //   B/C/P/R  the source is restricted — source control drawing, engineering
+    //            source approval, proprietary data, or no rights to add sources
+    //   D/H/Q    the package itself is missing, illegible or inadequate
+    //   S/T      you must already be an approved source or on the QPL
+    // G and Z (complete data, off the shelf) are the open cases and stay quiet,
+    // as do the codes that only explain why DLA has not broken the buy out —
+    // L, O, U, Y — and the added-cost ones, K/M/N/V, which raise your price
+    // without deciding whether you can bid at all.
+    notable: ["B", "C", "D", "H", "P", "Q", "R", "S", "T"],
   },
   {
     field: "higher_level_quality",
