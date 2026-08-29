@@ -289,6 +289,10 @@ export const WORK_STATUS_ORDER: RfqWorkStatus[] = [
 export interface RfqWorkItem {
   solicitation_id: number;
   solicitation_number: string | null;
+  // Sent, deliberately not displayed. The worklist is DIBBS-only, so this is
+  // always an ingestion source tag (DIBBS2, DSCR, FBO SA) naming our feed
+  // rather than the agency — which the solicitation prefix already tells a
+  // bidder. Removed from the row for the same reason as on /bidmatching.
   agency_code: string | null;
   issue_date: string | null;
   close_date: string | null;

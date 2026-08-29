@@ -15,7 +15,8 @@ import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import { QuoteVendorPickerModal } from "@/components/rfq/QuoteVendorPickerModal";
 import { QuoteComparisonModal } from "@/components/rfq/QuoteComparisonModal";
 import {
-  SortHeader, TableCard, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+  SortHeader, TableCard, filterSelectClass, rowClass, tableClass, tableHeadRowClass,
+  tableWrapClass, tdClass, thClass,
 } from "@/components/rfq/TableCard";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -124,7 +125,7 @@ type SearchField = (typeof SEARCH_FIELDS)[number]["value"];
 type SolStatusFilter = (typeof SOL_STATUS_OPTIONS)[number];
 
 type Scope = "mine" | "unassigned" | "all";
-type SortKey = "close_date" | "solicitation_number" | "sol_status" | "work_status" | "set_aside" | "assignee" | "estimated_value";
+type SortKey = "posted" | "close_date" | "solicitation_number" | "sol_status" | "work_status" | "set_aside" | "assignee" | "estimated_value";
 
 const inputClass =
   "px-2.5 py-1.5 rounded-md border border-border bg-card-bg text-card-foreground text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
@@ -133,9 +134,6 @@ const inputClass =
 // the bulk-assign control keeps: that one appears beside a <Button> and has to
 // match its height, while these sit above the table all day and read better as
 // chrome than as inputs.
-const filterSelectClass =
-  "px-1.5 py-0.5 rounded border border-border bg-card-bg text-card-foreground text-xs cursor-pointer focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20";
-
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-").map(Number);
@@ -870,6 +868,7 @@ export default function RfqWorklistPage() {
                 <SortHeader label="Solicitation" sortKey="solicitation_number" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                 <th className={`${thClass} whitespace-nowrap`}>PR #</th>
                 <SortHeader label="RFQ Progress" sortKey="work_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
+                <SortHeader label="Posted" sortKey="posted" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
                 <SortHeader label="Close date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
                 <SortHeader label="Set-aside" sortKey="set_aside" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                 <SortHeader label="Est. value" sortKey="estimated_value" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
@@ -1022,9 +1021,6 @@ export default function RfqWorklistPage() {
                             </Link>
                           )}
                         </div>
-                        {item.agency_code && (
-                          <div className="text-xs text-muted mt-0.5">{item.agency_code}</div>
-                        )}
                       </td>
                       <td className={`${tdClass} font-mono whitespace-nowrap`}>
                         {item.pr_numbers.length === 0 ? (
@@ -1046,6 +1042,15 @@ export default function RfqWorklistPage() {
                           sharedCount={item.rfq_count}
                           onChange={(next) => patchStatus(item, next)}
                         />
+                      </td>
+                      {/* Posted is the date the solicitation hit the street and
+                          nothing else — an amendment does NOT overwrite it. The
+                          amendment pill beside the solicitation number already
+                          carries "Latest change: …" in its tooltip and opens the
+                          full timeline, so the row states both facts instead of
+                          replacing one with the other. */}
+                      <td className={`${tdClass} whitespace-nowrap text-muted`}>
+                        {formatDate(item.issue_date)}
                       </td>
                       <td className={`${tdClass} whitespace-nowrap`}>
                         <span className={dtc != null && dtc <= 3 ? "text-error font-semibold" : "text-foreground"}>
@@ -1095,7 +1100,7 @@ export default function RfqWorklistPage() {
                     </tr>
                     {isOpen && (
                       <tr className="bg-muted-light/30">
-                        <td colSpan={10} className="px-6 py-3">
+                        <td colSpan={11} className="px-6 py-3">
                           <div className="space-y-4">
                           {/* Whether this solicitation is biddable at all, and
                               what bidding costs — above the parts, because it
