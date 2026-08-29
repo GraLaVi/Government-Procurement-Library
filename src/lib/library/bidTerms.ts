@@ -99,7 +99,12 @@ export const BID_TERM_SPECS: readonly BidTermSpec[] = [
   {
     field: "amsc",
     codeType: "AMSC",
-    name: "Technical data",
+    // The acronym rides along because that is what vendors call it — the
+    // panel already does this where the trade name IS the name (FOB point,
+    // HUBZone preference, DPAS rating). "Technical data" stays in front of it
+    // so the column still reads to someone who has never seen an AMSC, and at
+    // 21 characters it is no wider than "Free trade agreements" already is.
+    name: "Technical data (AMSC)",
     hint: "Whether the government can release a data package",
     // The codes that mean you cannot simply obtain the drawing and make the
     // part: D/H/Q (no data, insufficient, inadequate) and B/C/P (source
