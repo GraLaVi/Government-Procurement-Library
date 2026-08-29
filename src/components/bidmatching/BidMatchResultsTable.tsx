@@ -92,6 +92,10 @@ interface BidMatchResult {
   // True when this DIBBS solicitation has a PDF on disk (always false for SAM).
   has_pdf?: boolean;
   solicitation_number: string | null;
+  // Sent, deliberately not displayed. On DIBBS it is an ingestion source tag
+  // (DIBBS2, DSCR, FBO SA) that names our feed, not the agency; on SAM it is
+  // the buying department, which the source dropdown and the notice prefix
+  // already establish. Both read as noise under the solicitation number.
   agency_code: string | null;
   // SAM rows only: the stage of the posting ("Solicitation", "Presolicitation",
   // "Sources Sought", "Combined Synopsis/Solicitation"). The early-stage two
@@ -580,9 +584,6 @@ export function BidMatchResultsTable({
                         <DemandSignalChip signal={result.demand_signal}
                         />
                       </div>
-                      {result.agency_code && (
-                        <div className="text-[11px] text-muted leading-tight">{result.agency_code}</div>
-                      )}
                     </td>
                     {/* Primary line item. "+N more" expands the row rather than
                         opening a modal — the full list renders there. */}

@@ -159,8 +159,13 @@ interface ResultsResponse {
 // 200 is the server's ceiling (page_size is Query(le=200) on the results
 // endpoint), so the widest choice here is the widest one the API will serve.
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200] as const;
-const DEFAULT_PAGE_SIZE = 50;
-const PAGE_SIZE_STORAGE_KEY = "bidmatching-page-size";
+const DEFAULT_PAGE_SIZE = 100;
+// Key bumped with the default. The old key holds a "50" that most visitors
+// never chose: the size used to be persisted by an effect that also ran on
+// mount, so simply opening the page wrote the default back as a preference.
+// Reading that key would pin every existing user to the old default forever
+// and make this constant unchangeable in practice.
+const PAGE_SIZE_STORAGE_KEY = "bidmatching-page-size-v2";
 
 export default function BidMatchingPage() {
   const { isLoading: authLoading, hasProductAccessByPrefix } = useAuth();
@@ -227,13 +232,6 @@ export default function BidMatchingPage() {
     } catch { /* ignore */ }
     setPageSizeInitialized(true);
   }, []);
-
-  useEffect(() => {
-    if (!pageSizeInitialized) return;
-    try {
-      localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(pageSize));
-    } catch { /* ignore */ }
-  }, [pageSize, pageSizeInitialized]);
 
   useEffect(() => {
     // Reset to page 1 whenever the filters or sort change so we don't land on
@@ -451,6 +449,12 @@ export default function BidMatchingPage() {
   const handlePageSizeChange = (size: number) => {
     setPageSize(size);
     setPage(1);
+    // Written here rather than in an effect on `pageSize`, which also fired on
+    // mount and so stored the default as if the user had picked it. Only a
+    // deliberate choice is remembered; everyone else follows the default.
+    try {
+      localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(size));
+    } catch { /* ignore */ }
   };
 
   // Prints the page of results currently on screen — filters, sort and
