@@ -3,12 +3,11 @@ import { CheckIcon } from "@/components/icons";
 
 // Static comparison copy for /pricing. Deliberately not driven off the plans
 // API: that payload carries prices, seat ceilings and max_customer_users, but
-// not the feature_limits keys the numeric rows below need (max_profiles,
-// max_conditions_per_profile live under products.feature_limits and are never
-// serialised to the client). Surfacing them properly is an API change; until
-// then these are copy, and they have to be re-checked against
-// products.feature_limits whenever a tier's limits are edited in admin
-// /billing/settings.
+// not the feature_limits keys the numeric rows below need (max_profiles lives
+// under products.feature_limits and is never serialised to the client).
+// Surfacing it properly is an API change; until then these are copy, and they
+// have to be re-checked against products.feature_limits whenever a tier's
+// limits are edited in admin /billing/settings.
 //
 // The numbers below were read from feature_limits on the DEV business
 // database. Confirm against prod before this ships.
@@ -59,7 +58,6 @@ const groups: Group[] = [
     title: "Bid-matching",
     rows: [
       { label: "Matching profiles", free: val("1"), basic: val("5"), advanced: val("20") },
-      { label: "Conditions per profile", free: val("5"), basic: val("20"), advanced: val("100") },
       {
         label: "Match alerts",
         free: val("Weekly"),
