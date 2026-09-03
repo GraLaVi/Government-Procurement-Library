@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // POST /api/billing/checkout-session — starts a Stripe Checkout session for
 // the logged-in customer. Body: { price_id, seat_quantity }.
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
       body: JSON.stringify(body),
     });
@@ -33,6 +35,7 @@ export async function POST(request: NextRequest) {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
           body: JSON.stringify(body),
         });

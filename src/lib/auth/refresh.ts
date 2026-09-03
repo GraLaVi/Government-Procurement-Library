@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from './config';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 import { setAccessCookie, setRefreshCookie } from './cookies';
 
 type CookieStore = Awaited<ReturnType<typeof cookies>>;
@@ -33,10 +34,16 @@ export async function refreshSession(store: CookieStore): Promise<RefreshResult>
   }
 
   try {
+    // Forward the real client IP and User-Agent. Rotation mints a NEW
+    // customer_refresh_tokens row on every refresh, and the admin Access tab
+    // identifies each device by the newest row in its family — so without
+    // these headers a session's IP/device reverts to this Next server an hour
+    // after login, no matter where the user actually is.
     const response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(await buildForwardHeadersFromContext()),
       },
       body: JSON.stringify({ refresh_token: refreshToken }),
     });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_CONFIG } from "@/lib/auth/config";
 import { getAccessToken, refreshAccessToken } from "@/lib/auth/getAccessToken";
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/library/solicitations/[id]/amendments
 // Proxies to: GET /api/v1/library/solicitations/{id}/amendments
@@ -23,14 +24,14 @@ export async function GET(
     const url = `${AUTH_CONFIG.API_BASE_URL}/library/solicitations/${solicitationId}/amendments`;
 
     let response = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
     });
 
     if (response.status === 401) {
       const newToken = await refreshAccessToken();
       if (newToken) {
         response = await fetch(url, {
-          headers: { Authorization: `Bearer ${newToken}` },
+          headers: { Authorization: `Bearer ${newToken}`, ...(await buildForwardHeadersFromContext()) },
         });
       } else {
         return NextResponse.json({ error: "Session expired. Please log in again." }, { status: 401 });

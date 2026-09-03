@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // DELETE /api/auth/me/recent-actions/[id] - Delete recent action
 export async function DELETE(
@@ -31,6 +32,7 @@ export async function DELETE(
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -42,6 +44,7 @@ export async function DELETE(
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {
@@ -70,5 +73,4 @@ export async function DELETE(
     );
   }
 }
-
 

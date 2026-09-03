@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/library/vendor/[cageCode]/bookings - Get vendor booking history
 // Proxies to: GET /api/v1/library/vendor/{cage_code}/bookings
@@ -41,6 +42,7 @@ export async function GET(
     let response = await fetch(url.toString(), {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -51,6 +53,7 @@ export async function GET(
         response = await fetch(url.toString(), {
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {

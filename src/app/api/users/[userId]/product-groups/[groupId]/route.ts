@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // POST /api/users/[userId]/product-groups/[groupId] — assign a product group to a user.
 // Mirrors the per-product assignment path but for groups; required when a
@@ -19,7 +20,7 @@ export async function POST(
     const upstream = `${AUTH_CONFIG.API_BASE_URL}/users/${userId}/product-groups/${groupId}`;
     let response = await fetch(upstream, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', ...(await buildForwardHeadersFromContext()) },
     });
 
     if (response.status === 401) {
@@ -27,7 +28,7 @@ export async function POST(
       if (newToken) {
         response = await fetch(upstream, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${newToken}`, 'Content-Type': 'application/json' },
+          headers: { Authorization: `Bearer ${newToken}`, 'Content-Type': 'application/json', ...(await buildForwardHeadersFromContext()) },
         });
       } else {
         return NextResponse.json({ error: 'Session expired. Please log in again.' }, { status: 401 });
@@ -63,7 +64,7 @@ export async function DELETE(
     const upstream = `${AUTH_CONFIG.API_BASE_URL}/users/${userId}/product-groups/${groupId}`;
     let response = await fetch(upstream, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
     });
 
     if (response.status === 401) {
@@ -71,7 +72,7 @@ export async function DELETE(
       if (newToken) {
         response = await fetch(upstream, {
           method: 'DELETE',
-          headers: { Authorization: `Bearer ${newToken}` },
+          headers: { Authorization: `Bearer ${newToken}`, ...(await buildForwardHeadersFromContext()) },
         });
       } else {
         return NextResponse.json({ error: 'Session expired. Please log in again.' }, { status: 401 });

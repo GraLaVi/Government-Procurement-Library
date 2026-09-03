@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // POST /api/billing/subscriptions/{id}/seats — body: { seat_quantity }
 // Changes the billed seat count (per-user quantity + user cap) on a per-seat
@@ -22,7 +23,7 @@ export async function POST(
 
     let response = await fetch(upstream, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
       body: JSON.stringify(body),
     });
 
@@ -31,7 +32,7 @@ export async function POST(
       if (newToken) {
         response = await fetch(upstream, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${newToken}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${newToken}`, ...(await buildForwardHeadersFromContext()) },
           body: JSON.stringify(body),
         });
       } else {

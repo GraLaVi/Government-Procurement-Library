@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/auth/me/products - Get current user's products
 // Proxies to: GET /api/v1/auth/me/products
@@ -18,6 +19,7 @@ export async function GET(_request: NextRequest) {
     let response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/me/products`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -28,6 +30,7 @@ export async function GET(_request: NextRequest) {
         response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/me/products`, {
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {

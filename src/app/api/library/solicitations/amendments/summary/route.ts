@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_CONFIG } from "@/lib/auth/config";
 import { getAccessToken, refreshAccessToken } from "@/lib/auth/getAccessToken";
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // POST /api/library/solicitations/amendments/summary
 // Proxies to: POST /api/v1/library/solicitations/amendments/summary
@@ -20,6 +21,7 @@ export async function POST(request: NextRequest) {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
+        ...(await buildForwardHeadersFromContext()),
       },
       body,
     });
@@ -32,6 +34,7 @@ export async function POST(request: NextRequest) {
           headers: {
             Authorization: `Bearer ${newToken}`,
             "Content-Type": "application/json",
+            ...(await buildForwardHeadersFromContext()),
           },
           body,
         });

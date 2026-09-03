@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/auth/me/company-name - Resolve the current user's display company name.
 // Proxies to: GET /api/v1/auth/me/company-name
@@ -18,6 +19,7 @@ export async function GET(_request: NextRequest) {
     let response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/me/company-name`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -27,6 +29,7 @@ export async function GET(_request: NextRequest) {
         response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/me/company-name`, {
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {

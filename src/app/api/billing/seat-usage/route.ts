@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/billing/seat-usage — per-product seat usage for the logged-in user's customer.
 // Drives the seat counter on /account/users when assigning products to team members.
@@ -12,14 +13,14 @@ export async function GET() {
     }
 
     let response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/billing/seat-usage`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
     });
 
     if (response.status === 401) {
       const newToken = await refreshAccessToken();
       if (newToken) {
         response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/billing/seat-usage`, {
-          headers: { Authorization: `Bearer ${newToken}` },
+          headers: { Authorization: `Bearer ${newToken}`, ...(await buildForwardHeadersFromContext()) },
         });
       } else {
         return NextResponse.json(

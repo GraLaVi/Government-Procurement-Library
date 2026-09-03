@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,9 +17,7 @@ export async function POST(request: NextRequest) {
     // Call the backend API to resend verification email
     const response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/resend-verification`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json', ...(await buildForwardHeadersFromContext()) },
       body: JSON.stringify({ email }),
     });
 

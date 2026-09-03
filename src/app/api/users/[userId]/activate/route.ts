@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 interface RouteParams {
   params: Promise<{ userId: string }>;
@@ -25,6 +26,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -36,6 +38,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {

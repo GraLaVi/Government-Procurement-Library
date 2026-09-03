@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/notifications/types - Get available notification types
 export async function GET(_request: NextRequest) {
@@ -17,6 +18,7 @@ export async function GET(_request: NextRequest) {
     let response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/notifications/types`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -26,6 +28,7 @@ export async function GET(_request: NextRequest) {
         response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/notifications/types`, {
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {

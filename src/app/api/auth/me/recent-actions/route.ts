@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/auth/me/recent-actions - Get recent actions
 export async function GET(request: NextRequest) {
@@ -28,6 +29,7 @@ export async function GET(request: NextRequest) {
     let response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/me/recent-actions?action_type=${encodeURIComponent(actionType)}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -38,6 +40,7 @@ export async function GET(request: NextRequest) {
         response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/me/recent-actions?action_type=${encodeURIComponent(actionType)}`, {
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {
@@ -86,6 +89,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        ...(await buildForwardHeadersFromContext()),
       },
       body: JSON.stringify(body),
     });
@@ -99,6 +103,7 @@ export async function POST(request: NextRequest) {
           headers: {
             'Authorization': `Bearer ${newToken}`,
             'Content-Type': 'application/json',
+            ...(await buildForwardHeadersFromContext()),
           },
           body: JSON.stringify(body),
         });
@@ -128,5 +133,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
 
