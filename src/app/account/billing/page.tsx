@@ -774,6 +774,16 @@ function BillingPageContent() {
             preserved and support can reopen the account. To simply stop paying while keeping a
             free account, use <span className="font-medium">Downgrade to Free</span> above instead.
           </p>
+          <p className="text-xs text-muted mt-2 max-w-xl">
+            Want your data permanently deleted as well? Email{" "}
+            <a
+              href="mailto:support@gphusa.com?subject=Account%20data%20deletion%20request"
+              className="text-primary hover:underline"
+            >
+              support@gphusa.com
+            </a>{" "}
+            and we&apos;ll process the deletion request for you.
+          </p>
           <Button
             variant="outline"
             size="sm"
@@ -1878,6 +1888,16 @@ function CloseAccountModal({
         </ul>
         <p className="text-xs text-muted">
           Just want to stop paying? Use <span className="font-medium">Downgrade to Free</span> instead — it keeps your account active.
+        </p>
+        <p className="text-xs text-muted">
+          To have your data permanently deleted, email{" "}
+          <a
+            href="mailto:support@gphusa.com?subject=Account%20data%20deletion%20request"
+            className="text-primary hover:underline"
+          >
+            support@gphusa.com
+          </a>{" "}
+          — closing the account here does not delete it.
         </p>
         <div>
           <label className="block text-xs text-muted mb-1">
