@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/inventory/uploads/[id]/errors - download the per-row error report.
 // Hand-written: the shared proxy JSON-parses responses; this one streams CSV
@@ -17,8 +18,12 @@ export async function GET(
     }
 
     const url = `${AUTH_CONFIG.API_BASE_URL}/inventory/uploads/${encodeURIComponent(id)}/errors.csv`;
+
+    const forwarded = await buildForwardHeadersFromContext();
     const doFetch = (bearer: string) =>
-      fetch(url, { headers: { Authorization: `Bearer ${bearer}` } });
+      fetch(url, {
+        headers: { Authorization: `Bearer ${bearer}`, ...forwarded },
+      });
 
     let response = await doFetch(token);
     if (response.status === 401) {

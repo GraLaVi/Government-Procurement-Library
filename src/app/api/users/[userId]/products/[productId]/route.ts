@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // POST /api/users/[userId]/products/[productId] - Assign a product to a user
 export async function POST(
@@ -23,6 +24,7 @@ export async function POST(
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -35,6 +37,7 @@ export async function POST(
           headers: {
             'Authorization': `Bearer ${newToken}`,
             'Content-Type': 'application/json',
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {
@@ -84,6 +87,7 @@ export async function DELETE(
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -95,6 +99,7 @@ export async function DELETE(
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {

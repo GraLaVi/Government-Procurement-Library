@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // PUT /api/notifications/contacts/[id]/subscriptions/[typeKey]
 // Customer-admin: set a single contact's subscription for one type.
@@ -22,6 +23,7 @@ export async function PUT(
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        ...(await buildForwardHeadersFromContext()),
       },
       body: JSON.stringify(body),
     };

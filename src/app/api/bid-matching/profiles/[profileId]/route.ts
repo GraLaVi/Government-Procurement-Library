@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 async function proxyRequest(
   profileId: string,
@@ -19,6 +20,7 @@ async function proxyRequest(
   const url = `${AUTH_CONFIG.API_BASE_URL}/bid-matching/profiles/${profileId}`;
   const headers: Record<string, string> = {
     'Authorization': `Bearer ${accessToken}`,
+    ...(await buildForwardHeadersFromContext()),
   };
   if (body) {
     headers['Content-Type'] = 'application/json';

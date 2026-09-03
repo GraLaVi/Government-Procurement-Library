@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/library/awards/[id]/pdf - Stream award PDF
 // Proxies to: GET /api/v1/library/awards/{id}/pdf
@@ -40,6 +41,7 @@ export async function GET(
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -49,6 +51,7 @@ export async function GET(
         const retryResponse = await fetch(url, {
           headers: {
             Authorization: `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
         if (!retryResponse.ok) {

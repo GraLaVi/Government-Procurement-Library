@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // PUT /api/notifications/subscriptions/[typeId] - Create/update subscription
 export async function PUT(
@@ -25,6 +26,7 @@ export async function PUT(
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        ...(await buildForwardHeadersFromContext()),
       },
       body: JSON.stringify(body),
     });
@@ -37,6 +39,7 @@ export async function PUT(
           headers: {
             'Authorization': `Bearer ${newToken}`,
             'Content-Type': 'application/json',
+            ...(await buildForwardHeadersFromContext()),
           },
           body: JSON.stringify(body),
         });

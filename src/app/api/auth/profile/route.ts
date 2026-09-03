@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from '@/lib/auth/config';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 /**
  * FastAPI's `detail` is a string for HTTPException but an array of
@@ -41,6 +42,7 @@ export async function PUT(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
       body: JSON.stringify({
         first_name,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/users - List all users in the organization
 export async function GET(request: NextRequest) {
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
     let response = await fetch(url.toString(), {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -36,6 +38,7 @@ export async function GET(request: NextRequest) {
         response = await fetch(url.toString(), {
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {
@@ -84,6 +87,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        ...(await buildForwardHeadersFromContext()),
       },
       body: JSON.stringify(body),
     });
@@ -97,6 +101,7 @@ export async function POST(request: NextRequest) {
           headers: {
             'Authorization': `Bearer ${newToken}`,
             'Content-Type': 'application/json',
+            ...(await buildForwardHeadersFromContext()),
           },
           body: JSON.stringify(body),
         });

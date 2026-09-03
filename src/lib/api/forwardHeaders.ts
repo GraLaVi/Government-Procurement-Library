@@ -1,3 +1,4 @@
+import { headers as requestHeaders } from 'next/headers';
 import { NextRequest } from 'next/server';
 
 /**
@@ -38,4 +39,42 @@ export function buildForwardHeaders(request: NextRequest): Record<string, string
   const ua = request.headers.get('user-agent');
   if (ua) headers['User-Agent'] = ua;
   return headers;
+}
+
+/**
+ * Same as `buildForwardHeaders`, but sources the incoming request from
+ * `next/headers` instead of a `NextRequest` argument.
+ *
+ * This exists for the refresh path. `refreshSession` is reached from ~200 call
+ * sites via `getAccessToken`/`refreshAccessToken`, neither of which is handed
+ * the `NextRequest`, so there is no request object to thread down. Without
+ * this, every token rotation wrote the Next server's own IP into
+ * `customer_refresh_tokens.ip_address` — which is what the admin Access tab
+ * reads, since it shows the newest row in each family. Sessions therefore
+ * showed a real client IP only until their first rotation (one hour) and the
+ * web server's IP forever after.
+ *
+ * Returns {} outside a request scope (build-time prerender, unit tests), where
+ * `headers()` throws — the caller then behaves exactly as it did before.
+ */
+export async function buildForwardHeadersFromContext(): Promise<Record<string, string>> {
+  try {
+    const incoming = await requestHeaders();
+    const out: Record<string, string> = {};
+    const xff = incoming.get('x-forwarded-for');
+    const ip = xff
+      ? xff.split(',')[0].trim()
+      : incoming.get('x-real-ip')?.trim()
+        || incoming.get('cf-connecting-ip')?.trim()
+        || null;
+    if (ip) {
+      out['X-Forwarded-For'] = ip;
+      out['X-Real-IP'] = ip;
+    }
+    const ua = incoming.get('user-agent');
+    if (ua) out['User-Agent'] = ua;
+    return out;
+  } catch {
+    return {};
+  }
 }

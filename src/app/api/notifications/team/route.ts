@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 const UPSTREAM = `${AUTH_CONFIG.API_BASE_URL}/notifications/team`;
 
@@ -14,7 +15,7 @@ export async function GET(_request: NextRequest) {
     }
 
     let response = await fetch(UPSTREAM, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
     });
 
     if (response.status === 401) {
@@ -27,7 +28,7 @@ export async function GET(_request: NextRequest) {
       }
       accessToken = newToken;
       response = await fetch(UPSTREAM, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: { Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
       });
     }
 

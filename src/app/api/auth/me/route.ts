@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { ACCOUNT_INACTIVE_CODE, ACCOUNT_INACTIVE_MESSAGE, AUTH_CONFIG } from '@/lib/auth/config';
 import { clearAuthCookies } from '@/lib/auth/cookies';
 import { refreshSession } from '@/lib/auth/refresh';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 async function refreshAccessToken(cookieStore: Awaited<ReturnType<typeof cookies>>): Promise<string | null> {
   const result = await refreshSession(cookieStore);
@@ -29,6 +30,7 @@ export async function GET(_request: NextRequest) {
     let response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/me`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -41,6 +43,7 @@ export async function GET(_request: NextRequest) {
         response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/me`, {
           headers: {
             'Authorization': `Bearer ${newAccessToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { setAccessCookie, setRefreshCookie, clearLegacyAuthCookies } from '@/lib/auth/cookies';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // POST /api/billing/finalize-checkout — public.
 // Body: { session_id }
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     const response = await fetch(upstream, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await buildForwardHeadersFromContext()) },
       body: JSON.stringify(body),
     });
 

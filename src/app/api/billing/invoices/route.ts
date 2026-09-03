@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/billing/invoices?limit=&offset= — logged-in customer's invoices.
 export async function GET(request: NextRequest) {
@@ -22,14 +23,14 @@ export async function GET(request: NextRequest) {
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
 
     let response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/billing/invoices${suffix}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
     });
 
     if (response.status === 401) {
       const newToken = await refreshAccessToken();
       if (newToken) {
         response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/billing/invoices${suffix}`, {
-          headers: { Authorization: `Bearer ${newToken}` },
+          headers: { Authorization: `Bearer ${newToken}`, ...(await buildForwardHeadersFromContext()) },
         });
       } else {
         return NextResponse.json(

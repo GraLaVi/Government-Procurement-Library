@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 const UPSTREAM = `${AUTH_CONFIG.API_BASE_URL}/notifications/contacts`;
 
@@ -8,11 +9,13 @@ async function authedFetch(init: RequestInit) {
   const accessToken = await getAccessToken();
   if (!accessToken) return { unauth: true };
 
+  const forwarded = await buildForwardHeadersFromContext();
   const withAuth = (token: string): RequestInit => ({
     ...init,
     headers: {
       ...(init.headers as Record<string, string> | undefined),
       Authorization: `Bearer ${token}`,
+      ...forwarded,
     },
   });
 

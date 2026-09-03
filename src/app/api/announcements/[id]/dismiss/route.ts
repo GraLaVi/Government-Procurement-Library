@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // POST /api/announcements/{id}/dismiss — record that the logged-in user
 // has dismissed this announcement. Idempotent. Returns 204 on success.
@@ -18,7 +19,7 @@ export async function POST(
     const url = `${AUTH_CONFIG.API_BASE_URL}/announcements/${id}/dismiss`;
     let response = await fetch(url, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
     });
 
     if (response.status === 401) {
@@ -26,7 +27,7 @@ export async function POST(
       if (newToken) {
         response = await fetch(url, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${newToken}` },
+          headers: { Authorization: `Bearer ${newToken}`, ...(await buildForwardHeadersFromContext()) },
         });
       } else {
         return NextResponse.json(

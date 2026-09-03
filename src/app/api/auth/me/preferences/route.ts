@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/auth/me/preferences - Get user preferences
 export async function GET(_request: NextRequest) {
@@ -18,6 +19,7 @@ export async function GET(_request: NextRequest) {
     let response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/me/preferences`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -28,6 +30,7 @@ export async function GET(_request: NextRequest) {
         response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/auth/me/preferences`, {
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {
@@ -76,6 +79,7 @@ export async function PUT(request: NextRequest) {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        ...(await buildForwardHeadersFromContext()),
       },
       body: JSON.stringify(body),
     });
@@ -89,6 +93,7 @@ export async function PUT(request: NextRequest) {
           headers: {
             'Authorization': `Bearer ${newToken}`,
             'Content-Type': 'application/json',
+            ...(await buildForwardHeadersFromContext()),
           },
           body: JSON.stringify(body),
         });
@@ -118,5 +123,4 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
-
 

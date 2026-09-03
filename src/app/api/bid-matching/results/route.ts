@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/bid-matching/results - List match results for a specific date
 export async function GET(request: NextRequest) {
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
     let response = await fetch(backendUrl, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -69,6 +71,7 @@ export async function GET(request: NextRequest) {
         response = await fetch(backendUrl, {
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {

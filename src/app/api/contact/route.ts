@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // POST /api/contact — public, no auth.
 // Body: { name, email, subject, message, website (honeypot) }
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         ...(forwardedFor ? { 'X-Forwarded-For': forwardedFor } : {}),
+        ...(await buildForwardHeadersFromContext()),
       },
       body: JSON.stringify(body),
     });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/billing/user-cap — org-level user-cap status for the logged-in
 // customer. Returns `{ used, cap }` where cap is null when uncapped.
@@ -14,14 +15,14 @@ export async function GET() {
     }
 
     let response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/billing/user-cap`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
     });
 
     if (response.status === 401) {
       const newToken = await refreshAccessToken();
       if (newToken) {
         response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/billing/user-cap`, {
-          headers: { Authorization: `Bearer ${newToken}` },
+          headers: { Authorization: `Bearer ${newToken}`, ...(await buildForwardHeadersFromContext()) },
         });
       } else {
         return NextResponse.json(

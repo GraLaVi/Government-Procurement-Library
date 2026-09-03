@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // PATCH /api/auth/me/recent-actions/[id]/pin — toggle pin state on a
 // recent-action row. Body: { is_pinned: boolean }. Advanced-tier gated
@@ -24,12 +25,14 @@ export async function PATCH(
     const body = await request.json();
     const upstream = `${AUTH_CONFIG.API_BASE_URL}/auth/me/recent-actions/${actionId}/pin`;
 
+    const forwarded = await buildForwardHeadersFromContext();
     const doFetch = (token: string) =>
       fetch(upstream, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
+          ...forwarded,
         },
         body: JSON.stringify(body),
       });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // POST /api/billing/close-account — body: { confirm: true }
 // Deactivates the whole account (admin only, non-destructive): cancels billing,
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     let response = await fetch(upstream, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
       body: JSON.stringify(body),
     });
 
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
       if (newToken) {
         response = await fetch(upstream, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${newToken}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${newToken}`, ...(await buildForwardHeadersFromContext()) },
           body: JSON.stringify(body),
         });
       } else {

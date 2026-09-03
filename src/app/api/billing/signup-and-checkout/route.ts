@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // POST /api/billing/signup-and-checkout — public.
 // Body: { cage_code, email, password, first_name, last_name, company_name?,
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     const response = await fetch(upstream, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await buildForwardHeadersFromContext()) },
       body: JSON.stringify(body),
     });
 

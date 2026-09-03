@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { ACCOUNT_INACTIVE_CODE, ACCOUNT_INACTIVE_MESSAGE, AUTH_CONFIG } from '@/lib/auth/config';
 import { clearAuthCookies } from '@/lib/auth/cookies';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeaders } from '@/lib/api/forwardHeaders';
 
 /**
  * Proxy a request to a PUBLIC (token-authorized) backend endpoint WITHOUT
@@ -21,7 +22,10 @@ export async function publicBackendProxy(
     const body = forwardBody ? await request.text() : undefined;
     const response = await fetch(url, {
       method,
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
+      headers: {
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...buildForwardHeaders(request),
+      },
       body,
     });
     const data = await response.json().catch(() => ({}));
@@ -73,12 +77,18 @@ export async function backendProxy(
     // Read the body once so we can replay it on the refresh retry.
     const body = forwardBody ? await request.text() : undefined;
 
+    // Forward the real client IP/User-Agent so the backend's audit log
+    // records the person who acted, not this Next server. Every route that
+    // goes through this proxy depends on it — see forwardHeaders.ts.
+    const forwarded = buildForwardHeaders(request);
+
     const doFetch = (bearer: string) =>
       fetch(url, {
         method,
         headers: {
           Authorization: `Bearer ${bearer}`,
           ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          ...forwarded,
         },
         body,
       });

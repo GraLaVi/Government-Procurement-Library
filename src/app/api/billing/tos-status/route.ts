@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/billing/tos-status — whether the logged-in customer already has a
 // current-version Terms of Service acceptance on file. Used to skip
@@ -14,14 +15,14 @@ export async function GET() {
     }
 
     let response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/billing/tos-status`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: { Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
     });
 
     if (response.status === 401) {
       const newToken = await refreshAccessToken();
       if (newToken) {
         response = await fetch(`${AUTH_CONFIG.API_BASE_URL}/billing/tos-status`, {
-          headers: { Authorization: `Bearer ${newToken}` },
+          headers: { Authorization: `Bearer ${newToken}`, ...(await buildForwardHeadersFromContext()) },
         });
       } else {
         return NextResponse.json(

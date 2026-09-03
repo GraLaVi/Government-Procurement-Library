@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // GET /api/library/parts/[nsn]/technical-characteristics - Get part technical characteristics
 // Proxies to: GET /api/v1/library/parts/{nsn}/technical-characteristics
@@ -34,6 +35,7 @@ export async function GET(
     let response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        ...(await buildForwardHeadersFromContext()),
       },
     });
 
@@ -44,6 +46,7 @@ export async function GET(
         response = await fetch(url, {
           headers: {
             'Authorization': `Bearer ${newToken}`,
+            ...(await buildForwardHeadersFromContext()),
           },
         });
       } else {

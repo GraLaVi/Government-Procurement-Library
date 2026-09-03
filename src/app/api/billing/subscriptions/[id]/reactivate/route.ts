@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // POST /api/billing/subscriptions/{id}/reactivate — no body required.
 export async function POST(
@@ -18,7 +19,7 @@ export async function POST(
 
     let response = await fetch(upstream, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, ...(await buildForwardHeadersFromContext()) },
       body: '{}',
     });
 
@@ -27,7 +28,7 @@ export async function POST(
       if (newToken) {
         response = await fetch(upstream, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${newToken}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${newToken}`, ...(await buildForwardHeadersFromContext()) },
           body: '{}',
         });
       } else {

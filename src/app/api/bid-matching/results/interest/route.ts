@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
 import { getAccessToken, refreshAccessToken } from '@/lib/auth/getAccessToken';
+import { buildForwardHeadersFromContext } from '@/lib/api/forwardHeaders';
 
 // PUT /api/bid-matching/results/interest - flag or unflag a solicitation the
 // customer wants to come back to. The body carries the desired state rather
@@ -22,12 +23,15 @@ export async function PUT(request: NextRequest) {
     };
 
     const backendUrl = `${AUTH_CONFIG.API_BASE_URL}/bid-matching/results/interest`;
+
+    const forwarded = await buildForwardHeadersFromContext();
     const send = (token: string) =>
       fetch(backendUrl, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          ...forwarded,
         },
         body: JSON.stringify(payload),
       });
