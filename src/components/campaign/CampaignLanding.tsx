@@ -8,7 +8,12 @@ import remarkGfm from "remark-gfm";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/Button";
-import { CheckIcon } from "@/components/icons";
+import {
+  CheckIcon,
+  DatabaseIcon,
+  TargetIcon,
+  ZapIcon,
+} from "@/components/icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveCampaignTitle } from "@/lib/campaigns";
 import { formatMoney } from "@/lib/billing/pricing";
@@ -53,21 +58,82 @@ interface CampaignLandingProps {
   isBasket: boolean;
 }
 
-// The period a price is quoted for, as a noun that reads naturally after a
-// figure: "$1,008 / year". intervalLabel() gives the adjective form
-// ("Annual"), which is right for the pricing page's toggles but not here.
-function periodNoun(months: number): string {
+// Per-product copy for the rows a basket campaign lists under its headline,
+// keyed by products.key.
+//
+// Only the icon, the summary line and three features are authored here. The
+// NAME comes from the catalog (`productName` on the resolved offer), so a
+// campaign page cannot call a product something other than the thing it is
+// selling — the same rule that keeps prices off this page. The basket
+// includes `request_for_quote`, so the row says "RFQ Add-on" and cannot
+// quietly promise `request_for_quote_enterprise`'s feature list.
+//
+// Deliberately NOT the landing page's product copy (src/components/landing/
+// Products.tsx). That copy is written for a comparison — its bullets quote
+// per-user prices and its descriptions say "everything in Basic plus…" —
+// both wrong beside a catalog-resolved bundle price on a page with no other
+// tier in view.
+//
+// Three features, not five: they set inline under the summary, and the fourth
+// wraps to a line that reads as a list nobody finishes. The full breakdown is
+// one link away on /pricing, which is where it belongs.
+//
+// A product with no entry here still renders: catalog name, no summary, no
+// features. That is the right failure for a page that must not invent claims
+// about a product nobody has written copy for.
+const CAMPAIGN_PRODUCT_COPY: Record<
+  string,
+  {
+    icon: React.ComponentType<{ className?: string }>;
+    summary: string;
+    features: string[];
+  }
+> = {
+  library_search_advanced: {
+    icon: DatabaseIcon,
+    summary: "The complete procurement picture.",
+    features: [
+      "Full procurement and award history",
+      "Open solicitations by vendor",
+      "Bid-matching profiles with full solicitation view",
+    ],
+  },
+  request_for_quote: {
+    icon: TargetIcon,
+    summary: "Send RFQs and collect quotes without leaving the platform.",
+    features: [
+      "Structured RFQs with line-item detail",
+      "Shared batch cart and private vendor book",
+      "Response tracking across every recipient",
+    ],
+  },
+  gph_analytics: {
+    icon: ZapIcon,
+    summary: "Know your market, your competitors, and what DLA is about to buy.",
+    features: [
+      "Win rate and competitor leaderboard",
+      "Market prioritization — parts worth qualifying on",
+      "DLA demand forecasts and stock levels",
+    ],
+  },
+};
+
+// How often the plan is charged, as an adverbial phrase that follows
+// "billed": "$2,110 billed annually". The card's headline figure is always
+// per month — see the offer card below — so the noun form ("/ year") this
+// component used to need is gone; only the cadence sentence still varies.
+function billedEvery(months: number): string {
   switch (months) {
     case 1:
-      return "month";
+      return "monthly";
     case 3:
-      return "quarter";
+      return "quarterly";
     case 6:
-      return "6 months";
+      return "every 6 months";
     case 12:
-      return "year";
+      return "annually";
     default:
-      return `${months} months`;
+      return `every ${months} months`;
   }
 }
 
@@ -122,11 +188,25 @@ function CampaignLandingContent({
   const searchParams = useSearchParams();
   const { user, isLoading: authLoading } = useAuth();
 
-  // ?interval= lets one campaign page be linked as either the monthly or the
-  // annual offer — the same copy, a different price and a different price id
-  // carried into checkout. An unknown or unsold interval falls back to the
-  // campaign file's own choice rather than showing nothing.
-  const requestedInterval = searchParams.get("interval")?.toLowerCase();
+  // ?interval= lets one SINGLE-PRODUCT campaign page be linked as either the
+  // monthly or the annual offer — the same copy, a different price, and a
+  // different price id carried into checkout. An unknown or unsold interval
+  // falls back to the campaign file's own choice rather than showing nothing.
+  //
+  // A basket must ignore it. Its handoff carries the slug and nothing else —
+  // that is what stops a visitor assembling their own basket in the URL — so
+  // the chosen interval never reaches the API, which prices the basket at the
+  // interval in its OWN registry (src/billing/campaigns.py). Honouring
+  // ?interval= here would quote a monthly figure on a page that then bills
+  // annually: the card would be advertising a price we have no way to sell.
+  //
+  // So a basket sells exactly one interval: its campaign's. To sell the same
+  // basket month-to-month, register a SECOND campaign at that interval in
+  // both repos — see docs/campaign-pages.md. That keeps the page honest and
+  // gives the two offers separate landing counts, which one URL cannot.
+  const requestedInterval = isBasket
+    ? undefined
+    : searchParams.get("interval")?.toLowerCase();
   const interval: OfferInterval =
     isOfferInterval(requestedInterval) && offers[requestedInterval]
       ? requestedInterval
@@ -140,6 +220,18 @@ function CampaignLandingContent({
     { title, title_no_trial: titleNoTrial },
     offer?.trialDays ?? null,
   );
+
+  // One row per product in the basket. Single-product campaigns get none —
+  // the offer card already names the one thing on offer, and a lone row
+  // repeating it is the same sentence twice.
+  const rows =
+    offer && offer.items.length > 1
+      ? offer.items.map((item) => ({
+          key: item.productKey,
+          name: item.productName,
+          ...CAMPAIGN_PRODUCT_COPY[item.productKey],
+        }))
+      : [];
 
   const [cageInput, setCageInput] = useState("");
   const [checking, setChecking] = useState(false);
@@ -218,11 +310,91 @@ function CampaignLandingContent({
             >
               {headline}
             </h1>
-            <div className="mt-4">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                {content}
-              </ReactMarkdown>
-            </div>
+            {/* The campaign file's body. A basket campaign leaves it empty —
+                its products are tiles below, and the prose that used to sit
+                here said less than they do. */}
+            {content && (
+              <div className="mt-4">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                  {content}
+                </ReactMarkdown>
+              </div>
+            )}
+
+            {/* Products as ruled rows inside one container, not three cards.
+                Three bordered cards read as three separate purchases sitting
+                next to each other — the opposite of the one plan the offer
+                card is selling — and put the CAGE field below the fold on a
+                laptop, which is the only thing this page asks anyone to do.
+                Weight and the icon separate the rows; the single border holds
+                them together. */}
+            {rows.length > 0 && (
+              /* One container around all three, not one per product. The
+                 border is what says "this is a single plan"; the rules inside
+                 it separate the parts without splitting them into three
+                 things to buy. Transparent, so it sits on the page ground
+                 rather than competing with the offer card's filled surface
+                 alongside it. */
+              <div className="mt-8 rounded-xl border border-border p-5">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">
+                  What&apos;s included
+                </h2>
+                <div className="mt-4">
+                  {rows.map((row) => {
+                    const Icon = row.icon ?? CheckIcon;
+                    return (
+                      <div
+                        key={row.key}
+                        className="flex items-start gap-3.5 py-4 border-t border-border first:border-t-0 first:pt-0 last:pb-0"
+                      >
+                        <span className="flex-none w-[34px] h-[34px] rounded-[9px] bg-primary-light grid place-items-center">
+                          <Icon className="w-[18px] h-[18px] text-primary" />
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-base font-semibold text-foreground">
+                              {row.name}
+                            </h3>
+                            {/* "Included", not the catalog's "Add-on": on this
+                                page all three are part of what the trial hands
+                                over, and two of them being add-ons is a
+                                billing fact, not something the visitor picks. */}
+                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary whitespace-nowrap">
+                              Included
+                            </span>
+                          </div>
+                          {row.summary && (
+                            <p className="mt-1 text-sm text-muted">{row.summary}</p>
+                          )}
+                          {row.features && row.features.length > 0 && (
+                            <ul className="mt-2 flex flex-wrap gap-x-2.5 gap-y-1 text-[13px] text-muted">
+                              {row.features.map((feature) => (
+                                <li key={feature} className="flex items-center gap-1.5">
+                                  <CheckIcon className="w-[13px] h-[13px] text-success flex-none" />
+                                  {feature}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* The one link off this page, and deliberately the last thing in
+                the column. It is also where the two features each row had to
+                drop went: feature-by-feature comparison belongs on /pricing,
+                which already has the table — building a second one here would
+                turn a page with a single action into a page with a decision. */}
+            <p className="mt-6 text-sm text-muted">
+              Want the feature-by-feature breakdown?{" "}
+              <Link href="/pricing#compare" className="text-primary hover:underline">
+                Compare all plans →
+              </Link>
+            </p>
           </div>
 
           {/* ---------- Offer card + CAGE entry ---------- */}
@@ -236,9 +408,16 @@ function CampaignLandingContent({
                 ) : (
                   // A basket bills as one subscription, so it prices as one
                   // figure — but the visitor is being signed up to three
-                  // separate things and the card has to say which. Itemised
-                  // above the total, in the order they'll appear on the
-                  // invoice (tier first).
+                  // separate things and the card has to say which, in the
+                  // order they'll appear on the invoice (tier first).
+                  //
+                  // Deliberately NOT itemised by price. The basket carries no
+                  // bundle discount, so per-item figures sum to exactly the
+                  // total below them: they add three more dollar amounts to
+                  // the reader's path and no information. The names are the
+                  // value; the one figure that matters is the one under them.
+                  // (Re-itemise the moment a basket IS discounted — then the
+                  // list is showing a saving rather than repeating a cost.)
                   <>
                     <p className="text-sm font-semibold text-foreground">
                       Everything below, on one plan
@@ -247,47 +426,75 @@ function CampaignLandingContent({
                       {offer.items.map((item) => (
                         <li
                           key={item.priceId}
-                          className="flex items-start justify-between gap-3 text-sm"
+                          className="flex items-start gap-2 text-sm text-foreground"
                         >
-                          <span className="flex items-start gap-2 text-foreground">
-                            <CheckIcon className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
-                            {item.productName}
-                          </span>
-                          <span className="text-muted whitespace-nowrap">
-                            {formatMoney(item.totalCents, item.currency)}
-                          </span>
+                          <CheckIcon className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                          <span>{item.productName}</span>
                         </li>
                       ))}
                     </ul>
                     <hr className="border-0 border-t border-border my-4" />
                   </>
                 )}
-                <div className="mt-3 flex items-baseline gap-2 flex-wrap">
-                  <span className="text-4xl font-bold text-foreground">
-                    {formatMoney(offer.totalCents, offer.currency)}
+
+                {/* What actually happens at checkout, in the card's loudest
+                    voice: nothing is charged. The H1 says this too, but it
+                    scrolls away — on mobile the card sits below the whole
+                    body copy, and on desktop it stays stuck to the viewport
+                    long after the headline is gone. This is the copy that is
+                    on screen at the moment the CAGE field is filled in. */}
+                {offer.trialDays !== null && offer.trialDays > 0 && (
+                  <p className="text-base font-semibold text-foreground">
+                    Free for {offer.trialDays} days
+                    <span className="text-muted font-normal">
+                      {" · "}no card required
+                    </span>
+                  </p>
+                )}
+
+                {/* The price, anchored per month even though the plan bills
+                    annually. $175.83/mo is a figure a supplier can judge
+                    against what the products save them; $2,110 is a
+                    purchase-order-sized number, and leading with it invites
+                    "let me think about it" on a page whose whole offer is
+                    that thinking about it is free.
+
+                    The annual total is NOT hidden — it sits directly below,
+                    in the same breath as when it's charged. A price the
+                    visitor discovers late reads as a price we were hiding,
+                    and /signup quotes the full figure on its badge one click
+                    from here anyway. */}
+                <div
+                  className={`flex items-baseline gap-2 flex-wrap ${
+                    offer.trialDays ? "mt-3" : "mt-1"
+                  }`}
+                >
+                  <span className="text-2xl font-bold text-foreground">
+                    {formatMoney(
+                      offer.intervalMonths > 1 ? offer.perMonthCents : offer.totalCents,
+                      offer.currency,
+                    )}
                   </span>
-                  <span className="text-sm text-muted">
-                    / {periodNoun(offer.intervalMonths)}
-                  </span>
+                  <span className="text-sm text-muted">/ month</span>
                 </div>
                 <p className="text-sm text-muted mt-1.5">
-                  {offer.seats} user{offer.seats === 1 ? "" : "s"}
+                  {/* On a monthly plan the figure above IS the charge, so
+                      "billed monthly at $207" would only restate it. */}
                   {offer.intervalMonths > 1 && (
                     <>
+                      {offer.trialDays ? "then " : ""}
+                      {formatMoney(offer.totalCents, offer.currency)}{" "}
+                      billed {billedEvery(offer.intervalMonths)}
                       {" · "}
-                      {formatMoney(offer.perMonthCents, offer.currency)}/mo
                     </>
                   )}
+                  {offer.seats} user{offer.seats === 1 ? "" : "s"}
                 </p>
                 {offer.savingsVsMonthlyCents !== null && (
                   <span className="inline-block mt-3 px-2 py-1 rounded bg-muted-light border border-border text-xs text-foreground">
                     Save {formatMoney(offer.savingsVsMonthlyCents, offer.currency)} vs. paying monthly
                   </span>
                 )}
-                {/* The trial is the headline now (campaigns lead with
-                    "Free for {trial_days} days…"), so the card doesn't repeat
-                    it — it leads with the price and the annual saving. The
-                    reassurance strip below the fold still states the terms. */}
               </>
             ) : (
               // Catalog unreachable at render. Never invent a figure — point
@@ -394,9 +601,9 @@ function CampaignLandingContent({
                       switching to process language ("create your account") —
                       the ✓ Eligible panel above already signals the step
                       changed, and the arrow marks this as the click that
-                      leaves the page. Not derived from ctaLabel: that reads
-                      as nonsense for a campaign whose CTA is "Check my CAGE
-                      code". Falls back to neutral wording on a price that
+                      leaves the page. Not derived from ctaLabel, which a
+                      campaign may write as a step ("Check my CAGE code")
+                      rather than the outcome. Falls back to neutral wording on a price that
                       sells without a trial, so the button never promises one
                       that isn't on offer. */}
                   {checking

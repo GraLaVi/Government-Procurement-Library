@@ -41,6 +41,9 @@ export function isOfferInterval(value: unknown): value is OfferInterval {
 }
 
 export type ResolvedOffer = {
+  /** products.key, e.g. "library_search_advanced". The stable identifier a
+   *  campaign keys its per-product copy off — names and ids both move. */
+  productKey: string;
   /** Catalog product name, e.g. "Procurement Intelligence — Advanced". */
   productName: string;
   /** Tier half of the product name, lowercased — the ?tier= slug /signup wants. */
@@ -170,6 +173,7 @@ export function resolveOffer(
   }
 
   return {
+    productKey: plan.key,
     productName: plan.name,
     tierSlug: tierSlugFromName(plan.name),
     priceId: price.id,
