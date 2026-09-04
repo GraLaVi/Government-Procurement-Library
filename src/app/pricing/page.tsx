@@ -12,7 +12,7 @@ import { TermsAcceptanceModal } from "@/components/billing/TermsAcceptanceModal"
 import { PlanComparison } from "@/components/billing/PlanComparison";
 import { clearPendingSignup, readPendingSignup } from "@/lib/signup/pendingSignup";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
-import { ChartIcon, CheckIcon, TargetIcon, ZapIcon } from "@/components/icons";
+import { ChartIcon, CheckIcon, TargetIcon, UsersIcon, ZapIcon } from "@/components/icons";
 import { ANALYTICS_PRODUCT_KEY } from "@/lib/analytics/tier";
 import {
   type Price,
@@ -518,25 +518,38 @@ function PricingPageContent() {
 
   // Add-on panels below the tier grid. Each has its own hand-written copy
   // (icon, tagline, feature bullets) rather than generic add-on text, so
-  // adding a third means adding an entry here — see AddonPanel below.
-  // Both self-hide: GET /billing/plans only returns billing_enabled products,
+  // adding another means adding an entry here — see AddonPanel below.
+  // They self-hide: GET /billing/plans only returns billing_enabled products,
   // so an unannounced add-on never reaches `plans` and its panel never
   // renders. That's the switch for the analytics add-on's public launch.
   const rfqPlan = useMemo(() => plans.find((p) => p.key === "request_for_quote") ?? null, [plans]);
+  // The RFQ tiers render next to each other so the difference between them
+  // can be read across, which is the whole reason the enterprise panel
+  // exists: the product has been publicly purchasable with no page that
+  // describes it.
+  const rfqEnterprisePlan = useMemo(
+    () => plans.find((p) => p.key === "request_for_quote_enterprise") ?? null,
+    [plans],
+  );
   const analyticsPlan = useMemo(
     () => plans.find((p) => p.key === ANALYTICS_PRODUCT_KEY) ?? null,
     [plans],
   );
   // Data Reports is always rendered, so the row is never empty.
-  const addonPanelCount = 1 + (rfqPlan ? 1 : 0) + (analyticsPlan ? 1 : 0);
+  const addonPanelCount =
+    1 + (rfqPlan ? 1 : 0) + (rfqEnterprisePlan ? 1 : 0) + (analyticsPlan ? 1 : 0);
   // Full literal class strings so Tailwind's JIT keeps them (same pattern as
-  // the tier grid above).
+  // the tier grid above). Four panels go 2x2 rather than 4-up: these carry
+  // feature bullets and a price line, and a quarter of the row is too narrow
+  // to set them without every bullet wrapping.
   const addonColsClass =
     addonPanelCount === 1
       ? "grid-cols-1"
       : addonPanelCount === 2
         ? "md:grid-cols-2"
-        : "md:grid-cols-2 lg:grid-cols-3";
+        : addonPanelCount === 3
+          ? "md:grid-cols-2 lg:grid-cols-3"
+          : "md:grid-cols-2";
   // Add-ons require an active paid-tier subscription — Free-tier and
   // logged-out visitors can't add one yet. currentSub already excludes
   // add-on subscriptions (see the effect above), so "has one" == "has a paid tier".
@@ -974,6 +987,27 @@ function PricingPageContent() {
               "Structured RFQs with line-item detail",
               "Shared batch cart and private vendor contact book",
               "Response tracking across every recipient",
+            ]}
+            hasPaidTier={hasPaidTier}
+            isSignedIn={!!user}
+          />
+        )}
+
+        {/* RFQ Enterprise sits directly beside the RFQ add-on so the two can
+            be read across. Its own catalog description already opens
+            "Everything in the RFQ Add-on, plus…", so the bullets here name
+            only what the step up actually buys rather than repeating the
+            base product's list. */}
+        {rfqEnterprisePlan && (
+          <AddonPanel
+            plan={rfqEnterprisePlan}
+            icon={<UsersIcon className="w-6 h-6 text-primary" />}
+            tagline="Run RFQs across a buying team, with the queue and reporting to match."
+            fallbackDescription="Everything in the RFQ Add-on, plus a solicitation work queue disbursed to buyers by approved-source CAGE, private vendor lists, quote comparison, vendor responsiveness, and coverage reporting."
+            features={[
+              "Bid-matching results feed a solicitation work queue",
+              "Private vendor lists and side-by-side quote comparison",
+              "Vendor responsiveness and coverage reporting",
             ]}
             hasPaidTier={hasPaidTier}
             isSignedIn={!!user}

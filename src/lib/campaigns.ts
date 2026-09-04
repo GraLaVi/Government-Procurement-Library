@@ -53,14 +53,21 @@ export interface CampaignMeta {
 
 export const CAMPAIGNS: CampaignMeta[] = [
   {
+    // NOTE THE MISMATCH: this slug reads "Advanced, annual, Q4" and the page
+    // now sells Advanced + RFQ + Analytics on one subscription. That is
+    // deliberate — marketing wanted the all-access trial on the URL already
+    // in their collateral rather than a second one. Read the basket below,
+    // never the slug, for what this campaign sells.
+    //
+    // Landings are recorded against the slug (activity_log, resource_id =
+    // slug), so counts for this URL span both offers. They split on
+    // created_at at the cutover date — record that date when it ships.
     slug: "advanced-annual-q4",
-    note: "Email + paid social. Advanced tier sold on the annual discount.",
-  },
-  {
-    slug: "advanced-trial-all-access",
     note:
       "All-access trial: Advanced + RFQ + Analytics on one 14-day trial, no " +
-      "card. MUST stay in sync with CAMPAIGNS in the API's " +
+      "card, billed annually. Was the Advanced-only annual campaign until " +
+      "Sept 2026; the slug is kept because it is already in email and paid " +
+      "social. MUST stay in sync with CAMPAIGNS in the API's " +
       "src/billing/campaigns.py — that registry decides the charge, this one " +
       "only decides what the page says.",
     basket: {
