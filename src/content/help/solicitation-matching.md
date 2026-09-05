@@ -18,9 +18,29 @@ Because matching runs once a day, edits to your profiles take effect on the foll
 
 Click **Bid-Matching** in the main navigation to open your match history. The page shows every match generated against your organization's active profiles, organized by run date.
 
-The date picker at the left of the toolbar lists each run date with the total number of matches generated that day. Open it and select a date to load that run's matches. Keeping the dates in a dropdown rather than a fixed sidebar gives the results table the full width of the page.
+The date picker at the left of the toolbar lists each run date with the number of matches that run produced. Select a run date to load everything it found. The page opens on your most recent run, so the newest matches are the first thing you see. Keeping the dates in a dropdown rather than a fixed sidebar gives the results table the full width of the page.
+
+A run that turned up solicitations posted on more than one day carries an expand arrow. Click the arrow to break the run out by posted date and pick one to narrow the list; click the run date itself to go back to the whole run. Runs that found everything on a single posted date have nothing to expand, so they show no arrow.
 
 New matches also appear in the in-app notification bell (🔔) at the top of the page, so you're alerted without opening the Bid-Matching tab. See [Notifications](/help/notifications#the-notification-bell-in-app-alerts) to turn the bell on or off and choose how matches are grouped.
+
+## Run date and posted date
+
+These are two different dates, and the difference explains most of what the picker shows you:
+
+- **Run date** — when GPH's matching engine found the solicitation for you.
+- **Posted date** — when the government put the solicitation on the street. This is the **Posted** column in the results table.
+
+Most of what a run finds was posted that same day. The rest is older, for one of two reasons:
+
+- **It arrived late.** DIBBS and SAM.gov don't always publish a solicitation on the day it's dated, so a day's harvest routinely brings in solicitations posted earlier — sometimes weeks earlier.  
+- **An amendment changed it.** The solicitation was already in GPH but didn't match your profiles. A buyer then amended it — adding a line item, revising a quantity, flipping a set-aside — and the amended version does match. These rows carry an **Amended** badge; see [Amended and updated solicitations](#amended-and-updated-solicitations).
+
+Either way it's a first match, not a repeat. Once you've been matched on a solicitation, GPH won't surface it for you again on a later run.
+
+So one run typically spans dozens of posted dates: the bulk from that day, plus a scattering going back weeks. That's why the picker offers both levels — the run date answers *what's new since I last looked*, and a posted date answers *what came out on this particular day*.
+
+Older posted dates are worth reading rather than skipping. Those solicitations have been on the street longer, so their deadlines are nearer. The results are sorted by **Close Date** by default, which puts the most urgent first no matter when anything was posted.
 
 ## Reading a match
 
@@ -91,7 +111,7 @@ The toolbar above the match list carries:
 
 Searching and sorting apply to the whole run, not just the page you are looking at, and the results reset to page 1 whenever you change either.
 
-You can also filter the list by run date and issue date from the date picker.
+You can also narrow the list to a single posted date from the date picker — see [Run date and posted date](#run-date-and-posted-date).
 
 ## How matches connect to email alerts
 

@@ -16,6 +16,10 @@ Matching runs once a day, after GPH imports new solicitations. A profile you cre
 
 No. Bid matching evaluates newly imported solicitations on each run, not the existing backlog. To research solicitations that are already posted, use the [Searching for Parts](/help/parts-search) and [Researching Vendors](/help/vendor-research) tools, which surface recent and open solicitations tied to a part or vendor.
 
+### Why does one run date show solicitations posted on other days?
+
+The run date is when GPH found the match; the **Posted** date is when the government put the solicitation on the street. They usually differ. A day's harvest routinely brings in solicitations that were posted earlier, and an amendment can turn a solicitation GPH already held into one that matches your profiles for the first time. Selecting a run date shows you everything that run found; expand it to narrow to a single posted date. See [Run date and posted date](/help/solicitation-matching#run-date-and-posted-date).
+
 ### Will I be notified about the same solicitation twice?
 
 No. Once you've been matched on a solicitation, GPH won't surface it for you again on later runs, even if it reappears in a subsequent import.
