@@ -338,13 +338,16 @@ export default function BidMatchingPage() {
         if (!res.ok) throw new Error("Failed to load match dates");
         const data: RunDateGroup[] = await res.json();
         setDateTree(data);
-        // Auto-select first run date — prefer first DIBBS issue date, fall back
-        // to the SAM bucket for run dates that have no DIBBS matches.
+        // Auto-select the newest run date, whole: a null issue date is the
+        // run-wide view, so the page opens on everything that run produced
+        // rather than only the slice posted that same day. Same selection the
+        // menu's run row makes, so the row reads as selected on arrival.
+        // Runs with no DIBBS matches fall back to their SAM bucket.
         if (data.length > 0) {
           const first = data[0];
           if (first.issue_dates.length > 0) {
             setSelectedRunDate(first.run_date);
-            setSelectedIssueDate(first.issue_dates[0].issue_date);
+            setSelectedIssueDate(null);
             setSelectedSource("dibbs");
           } else if (first.sam_bucket && first.sam_bucket.match_count > 0) {
             setSelectedRunDate(first.run_date);
@@ -426,8 +429,9 @@ export default function BidMatchingPage() {
     // Wait for the stored page size, or the first load fetches 50 rows and
     // then immediately refetches at the restored size.
     if (!pageSizeInitialized) return;
+    // No issue-date guard: on DIBBS a null issue date is the "All posted
+    // dates" selection, which the API answers from run_date alone.
     if (!selectedRunDate) return;
-    if (selectedSource === "dibbs" && !selectedIssueDate) return;
     fetchResults(
       selectedSource, selectedRunDate, selectedIssueDate, page, pageSize, hardOnly,
       appliedSearch, searchField, sortBy, sortDir, interestedOnly, biddableOnly,
@@ -535,7 +539,11 @@ export default function BidMatchingPage() {
             <p className="print-only mt-1 text-sm text-muted">
               {selectedSource === "sam" ? "SAM.gov" : "DIBBS"} matches — run{" "}
               {formatDateMmDdYyyy(selectedRunDate)}
-              {selectedIssueDate ? `, posted ${formatDateMmDdYyyy(selectedIssueDate)}` : ""}
+              {selectedSource === "sam"
+                ? ""
+                : selectedIssueDate
+                  ? `, posted ${formatDateMmDdYyyy(selectedIssueDate)}`
+                  : ", all posted dates"}
               {printedOn ? ` · printed ${printedOn}` : ""}
             </p>
           )}
@@ -732,7 +740,7 @@ export default function BidMatchingPage() {
 
           {/* Results */}
           <div className="bg-card-bg rounded-lg border border-border p-4">
-            {selectedRunDate && (selectedSource === "sam" || selectedIssueDate) ? (
+            {selectedRunDate ? (
               <BidMatchResultsTable
                 results={results}
                 bidTermDefinitions={bidTermDefinitions}
