@@ -258,7 +258,7 @@ function DemandSignalChip({ signal }: { signal?: string | null }) {
 }
 
 /** Columns the server can sort on. "" = the default newest-first ordering. */
-export type BidSortKey = "" | "interested" | "solicitation" | "nsn" | "quantity" | "estimated_value" | "close_date";
+export type BidSortKey = "" | "interested" | "solicitation" | "nsn" | "quantity" | "estimated_value" | "posted" | "close_date";
 
 interface BidMatchResultsTableProps {
   results: BidMatchResult[];
@@ -470,7 +470,7 @@ export function BidMatchResultsTable({
               <SortHeader label="Qty" sortKey="quantity" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
               <th className={thClass}>UOM</th>
               <SortHeader label="Est. Value" sortKey="estimated_value" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
-              <th className={`${thClass} whitespace-nowrap`}>Posted</th>
+              <SortHeader label="Posted" sortKey="posted" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
               <SortHeader label="Close Date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
               <th className={thClass}>Set-Aside</th>
               <th className={thClass}>Status</th>

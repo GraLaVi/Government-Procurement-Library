@@ -40,7 +40,7 @@ Either way it's a first match, not a repeat. Once you've been matched on a solic
 
 So one run typically spans dozens of posted dates: the bulk from that day, plus a scattering going back weeks. That's why the picker offers both levels — the run date answers *what's new since I last looked*, and a posted date answers *what came out on this particular day*.
 
-Older posted dates are worth reading rather than skipping. Those solicitations have been on the street longer, so their deadlines are nearer. The results are sorted by **Close Date** by default, which puts the most urgent first no matter when anything was posted.
+Older posted dates are worth reading rather than skipping. Those solicitations have been on the street longer, so their deadlines are nearer. The results are sorted by **Close Date** by default, which puts the most urgent first no matter when anything was posted; you can also sort on the **Posted** column to bring the oldest postings to the top.
 
 ## Reading a match
 
@@ -64,9 +64,9 @@ Two badges can appear next to the NSN:
 
 ## Sorting the results
 
-Click a column heading to sort: **Solicitation**, **Qty**, **Est. Value**, **Close Date**, or the **★** column. Sorting runs across every match in the run, not just the rows currently on screen, so the top of the list is genuinely the largest order or the soonest deadline.
+Click a column heading to sort: **Solicitation**, **NSN**, **Qty**, **Est. Value**, **Posted**, **Close Date**, or the **★** column. Sorting runs across every match in the run, not just the rows currently on screen, so the top of the list is genuinely the largest order or the soonest deadline.
 
-The first click picks the direction that column is actually useful in — the biggest quantity and value first, but the *soonest* close date, since that is the urgent end. Click again to reverse it.
+The first click picks the direction that column is actually useful in — the biggest quantity and value first, but the *soonest* close date and the *oldest* posted date, since those are the urgent end. Click again to reverse it.
 
 ## Flagging solicitations to work later
 

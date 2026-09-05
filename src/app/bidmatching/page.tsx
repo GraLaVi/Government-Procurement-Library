@@ -300,8 +300,14 @@ export default function BidMatchingPage() {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortBy(key);
+      // Ascending on first click where ascending is the useful read: the
+      // date columns because oldest is nearest its deadline (posted dates on
+      // a whole-run view can run weeks back), and the identifier columns
+      // because their natural order is alphanumeric.
       setSortDir(
-        key === "close_date" || key === "solicitation" || key === "nsn" ? "asc" : "desc",
+        key === "close_date" || key === "posted" || key === "solicitation" || key === "nsn"
+          ? "asc"
+          : "desc",
       );
     }
   };
