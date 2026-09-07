@@ -5,6 +5,11 @@ import { ProspectRow } from '@/lib/hooks/useAnalytics';
 import { DemandSignalChip, DemandSignalKind } from './DemandSignalChip';
 import { CardInfoBadge } from './CardInfoBadge';
 import { formatCurrency, formatNumber } from './ChartColors';
+import {
+  analyticsCardClass, analyticsCardHeaderClass, analyticsCardPaddedClass,
+  analyticsRowClass, analyticsTableClass, analyticsTableWrapClass,
+  analyticsTdClass, analyticsTheadRowClass, analyticsThClass,
+} from './AnalyticsTable';
 
 interface MarketPrioritizationTableProps {
   data: ProspectRow[];
@@ -27,7 +32,7 @@ const INFO_COPY =
 export function MarketPrioritizationTable({ data }: MarketPrioritizationTableProps) {
   if (!data.length) {
     return (
-      <div className="bg-card-bg rounded-xl border border-border p-6">
+      <div className={analyticsCardPaddedClass}>
         <div className="flex items-center gap-1.5 mb-1">
           <h3 className="text-sm font-semibold text-card-foreground">Market Prioritization</h3>
           <CardInfoBadge content={INFO_COPY} />
@@ -40,8 +45,8 @@ export function MarketPrioritizationTable({ data }: MarketPrioritizationTablePro
   }
 
   return (
-    <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-      <div className="px-6 py-4 border-b border-border">
+    <div className={analyticsCardClass}>
+      <div className={analyticsCardHeaderClass}>
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-semibold text-card-foreground">Market Prioritization</h3>
           <CardInfoBadge content={INFO_COPY} />
@@ -50,20 +55,20 @@ export function MarketPrioritizationTable({ data }: MarketPrioritizationTablePro
           Parts worth getting qualified on — ranked by estimated order value
         </p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className={analyticsTableWrapClass}>
+        <table className={analyticsTableClass}>
           <thead>
-            <tr className="border-b border-border bg-muted-light/50">
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">NSN / Description</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Signal</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Forecast (12mo)</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Est. Value</th>
+            <tr className={analyticsTheadRowClass}>
+              <th className={analyticsThClass}>NSN / Description</th>
+              <th className={analyticsThClass}>Signal</th>
+              <th className={`${analyticsThClass} !text-right`}>Forecast (12mo)</th>
+              <th className={`${analyticsThClass} !text-right`}>Est. Value</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {data.map((row, i) => (
-              <tr key={i} className="hover:bg-muted-light/30 transition-colors">
-                <td className="px-6 py-3">
+              <tr key={i} className={analyticsRowClass}>
+                <td className={analyticsTdClass}>
                   <Link href={partSearchUrl(row.niin)} className="font-mono text-xs text-primary hover:underline">
                     {row.fsc ? `${row.fsc}-${row.niin}` : row.niin}
                   </Link>
@@ -71,13 +76,13 @@ export function MarketPrioritizationTable({ data }: MarketPrioritizationTablePro
                     <div className="text-xs text-muted truncate max-w-[280px]" title={row.description}>{row.description}</div>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className={analyticsTdClass}>
                   <DemandSignalChip kind={SIGNAL_KIND_MAP[row.signal_type] ?? 'unknown'} />
                 </td>
-                <td className="px-4 py-3 text-right text-muted tabular-nums">
+                <td className={`${analyticsTdClass} text-right text-muted tabular-nums`}>
                   {row.forecast_next_12mo != null ? formatNumber(row.forecast_next_12mo) : '—'}
                 </td>
-                <td className="px-4 py-3 text-right text-card-foreground font-semibold tabular-nums">
+                <td className={`${analyticsTdClass} text-right text-card-foreground font-semibold tabular-nums`}>
                   {row.est_value != null ? formatCurrency(row.est_value) : '—'}
                 </td>
               </tr>

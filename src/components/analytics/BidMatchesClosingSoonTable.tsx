@@ -2,6 +2,11 @@
 
 import { RecentMatch } from '@/lib/hooks/useAnalytics';
 import { SolicitationNumberLink } from '@/components/library/SolicitationNumberLink';
+import {
+  analyticsCardClass, analyticsCardHeaderClass, analyticsCardPaddedClass,
+  analyticsRowClass, analyticsTableClass, analyticsTableWrapClass,
+  analyticsTdClass, analyticsTheadRowClass, analyticsThClass,
+} from './AnalyticsTable';
 
 interface BidMatchesClosingSoonTableProps {
   data: RecentMatch[];
@@ -34,7 +39,7 @@ function calendarDaysUntil(value: string): number {
 export function BidMatchesClosingSoonTable({ data }: BidMatchesClosingSoonTableProps) {
   if (!data.length) {
     return (
-      <div className="bg-card-bg rounded-xl border border-border p-6">
+      <div className={analyticsCardPaddedClass}>
         <h3 className="text-sm font-semibold text-card-foreground mb-4">Bid Matches — Closing Soon</h3>
         <div className="text-muted text-sm">No open matches from your bid-matching profiles</div>
       </div>
@@ -42,18 +47,18 @@ export function BidMatchesClosingSoonTable({ data }: BidMatchesClosingSoonTableP
   }
 
   return (
-    <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-      <div className="px-6 py-4 border-b border-border">
+    <div className={analyticsCardClass}>
+      <div className={analyticsCardHeaderClass}>
         <h3 className="text-sm font-semibold text-card-foreground">Bid Matches — Closing Soon</h3>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className={analyticsTableWrapClass}>
+        <table className={analyticsTableClass}>
           <thead>
-            <tr className="border-b border-border bg-muted-light/50">
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Solicitation #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Close Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Profile</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Found</th>
+            <tr className={analyticsTheadRowClass}>
+              <th className={analyticsThClass}>Solicitation #</th>
+              <th className={analyticsThClass}>Close Date</th>
+              <th className={analyticsThClass}>Profile</th>
+              <th className={analyticsThClass}>Found</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -73,13 +78,13 @@ export function BidMatchesClosingSoonTable({ data }: BidMatchesClosingSoonTableP
               }
 
               return (
-                <tr key={i} className="hover:bg-muted-light/30 transition-colors">
-                  <td className="px-6 py-3 font-mono">
+                <tr key={i} className={analyticsRowClass}>
+                  <td className={`${analyticsTdClass} font-mono`}>
                     {match.solicitation_number ? (
                       <SolicitationNumberLink solicitationNumber={match.solicitation_number} />
                     ) : '-'}
                   </td>
-                  <td className="px-6 py-3 text-card-foreground whitespace-nowrap">
+                  <td className={`${analyticsTdClass} text-card-foreground whitespace-nowrap`}>
                     {closeDate}
                     {badge && (
                       <span className="ml-2 text-xs font-medium text-error">
@@ -87,8 +92,8 @@ export function BidMatchesClosingSoonTable({ data }: BidMatchesClosingSoonTableP
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-3 text-card-foreground">{match.profile_name || '-'}</td>
-                  <td className="px-6 py-3">
+                  <td className={`${analyticsTdClass} text-card-foreground`}>{match.profile_name || '-'}</td>
+                  <td className={analyticsTdClass}>
                     <div className="flex flex-wrap gap-1">
                       {match.condition_types.length > 0 ? match.condition_types.map((ct, j) => (
                         <span
