@@ -130,6 +130,13 @@ export const HELP_ARTICLES: HelpArticleMeta[] = [
     group: "account",
   },
   {
+    slug: "company-profile",
+    title: "Managing Your Company Profile",
+    blurb:
+      "Correct your SAM.gov demographics, curate the contacts shown in vendor search, and publish your certifications and set-asides.",
+    group: "account",
+  },
+  {
     slug: "notifications",
     title: "Notifications",
     blurb: "Configure email alert preferences for yourself and your team.",

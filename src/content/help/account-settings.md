@@ -107,5 +107,6 @@ Once added, contacts appear in your contacts list. To subscribe a contact to spe
 ## Related articles
 
 - [Notifications](/help/notifications) — Configure email alerts for yourself and your team  
+- [Managing Your Company Profile](/help/company-profile) — Correct your SAM.gov demographics and curate what vendor search shows  
 - [Plans and Pricing](/help/plans-and-pricing) — Compare what each plan includes, and add or remove seats  
 - [Setting Up Bid-Matching Profiles](/help/bid-matching-profiles) — Create the profiles that drive your match alerts

@@ -47,7 +47,7 @@ The Demographics tab provides the vendor's basic identification and business det
 
 - **Business Details.** Entity structure (corporation, LLC, etc.), website, state and country of incorporation, business type (e.g., Under 500 employee Corp), and the vendor's **DUNS** and **DoDAAC** identifiers.  
 - **Registration.** SAM registration status (Active, Inactive, or Expired), exclusion status (shown as **Excluded** or **Not Excluded**), and **Reg. Expires** (the SAM registration expiration date).  
-- **Certifications & Set-Asides.** When the vendor has published certifications, they appear here as chips, with set-aside designations tagged.  
+- **Certifications & Set-Asides.** When the vendor has published certifications, they appear here as chips, with set-aside designations tagged. These are published by the vendor themselves, not drawn from SAM — to publish your own, see [Managing your company profile](/help/company-profile#certifications-and-set-asides).  
 - **Physical Address** and **Mailing Address.** The vendor's registered locations, including U.S. congressional district when applicable. The mailing address is shown only when it differs from the physical address.
 
 The Demographics tab is your first stop when you need to confirm a vendor is currently eligible to receive federal contracts.
