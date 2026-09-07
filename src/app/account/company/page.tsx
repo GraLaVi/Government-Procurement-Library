@@ -612,6 +612,11 @@ function CertificationsSection({ profile, onChanged }: { profile: CompanyProfile
   );
 }
 
+// Sentinel for the "Other (custom)" choice in the Standard picklist. It has to
+// be distinct from "" (nothing picked yet) — sharing the empty string made the
+// form open on custom entry, since the unselected state matched that option.
+const CUSTOM_LABEL_OPTION = "__other__";
+
 function AddCertificationForm({ onAdded, onError }: { onAdded: () => void; onError: (m: string) => void }) {
   const [kind, setKind] = useState<"set_aside" | "certification">("certification");
   const [picklistValue, setPicklistValue] = useState("");
@@ -621,16 +626,17 @@ function AddCertificationForm({ onAdded, onError }: { onAdded: () => void; onErr
   const [saving, setSaving] = useState(false);
 
   // Canonical vocabularies (shared, cached) from code_definitions.
-  const { codes: setAsideCodes } = useCodeDefinitions("SET_ASIDE");
-  const { codes: certCodes } = useCodeDefinitions("CERTIFICATION");
+  const { codes: setAsideCodes, loading: setAsideLoading } = useCodeDefinitions("SET_ASIDE");
+  const { codes: certCodes, loading: certLoading } = useCodeDefinitions("CERTIFICATION");
+  const loadingCodes = kind === "set_aside" ? setAsideLoading : certLoading;
   const picklist = (kind === "set_aside" ? setAsideCodes : certCodes)
     .map((c) => ({ value: c.code, label: c.label }));
-  const isOther = picklistValue === "";
+  const isOther = picklistValue === CUSTOM_LABEL_OPTION;
   const resolvedLabel = isOther ? customLabel.trim() : (picklist.find((p) => p.value === picklistValue)?.label || "");
 
   const submit = async () => {
     if (!resolvedLabel) {
-      onError("Choose a standard option or enter a custom label.");
+      onError("Choose a standard option, or pick \u201cOther (custom)\u201d and enter a label.");
       return;
     }
     setSaving(true);
@@ -673,7 +679,9 @@ function AddCertificationForm({ onAdded, onError }: { onAdded: () => void; onErr
           label="Standard"
           value={picklistValue}
           onChange={(e) => setPicklistValue(e.target.value)}
-          options={[...picklist, { value: "", label: "Other (custom)…" }]}
+          placeholder={loadingCodes ? "Loading…" : "Select a standard option…"}
+          disabled={loadingCodes}
+          options={[...picklist, { value: CUSTOM_LABEL_OPTION, label: "Other (custom)…" }]}
         />
         {isOther && (
           <Input label="Custom Label" value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} placeholder="e.g. State MBE Certification" />
