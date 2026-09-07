@@ -5,6 +5,11 @@ import { BuySignalRow } from '@/lib/hooks/useAnalytics';
 import { DemandSignalChip } from './DemandSignalChip';
 import { CardInfoBadge } from './CardInfoBadge';
 import { formatCurrency, formatNumber } from './ChartColors';
+import {
+  analyticsCardClass, analyticsCardHeaderClass, analyticsCardPaddedClass,
+  analyticsRowClass, analyticsTableClass, analyticsTableWrapClass,
+  analyticsTdClass, analyticsTheadRowClass, analyticsThClass,
+} from './AnalyticsTable';
 
 interface BuySignalsTableProps {
   data: BuySignalRow[];
@@ -21,7 +26,7 @@ const INFO_COPY =
 export function BuySignalsTable({ data }: BuySignalsTableProps) {
   if (!data.length) {
     return (
-      <div className="bg-card-bg rounded-xl border border-border p-6">
+      <div className={analyticsCardPaddedClass}>
         <div className="flex items-center gap-1.5 mb-1">
           <h3 className="text-sm font-semibold text-card-foreground">Buy Signals</h3>
           <CardInfoBadge content={INFO_COPY} />
@@ -34,8 +39,8 @@ export function BuySignalsTable({ data }: BuySignalsTableProps) {
   }
 
   return (
-    <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-      <div className="px-6 py-4 border-b border-border">
+    <div className={analyticsCardClass}>
+      <div className={analyticsCardHeaderClass}>
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-semibold text-card-foreground">Buy Signals</h3>
           <CardInfoBadge content={INFO_COPY} />
@@ -44,22 +49,22 @@ export function BuySignalsTable({ data }: BuySignalsTableProps) {
           Parts you supply that DLA is flagging for a near-term buy
         </p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className={analyticsTableWrapClass}>
+        <table className={analyticsTableClass}>
           <thead>
-            <tr className="border-b border-border bg-muted-light/50">
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">NIIN / Description</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Signal</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">On Hand</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Reorder Pt</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Backorder</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Est. Value</th>
+            <tr className={analyticsTheadRowClass}>
+              <th className={analyticsThClass}>NIIN / Description</th>
+              <th className={analyticsThClass}>Signal</th>
+              <th className={`${analyticsThClass} !text-right`}>On Hand</th>
+              <th className={`${analyticsThClass} !text-right`}>Reorder Pt</th>
+              <th className={`${analyticsThClass} !text-right`}>Backorder</th>
+              <th className={`${analyticsThClass} !text-right`}>Est. Value</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {data.map((row, i) => (
-              <tr key={i} className="hover:bg-muted-light/30 transition-colors">
-                <td className="px-6 py-3">
+              <tr key={i} className={analyticsRowClass}>
+                <td className={analyticsTdClass}>
                   <Link href={partSearchUrl(row.niin)} className="font-mono text-xs text-primary hover:underline">
                     {row.fsc ? `${row.fsc}-${row.niin}` : row.niin}
                   </Link>
@@ -67,19 +72,19 @@ export function BuySignalsTable({ data }: BuySignalsTableProps) {
                     <div className="text-xs text-muted truncate max-w-[280px]" title={row.description}>{row.description}</div>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className={analyticsTdClass}>
                   <DemandSignalChip kind={row.signal_type === 'on_backorder' ? 'on_backorder' : 'below_reorder_point'} />
                 </td>
-                <td className="px-4 py-3 text-right text-card-foreground tabular-nums">
+                <td className={`${analyticsTdClass} text-right text-card-foreground tabular-nums`}>
                   {row.total_stock != null ? formatNumber(row.total_stock) : '—'}
                 </td>
-                <td className="px-4 py-3 text-right text-muted tabular-nums">
+                <td className={`${analyticsTdClass} text-right text-muted tabular-nums`}>
                   {row.reorder_point != null ? formatNumber(row.reorder_point) : '—'}
                 </td>
-                <td className="px-4 py-3 text-right text-card-foreground tabular-nums">
+                <td className={`${analyticsTdClass} text-right text-card-foreground tabular-nums`}>
                   {row.backorder_qty != null ? formatNumber(row.backorder_qty) : '—'}
                 </td>
-                <td className="px-4 py-3 text-right text-card-foreground font-semibold tabular-nums">
+                <td className={`${analyticsTdClass} text-right text-card-foreground font-semibold tabular-nums`}>
                   {row.est_buy_value != null ? formatCurrency(row.est_buy_value) : '—'}
                 </td>
               </tr>

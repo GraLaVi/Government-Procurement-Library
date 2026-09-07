@@ -3,6 +3,11 @@
 import { AmendmentAlertRow } from '@/lib/hooks/useAnalytics';
 import { SolicitationNumberLink } from '@/components/library/SolicitationNumberLink';
 import { CardInfoBadge } from './CardInfoBadge';
+import {
+  analyticsCardClass, analyticsCardHeaderClass, analyticsCardPaddedClass,
+  analyticsRowClass, analyticsTableClass, analyticsTableWrapClass,
+  analyticsTdClass, analyticsTheadRowClass, analyticsThClass,
+} from './AnalyticsTable';
 
 const INFO_COPY =
   "Solicitations you matched that were amended after the match was generated — check for changed terms before you bid. Source: DIBBS/SAM amendment history.";
@@ -49,7 +54,7 @@ const REASON_LABELS: Record<string, string> = {
 export function AmendmentAlertsTable({ data }: AmendmentAlertsTableProps) {
   if (!data.length) {
     return (
-      <div className="bg-card-bg rounded-xl border border-border p-6">
+      <div className={analyticsCardPaddedClass}>
         <div className="flex items-center gap-1.5 mb-1">
           <h3 className="text-sm font-semibold text-card-foreground">Amendment Alerts</h3>
           <CardInfoBadge content={INFO_COPY} />
@@ -60,41 +65,41 @@ export function AmendmentAlertsTable({ data }: AmendmentAlertsTableProps) {
   }
 
   return (
-    <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-      <div className="px-6 py-4 border-b border-border">
+    <div className={analyticsCardClass}>
+      <div className={analyticsCardHeaderClass}>
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-semibold text-card-foreground">Amendment Alerts</h3>
           <CardInfoBadge content={INFO_COPY} />
         </div>
         <p className="text-xs text-muted mt-1">Matched solicitations changed AFTER your match was generated — review before bidding</p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className={analyticsTableWrapClass}>
+        <table className={analyticsTableClass}>
           <thead>
-            <tr className="border-b border-border bg-muted-light/50">
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Solicitation #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Profile</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Close Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Updated</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Reason</th>
+            <tr className={analyticsTheadRowClass}>
+              <th className={analyticsThClass}>Solicitation #</th>
+              <th className={analyticsThClass}>Profile</th>
+              <th className={analyticsThClass}>Close Date</th>
+              <th className={analyticsThClass}>Updated</th>
+              <th className={analyticsThClass}>Reason</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {data.map((row, i) => (
-              <tr key={i} className="hover:bg-muted-light/30 transition-colors">
-                <td className="px-6 py-3 font-mono">
+              <tr key={i} className={analyticsRowClass}>
+                <td className={`${analyticsTdClass} font-mono`}>
                   {row.solicitation_number ? (
                     <SolicitationNumberLink solicitationNumber={row.solicitation_number} />
                   ) : '—'}
                 </td>
-                <td className="px-6 py-3 text-card-foreground truncate max-w-[180px]" title={row.profile_name || ''}>
+                <td className={`${analyticsTdClass} text-card-foreground truncate max-w-[180px]`} title={row.profile_name || ''}>
                   {row.profile_name || '—'}
                 </td>
-                <td className="px-6 py-3 text-card-foreground whitespace-nowrap">{formatDate(row.close_date)}</td>
-                <td className="px-6 py-3 text-amber-700 dark:text-amber-300 whitespace-nowrap font-medium">
+                <td className={`${analyticsTdClass} text-card-foreground whitespace-nowrap`}>{formatDate(row.close_date)}</td>
+                <td className={`${analyticsTdClass} text-amber-700 dark:text-amber-300 whitespace-nowrap font-medium`}>
                   {formatRelative(row.latest_amendment_at)}
                 </td>
-                <td className="px-6 py-3 text-muted whitespace-nowrap">
+                <td className={`${analyticsTdClass} text-muted whitespace-nowrap`}>
                   {row.change_reason ? (REASON_LABELS[row.change_reason] || row.change_reason) : '—'}
                 </td>
               </tr>

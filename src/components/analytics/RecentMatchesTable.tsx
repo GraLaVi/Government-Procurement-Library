@@ -3,6 +3,11 @@
 import { RecentMatch } from '@/lib/hooks/useAnalytics';
 import { SolicitationNumberLink } from '@/components/library/SolicitationNumberLink';
 import { CardInfoBadge } from './CardInfoBadge';
+import {
+  analyticsCardClass, analyticsCardHeaderClass, analyticsCardPaddedClass,
+  analyticsRowClass, analyticsTableClass, analyticsTableWrapClass,
+  analyticsTdClass, analyticsTheadRowClass, analyticsThClass,
+} from './AnalyticsTable';
 
 const INFO_COPY = 'Your 5 most recently matched solicitations. Source: your bid-matching results.';
 
@@ -13,7 +18,7 @@ interface RecentMatchesTableProps {
 export function RecentMatchesTable({ data }: RecentMatchesTableProps) {
   if (!data.length) {
     return (
-      <div className="bg-card-bg rounded-xl border border-border p-6">
+      <div className={analyticsCardPaddedClass}>
         <div className="flex items-center gap-1.5 mb-4">
           <h3 className="text-sm font-semibold text-card-foreground">Recent Matches</h3>
           <CardInfoBadge content={INFO_COPY} />
@@ -24,22 +29,22 @@ export function RecentMatchesTable({ data }: RecentMatchesTableProps) {
   }
 
   return (
-    <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-      <div className="px-6 py-4 border-b border-border">
+    <div className={analyticsCardClass}>
+      <div className={analyticsCardHeaderClass}>
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-semibold text-card-foreground">Recent Matches</h3>
           <CardInfoBadge content={INFO_COPY} />
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className={analyticsTableWrapClass}>
+        <table className={analyticsTableClass}>
           <thead>
-            <tr className="border-b border-border bg-muted-light/50">
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Solicitation #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Close Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Profile</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Matched On</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Found</th>
+            <tr className={analyticsTheadRowClass}>
+              <th className={analyticsThClass}>Solicitation #</th>
+              <th className={analyticsThClass}>Close Date</th>
+              <th className={analyticsThClass}>Profile</th>
+              <th className={analyticsThClass}>Matched On</th>
+              <th className={analyticsThClass}>Found</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -52,15 +57,15 @@ export function RecentMatchesTable({ data }: RecentMatchesTableProps) {
                 : '-';
 
               return (
-                <tr key={i} className="hover:bg-muted-light/30 transition-colors">
-                  <td className="px-6 py-3 font-mono">
+                <tr key={i} className={analyticsRowClass}>
+                  <td className={`${analyticsTdClass} font-mono`}>
                     {match.solicitation_number ? (
                       <SolicitationNumberLink solicitationNumber={match.solicitation_number} />
                     ) : '-'}
                   </td>
-                  <td className="px-6 py-3 text-card-foreground whitespace-nowrap">{closeDate}</td>
-                  <td className="px-6 py-3 text-card-foreground">{match.profile_name || '-'}</td>
-                  <td className="px-6 py-3">
+                  <td className={`${analyticsTdClass} text-card-foreground whitespace-nowrap`}>{closeDate}</td>
+                  <td className={`${analyticsTdClass} text-card-foreground`}>{match.profile_name || '-'}</td>
+                  <td className={analyticsTdClass}>
                     <div className="flex flex-wrap gap-1">
                       {match.condition_types.length > 0 ? match.condition_types.map((ct, j) => (
                         <span
@@ -72,7 +77,7 @@ export function RecentMatchesTable({ data }: RecentMatchesTableProps) {
                       )) : '-'}
                     </div>
                   </td>
-                  <td className="px-6 py-3 text-muted whitespace-nowrap">{matchedAt}</td>
+                  <td className={`${analyticsTdClass} text-muted whitespace-nowrap`}>{matchedAt}</td>
                 </tr>
               );
             })}

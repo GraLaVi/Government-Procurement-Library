@@ -3,6 +3,11 @@
 import { SetAsideWinRateRow } from '@/lib/hooks/useAnalytics';
 import { formatNumber } from './ChartColors';
 import { CardInfoBadge } from './CardInfoBadge';
+import {
+  analyticsCardClass, analyticsCardHeaderClass, analyticsCardPaddedClass,
+  analyticsRowClass, analyticsTableClass, analyticsTableWrapClass,
+  analyticsTdClass, analyticsTheadRowClass, analyticsThClass,
+} from './AnalyticsTable';
 
 const INFO_COPY =
   'Your win rate by set-aside category — awards won ÷ solicitations matched, last 24 months. Source: DIBBS solicitations + award history.';
@@ -27,7 +32,7 @@ function RatePill({ pct }: { pct: number | null }) {
 export function SetAsideWinRateTable({ data }: SetAsideWinRateTableProps) {
   if (!data.length) {
     return (
-      <div className="bg-card-bg rounded-xl border border-border p-6">
+      <div className={analyticsCardPaddedClass}>
         <div className="flex items-center gap-1.5 mb-4">
           <h3 className="text-sm font-semibold text-card-foreground">Set-Aside Win Rate</h3>
           <CardInfoBadge content={INFO_COPY} />
@@ -38,31 +43,31 @@ export function SetAsideWinRateTable({ data }: SetAsideWinRateTableProps) {
   }
 
   return (
-    <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-      <div className="px-6 py-4 border-b border-border">
+    <div className={analyticsCardClass}>
+      <div className={analyticsCardHeaderClass}>
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-semibold text-card-foreground">Set-Aside Win Rate</h3>
           <CardInfoBadge content={INFO_COPY} />
         </div>
         <p className="text-xs text-muted mt-1">Won / matched ratio per set-aside type (last 24 months)</p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className={analyticsTableWrapClass}>
+        <table className={analyticsTableClass}>
           <thead>
-            <tr className="border-b border-border bg-muted-light/50">
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Set-Aside</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Matched</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Won</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Win Rate</th>
+            <tr className={analyticsTheadRowClass}>
+              <th className={analyticsThClass}>Set-Aside</th>
+              <th className={`${analyticsThClass} !text-right`}>Matched</th>
+              <th className={`${analyticsThClass} !text-right`}>Won</th>
+              <th className={`${analyticsThClass} !text-right`}>Win Rate</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {data.map((row, i) => (
-              <tr key={i} className="hover:bg-muted-light/30 transition-colors">
-                <td className="px-6 py-3 text-card-foreground">{row.set_aside || 'Unspecified'}</td>
-                <td className="px-6 py-3 text-right text-card-foreground tabular-nums">{formatNumber(row.matched_count)}</td>
-                <td className="px-6 py-3 text-right text-card-foreground tabular-nums">{formatNumber(row.won_count)}</td>
-                <td className="px-6 py-3 text-right"><RatePill pct={row.win_rate_pct} /></td>
+              <tr key={i} className={analyticsRowClass}>
+                <td className={`${analyticsTdClass} text-card-foreground`}>{row.set_aside || 'Unspecified'}</td>
+                <td className={`${analyticsTdClass} text-right text-card-foreground tabular-nums`}>{formatNumber(row.matched_count)}</td>
+                <td className={`${analyticsTdClass} text-right text-card-foreground tabular-nums`}>{formatNumber(row.won_count)}</td>
+                <td className={`${analyticsTdClass} text-right`}><RatePill pct={row.win_rate_pct} /></td>
               </tr>
             ))}
           </tbody>

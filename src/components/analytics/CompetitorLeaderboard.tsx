@@ -3,6 +3,11 @@
 import { CompetitorRow } from '@/lib/hooks/useAnalytics';
 import { formatCurrency, formatNumber } from './ChartColors';
 import { CardInfoBadge } from './CardInfoBadge';
+import {
+  analyticsCardClass, analyticsCardHeaderClass, analyticsCardPaddedClass,
+  analyticsRowClass, analyticsTableClass, analyticsTableWrapClass,
+  analyticsTdClass, analyticsTheadRowClass, analyticsThClass,
+} from './AnalyticsTable';
 
 const INFO_COPY = "Vendors who've won the most value on your parts, last 2 years. Source: DIBBS award history.";
 
@@ -23,7 +28,7 @@ function formatDate(value: string | null): string {
 export function CompetitorLeaderboard({ data }: CompetitorLeaderboardProps) {
   if (!data.length) {
     return (
-      <div className="bg-card-bg rounded-xl border border-border p-6">
+      <div className={analyticsCardPaddedClass}>
         <div className="flex items-center gap-1.5 mb-4">
           <h3 className="text-sm font-semibold text-card-foreground">Competitors on Your Parts</h3>
           <CardInfoBadge content={INFO_COPY} />
@@ -34,39 +39,39 @@ export function CompetitorLeaderboard({ data }: CompetitorLeaderboardProps) {
   }
 
   return (
-    <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-      <div className="px-6 py-4 border-b border-border">
+    <div className={analyticsCardClass}>
+      <div className={analyticsCardHeaderClass}>
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-semibold text-card-foreground">Competitors on Your Parts</h3>
           <CardInfoBadge content={INFO_COPY} />
         </div>
         <p className="text-xs text-muted mt-1">Top vendors winning on parts you supply (last 24 months)</p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className={analyticsTableWrapClass}>
+        <table className={analyticsTableClass}>
           <thead>
-            <tr className="border-b border-border bg-muted-light/50">
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">CAGE</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Company</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Your Parts Won</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Total $</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Last Award</th>
+            <tr className={analyticsTheadRowClass}>
+              <th className={analyticsThClass}>CAGE</th>
+              <th className={analyticsThClass}>Company</th>
+              <th className={`${analyticsThClass} !text-right`}>Your Parts Won</th>
+              <th className={`${analyticsThClass} !text-right`}>Total $</th>
+              <th className={analyticsThClass}>Last Award</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {data.map((row, i) => (
-              <tr key={i} className="hover:bg-muted-light/30 transition-colors">
-                <td className="px-6 py-3 font-mono text-card-foreground">{row.cage_code || '—'}</td>
-                <td className="px-6 py-3 text-card-foreground truncate max-w-xs" title={row.company_name || ''}>
+              <tr key={i} className={analyticsRowClass}>
+                <td className={`${analyticsTdClass} font-mono text-card-foreground`}>{row.cage_code || '—'}</td>
+                <td className={`${analyticsTdClass} text-card-foreground truncate max-w-xs`} title={row.company_name || ''}>
                   {row.company_name || <span className="text-muted">Unknown</span>}
                 </td>
-                <td className="px-6 py-3 text-right text-card-foreground tabular-nums">
+                <td className={`${analyticsTdClass} text-right text-card-foreground tabular-nums`}>
                   {formatNumber(row.parts_won_count)}
                 </td>
-                <td className="px-6 py-3 text-right text-card-foreground font-semibold tabular-nums">
+                <td className={`${analyticsTdClass} text-right text-card-foreground font-semibold tabular-nums`}>
                   {formatCurrency(Number(row.total_value))}
                 </td>
-                <td className="px-6 py-3 text-muted whitespace-nowrap">{formatDate(row.last_award_date)}</td>
+                <td className={`${analyticsTdClass} text-muted whitespace-nowrap`}>{formatDate(row.last_award_date)}</td>
               </tr>
             ))}
           </tbody>

@@ -3,6 +3,11 @@
 import { SetAsideMarketRow } from '@/lib/hooks/useAnalytics';
 import { formatNumber } from './ChartColors';
 import { CardInfoBadge } from './CardInfoBadge';
+import {
+  analyticsCardClass, analyticsCardHeaderClass, analyticsCardPaddedClass,
+  analyticsRowClass, analyticsTableClass, analyticsTableWrapClass,
+  analyticsTdClass, analyticsTheadRowClass, analyticsThClass,
+} from './AnalyticsTable';
 
 const INFO_COPY =
   'Currently open opportunities by set-aside category, with a 12-month trend and year-over-year change. Source: SAM.gov + DIBBS solicitations.';
@@ -55,7 +60,7 @@ function YoYPill({ pct }: { pct: number | null }) {
 export function SetAsideMarketTable({ data }: SetAsideMarketTableProps) {
   if (!data.length) {
     return (
-      <div className="bg-card-bg rounded-xl border border-border p-6">
+      <div className={analyticsCardPaddedClass}>
         <div className="flex items-center gap-1.5 mb-4">
           <h3 className="text-sm font-semibold text-card-foreground">Set-Aside Distribution</h3>
           <CardInfoBadge content={INFO_COPY} />
@@ -66,37 +71,37 @@ export function SetAsideMarketTable({ data }: SetAsideMarketTableProps) {
   }
 
   return (
-    <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-      <div className="px-6 py-4 border-b border-border">
+    <div className={analyticsCardClass}>
+      <div className={analyticsCardHeaderClass}>
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-semibold text-card-foreground">Set-Aside Distribution</h3>
           <CardInfoBadge content={INFO_COPY} />
         </div>
         <p className="text-xs text-muted mt-1">Active SAM.gov opportunities, with 12-month posting trend and YoY change</p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className={analyticsTableWrapClass}>
+        <table className={analyticsTableClass}>
           <thead>
-            <tr className="border-b border-border bg-muted-light/50">
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Set-Aside</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Open</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">12mo Trend</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">YoY</th>
+            <tr className={analyticsTheadRowClass}>
+              <th className={analyticsThClass}>Set-Aside</th>
+              <th className={`${analyticsThClass} !text-right`}>Open</th>
+              <th className={analyticsThClass}>12mo Trend</th>
+              <th className={`${analyticsThClass} !text-right`}>YoY</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {data.map((row, i) => {
               const label = row.description || row.code || 'Unknown';
               return (
-                <tr key={i} className="hover:bg-muted-light/30 transition-colors">
-                  <td className="px-6 py-3 text-card-foreground">{label}</td>
-                  <td className="px-6 py-3 text-right text-card-foreground font-medium tabular-nums">
+                <tr key={i} className={analyticsRowClass}>
+                  <td className={`${analyticsTdClass} text-card-foreground`}>{label}</td>
+                  <td className={`${analyticsTdClass} text-right text-card-foreground font-medium tabular-nums`}>
                     {formatNumber(row.open_count)}
                   </td>
-                  <td className="px-6 py-3 text-primary">
+                  <td className={`${analyticsTdClass} text-primary`}>
                     <Sparkline values={row.trend_12mo} />
                   </td>
-                  <td className="px-6 py-3 text-right">
+                  <td className={`${analyticsTdClass} text-right`}>
                     <YoYPill pct={row.yoy_pct} />
                   </td>
                 </tr>

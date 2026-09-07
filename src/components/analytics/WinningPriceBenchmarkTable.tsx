@@ -4,6 +4,11 @@ import { PartPriceBenchmark } from '@/lib/hooks/useAnalytics';
 import { formatNumber } from './ChartColors';
 import { DemandSignalChip, DemandSignalKind } from './DemandSignalChip';
 import { CardInfoBadge } from './CardInfoBadge';
+import {
+  analyticsCardClass, analyticsCardHeaderClass, analyticsCardPaddedClass,
+  analyticsRowClass, analyticsTableClass, analyticsTableWrapClass,
+  analyticsTdClass, analyticsTheadRowClass, analyticsThClass,
+} from './AnalyticsTable';
 
 const DEMAND_TYPE_KINDS: DemandSignalKind[] = ['recurring', 'one_off', 'unknown'];
 
@@ -45,7 +50,7 @@ function PriceRangeBar({ row }: { row: PartPriceBenchmark }) {
 export function WinningPriceBenchmarkTable({ data }: WinningPriceBenchmarkTableProps) {
   if (!data.length) {
     return (
-      <div className="bg-card-bg rounded-xl border border-border p-6">
+      <div className={analyticsCardPaddedClass}>
         <div className="flex items-center gap-1.5 mb-4">
           <h3 className="text-sm font-semibold text-card-foreground">Winning Price Benchmark</h3>
           <CardInfoBadge content={WINNING_PRICE_INFO_COPY} />
@@ -58,8 +63,8 @@ export function WinningPriceBenchmarkTable({ data }: WinningPriceBenchmarkTableP
   }
 
   return (
-    <div className="bg-card-bg rounded-xl border border-border overflow-hidden">
-      <div className="px-6 py-4 border-b border-border">
+    <div className={analyticsCardClass}>
+      <div className={analyticsCardHeaderClass}>
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-semibold text-card-foreground">Winning Price Benchmark</h3>
           <CardInfoBadge content={WINNING_PRICE_INFO_COPY} />
@@ -68,17 +73,17 @@ export function WinningPriceBenchmarkTable({ data }: WinningPriceBenchmarkTableP
           Min / median / max winning unit price over the last 12 months — your most-active parts
         </p>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className={analyticsTableWrapClass}>
+        <table className={analyticsTableClass}>
           <thead>
-            <tr className="border-b border-border bg-muted-light/50">
-              <th className="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">NSN / Description</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Awards</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Min</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Median</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Max</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Range</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
+            <tr className={analyticsTheadRowClass}>
+              <th className={analyticsThClass}>NSN / Description</th>
+              <th className={`${analyticsThClass} !text-right`}>Awards</th>
+              <th className={`${analyticsThClass} !text-right`}>Min</th>
+              <th className={`${analyticsThClass} !text-right`}>Median</th>
+              <th className={`${analyticsThClass} !text-right`}>Max</th>
+              <th className={analyticsThClass}>Range</th>
+              <th className={analyticsThClass}>
                 <span className="inline-flex items-center gap-1.5">
                   Demand
                   <CardInfoBadge content={DEMAND_TYPE_INFO_COPY} />
@@ -94,29 +99,29 @@ export function WinningPriceBenchmarkTable({ data }: WinningPriceBenchmarkTableP
                 ? (row.demand_type as DemandSignalKind)
                 : null;
               return (
-                <tr key={i} className="hover:bg-muted-light/30 transition-colors">
-                  <td className="px-6 py-3">
+                <tr key={i} className={analyticsRowClass}>
+                  <td className={analyticsTdClass}>
                     <div className="font-mono text-xs text-card-foreground">{nsn}</div>
                     {desc && (
                       <div className="text-xs text-muted truncate max-w-[280px]" title={desc}>{desc}</div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right text-card-foreground tabular-nums">
+                  <td className={`${analyticsTdClass} text-right text-card-foreground tabular-nums`}>
                     {formatNumber(row.award_count)}
                   </td>
-                  <td className="px-4 py-3 text-right text-muted tabular-nums">
+                  <td className={`${analyticsTdClass} text-right text-muted tabular-nums`}>
                     {formatUnitPrice(row.min_unit_price)}
                   </td>
-                  <td className="px-4 py-3 text-right text-card-foreground font-semibold tabular-nums">
+                  <td className={`${analyticsTdClass} text-right text-card-foreground font-semibold tabular-nums`}>
                     {formatUnitPrice(row.median_unit_price)}
                   </td>
-                  <td className="px-4 py-3 text-right text-muted tabular-nums">
+                  <td className={`${analyticsTdClass} text-right text-muted tabular-nums`}>
                     {formatUnitPrice(row.max_unit_price)}
                   </td>
-                  <td className="px-4 py-3 text-primary">
+                  <td className={`${analyticsTdClass} text-primary`}>
                     <PriceRangeBar row={row} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className={analyticsTdClass}>
                     {demandKind ? <DemandSignalChip kind={demandKind} /> : <span className="text-muted text-xs">—</span>}
                   </td>
                 </tr>
