@@ -14,14 +14,21 @@ import { SeatCapSuspensionAlert } from "@/components/dashboard/SeatCapSuspension
 import { useSeatCapSuspensions } from "@/lib/hooks/useSeatCapSuspensions";
 import { resolveOrgTier } from "@/lib/library/tier";
 import { ANALYTICS_PRODUCT_KEY } from "@/lib/analytics/tier";
+import { RFQ_PRODUCT_KEY, RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 
 // Seat-assignable add-ons: 'feature' products with requires_seat_assignment,
 // which stack alongside the org's library tier rather than being one. Unlike
 // the org-wide tier, each of these must be handed to named users, so every
-// held add-on gets its own column in the users table. Adding a third add-on
+// held add-on gets its own column in the users table. Adding another add-on
 // is a one-line change here.
+//
+// The two RFQ add-ons are listed separately on purpose: they're distinct
+// products with distinct seat pools, so a customer on Enterprise needs its
+// own column. Enterprise is a strict superset (see @/lib/rfq/tier), so
+// customers normally hold one or the other and see a single RFQ column.
 const SEAT_ADDONS = [
-  { key: "request_for_quote", label: "RFQ" },
+  { key: RFQ_PRODUCT_KEY, label: "RFQ" },
+  { key: RFQ_ENTERPRISE_PRODUCT_KEY, label: "RFQ Enterprise" },
   { key: ANALYTICS_PRODUCT_KEY, label: "Analytics" },
 ] as const;
 
