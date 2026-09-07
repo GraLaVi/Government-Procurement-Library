@@ -6,7 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { Button } from "@/components/ui/Button";
-import { TableCard } from "@/components/rfq/TableCard";
+import {
+  TableCard, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
 import type { RfqBuyer } from "@/lib/rfq/types";
 
 interface CageAssignmentRow {
@@ -239,16 +241,16 @@ export default function RfqAssignmentsPage() {
                 : "Nothing matches your search."}
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+            <div className={tableWrapClass}>
+              <table className={tableClass}>
                 <thead>
-                  <tr className="border-b border-border bg-primary/10 text-left text-[10px] font-semibold text-muted uppercase tracking-wide">
-                    <th className="px-3 py-2">CAGE</th>
-                    <th className="px-3 py-2">Vendor</th>
-                    <th className="px-3 py-2">Buyers</th>
+                  <tr className={tableHeadRowClass}>
+                    <th className={thClass}>CAGE</th>
+                    <th className={thClass}>Vendor</th>
+                    <th className={thClass}>Buyers</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody>
                   {displayRows.map((r) => {
                     const busy = busyCage === r.cage_code;
                     const unowned = r.buyers.length === 0;
@@ -256,14 +258,17 @@ export default function RfqAssignmentsPage() {
                       (b) => !r.buyers.some((x) => x.user_id === b.user_id)
                     );
                     return (
-                      <tr key={r.cage_code} className={unowned ? "bg-amber-50/50 dark:bg-amber-500/10" : undefined}>
-                        <td className="px-3 py-2 font-mono font-semibold text-foreground whitespace-nowrap">
+                      <tr
+                        key={r.cage_code}
+                        className={`${rowClass} ${unowned ? "bg-amber-50/50 dark:bg-amber-500/10" : ""}`}
+                      >
+                        <td className={`${tdClass} font-mono font-semibold text-foreground whitespace-nowrap`}>
                           {r.cage_code}
                         </td>
-                        <td className="px-3 py-2 text-card-foreground">
+                        <td className={`${tdClass} text-card-foreground`}>
                           {r.vendor_name || <span className="text-muted italic">—</span>}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className={tdClass}>
                           <div className="flex flex-wrap items-center gap-1.5">
                             {r.buyers.map((b) => (
                               <span

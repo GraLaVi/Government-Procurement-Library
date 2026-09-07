@@ -14,14 +14,24 @@ import { SeatCapSuspensionAlert } from "@/components/dashboard/SeatCapSuspension
 import { useSeatCapSuspensions } from "@/lib/hooks/useSeatCapSuspensions";
 import { resolveOrgTier } from "@/lib/library/tier";
 import { ANALYTICS_PRODUCT_KEY } from "@/lib/analytics/tier";
+import { RFQ_PRODUCT_KEY, RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
+import {
+  rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
 
 // Seat-assignable add-ons: 'feature' products with requires_seat_assignment,
 // which stack alongside the org's library tier rather than being one. Unlike
 // the org-wide tier, each of these must be handed to named users, so every
-// held add-on gets its own column in the users table. Adding a third add-on
+// held add-on gets its own column in the users table. Adding another add-on
 // is a one-line change here.
+//
+// The two RFQ add-ons are listed separately on purpose: they're distinct
+// products with distinct seat pools, so a customer on Enterprise needs its
+// own column. Enterprise is a strict superset (see @/lib/rfq/tier), so
+// customers normally hold one or the other and see a single RFQ column.
 const SEAT_ADDONS = [
-  { key: "request_for_quote", label: "RFQ" },
+  { key: RFQ_PRODUCT_KEY, label: "RFQ" },
+  { key: RFQ_ENTERPRISE_PRODUCT_KEY, label: "RFQ Enterprise" },
   { key: ANALYTICS_PRODUCT_KEY, label: "Analytics" },
 ] as const;
 
@@ -725,173 +735,161 @@ export default function UsersPage() {
         </label>
       </div>
 
-      {/* Users table */}
-      <div className="bg-card-bg rounded-xl border border-border">
-        <div className="overflow-x-auto overflow-y-visible">
-          <table className="w-full">
-            <thead className="bg-muted-light border-b border-border">
+      {/* Users table. Built from the shared table tokens in
+          components/rfq/TableCard — the app's one table style — so this reads
+          as the same table as /rfq, bid matching and the inventory Items tab
+          rather than a sixth variant. Don't respell padding or borders here.
+          The row action menu is rendered outside the scroll box (below), so
+          the wrapper's overflow never clips it. */}
+      <div className={`${tableWrapClass} bg-card-bg`}>
+        <table className={tableClass}>
+          <thead>
+            <tr className={tableHeadRowClass}>
+              <th className={thClass}>Name</th>
+              <th className={thClass}>Email</th>
+              <th className={thClass}>Role</th>
+              <th className={thClass}>Plan</th>
+              <th className={thClass}>Status</th>
+              {heldAddons.map((addon) => (
+                <th key={addon.key} className={`${thClass} whitespace-nowrap`}>
+                  {addon.label}
+                </th>
+              ))}
+              <th className={`${thClass} !text-right`}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.length === 0 ? (
               <tr>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
-                  Plan
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
-                  Status
-                </th>
-                {heldAddons.map((addon) => (
-                  <th
-                    key={addon.key}
-                    className="text-left px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider"
-                  >
-                    {addon.label}
-                  </th>
-                ))}
-                <th className="text-right px-6 py-3 text-xs font-semibold text-muted uppercase tracking-wider">
-                  Actions
-                </th>
+                <td colSpan={6 + heldAddons.length} className="px-2.5 py-8 text-center text-muted">
+                  No users found
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan={6 + heldAddons.length} className="px-6 py-8 text-center text-muted">
-                    No users found
+            ) : (
+              users.map((u) => (
+                <tr key={u.id} className={rowClass}>
+                  <td className={tdClass}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 shrink-0 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-semibold text-primary uppercase">
+                          {u.first_name?.[0] || u.email[0]}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground whitespace-nowrap">
+                          {u.first_name} {u.last_name}
+                        </p>
+                        {u.job_title && (
+                          <p className="text-muted">{u.job_title}</p>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className={`${tdClass} text-muted`}>
+                    {u.email}
+                  </td>
+                  <td className={tdClass}>
+                    <div className="flex flex-wrap gap-1">
+                      {u.roles && u.roles.length > 0 ? (
+                        u.roles.map((role) => (
+                          <RowBadge
+                            key={role}
+                            tone={role === "admin" ? "sky" : "neutral"}
+                          >
+                            {formatRoleName(role)}
+                          </RowBadge>
+                        ))
+                      ) : (
+                        <span className="text-muted">No roles</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className={tdClass}>
+                    {/* Single org-wide tier per the locked pricing model.
+                        Inactive users hold no seat, so they show no plan. */}
+                    {u.is_active ? (
+                      <RowBadge tone={orgTier.tone}>{orgTier.label}</RowBadge>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
+                  <td className={tdClass}>
+                    <RowBadge tone={u.is_active ? "green" : "amber"}>
+                      {u.is_active ? "Active" : "Inactive"}
+                    </RowBadge>
+                    {/* Why they're inactive, when we know. A plan-limit
+                        suspension is the system's doing and is undone by
+                        adding seats; the others were someone's decision.
+                        Rendered as a separate line rather than folded into
+                        the badge because Badge applies `capitalize`, which
+                        would mangle multi-word text. */}
+                    {!u.is_active && deactivationLabel(u.deactivated_reason) && (
+                      <div
+                        className="mt-1 text-muted"
+                        title={deactivationTitle(u.deactivated_reason)}
+                      >
+                        {deactivationLabel(u.deactivated_reason)}
+                      </div>
+                    )}
+                  </td>
+                  {heldAddons.map((addon) => (
+                    <td key={addon.key} className={tdClass}>
+                      {!u.is_active ? (
+                        <span className="text-muted">—</span>
+                      ) : (
+                        (() => {
+                          const source = addonAssignments[addon.key]?.[u.id];
+                          if (source === "customer_direct" || source === "customer_group") {
+                            return (
+                              <span className="text-muted" title="Granted org-wide (comp/admin) — not an individually assigned seat">
+                                Org-wide
+                              </span>
+                            );
+                          }
+                          const isAssigned = source === "user_direct";
+                          const isToggling =
+                            togglingSeat?.key === addon.key && togglingSeat?.userId === u.id;
+                          const usage = addonSeatUsage[addon.key];
+                          const atCap = usage != null && usage.cap != null && usage.used >= usage.cap;
+                          const disabled = isToggling || (!isAssigned && atCap);
+                          return (
+                            <button
+                              onClick={() => toggleAddonSeat(addon, u)}
+                              disabled={disabled}
+                              title={!isAssigned && atCap ? `No ${addon.label} seats available — buy more or unassign one` : undefined}
+                              className={`font-medium whitespace-nowrap px-1.5 py-0.5 -mx-1.5 rounded transition-colors ${
+                                isAssigned
+                                  ? "text-success hover:text-error hover:bg-error/10"
+                                  : disabled
+                                    ? "text-muted cursor-not-allowed"
+                                    : "text-muted hover:text-primary hover:bg-primary/10"
+                              }`}
+                            >
+                              {isToggling ? "…" : isAssigned ? "✓ Assigned" : "Assign"}
+                            </button>
+                          );
+                        })()
+                      )}
+                    </td>
+                  ))}
+                  <td className={`${tdClass} text-right`}>
+                    {/* Menu always opens — even on the current user's own row.
+                        Self-targeted destructive actions (Deactivate, Delete)
+                        are filtered out inside the menu rendering. */}
+                    <button
+                      onClick={(e) => toggleMenu(u.id, e)}
+                      className="p-1 text-muted hover:text-foreground hover:bg-muted-light rounded transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </button>
                   </td>
                 </tr>
-              ) : (
-                users.map((u) => (
-                  <tr key={u.id} className="hover:bg-muted-light/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-semibold text-primary uppercase">
-                            {u.first_name?.[0] || u.email[0]}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {u.first_name} {u.last_name}
-                          </p>
-                          {u.job_title && (
-                            <p className="text-xs text-muted">{u.job_title}</p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted">
-                      {u.email}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {u.roles && u.roles.length > 0 ? (
-                          u.roles.map((role) => (
-                            <RowBadge
-                              key={role}
-                              tone={role === "admin" ? "sky" : "neutral"}
-                            >
-                              {formatRoleName(role)}
-                            </RowBadge>
-                          ))
-                        ) : (
-                          <span className="text-sm text-muted">No roles</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {/* Single org-wide tier per the locked pricing model.
-                          Inactive users hold no seat, so they show no plan. */}
-                      {u.is_active ? (
-                        <RowBadge tone={orgTier.tone}>{orgTier.label}</RowBadge>
-                      ) : (
-                        <span className="text-sm text-muted">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <RowBadge tone={u.is_active ? "green" : "amber"}>
-                        {u.is_active ? "Active" : "Inactive"}
-                      </RowBadge>
-                      {/* Why they're inactive, when we know. A plan-limit
-                          suspension is the system's doing and is undone by
-                          adding seats; the others were someone's decision.
-                          Rendered as a separate line rather than folded into
-                          the badge because Badge applies `capitalize`, which
-                          would mangle multi-word text. */}
-                      {!u.is_active && deactivationLabel(u.deactivated_reason) && (
-                        <div
-                          className="mt-1 text-xs text-muted"
-                          title={deactivationTitle(u.deactivated_reason)}
-                        >
-                          {deactivationLabel(u.deactivated_reason)}
-                        </div>
-                      )}
-                    </td>
-                    {heldAddons.map((addon) => (
-                      <td key={addon.key} className="px-6 py-4">
-                        {!u.is_active ? (
-                          <span className="text-sm text-muted">—</span>
-                        ) : (
-                          (() => {
-                            const source = addonAssignments[addon.key]?.[u.id];
-                            if (source === "customer_direct" || source === "customer_group") {
-                              return (
-                                <span className="text-xs text-muted" title="Granted org-wide (comp/admin) — not an individually assigned seat">
-                                  Org-wide
-                                </span>
-                              );
-                            }
-                            const isAssigned = source === "user_direct";
-                            const isToggling =
-                              togglingSeat?.key === addon.key && togglingSeat?.userId === u.id;
-                            const usage = addonSeatUsage[addon.key];
-                            const atCap = usage != null && usage.cap != null && usage.used >= usage.cap;
-                            const disabled = isToggling || (!isAssigned && atCap);
-                            return (
-                              <button
-                                onClick={() => toggleAddonSeat(addon, u)}
-                                disabled={disabled}
-                                title={!isAssigned && atCap ? `No ${addon.label} seats available — buy more or unassign one` : undefined}
-                                className={`text-xs font-medium px-2 py-1 -mx-2 rounded transition-colors ${
-                                  isAssigned
-                                    ? "text-success hover:text-error hover:bg-error/10"
-                                    : disabled
-                                      ? "text-muted cursor-not-allowed"
-                                      : "text-muted hover:text-primary hover:bg-primary/10"
-                                }`}
-                              >
-                                {isToggling ? "…" : isAssigned ? "✓ Assigned" : "Assign"}
-                              </button>
-                            );
-                          })()
-                        )}
-                      </td>
-                    ))}
-                    <td className="px-6 py-4 text-right">
-                      {/* Menu always opens — even on the current user's own row.
-                          Self-targeted destructive actions (Deactivate, Delete)
-                          are filtered out inside the menu rendering. */}
-                      <button
-                        onClick={(e) => toggleMenu(u.id, e)}
-                        className="p-2 text-muted hover:text-foreground hover:bg-muted-light rounded-lg transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Fixed position dropdown menu (rendered outside table to avoid overflow clipping) */}

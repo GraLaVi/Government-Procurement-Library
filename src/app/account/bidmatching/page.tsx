@@ -9,6 +9,9 @@ import { ChipInput } from "@/components/ui/ChipInput";
 import { normalizeNiin, previewNiin } from "@/lib/niin";
 import { useCodeDefinitions } from "@/lib/hooks/useCodeDefinitions";
 import type { CodeDefinition } from "@/lib/codeDefinitions";
+import {
+  rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
 
 interface BidMatchCondition {
   condition_id: number;
@@ -953,37 +956,31 @@ export default function BidMatchingPage() {
 
               {/* Conditions table */}
               {profile.conditions.length > 0 ? (
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted-light">
-                      <tr className="border-b border-border">
-                        <th className="text-left py-2 px-4 font-medium text-muted">
-                          Type
-                        </th>
-                        <th className="text-left py-2 px-4 font-medium text-muted">
-                          Operator
-                        </th>
-                        <th className="text-left py-2 px-4 font-medium text-muted">
-                          Value
-                        </th>
+                <div className={tableWrapClass}>
+                  <table className={tableClass}>
+                    <thead>
+                      <tr className={tableHeadRowClass}>
+                        <th className={thClass}>Type</th>
+                        <th className={thClass}>Operator</th>
+                        <th className={thClass}>Value</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border">
+                    <tbody>
                       {profile.conditions.map((cond) => (
                         <tr
                           key={cond.condition_id}
-                          className={cond.is_negated ? "border-l-4 border-l-red-400" : ""}
+                          className={`${rowClass} ${cond.is_negated ? "border-l-4 border-l-error" : ""}`}
                         >
-                          <td className="py-2 px-4 text-card-foreground font-medium">
+                          <td className={`${tdClass} text-card-foreground font-medium`}>
                             {cond.is_negated && (
                               <span className="inline-block mr-1.5 text-[10px] font-bold text-error">NOT</span>
                             )}
                             {CONDITION_TYPE_LABELS[cond.condition_type] || cond.condition_type}
                           </td>
-                          <td className="py-2 px-4 text-muted text-xs">
+                          <td className={`${tdClass} text-muted`}>
                             {OPERATOR_LABELS[cond.match_operator] || cond.match_operator}
                           </td>
-                          <td className={`py-2 px-4 text-card-foreground ${cond.is_negated ? "line-through opacity-70" : ""}`}>
+                          <td className={`${tdClass} text-card-foreground ${cond.is_negated ? "line-through opacity-70" : ""}`}>
                             {cond.match_value}
                           </td>
                         </tr>
@@ -1247,7 +1244,7 @@ export default function BidMatchingPage() {
                       <div
                         key={idx}
                         className={`rounded-lg border ${
-                          cond.is_negated ? "border-red-200 border-l-4 border-l-red-400" : "border-border"
+                          cond.is_negated ? "border-error/30 border-l-4 border-l-error" : "border-border"
                         } p-2 space-y-2`}
                       >
                         {/* Row 1: condition type + operator + delete. The
