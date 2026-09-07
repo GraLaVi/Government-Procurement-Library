@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import {
+  rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
 
 interface Contact {
   id: number;
@@ -229,28 +232,28 @@ export default function ContactsPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-border bg-card-bg overflow-hidden">
+      <div className={`${tableWrapClass} bg-card-bg`}>
         {contacts.length === 0 ? (
-          <div className="px-6 py-10 text-center text-sm text-muted">
+          <div className="px-2.5 py-8 text-center text-sm text-muted">
             No contacts yet. Add your first one to start subscribing non-login
             recipients to notifications.
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-muted-light/30 border-b border-border">
-              <tr>
-                <th className="text-left py-2 px-4 font-medium text-muted">Name</th>
-                <th className="text-left py-2 px-4 font-medium text-muted">Email</th>
-                <th className="text-left py-2 px-4 font-medium text-muted">Type</th>
-                <th className="text-left py-2 px-4 font-medium text-muted">Title</th>
-                <th className="text-left py-2 px-4 font-medium text-muted w-24">Status</th>
-                <th className="py-2 px-4 w-32"></th>
+          <table className={tableClass}>
+            <thead>
+              <tr className={tableHeadRowClass}>
+                <th className={thClass}>Name</th>
+                <th className={thClass}>Email</th>
+                <th className={thClass}>Type</th>
+                <th className={thClass}>Title</th>
+                <th className={`${thClass} w-24`}>Status</th>
+                <th className={`${thClass} w-32`}></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {contacts.map((c) => (
-                <tr key={c.id} className="hover:bg-muted-light/20">
-                  <td className="py-2 px-4 text-foreground">
+                <tr key={c.id} className={rowClass}>
+                  <td className={`${tdClass} text-foreground`}>
                     {fullName(c)}
                     {c.is_primary && (
                       <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
@@ -258,28 +261,28 @@ export default function ContactsPage() {
                       </span>
                     )}
                   </td>
-                  <td className="py-2 px-4 text-muted">{c.email || "—"}</td>
-                  <td className="py-2 px-4 text-muted capitalize">
+                  <td className={`${tdClass} text-muted`}>{c.email || "—"}</td>
+                  <td className={`${tdClass} text-muted capitalize`}>
                     {c.contact_type || "—"}
                   </td>
-                  <td className="py-2 px-4 text-muted">{c.job_title || "—"}</td>
-                  <td className="py-2 px-4">
+                  <td className={`${tdClass} text-muted`}>{c.job_title || "—"}</td>
+                  <td className={tdClass}>
                     {c.is_active ? (
-                      <span className="text-[11px] text-success">Active</span>
+                      <span className="text-success">Active</span>
                     ) : (
-                      <span className="text-[11px] text-muted">Inactive</span>
+                      <span className="text-muted">Inactive</span>
                     )}
                   </td>
-                  <td className="py-2 px-4 text-right">
+                  <td className={`${tdClass} text-right`}>
                     <button
                       onClick={() => openEdit(c)}
-                      className="text-xs text-primary hover:underline mr-3"
+                      className="text-primary hover:underline mr-3"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(c)}
-                      className="text-xs text-error hover:underline"
+                      className="text-error hover:underline"
                     >
                       Delete
                     </button>

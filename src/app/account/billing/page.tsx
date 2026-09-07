@@ -11,6 +11,9 @@ import { tierBadgeForKey } from "@/lib/library/tier";
 import { clearPendingSignup } from "@/lib/signup/pendingSignup";
 import { TermsAcceptanceModal } from "@/components/billing/TermsAcceptanceModal";
 import {
+  rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+} from "@/components/rfq/TableCard";
+import {
   type Price,
   formatMoney as formatPriceMoney,
   intervalLabel as priceIntervalLabel,
@@ -718,36 +721,36 @@ function BillingPageContent() {
 
       <TabPanel tabId="invoices" activeTab={activeTab}>
         <h2 className="text-lg font-semibold text-foreground mb-4">Invoice history</h2>
-        <div className="bg-card-bg border border-border rounded-xl overflow-hidden">
+        <div className={`${tableWrapClass} bg-card-bg`}>
           {isLoading ? (
-            <div className="p-6 text-muted text-sm">Loading invoices…</div>
+            <div className="px-2.5 py-8 text-center text-muted text-sm">Loading invoices…</div>
           ) : invoices.length === 0 ? (
-            <div className="p-6 text-muted text-sm">No invoices yet.</div>
+            <div className="px-2.5 py-8 text-center text-muted text-sm">No invoices yet.</div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-muted-light/40 text-muted border-b border-border">
-                <tr>
-                  <th className="text-left px-4 py-2 font-medium">Number</th>
-                  <th className="text-left px-4 py-2 font-medium">Issued</th>
-                  <th className="text-left px-4 py-2 font-medium">Status</th>
-                  <th className="text-right px-4 py-2 font-medium">Amount</th>
-                  <th className="text-right px-4 py-2 font-medium">Paid</th>
-                  <th className="px-4 py-2"></th>
+            <table className={tableClass}>
+              <thead>
+                <tr className={tableHeadRowClass}>
+                  <th className={thClass}>Number</th>
+                  <th className={thClass}>Issued</th>
+                  <th className={thClass}>Status</th>
+                  <th className={`${thClass} !text-right`}>Amount</th>
+                  <th className={`${thClass} !text-right`}>Paid</th>
+                  <th className={thClass}></th>
                 </tr>
               </thead>
               <tbody>
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className="border-b border-border last:border-b-0">
-                    <td className="px-4 py-2 text-card-foreground">{inv.number || `#${inv.id}`}</td>
-                    <td className="px-4 py-2 text-muted">{formatDate(inv.issued_at)}</td>
-                    <td className="px-4 py-2 text-muted capitalize">{inv.status.replace(/_/g, " ")}</td>
-                    <td className="px-4 py-2 text-right text-card-foreground">
+                  <tr key={inv.id} className={rowClass}>
+                    <td className={`${tdClass} text-card-foreground`}>{inv.number || `#${inv.id}`}</td>
+                    <td className={`${tdClass} text-muted`}>{formatDate(inv.issued_at)}</td>
+                    <td className={`${tdClass} text-muted capitalize`}>{inv.status.replace(/_/g, " ")}</td>
+                    <td className={`${tdClass} text-right text-card-foreground`}>
                       {formatMoney(inv.amount_due_cents, inv.currency)}
                     </td>
-                    <td className="px-4 py-2 text-right text-muted">
+                    <td className={`${tdClass} text-right text-muted`}>
                       {inv.paid_at ? formatDate(inv.paid_at) : "—"}
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    <td className={`${tdClass} text-right`}>
                       {inv.invoice_pdf_url ? (
                         <a href={inv.invoice_pdf_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">PDF</a>
                       ) : inv.hosted_invoice_url ? (
