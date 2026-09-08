@@ -156,8 +156,16 @@ export default function CompanyProfilePage() {
 // Demographics
 // ===========================================================================
 
-function SamHint({ value }: { value: string | null }) {
+// The SAM.gov original, shown only when the field has been overridden away
+// from it. It used to print on every field that had a SAM value at all, which
+// on an unedited profile means restating the input directly above it — 14
+// redundant lines, and the one case that matters (this field no longer matches
+// SAM, here is what clearing it reverts to) read the same as the 13 that
+// didn't. Comparison is trimmed because ovField trims before deciding whether
+// to send an override, so a whitespace-only difference is not one.
+function SamHint({ value, current }: { value: string | null; current: string | null }) {
   if (!value) return null;
+  if ((current || "").trim() === value.trim()) return null;
   return <p className="text-xs text-muted mt-1">SAM.gov: {value}</p>;
 }
 
@@ -250,38 +258,38 @@ function DemographicsSection({ profile, onSaved }: { profile: CompanyProfile; on
       )}
       {err && <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg text-sm text-error">{err}</div>}
 
-      <div className="bg-card-bg rounded-xl border border-border p-6 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="bg-card-bg rounded-xl border border-border p-4 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
             <Input label="Legal Business Name" value={form.legal_business_name || ""} onChange={(e) => setTop("legal_business_name", e.target.value)} disabled={saving} />
-            <SamHint value={sam.legal_business_name} />
+            <SamHint value={sam.legal_business_name} current={form.legal_business_name} />
           </div>
           <div>
             <Input label="DBA Name" value={form.dba_name || ""} onChange={(e) => setTop("dba_name", e.target.value)} disabled={saving} />
-            <SamHint value={sam.dba_name} />
+            <SamHint value={sam.dba_name} current={form.dba_name} />
           </div>
-        </div>
-        <div>
-          <Input label="Website" placeholder="https://example.com" value={form.entity_url || ""} onChange={(e) => setTop("entity_url", e.target.value)} disabled={saving} />
-          <SamHint value={sam.entity_url} />
+          <div>
+            <Input label="Website" placeholder="https://example.com" value={form.entity_url || ""} onChange={(e) => setTop("entity_url", e.target.value)} disabled={saving} />
+            <SamHint value={sam.entity_url} current={form.entity_url} />
+          </div>
         </div>
 
         <AddressFields title="Physical Address" group="physical_address" addr={form.physical_address} sam={sam.physical_address} onChange={setAddr} disabled={saving} />
         <AddressFields title="Mailing Address" group="mailing_address" addr={form.mailing_address} sam={sam.mailing_address} onChange={setAddr} disabled={saving} />
 
         <div>
-          <h3 className="text-sm font-semibold text-secondary mb-3">Point of Contact</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><Input label="First Name" value={form.poc.first_name || ""} onChange={(e) => setPoc("first_name", e.target.value)} disabled={saving} /><SamHint value={sam.poc.first_name} /></div>
-            <div><Input label="Last Name" value={form.poc.last_name || ""} onChange={(e) => setPoc("last_name", e.target.value)} disabled={saving} /><SamHint value={sam.poc.last_name} /></div>
-            <div><Input label="Title" value={form.poc.title || ""} onChange={(e) => setPoc("title", e.target.value)} disabled={saving} /><SamHint value={sam.poc.title} /></div>
+          <h3 className="text-sm font-semibold text-secondary mb-2">Point of Contact</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div><Input label="First Name" value={form.poc.first_name || ""} onChange={(e) => setPoc("first_name", e.target.value)} disabled={saving} /><SamHint value={sam.poc.first_name} current={form.poc.first_name} /></div>
+            <div><Input label="Last Name" value={form.poc.last_name || ""} onChange={(e) => setPoc("last_name", e.target.value)} disabled={saving} /><SamHint value={sam.poc.last_name} current={form.poc.last_name} /></div>
+            <div><Input label="Title" value={form.poc.title || ""} onChange={(e) => setPoc("title", e.target.value)} disabled={saving} /><SamHint value={sam.poc.title} current={form.poc.title} /></div>
             <div><Input label="Email" type="email" value={form.poc.email || ""} onChange={(e) => setPoc("email", e.target.value)} disabled={saving} /></div>
             <div><Input label="Phone" value={form.poc.phone || ""} onChange={(e) => setPoc("phone", e.target.value)} disabled={saving} /></div>
           </div>
         </div>
 
-        <div className="pt-2 border-t border-border">
-          <Button variant="primary" onClick={handleSave} disabled={saving}>
+        <div className="pt-1">
+          <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
             {saving ? "Saving…" : "Save Demographics"}
           </Button>
         </div>
@@ -301,15 +309,19 @@ function AddressFields({
   disabled: boolean;
 }) {
   return (
+    // Four across on lg: the two street lines pair off on one row and
+    // city/state/ZIP/country fill the next, so an address block is two rows
+    // instead of four. State, ZIP and country are short enough that a quarter
+    // column is more than they need.
     <div>
-      <h3 className="text-sm font-semibold text-secondary mb-3">{title}</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="sm:col-span-2"><Input label="Address Line 1" value={addr.line_1 || ""} onChange={(e) => onChange(group, "line_1", e.target.value)} disabled={disabled} /><SamHint value={sam.line_1} /></div>
+      <h3 className="text-sm font-semibold text-secondary mb-2">{title}</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="sm:col-span-2"><Input label="Address Line 1" value={addr.line_1 || ""} onChange={(e) => onChange(group, "line_1", e.target.value)} disabled={disabled} /><SamHint value={sam.line_1} current={addr.line_1} /></div>
         <div className="sm:col-span-2"><Input label="Address Line 2" value={addr.line_2 || ""} onChange={(e) => onChange(group, "line_2", e.target.value)} disabled={disabled} /></div>
-        <div><Input label="City" value={addr.city || ""} onChange={(e) => onChange(group, "city", e.target.value)} disabled={disabled} /><SamHint value={sam.city} /></div>
-        <div><Input label="State" value={addr.state || ""} onChange={(e) => onChange(group, "state", e.target.value)} disabled={disabled} /><SamHint value={sam.state} /></div>
-        <div><Input label="ZIP" value={addr.zip || ""} onChange={(e) => onChange(group, "zip", e.target.value)} disabled={disabled} /><SamHint value={sam.zip} /></div>
-        <div><Input label="Country Code" value={addr.country_code || ""} onChange={(e) => onChange(group, "country_code", e.target.value)} disabled={disabled} /><SamHint value={sam.country_code} /></div>
+        <div><Input label="City" value={addr.city || ""} onChange={(e) => onChange(group, "city", e.target.value)} disabled={disabled} /><SamHint value={sam.city} current={addr.city} /></div>
+        <div><Input label="State" value={addr.state || ""} onChange={(e) => onChange(group, "state", e.target.value)} disabled={disabled} /><SamHint value={sam.state} current={addr.state} /></div>
+        <div><Input label="ZIP" value={addr.zip || ""} onChange={(e) => onChange(group, "zip", e.target.value)} disabled={disabled} /><SamHint value={sam.zip} current={addr.zip} /></div>
+        <div><Input label="Country Code" value={addr.country_code || ""} onChange={(e) => onChange(group, "country_code", e.target.value)} disabled={disabled} /><SamHint value={sam.country_code} current={addr.country_code} /></div>
       </div>
     </div>
   );
