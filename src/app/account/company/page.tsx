@@ -391,7 +391,7 @@ function ContactsSection({ profile, onChanged }: { profile: CompanyProfile; onCh
           <h2 className="text-lg font-semibold text-secondary">Contacts in Vendor Search</h2>
           <p className="text-sm text-muted">Hide outdated contacts, edit details, or add your own. Hidden contacts never appear in vendor search.</p>
         </div>
-        <Button variant="outline" onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "Add Contact"}</Button>
+        <Button variant="outline" size="sm" onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "Add Contact"}</Button>
       </div>
 
       {err && <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg text-sm text-error">{err}</div>}
@@ -570,16 +570,16 @@ function AddContactForm({ onAdded, onError }: { onAdded: () => void; onError: (m
   };
 
   return (
-    <div className="mb-4 p-4 bg-card-bg border border-border rounded-lg space-y-3">
+    <div className="mb-4 p-3 bg-card-bg border border-border rounded-lg space-y-2">
       <h3 className="text-sm font-semibold text-secondary">New Contact</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <Input label="First Name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
         <Input label="Last Name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
         <Input label="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
         <Input label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         <Input label="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
       </div>
-      <Button variant="primary" onClick={submit} disabled={saving}>{saving ? "Adding…" : "Add Contact"}</Button>
+      <Button variant="primary" size="sm" onClick={submit} disabled={saving}>{saving ? "Adding…" : "Add Contact"}</Button>
     </div>
   );
 }
@@ -640,7 +640,7 @@ function CertificationsSection({ profile, onChanged }: { profile: CompanyProfile
           <h2 className="text-lg font-semibold text-secondary">Certifications &amp; Set-Asides</h2>
           <p className="text-sm text-muted">Publish your set-asides and certifications. Visible items show in your vendor-search profile.</p>
         </div>
-        <Button variant="outline" onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "Add"}</Button>
+        <Button variant="outline" size="sm" onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "Add"}</Button>
       </div>
 
       {err && <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg text-sm text-error">{err}</div>}
@@ -756,9 +756,11 @@ function AddCertificationForm({ onAdded, onError }: { onAdded: () => void; onErr
   };
 
   return (
-    <div className="mb-4 p-4 bg-card-bg border border-border rounded-lg space-y-3">
+    <div className="mb-4 p-3 bg-card-bg border border-border rounded-lg space-y-2">
       <h3 className="text-sm font-semibold text-secondary">New Certification / Set-Aside</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Four across on lg: the whole form is one row, or two once "Other
+          (custom)" adds its label field. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Select
           label="Type"
           value={kind}
@@ -779,7 +781,7 @@ function AddCertificationForm({ onAdded, onError }: { onAdded: () => void; onErr
         <Input label="Detail / Number (optional)" value={value} onChange={(e) => setValue(e.target.value)} placeholder="e.g. Cert #12345" />
         <Input label="Expires (optional)" type="date" value={expires} onChange={(e) => setExpires(e.target.value)} />
       </div>
-      <Button variant="primary" onClick={submit} disabled={saving}>{saving ? "Adding…" : "Add"}</Button>
+      <Button variant="primary" size="sm" onClick={submit} disabled={saving}>{saving ? "Adding…" : "Add"}</Button>
     </div>
   );
 }
