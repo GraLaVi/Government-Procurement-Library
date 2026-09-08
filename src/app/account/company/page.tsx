@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
 import { useCodeDefinitions } from "@/lib/hooks/useCodeDefinitions";
+import {
+  tableWrapClass, tableClass, tableHeadRowClass, thClass, tdClass, rowClass,
+} from "@/components/rfq/TableCard";
 
 // ---------------------------------------------------------------------------
 // Types (mirror the FastAPI CompanyProfileResponse)
@@ -316,6 +319,20 @@ function AddressFields({
 // Contacts
 // ===========================================================================
 
+// Row actions are inline text links, matching /account/contacts and
+// /account/users — a table row is too tight for the Button component's md
+// padding, and three of them per row was most of why these sections read as a
+// different product. `disabled` is styled here because these fire requests and
+// go inert while one is in flight.
+const rowActionClass =
+  "text-primary hover:underline cursor-pointer disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed";
+const rowActionDangerClass =
+  "text-error hover:underline cursor-pointer disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed";
+
+// colSpan for the contact edit form. Keep in step with the <thead> below.
+const CONTACT_COLUMNS = 7;
+
+
 function ContactsSection({ profile, onChanged }: { profile: CompanyProfile; onChanged: () => void }) {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -362,28 +379,46 @@ function ContactsSection({ profile, onChanged }: { profile: CompanyProfile; onCh
           <h2 className="text-lg font-semibold text-secondary">Contacts in Vendor Search</h2>
           <p className="text-sm text-muted">Hide outdated contacts, edit details, or add your own. Hidden contacts never appear in vendor search.</p>
         </div>
-        <Button variant="secondary" onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "Add Contact"}</Button>
+        <Button variant="outline" onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "Add Contact"}</Button>
       </div>
 
       {err && <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg text-sm text-error">{err}</div>}
 
       {adding && <AddContactForm onAdded={() => { setAdding(false); onChanged(); }} onError={setErr} />}
 
-      <div className="bg-card-bg rounded-xl border border-border divide-y divide-border">
-        {profile.contacts.length === 0 && (
-          <p className="p-6 text-sm text-muted">No contacts yet. SAM.gov contacts will appear here automatically.</p>
+      <div className={`${tableWrapClass} bg-card-bg`}>
+        {profile.contacts.length === 0 ? (
+          <div className="px-2.5 py-8 text-center text-sm text-muted">
+            No contacts yet. SAM.gov contacts will appear here automatically.
+          </div>
+        ) : (
+          <table className={tableClass}>
+            <thead>
+              <tr className={tableHeadRowClass}>
+                <th className={thClass}>Name</th>
+                <th className={thClass}>Type</th>
+                <th className={thClass}>Title</th>
+                <th className={thClass}>Email</th>
+                <th className={thClass}>Phone</th>
+                <th className={`${thClass} w-24`}>Status</th>
+                <th className={`${thClass} w-32`}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {profile.contacts.map((c) => (
+                <ContactRow
+                  key={c.source_key}
+                  contact={c}
+                  busy={busyKey === c.source_key}
+                  onToggleHidden={() => toggleHidden(c)}
+                  onRemove={() => removeContact(c)}
+                  onSaved={onChanged}
+                  onError={setErr}
+                />
+              ))}
+            </tbody>
+          </table>
         )}
-        {profile.contacts.map((c) => (
-          <ContactRow
-            key={c.source_key}
-            contact={c}
-            busy={busyKey === c.source_key}
-            onToggleHidden={() => toggleHidden(c)}
-            onRemove={() => removeContact(c)}
-            onSaved={onChanged}
-            onError={setErr}
-          />
-        ))}
       </div>
     </section>
   );
@@ -435,48 +470,65 @@ function ContactRow({
     }
   };
 
+  // The edit form replaces the row's cells with one full-width cell, the same
+  // expanded-row shape BidMatchResultsTable uses, so the table's columns are
+  // never asked to hold a five-field form.
   if (editing) {
     return (
-      <div className="p-4 space-y-3 bg-muted-light">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="First Name" value={form.first_name || ""} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
-          <Input label="Last Name" value={form.last_name || ""} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
-          <Input label="Title" value={form.title || ""} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <Input label="Email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <Input label="Phone" value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-        </div>
-        <div className="flex gap-2">
-          <Button variant="primary" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-          <Button variant="ghost" onClick={() => { setEditing(false); setForm(contact); }} disabled={saving}>Cancel</Button>
-        </div>
-      </div>
+      <tr className="border-b border-border last:border-0 bg-muted-light">
+        <td className="px-2.5 py-3" colSpan={CONTACT_COLUMNS}>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input label="First Name" value={form.first_name || ""} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
+              <Input label="Last Name" value={form.last_name || ""} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+              <Input label="Title" value={form.title || ""} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              <Input label="Email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <Input label="Phone" value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="primary" size="sm" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+              <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setForm(contact); }} disabled={saving}>Cancel</Button>
+            </div>
+          </div>
+        </td>
+      </tr>
     );
   }
 
+  // Hidden contacts stay dimmed, composed onto rowClass rather than replacing
+  // it, so they keep the standard separator and hover.
   return (
-    <div className={`p-4 flex items-center justify-between gap-4 ${contact.is_hidden ? "opacity-50" : ""}`}>
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-foreground truncate">{name}</span>
-          <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted-light text-muted">
-            {contact.source === "manual" ? "added" : contact.contact_type || "sam"}
-          </span>
-          {contact.is_hidden && <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning/15 text-warning">hidden</span>}
-        </div>
-        <p className="text-sm text-muted truncate">
-          {[contact.title, contact.email, contact.phone].filter(Boolean).join(" · ") || "—"}
-        </p>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Button variant="ghost" onClick={onToggleHidden} disabled={busy}>{contact.is_hidden ? "Show" : "Hide"}</Button>
-        <Button variant="ghost" onClick={() => setEditing(true)} disabled={busy}>Edit</Button>
-        {(contact.source === "manual" || contact.is_overridden || contact.is_hidden) && (
-          <Button variant="ghost" onClick={onRemove} disabled={busy}>
-            {contact.source === "manual" ? "Remove" : "Reset"}
-          </Button>
+    <tr className={`${rowClass} ${contact.is_hidden ? "opacity-50" : ""}`}>
+      <td className={`${tdClass} text-foreground`}>{name}</td>
+      <td className={tdClass}>
+        <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted-light text-muted">
+          {contact.source === "manual" ? "added" : contact.contact_type || "sam"}
+        </span>
+      </td>
+      <td className={`${tdClass} text-muted`}>{contact.title || "—"}</td>
+      <td className={`${tdClass} text-muted`}>{contact.email || "—"}</td>
+      <td className={`${tdClass} text-muted whitespace-nowrap`}>{contact.phone || "—"}</td>
+      <td className={tdClass}>
+        {contact.is_hidden ? (
+          <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning/15 text-warning">hidden</span>
+        ) : (
+          <span className="text-muted">—</span>
         )}
-      </div>
-    </div>
+      </td>
+      <td className={`${tdClass} text-right whitespace-nowrap`}>
+        <button type="button" onClick={onToggleHidden} disabled={busy} className={rowActionClass}>
+          {contact.is_hidden ? "Show" : "Hide"}
+        </button>
+        <button type="button" onClick={() => setEditing(true)} disabled={busy} className={`ml-3 ${rowActionClass}`}>
+          Edit
+        </button>
+        {(contact.source === "manual" || contact.is_overridden || contact.is_hidden) && (
+          <button type="button" onClick={onRemove} disabled={busy} className={`ml-3 ${rowActionDangerClass}`}>
+            {contact.source === "manual" ? "Remove" : "Reset"}
+          </button>
+        )}
+      </td>
+    </tr>
   );
 }
 
@@ -576,37 +628,63 @@ function CertificationsSection({ profile, onChanged }: { profile: CompanyProfile
           <h2 className="text-lg font-semibold text-secondary">Certifications &amp; Set-Asides</h2>
           <p className="text-sm text-muted">Publish your set-asides and certifications. Visible items show in your vendor-search profile.</p>
         </div>
-        <Button variant="secondary" onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "Add"}</Button>
+        <Button variant="outline" onClick={() => setAdding((a) => !a)}>{adding ? "Cancel" : "Add"}</Button>
       </div>
 
       {err && <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg text-sm text-error">{err}</div>}
 
       {adding && <AddCertificationForm onAdded={() => { setAdding(false); onChanged(); }} onError={setErr} />}
 
-      <div className="bg-card-bg rounded-xl border border-border divide-y divide-border">
-        {profile.certifications.length === 0 && (
-          <p className="p-6 text-sm text-muted">No certifications or set-asides added yet.</p>
-        )}
-        {profile.certifications.map((cert) => (
-          <div key={cert.id} className={`p-4 flex items-center justify-between gap-4 ${cert.is_visible ? "" : "opacity-50"}`}>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-foreground truncate">{cert.label}</span>
-                <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted-light text-muted">
-                  {cert.kind === "set_aside" ? "set-aside" : "certification"}
-                </span>
-                {!cert.is_visible && <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning/15 text-warning">hidden</span>}
-              </div>
-              <p className="text-sm text-muted truncate">
-                {[cert.value, cert.expires_date ? `Expires ${cert.expires_date}` : null].filter(Boolean).join(" · ") || "—"}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button variant="ghost" onClick={() => toggleVisible(cert)} disabled={busyId === cert.id}>{cert.is_visible ? "Hide" : "Show"}</Button>
-              <Button variant="ghost" onClick={() => remove(cert)} disabled={busyId === cert.id}>Delete</Button>
-            </div>
+      <div className={`${tableWrapClass} bg-card-bg`}>
+        {profile.certifications.length === 0 ? (
+          <div className="px-2.5 py-8 text-center text-sm text-muted">
+            No certifications or set-asides added yet.
           </div>
-        ))}
+        ) : (
+          <table className={tableClass}>
+            <thead>
+              <tr className={tableHeadRowClass}>
+                <th className={thClass}>Label</th>
+                <th className={thClass}>Type</th>
+                <th className={thClass}>Detail / Number</th>
+                <th className={thClass}>Expires</th>
+                <th className={`${thClass} w-24`}>Status</th>
+                <th className={`${thClass} w-32`}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Hidden entries stay dimmed, composed onto rowClass so they
+                  keep the standard separator and hover. */}
+              {profile.certifications.map((cert) => (
+                <tr key={cert.id} className={`${rowClass} ${cert.is_visible ? "" : "opacity-50"}`}>
+                  <td className={`${tdClass} text-foreground`}>{cert.label}</td>
+                  <td className={tdClass}>
+                    <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted-light text-muted">
+                      {cert.kind === "set_aside" ? "set-aside" : "certification"}
+                    </span>
+                  </td>
+                  <td className={`${tdClass} text-muted`}>{cert.value || "—"}</td>
+                  <td className={`${tdClass} text-muted whitespace-nowrap`}>{cert.expires_date || "—"}</td>
+                  <td className={tdClass}>
+                    {cert.is_visible ? (
+                      <span className="text-muted">—</span>
+                    ) : (
+                      <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning/15 text-warning">hidden</span>
+                    )}
+                  </td>
+                  <td className={`${tdClass} text-right whitespace-nowrap`}>
+                    <button type="button" onClick={() => toggleVisible(cert)} disabled={busyId === cert.id} className={rowActionClass}>
+                      {cert.is_visible ? "Hide" : "Show"}
+                    </button>
+                    <button type="button" onClick={() => remove(cert)} disabled={busyId === cert.id} className={`ml-3 ${rowActionDangerClass}`}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </section>
   );

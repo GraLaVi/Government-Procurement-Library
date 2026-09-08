@@ -24,8 +24,13 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 const variantStyles: Record<ButtonVariant, string> = {
   primary: "bg-primary text-white hover:bg-primary-hover",
   secondary: "bg-secondary text-white hover:bg-secondary/90",
-  outline: "border border-primary text-primary hover:bg-primary-light",
-  ghost: "text-primary hover:bg-primary-light",
+  // The hover wash is a translucent primary rather than --primary-light, which
+  // is a LIGHT teal in light mode but a DARK teal (#155E5E) in dark mode. Held
+  // against text-primary (#0E8989, the same in both modes) that dark value put
+  // the label at 1.77:1 on hover — near-invisible under the cursor. A /10 wash
+  // tints whatever surface is behind it, so the label stays readable in both.
+  outline: "border border-primary text-primary hover:bg-primary/10",
+  ghost: "text-primary hover:bg-primary/10",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
