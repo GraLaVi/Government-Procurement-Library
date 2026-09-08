@@ -258,7 +258,7 @@ function DemographicsSection({ profile, onSaved }: { profile: CompanyProfile; on
       )}
       {err && <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg text-sm text-error">{err}</div>}
 
-      <div className="bg-card-bg rounded-xl border border-border p-4 space-y-4">
+      <div className="bg-card-bg rounded-lg border border-border p-4 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
             <Input label="Legal Business Name" value={form.legal_business_name || ""} onChange={(e) => setTop("legal_business_name", e.target.value)} disabled={saving} />
@@ -570,7 +570,7 @@ function AddContactForm({ onAdded, onError }: { onAdded: () => void; onError: (m
   };
 
   return (
-    <div className="mb-4 p-4 bg-card-bg border border-border rounded-xl space-y-3">
+    <div className="mb-4 p-4 bg-card-bg border border-border rounded-lg space-y-3">
       <h3 className="text-sm font-semibold text-secondary">New Contact</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label="First Name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
@@ -756,7 +756,7 @@ function AddCertificationForm({ onAdded, onError }: { onAdded: () => void; onErr
   };
 
   return (
-    <div className="mb-4 p-4 bg-card-bg border border-border rounded-xl space-y-3">
+    <div className="mb-4 p-4 bg-card-bg border border-border rounded-lg space-y-3">
       <h3 className="text-sm font-semibold text-secondary">New Certification / Set-Aside</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select
