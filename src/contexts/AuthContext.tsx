@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useRouter, usePathname } from 'next/navigation';
 import { User, Product, AuthState, LoginResult } from '@/lib/auth/types';
 import { AUTH_CONFIG } from '@/lib/auth/config';
+import { isPostCheckoutFinalize } from '@/lib/auth/postCheckout';
 
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<LoginResult>;
@@ -113,18 +114,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         (route) => pathname === route || pathname?.startsWith(`${route}/`)
       );
 
-      // Self-serve checkout-return exception: when a brand-new visitor lands
-      // on /account/billing?checkout=success&session_id=… straight from
-      // Stripe Checkout, they aren't logged in YET — the page itself swaps
-      // session_id for auth cookies via /api/billing/finalize-checkout.
-      // Skip the auto-redirect for that single case so the finalize step
-      // can run.
-      const isPostCheckoutFinalize =
-        pathname === '/account/billing' &&
+      // Self-serve checkout-return exception — see isPostCheckoutFinalize.
+      // The visitor isn't logged in YET; the page itself swaps session_id for
+      // auth cookies via /api/billing/finalize-checkout. Skip the auto-redirect
+      // for that single case so the finalize step can run.
+      const isCheckoutReturn =
         typeof window !== 'undefined' &&
-        new URLSearchParams(window.location.search).get('session_id');
+        isPostCheckoutFinalize(pathname, window.location.search);
 
-      if (!isPublicRoute && !isPostCheckoutFinalize && pathname !== AUTH_CONFIG.ROUTES.LOGIN) {
+      if (!isPublicRoute && !isCheckoutReturn && pathname !== AUTH_CONFIG.ROUTES.LOGIN) {
         // Only redirect on initial page load, not on subsequent auth failures
         // This prevents redirect loops when session expires during active use
         const loginUrl = `${AUTH_CONFIG.ROUTES.LOGIN}?redirect=${encodeURIComponent(pathname || '/')}`;
