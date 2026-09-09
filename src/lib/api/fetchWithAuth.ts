@@ -5,6 +5,7 @@
  */
 
 import { AUTH_CONFIG } from '@/lib/auth/config';
+import { isPostCheckoutFinalize } from '@/lib/auth/postCheckout';
 
 let sessionExpiredContext: {
   showModal: () => void;
@@ -104,6 +105,17 @@ function redirectToLogin(): void {
     (route) => currentPath === route || currentPath.startsWith(`${route}/`)
   );
   if (isPublicRoute) {
+    return;
+  }
+
+  // Nor on the post-Checkout landing, where being signed out is the expected
+  // starting state. Redirecting here is worse than a wasted navigation: it is a
+  // full page load, so it tears down the in-flight finalize-checkout request
+  // that was about to sign this visitor in, and discards the auth cookies its
+  // response carried. The 401 that got us here is just a page-load request
+  // (ThemeContext's preferences fetch) racing the exchange; the response is
+  // still returned to the caller, which handles it.
+  if (isPostCheckoutFinalize(window.location.pathname, window.location.search)) {
     return;
   }
 

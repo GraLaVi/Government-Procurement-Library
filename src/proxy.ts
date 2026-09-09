@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/auth/config';
+import { isPostCheckoutFinalize } from '@/lib/auth/postCheckout';
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,9 +14,19 @@ export function proxy(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
+  // Self-serve checkout return — see isPostCheckoutFinalize. This is the first
+  // of the three guards to run: bouncing here to /login drops the session_id
+  // outright, so the subscription starts in Stripe but the visitor never gets
+  // signed in and never sees the confirmation banner.
+  const isCheckoutReturn = isPostCheckoutFinalize(
+    pathname,
+    request.nextUrl.searchParams,
+  );
+
   // Allow public routes, static assets, and API routes
   if (
     isPublicRoute ||
+    isCheckoutReturn ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.includes('.')

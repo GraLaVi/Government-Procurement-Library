@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchWithAuth } from "@/lib/api/fetchWithAuth";
@@ -237,6 +237,8 @@ function BillingPageContent() {
   // visitor lands here ?checkout=success&session_id=cs_… still logged out.
   // We exchange the session_id for auth cookies before loading the rest.
   const [finalizingCheckout, setFinalizingCheckout] = useState(false);
+  // One-shot latch for the exchange above; see that effect for why it isn't state.
+  const finalizeStarted = useRef(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -288,13 +290,26 @@ function BillingPageContent() {
   // started in /pricing's signup-and-checkout flow, the visitor isn't
   // logged in yet. Exchange ?session_id=… for auth cookies first, then
   // fall through to the normal user-aware loadData below.
+  //
+  // The exchange is one-shot, and the guard has to be a ref rather than the
+  // `finalizingCheckout` state: state updates are async, so two effect runs in
+  // the same tick both read the old `false` and both POST — which is how one
+  // signup ended up holding two sessions.
+  //
+  // There is deliberately no `cancelled` flag here. This effect depends on
+  // `user`, and its own `await refreshUser()` is what sets `user` — so on the
+  // success path React tears the effect down *while it is still running*. A
+  // cancelled-guarded cleanup would then skip both the URL cleanup and
+  // `setFinalizingCheckout(false)`, pinning the "Setting up your account…"
+  // spinner on screen forever for a customer who is, by that point, signed in.
+  // The ref makes a re-run impossible, so late state writes are safe.
   useEffect(() => {
     if (checkoutFlag !== "success" || !checkoutSessionId) return;
-    if (user) return;            // already logged in (e.g. existing customer adding a sub)
     if (authLoading) return;     // wait until we know whether they're logged in
-    if (finalizingCheckout) return;
+    if (finalizeStarted.current) return;
+    if (user) return;            // already logged in (e.g. existing customer adding a sub)
+    finalizeStarted.current = true;
 
-    let cancelled = false;
     (async () => {
       setFinalizingCheckout(true);
       try {
@@ -305,7 +320,7 @@ function BillingPageContent() {
         });
         const data = await resp.json();
         if (!resp.ok || !data.success) {
-          if (!cancelled) setError(data.error || "We couldn't finalize your checkout. Please sign in.");
+          setError(data.error || "We couldn't finalize your checkout. Please sign in.");
           return;
         }
         // Pending signup blob is no longer needed.
@@ -313,21 +328,16 @@ function BillingPageContent() {
         // Pull the new user identity into AuthContext.
         await refreshUser();
         // Strip session_id from the URL (no need to re-finalize on refresh).
-        if (!cancelled) {
-          const cleaned = new URLSearchParams(searchParams.toString());
-          cleaned.delete("session_id");
-          router.replace(`/account/billing?${cleaned.toString()}`);
-        }
+        const cleaned = new URLSearchParams(searchParams.toString());
+        cleaned.delete("session_id");
+        router.replace(`/account/billing?${cleaned.toString()}`);
       } catch (err) {
         console.error("finalize-checkout error", err);
-        if (!cancelled) setError("Network error finalizing checkout. Please sign in.");
+        setError("Network error finalizing checkout. Please sign in.");
       } finally {
-        if (!cancelled) setFinalizingCheckout(false);
+        setFinalizingCheckout(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkoutFlag, checkoutSessionId, user, authLoading]);
 
@@ -494,12 +504,29 @@ function BillingPageContent() {
   // "you're not logged in" empty state in the millisecond before cookies
   // are set.
   if (finalizingCheckout || (!user && checkoutFlag === "success" && checkoutSessionId)) {
+    // A failed exchange is terminal — keeping the spinner up would promise
+    // progress that isn't coming. The subscription itself is already live in
+    // Stripe either way, so the way out is simply to sign in.
+    if (error && !finalizingCheckout) {
+      return (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center max-w-md">
+            <p className="text-sm text-error">{error}</p>
+            <p className="mt-3 text-sm text-muted">
+              Your subscription is active — signing in will show it.
+            </p>
+            <Button href="/login" variant="primary" className="mt-4">
+              Sign in
+            </Button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto" />
           <p className="mt-4 text-muted">Setting up your account…</p>
-          {error && <p className="mt-3 text-sm text-error">{error}</p>}
         </div>
       </div>
     );
