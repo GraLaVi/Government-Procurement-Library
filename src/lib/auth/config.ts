@@ -40,7 +40,10 @@ export const AUTH_CONFIG = {
     ACCOUNT: '/account',
     CHANGE_PASSWORD: '/account/change-password',
     // '/start' covers the campaign landing pages (/start/<slug>) — they are
-    // the top of the funnel, so they must never bounce to /login.
-    PUBLIC: ['/', '/login', '/signup', '/start', '/pricing', '/about', '/contact', '/legal', '/support', '/help', '/forgot-password', '/reset-password', '/verify-email', '/rfq/respond'],
+    // the top of the funnel, so they must never bounce to /login. '/products'
+    // is the same argument: the per-product pages exist to be read by people
+    // who do not have an account yet, and one of them carries a clickable
+    // mock-up that is the whole point of the visit.
+    PUBLIC: ['/', '/login', '/signup', '/start', '/pricing', '/products', '/about', '/contact', '/legal', '/support', '/help', '/forgot-password', '/reset-password', '/verify-email', '/rfq/respond'],
   },
 } as const;

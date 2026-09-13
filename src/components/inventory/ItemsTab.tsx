@@ -26,6 +26,123 @@ const MATCH_TONES: Record<MatchStatus, "green" | "amber" | "red" | "slate"> = {
   unmatched: "slate",
 };
 
+/**
+ * The Items table's columns, shared with the public product page's demo so
+ * the mock-up renders the same cells the app does. `isAdmin` adds the
+ * Edit / Remove actions; the demo passes false.
+ */
+export function inventoryItemColumns({
+  isAdmin,
+  onEdit,
+  onDelete,
+}: {
+  isAdmin: boolean;
+  onEdit: (item: InventoryItem) => void;
+  onDelete: (item: InventoryItem) => void;
+}): ColumnDef<InventoryItem, unknown>[] {
+  const cols: ColumnDef<InventoryItem, unknown>[] = [
+    {
+      id: "customer_sku",
+      accessorKey: "customer_sku",
+      header: "SKU",
+      cell: ({ row }) => <span className="font-mono">{row.original.customer_sku || "—"}</span>,
+    },
+    {
+      id: "identity",
+      header: "NSN / part number",
+      cell: ({ row }) => (
+        <span className="font-mono whitespace-nowrap">
+          {row.original.niin
+            ? (row.original.fsc ? `${row.original.fsc}-${row.original.niin}` : row.original.niin)
+            : row.original.part_number || "—"}
+        </span>
+      ),
+    },
+    {
+      id: "quantity",
+      header: () => <span className="w-full text-right block">On hand</span>,
+      cell: ({ row }) => (
+        <span className="text-right block font-medium whitespace-nowrap">
+          {Number(row.original.quantity_on_hand).toLocaleString()} {row.original.unit_of_measure}
+        </span>
+      ),
+    },
+    {
+      id: "condition_code",
+      accessorKey: "condition_code",
+      header: "Cond",
+      cell: ({ row }) => <span>{row.original.condition_code || "—"}</span>,
+    },
+    {
+      id: "unit_price",
+      header: () => <span className="w-full text-right block">Price</span>,
+      cell: ({ row }) => (
+        <span className="text-right block">
+          {row.original.unit_price != null
+            ? Number(row.original.unit_price).toLocaleString("en-US", { style: "currency", currency: row.original.currency || "USD" })
+            : "—"}
+        </span>
+      ),
+      meta: { className: "hidden md:table-cell" },
+    },
+    {
+      id: "warehouse_location",
+      accessorKey: "warehouse_location",
+      header: "Warehouse",
+      cell: ({ row }) => <span className="text-muted">{row.original.warehouse_location || "—"}</span>,
+      meta: { className: "hidden lg:table-cell" },
+    },
+    {
+      id: "match_status",
+      header: "Match",
+      cell: ({ row }) => (
+        <RowBadge tone={MATCH_TONES[row.original.match_status]}>
+          {MATCH_STATUS_LABELS[row.original.match_status]}
+        </RowBadge>
+      ),
+    },
+    {
+      id: "as_of_date",
+      accessorKey: "as_of_date",
+      header: "As of",
+      cell: ({ row }) => (
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          {row.original.as_of_date}
+          {row.original.network_hidden_at && (
+            <RowBadge tone="amber" title="Withdrawn from the network — refresh to restore.">
+              hidden
+            </RowBadge>
+          )}
+        </span>
+      ),
+    },
+  ];
+  if (isAdmin) {
+    cols.push({
+      id: "actions",
+      header: "",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="flex items-center gap-2 justify-end">
+          <button
+            className="text-xs text-primary hover:underline"
+            onClick={(e) => { e.stopPropagation(); onEdit(row.original); }}
+          >
+            Edit
+          </button>
+          <button
+            className="text-xs text-error hover:underline"
+            onClick={(e) => { e.stopPropagation(); onDelete(row.original); }}
+          >
+            Remove
+          </button>
+        </span>
+      ),
+    });
+  }
+  return cols;
+}
+
 interface ItemsTabProps {
   isAdmin: boolean;
 }
@@ -153,109 +270,10 @@ export function ItemsTab({ isAdmin }: ItemsTabProps) {
     }
   };
 
-  const columns = useMemo<ColumnDef<InventoryItem, unknown>[]>(() => {
-    const cols: ColumnDef<InventoryItem, unknown>[] = [
-      {
-        id: "customer_sku",
-        accessorKey: "customer_sku",
-        header: "SKU",
-        cell: ({ row }) => <span className="font-mono">{row.original.customer_sku || "—"}</span>,
-      },
-      {
-        id: "identity",
-        header: "NSN / part number",
-        cell: ({ row }) => (
-          <span className="font-mono whitespace-nowrap">
-            {row.original.niin
-              ? (row.original.fsc ? `${row.original.fsc}-${row.original.niin}` : row.original.niin)
-              : row.original.part_number || "—"}
-          </span>
-        ),
-      },
-      {
-        id: "quantity",
-        header: () => <span className="w-full text-right block">On hand</span>,
-        cell: ({ row }) => (
-          <span className="text-right block font-medium whitespace-nowrap">
-            {Number(row.original.quantity_on_hand).toLocaleString()} {row.original.unit_of_measure}
-          </span>
-        ),
-      },
-      {
-        id: "condition_code",
-        accessorKey: "condition_code",
-        header: "Cond",
-        cell: ({ row }) => <span>{row.original.condition_code || "—"}</span>,
-      },
-      {
-        id: "unit_price",
-        header: () => <span className="w-full text-right block">Price</span>,
-        cell: ({ row }) => (
-          <span className="text-right block">
-            {row.original.unit_price != null
-              ? Number(row.original.unit_price).toLocaleString("en-US", { style: "currency", currency: row.original.currency || "USD" })
-              : "—"}
-          </span>
-        ),
-        meta: { className: "hidden md:table-cell" },
-      },
-      {
-        id: "warehouse_location",
-        accessorKey: "warehouse_location",
-        header: "Warehouse",
-        cell: ({ row }) => <span className="text-muted">{row.original.warehouse_location || "—"}</span>,
-        meta: { className: "hidden lg:table-cell" },
-      },
-      {
-        id: "match_status",
-        header: "Match",
-        cell: ({ row }) => (
-          <RowBadge tone={MATCH_TONES[row.original.match_status]}>
-            {MATCH_STATUS_LABELS[row.original.match_status]}
-          </RowBadge>
-        ),
-      },
-      {
-        id: "as_of_date",
-        accessorKey: "as_of_date",
-        header: "As of",
-        cell: ({ row }) => (
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-            {row.original.as_of_date}
-            {row.original.network_hidden_at && (
-              <RowBadge tone="amber" title="Withdrawn from the network — refresh to restore.">
-                hidden
-              </RowBadge>
-            )}
-          </span>
-        ),
-      },
-    ];
-    if (isAdmin) {
-      cols.push({
-        id: "actions",
-        header: "",
-        enableSorting: false,
-        cell: ({ row }) => (
-          <span className="flex items-center gap-2 justify-end">
-            <button
-              className="text-xs text-primary hover:underline"
-              onClick={(e) => { e.stopPropagation(); openEdit(row.original); }}
-            >
-              Edit
-            </button>
-            <button
-              className="text-xs text-error hover:underline"
-              onClick={(e) => { e.stopPropagation(); setDeleteTarget(row.original); }}
-            >
-              Remove
-            </button>
-          </span>
-        ),
-      });
-    }
-    return cols;
-  }, [isAdmin, openEdit]);
+  const columns = useMemo<ColumnDef<InventoryItem, unknown>[]>(
+    () => inventoryItemColumns({ isAdmin, onEdit: openEdit, onDelete: setDeleteTarget }),
+    [isAdmin, openEdit],
+  );
 
   return (
     <TableCard

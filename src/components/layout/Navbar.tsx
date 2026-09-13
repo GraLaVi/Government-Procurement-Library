@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanner";
 import { showAnalyticsNav } from "@/lib/analytics/tier";
 import { showInventorySurfaces } from "@/lib/inventory/launch";
+import { PRODUCT_PAGES } from "@/lib/products";
 
 // Whether the given href should render as "current". Real routes match
 // on exact path or sub-path (so /library/parts/123 still highlights the
@@ -41,12 +42,24 @@ const navLinks = [
 
 // Links shown to unauthenticated visitors. Pricing is surfaced here so visitors
 // can compare plans before signing up.
-const visitorNavLinks = [
+// Visitors get a Products DROPDOWN rather than the anchor authenticated users
+// see: each product now has a page of its own explaining how it works, and a
+// visitor deciding whether to sign up is exactly who those pages are for.
+// Signed-in users keep the anchor — they already have the product.
+const visitorNavLinks: Array<{ href: string; label: string; dropdown?: true }> = [
   { href: "/#features", label: "Features" },
   { href: "/#how-it-works", label: "How It Works" },
-  { href: "/#products", label: "Products" },
+  { href: "/products", label: "Products", dropdown: true },
   { href: "/pricing", label: "Pricing" },
 ];
+
+// Built from the one product registry, so the menu can never list a page that
+// does not exist. Products still being written render as unclickable rows
+// rather than vanishing — the four products are the pitch either way.
+const productItems = PRODUCT_PAGES.map((product) => ({
+  href: product.href,
+  label: product.name,
+}));
 
 const libraryItems = [
   { href: "/library/parts", label: "Parts Search" },
@@ -72,10 +85,13 @@ export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLibraryDropdownOpen, setIsLibraryDropdownOpen] = useState(false);
   const [isHelpDropdownOpen, setIsHelpDropdownOpen] = useState(false);
+  const [isProductsDropdownOpen, setIsProductsDropdownOpen] = useState(false);
   const [isMobileLibraryOpen, setIsMobileLibraryOpen] = useState(false);
   const [isMobileHelpOpen, setIsMobileHelpOpen] = useState(false);
+  const [isMobileProductsOpen, setIsMobileProductsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const helpDropdownRef = useRef<HTMLDivElement>(null);
+  const productsDropdownRef = useRef<HTMLDivElement>(null);
   const { user, isAuthenticated, isLoading, isRfqResponderOnly, hasProductAccess, hasAnyProductAccess } = useAuth();
   const pathname = usePathname() || "/";
 
@@ -129,6 +145,7 @@ export function Navbar() {
       (showInventorySurfaces() && !isRfqResponderOnly)
   );
 
+  const productsGroupActive = isLinkActive("/products", pathname);
   const libraryGroupActive = isGroupActive(visibleLibraryItems, pathname);
   const helpGroupActive = isGroupActive(visibleHelpItems, pathname);
 
@@ -140,6 +157,9 @@ export function Navbar() {
       }
       if (helpDropdownRef.current && !helpDropdownRef.current.contains(event.target as Node)) {
         setIsHelpDropdownOpen(false);
+      }
+      if (productsDropdownRef.current && !productsDropdownRef.current.contains(event.target as Node)) {
+        setIsProductsDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -163,15 +183,70 @@ export function Navbar() {
               Bid Matching for authenticated users. Mirrors Header.tsx so the
               landing-page nav stays consistent with the in-app nav. */}
           <div className="hidden md:flex items-center gap-8">
-            {(isAuthenticated ? navLinks : visitorNavLinks).map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={topLinkClass(isLinkActive(link.href, pathname))}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {(isAuthenticated ? navLinks : visitorNavLinks).map((link) =>
+              "dropdown" in link && link.dropdown ? (
+                /* Products — the trigger is a link to the index as well as a
+                   menu, so "Products" is still one click to somewhere useful. */
+                <div key={link.href} className="relative" ref={productsDropdownRef}>
+                  <button
+                    onClick={() => setIsProductsDropdownOpen(!isProductsDropdownOpen)}
+                    className={`flex items-center gap-1 ${topLinkClass(productsGroupActive)}`}
+                  >
+                    {link.label}
+                    <svg
+                      className={`w-4 h-4 transition-transform duration-200 ${isProductsDropdownOpen ? "rotate-180" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isProductsDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-2 w-56 bg-card-bg rounded-lg shadow-xl border border-border py-2 z-[100]">
+                      {productItems.map((item) =>
+                        item.href ? (
+                          <Link
+                            key={item.label}
+                            href={item.href}
+                            className={dropdownItemClass(isLinkActive(item.href, pathname))}
+                            onClick={() => setIsProductsDropdownOpen(false)}
+                          >
+                            {item.label}
+                          </Link>
+                        ) : (
+                          <span
+                            key={item.label}
+                            className="block px-4 py-2 text-sm text-muted/60 cursor-default"
+                            title="Page coming soon"
+                          >
+                            {item.label}
+                          </span>
+                        ),
+                      )}
+                      <div className="mt-1 border-t border-border pt-1">
+                        <Link
+                          href="/products"
+                          className={dropdownItemClass(false)}
+                          onClick={() => setIsProductsDropdownOpen(false)}
+                        >
+                          All products →
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={topLinkClass(isLinkActive(link.href, pathname))}
+                >
+                  {link.label}
+                </Link>
+              ),
+            )}
             {/* Library Dropdown - Only for authenticated users */}
             {!isLoading && isAuthenticated && (
               <div className="relative" ref={dropdownRef}>
@@ -318,16 +393,69 @@ export function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col gap-4">
-              {(isAuthenticated ? navLinks : visitorNavLinks).map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={mobileLinkClass(isLinkActive(link.href, pathname))}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {(isAuthenticated ? navLinks : visitorNavLinks).map((link) =>
+                "dropdown" in link && link.dropdown ? (
+                  <div key={link.href}>
+                    <button
+                      onClick={() => setIsMobileProductsOpen(!isMobileProductsOpen)}
+                      className={`flex items-center justify-between w-full ${mobileLinkClass(productsGroupActive)}`}
+                    >
+                      <span>{link.label}</span>
+                      <svg
+                        className={`w-4 h-4 transition-transform duration-200 ${isMobileProductsOpen ? "rotate-180" : ""}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {isMobileProductsOpen && (
+                      <div className="pl-4 mt-2 space-y-2 border-l-2 border-border">
+                        {productItems.map((item) =>
+                          item.href ? (
+                            <Link
+                              key={item.label}
+                              href={item.href}
+                              className={mobileDropdownItemClass(isLinkActive(item.href, pathname))}
+                              onClick={() => {
+                                setIsMenuOpen(false);
+                                setIsMobileProductsOpen(false);
+                              }}
+                            >
+                              {item.label}
+                            </Link>
+                          ) : (
+                            <span key={item.label} className="block py-1 text-sm text-muted/60">
+                              {item.label}
+                            </span>
+                          ),
+                        )}
+                        <Link
+                          href="/products"
+                          className={mobileDropdownItemClass(false)}
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            setIsMobileProductsOpen(false);
+                          }}
+                        >
+                          All products →
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={mobileLinkClass(isLinkActive(link.href, pathname))}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ),
+              )}
               {/* Mobile Library - Only for authenticated users */}
               {!isLoading && isAuthenticated && (
                 <div>

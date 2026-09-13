@@ -671,7 +671,7 @@ interface DemographicsPanelProps {
   mailingAddress?: VendorDetailType["addresses"][0];
 }
 
-function DemographicsPanel({
+export function DemographicsPanel({
   vendor,
   physicalAddress,
   mailingAddress,
@@ -969,7 +969,7 @@ interface ContactsPanelProps {
   contacts: VendorDetailType["contacts"];
 }
 
-function ContactsPanel({ contacts }: ContactsPanelProps) {
+export function ContactsPanel({ contacts }: ContactsPanelProps) {
   if (!contacts || contacts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -1020,7 +1020,7 @@ interface AwardsPanelProps {
   onRetry: () => void;
 }
 
-function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPanelProps) {
+export function AwardsPanel({ awards, totalCount, isLoading, error, onRetry }: AwardsPanelProps) {
   const [pdfModal, setPdfModal] = useState<{ id: number; contract: string } | null>(null);
   const pdfUrl = pdfModal ? `/api/library/awards/${pdfModal.id}/pdf` : null;
 
@@ -1277,7 +1277,7 @@ interface BookingsPanelProps {
   onRetry: () => void;
 }
 
-function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPanelProps) {
+export function BookingsPanel({ months, totals, isLoading, error, onRetry }: BookingsPanelProps) {
   // Define columns for bookings table
   const columns = useMemo<ColumnDef<VendorBookingMonth>[]>(
     () => [
@@ -1571,7 +1571,7 @@ function MatchedNsnsChip({ nsns }: { nsns: NonNullable<VendorSolicitation["nsns"
   );
 }
 
-function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRetry }: SolicitationsPanelProps) {
+export function SolicitationsPanel({ solicitations, totalCount, isLoading, error, onRetry }: SolicitationsPanelProps) {
   const [pdfModal, setPdfModal] = useState<{ id: number; number: string } | null>(null);
   const pdfUrl = pdfModal ? `/api/library/solicitations/${pdfModal.id}/pdf` : null;
 

@@ -281,6 +281,14 @@ interface BidMatchResultsTableProps {
   sortDir: "asc" | "desc";
   onSort: (key: BidSortKey) => void;
   onToggleInterest: (result: BidMatchResult, interested: boolean) => void;
+  /**
+   * Row keys to start expanded, in the `${source}-${id}` form rowKey builds.
+   * Omitted everywhere in the app — the results page opens with every row
+   * collapsed — and set by the public demo on /products/bid-matching, which
+   * has to arrive with the "why it matched" panel already showing rather than
+   * hoping a visitor discovers the chevron.
+   */
+  defaultExpandedKeys?: readonly string[];
 }
 
 /**
@@ -372,9 +380,12 @@ export function BidMatchResultsTable({
   sortDir,
   onSort,
   onToggleInterest,
+  defaultExpandedKeys,
 }: BidMatchResultsTableProps) {
   const totalPages = Math.ceil(total / pageSize);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Lazy initializer, so a later render of defaultExpandedKeys cannot reopen a
+  // row the user has since collapsed — it is an initial state, not a control.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(defaultExpandedKeys ?? []));
   const [amendmentSolId, setAmendmentSolId] = useState<number | null>(null);
   const [amendmentSolNumber, setAmendmentSolNumber] = useState<string | null>(null);
   const [pdfModal, setPdfModal] = useState<{ id: number; number: string } | null>(null);

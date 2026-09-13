@@ -1283,7 +1283,7 @@ interface OverviewPanelProps {
   onRetryDemand?: () => void;
 }
 
-function OverviewPanel({ part, codeDefinitions, codeTypeNames, showDemand, demand, isLoadingDemand, demandError, onRetryDemand }: OverviewPanelProps) {
+export function OverviewPanel({ part, codeDefinitions, codeTypeNames, showDemand, demand, isLoadingDemand, demandError, onRetryDemand }: OverviewPanelProps) {
   // NSN-less (DIBBS part-number-only) parts have no NSN/NIIN/FSC; identify them
   // by manufacturer CAGE + part number instead (mirrors the legacy 'M'-class view).
   const identifiers = [
@@ -1922,7 +1922,7 @@ interface ProcurementPanelProps {
   onRetry: () => void;
 }
 
-function ProcurementPanel({ records, isLoading, error, onRetry }: ProcurementPanelProps) {
+export function ProcurementPanel({ records, isLoading, error, onRetry }: ProcurementPanelProps) {
   const [pdfModal, setPdfModal] = useState<{ id: number; contract: string } | null>(null);
   const pdfUrl = pdfModal ? `/api/library/awards/${pdfModal.id}/pdf` : null;
 
@@ -2131,7 +2131,7 @@ interface SolicitationsPanelProps {
   onViewDemand?: () => void;
 }
 
-function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, onEnsureDemand, onViewDemand }: SolicitationsPanelProps) {
+export function SolicitationsPanel({ solicitations, isLoading, error, onRetry, demand, onEnsureDemand, onViewDemand }: SolicitationsPanelProps) {
   // Pull demand context once when this tab mounts so the strip can render
   // alongside the opportunities without the user opening the Demand tab.
   useEffect(() => {
@@ -2642,7 +2642,7 @@ function manufacturerRowKey(m: PartManufacturer): string {
   return `${m.cage_code}-${m.part_number || ""}`;
 }
 
-function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, totalCount, isLoading, error, onRetry }: ManufacturersPanelProps) {
+export function ManufacturersPanel({ nsn, partId, partDescription, manufacturers, totalCount, isLoading, error, onRetry }: ManufacturersPanelProps) {
   // RFQ is a separate paid product (either tier — Enterprise is a superset
   // of the base add-on); only surface the entry when the user holds one.
   const { hasAnyProductAccess } = useAuth();
@@ -2968,7 +2968,7 @@ interface TechnicalCharacteristicsPanelProps {
   onRetry: () => void;
 }
 
-function TechnicalCharacteristicsPanel({ characteristics, isLoading, error, onRetry }: TechnicalCharacteristicsPanelProps) {
+export function TechnicalCharacteristicsPanel({ characteristics, isLoading, error, onRetry }: TechnicalCharacteristicsPanelProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -3023,7 +3023,7 @@ interface EndUseDescriptionPanelProps {
   onRetry: () => void;
 }
 
-function EndUseDescriptionPanel({ descriptions, isLoading, error, onRetry }: EndUseDescriptionPanelProps) {
+export function EndUseDescriptionPanel({ descriptions, isLoading, error, onRetry }: EndUseDescriptionPanelProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -3080,7 +3080,7 @@ interface PackagingPanelProps {
   onRetry: () => void;
 }
 
-function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, supplemental, isLoading, error, onRetry }: PackagingPanelProps) {
+export function PackagingPanel({ packaging, codeDefinitions, markingDefinitions, supplemental, isLoading, error, onRetry }: PackagingPanelProps) {
 
   if (isLoading) {
     return (
@@ -3445,7 +3445,7 @@ interface ProcurementItemDescriptionPanelProps {
   onRetry: () => void;
 }
 
-function ProcurementItemDescriptionPanel({ description, isLoading, error, onRetry }: ProcurementItemDescriptionPanelProps) {
+export function ProcurementItemDescriptionPanel({ description, isLoading, error, onRetry }: ProcurementItemDescriptionPanelProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-6">
