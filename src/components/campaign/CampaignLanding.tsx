@@ -244,7 +244,10 @@ function CampaignLandingContent({
     setError(null);
     setResult(null);
     setChecking(true);
-    const outcome = await validateCageCode(cageInput);
+    // The slug rides along so the check lands in the audit log under this
+    // campaign. It is the only thing this page asks anyone to do, so a
+    // landing with no check after it is the funnel step that failed.
+    const outcome = await validateCageCode(cageInput, slug);
     setChecking(false);
     if (!outcome.ok) {
       setError(outcome.error);
