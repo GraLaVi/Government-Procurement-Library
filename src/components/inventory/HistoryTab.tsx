@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/DataTable";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { RowBadge, type RowBadgeTone } from "@/components/library/RowBadge";
 import {
   type InventoryUpload,
@@ -256,9 +257,14 @@ export function HistoryTab({ isAdmin, refreshKey }: HistoryTabProps) {
               </>
             )}
             {isAdmin && u.status === "completed" && (
-              <button className="text-xs text-error hover:underline" disabled={busy} onClick={() => setRollbackTarget(u)}>
-                Roll back
-              </button>
+              // The label alone reads as "undo everything", which overstates it —
+              // say up front that edits to pre-existing lines don't come back, so
+              // the scope is clear before the confirm dialog, not just inside it.
+              <Tooltip content="Undo this upload's changes to your stock: lines it removed come back, and lines it added are removed. Changes it made to lines that already existed are not reverted.">
+                <button className="text-xs text-error hover:underline" disabled={busy} onClick={() => setRollbackTarget(u)}>
+                  Roll back
+                </button>
+              </Tooltip>
             )}
           </span>
         );
