@@ -455,6 +455,11 @@ export interface PartSearchResult {
 
   // Only populated when searching by solicitation: sum of requested_quantity on that solicitation
   quantity?: number | null;
+  // Also solicitation-search only: what technical documentation DLA holds for
+  // the NSN ("full" | "spec_only" | "none"). Raw stored string; null/absent
+  // means NOT CAPTURED, which is not "none" — see resolveTechDocs in
+  // lib/library/techDocs.ts.
+  tech_docs?: string | null;
 }
 
 export interface PartSearchResponse {

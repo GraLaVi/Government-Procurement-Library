@@ -55,9 +55,10 @@ Each match row shows:
 - **Set-Aside.** The set-aside code (for example **HZC**). Hover for the full name.  
 - **Status.** The current state of the solicitation (most commonly **open**, meaning it's still accepting bids).
 
-Two badges can appear next to the NSN:
+Badges can appear next to the NSN:
 
 - **FAT** — the solicitation requires a contractor First Article Test. Click it for what that commits you to. See [First article requirements](#first-article-requirements).  
+- **TD** or **SPEC** — DLA holds technical documentation for the part. Click it for what you can expect to get. See [Technical documentation](#technical-documentation).  
 - **A trophy with a number** — you have won this part before, that many times. Click it for your award history, including what you charged. See [Parts you have won before](#parts-you-have-won-before).
 
 **Which profile matched, and why,** now lives in the expanded row rather than its own columns. Click the arrow at the left of any row to see the profile name, the **Hard** or **Soft** badge, and the reason the match fired — for example *keyword 'carabiner' in description* — alongside the full line-item list.
@@ -87,6 +88,48 @@ The badge reflects awards made to your own CAGE code. Work delivered as a subcon
 Some solicitations require a **first article test**: before you may ship full production quantities, you must produce initial sample units and have them approved. It is ordered as a separate line on the solicitation, and it adds real cost and lead time to a bid.
 
 Rows carrying one show a **FAT** badge next to the NSN — the abbreviation buyers use for First Article Test. Click it for the specifics, including the FAR clause the requirement falls under. Because the requirement is recorded as a placeholder line rather than a purchasable part, it is not counted in the row's item count and never shown as the row's NSN.
+
+## Technical documentation
+
+Whether DLA holds drawings or specifications for a part decides how you can bid
+it at all. With a full drawing package, anyone able to build to the drawings can
+quote. With nothing, the work usually goes to an approved source, and being one
+is a separate process.
+
+Rows whose part has documentation carry a badge next to the NSN:
+
+- **TD** — a full technical data package: drawings *and* specifications. The
+  item can be quoted by building to the documents rather than only by being an
+  approved source.  
+- **SPEC** — a specification or standard, but **no drawings**. You can still
+  build to the spec; without dimensioned drawings, expect to carry more of the
+  design risk yourself.
+
+Click either badge for the full explanation. Request the documents themselves
+through DIBBS — what you actually receive depends on the solicitation's
+acquisition method and any export-control restrictions, so the badge tells you
+what DLA holds, not what will clear for release to you.
+
+Where a part has **no** documentation, no badge appears. To see that stated
+outright — and to see it for every part on a multi-item solicitation rather than
+just the one on the row — expand the row with the arrow at its left. The
+**Tech docs** column in the line-item tables reads one of four ways:
+
+| Column shows | Meaning |
+| --- | --- |
+| **Full** | Drawings and specifications |
+| **Spec only** | A specification or standard, no drawings |
+| **None** | DLA holds no documentation for this part |
+| **—** | Not recorded — this says nothing about what DLA holds |
+
+The last two are worth keeping apart. **None** is DLA telling us there is no
+documentation. **—** means we have no answer for that line, which is not the
+same thing and should not be read as one.
+
+Documentation follows the **part**, not the solicitation. A part that shows
+**Full** here shows **Full** on the next solicitation it appears on, and two
+parts on the same solicitation can easily differ — which is why the badge on a
+collapsed row speaks only for the item shown in the NSN column.
 
 ## Amended and updated solicitations
 

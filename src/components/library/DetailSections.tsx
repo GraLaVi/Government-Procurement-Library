@@ -287,7 +287,13 @@ export function ResultsLayoutToggle({
             onClick={() => onChange(opt.value)}
             aria-pressed={isActive}
             title={`${opt.label} — ${opt.description}`}
-            className={`inline-flex items-center px-2 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${
+            // An INSET focus ring, where the rest of the app uses
+            // ring-offset-2: these buttons are flush inside the group's
+            // overflow-hidden border, which would clip an outward ring on
+            // three sides. `inset-ring-*` is the Tailwind v4 spelling — v3's
+            // `ring-inset` compiles to nothing here, which is what
+            // scripts/check-theme-classes.mjs reports as a dead token.
+            className={`inline-flex items-center px-2 py-1 transition-colors focus:outline-none focus-visible:inset-ring-2 focus-visible:inset-ring-primary ${
               isActive
                 ? "bg-primary/10 text-primary"
                 : "text-muted hover:bg-muted-light hover:text-foreground"
