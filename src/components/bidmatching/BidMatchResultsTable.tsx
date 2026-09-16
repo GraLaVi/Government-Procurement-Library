@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/Modal";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { BidMatchLineItems } from "@/components/bidmatching/BidMatchLineItems";
 import { PartIdentityLink } from "@/components/bidmatching/PartIdentityLink";
+import { TechDocsBadge } from "@/components/library/TechDocsBadge";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
 import { PendingOutcomeFlag } from "@/components/library/PendingOutcomeFlag";
 import { NoticeTypeBadge } from "@/components/library/NoticeTypeBadge";
@@ -18,6 +19,7 @@ import { BidTermsPanel } from "@/components/library/BidTermsPanel";
 import { PrintButton } from "@/components/ui/PrintButton";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
 import { formatCurrency } from "@/lib/library/types";
+import { techDocsCellLabel } from "@/lib/library/techDocs";
 import {
   SortHeader, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
 } from "@/components/rfq/TableCard";
@@ -69,6 +71,8 @@ interface BidMatchPart {
   part_description?: string | null;
   quantity?: number | null;
   unit_of_issue?: string | null;
+  // See the field of the same name on BidMatchResult.
+  tech_docs?: string | null;
 }
 
 // A row is one SOLICITATION, never one match row — see BidMatchDetail.
@@ -151,6 +155,14 @@ interface BidMatchResult {
   mfg_cage?: string | null;
   mfg_part_number?: string | null;
   part_description?: string | null;
+  // What technical documentation DLA holds for the primary line item's NSN:
+  // "full", "spec_only" or "none". Stored per line item but describing the
+  // PART, so it follows the NSN from one solicitation to the next.
+  //
+  // The raw stored string — NOT a boolean, and NULL/absent means NOT CAPTURED
+  // rather than "none". resolveTechDocs owns both distinctions, and nothing
+  // here may render a negative for an absent value. Always absent on SAM rows.
+  tech_docs?: string | null;
   // Solicitation carries a contractor-tested First Article CLIN.
   first_article?: boolean;
   // Customer-scoped "come back to this" flag — shared by every user on the
@@ -602,6 +614,7 @@ export function BidMatchResultsTable({
                       <div className="flex items-center gap-1.5">
                         <PartIdentityLink part={result} className="data-field font-medium" />
                         <FirstArticleBadge firstArticle={result.first_article} />
+                        <TechDocsBadge techDocs={result.tech_docs} />
                         <WinHistoryBadge
                           count={result.win_count ?? 0}
                           lastWonOn={result.last_won_on}
@@ -713,6 +726,13 @@ export function BidMatchResultsTable({
                                       <th className={thClass}>Description</th>
                                       <th className={`${thClass} !text-right whitespace-nowrap`}>Qty</th>
                                       <th className={thClass}>UOM</th>
+                                      {/* All four states spelled out per NSN
+                                          here, where the collapsed row's badge
+                                          can only speak for the one part it
+                                          shows — and where "None" has room to
+                                          be stated rather than inferred from
+                                          an absent pill. */}
+                                      <th className={`${thClass} whitespace-nowrap`}>Tech docs</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -732,6 +752,9 @@ export function BidMatchResultsTable({
                                         </td>
                                         <td className={`${tdClass} text-muted whitespace-nowrap`}>
                                           {part.unit_of_issue || "—"}
+                                        </td>
+                                        <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                                          {techDocsCellLabel(part.tech_docs)}
                                         </td>
                                       </tr>
                                     ))}

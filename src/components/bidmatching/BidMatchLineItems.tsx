@@ -7,6 +7,7 @@ import {
   formatCurrency,
 } from "@/lib/library/types";
 import { PartIdentityLink } from "@/components/bidmatching/PartIdentityLink";
+import { techDocsCellLabel } from "@/lib/library/techDocs";
 import {
   rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
 } from "@/components/rfq/TableCard";
@@ -89,6 +90,10 @@ export function BidMatchLineItems({
                 <th className={thClass}>Description</th>
                 <th className={`${thClass} !text-right whitespace-nowrap`}>Qty</th>
                 <th className={thClass}>UOM</th>
+                {/* Per NSN, the same four states as the matched-parts table
+                    above: Full, Spec only, None, or an em dash for a line we
+                    have not captured. */}
+                <th className={`${thClass} whitespace-nowrap`}>Tech docs</th>
                 <th className={`${thClass} !text-right whitespace-nowrap`}>Unit Price</th>
               </tr>
             </thead>
@@ -108,6 +113,7 @@ export function BidMatchLineItems({
                     {p.quantity != null ? p.quantity.toLocaleString() : "—"}
                   </td>
                   <td className={`${tdClass} text-muted whitespace-nowrap`}>{p.unit_of_issue || "—"}</td>
+                  <td className={`${tdClass} text-muted whitespace-nowrap`}>{techDocsCellLabel(p.tech_docs)}</td>
                   <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
                     {formatCurrency(p.unit_price)}
                   </td>
