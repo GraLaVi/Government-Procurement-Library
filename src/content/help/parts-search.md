@@ -13,8 +13,8 @@ Parts Search lets you look up any part in the federal procurement catalog by its
 - [Reading a part record](#reading-a-part-record)  
 - [Tabs or one page](#tabs-or-one-page)  
 - [Overview tab](#overview-tab)  
-- [Procurement History tab](#procurement-history-tab)  
 - [Solicitations tab](#solicitations-tab)  
+- [Procurement History tab](#procurement-history-tab)  
 - [Manufacturers tab](#manufacturers-tab)  
 - [Characteristics tab](#characteristics-tab)  
 - [End Use tab](#end-use-tab)  
@@ -56,7 +56,11 @@ GPH can present a part record two ways, and you choose which in **Account → Pr
 - **Tabs** (the default) — Each section is its own tab, and you view one at a time. Sections load as you open them, keeping the page compact.  
 - **One page** — Every section is stacked on a single scrollable page with a jump-to navigation rail, so you can scan the whole record at once. On the Advanced plan, this view also lets you print or export the entire record together.
 
-The setting applies to both part records and vendor profiles, and you can switch back and forth at any time. The section descriptions below are the same regardless of which layout you choose. For more on changing preferences, see [Managing your account](/help/account-settings#results-layout).
+You don't have to go to Preferences to switch. Every part record carries a **layout toggle** in the top-right corner of the record — two small buttons, one for tabs and one for one page. Click either to redraw the record in that layout straight away. The toggle is available on every plan.
+
+Switching from the record also saves your choice: the next record you open uses the layout you last picked, and **Account → Preferences** shows the same value. (If you're signed out, the switch still works for as long as you stay on the page, but there's no account to save it to.)
+
+The setting applies to both part records and vendor profiles. The section descriptions below are the same regardless of which layout you choose. For more on changing preferences, see [Managing your account](/help/account-settings#results-layout).
 
 ## Overview tab
 
@@ -65,14 +69,6 @@ The Overview tab is the part's at-a-glance summary. A **hero card** at the top r
 - **Identifiers.** The part's NSN, NIIN, and FSC (Federal Supply Class). Hover the FSC to see its **Federal Supply Classification** description. For part-number-only records with no NSN, this card shows the CAGE and manufacturer part number instead.  
 - **Part Details.** The part description, its **Unit of Issue**, and its standard price (if known).  
 - **Part Codes.** Management codes describing how the government catalogs and acquires the part — **DLA** (Item Description Segment), **AMC** (Acquisition Method Code), **PIC** (Procurement Info Code), and **SLC** (Shelf Life Code). Each code links to the **Code Definitions** reference.
-
-## Procurement History tab
-
-The Procurement History tab shows past contract awards for the part. Columns are **Contract #**, **Date**, **CAGE**, **Vendor**, **Qty**, **Unit Price**, and **Total** (the total contract value).
-
-The **CAGE** column links to the awarded vendor's profile — useful for researching competitive history on the part — and the **Contract #** cell has an icon button that opens the award document as a PDF. To learn more about viewing contract documents, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
-
-*Note: this tab is available on the Advanced plan.*
 
 ## Solicitations tab
 
@@ -91,6 +87,14 @@ The Solicitations tab shows active and recently closed solicitations for the par
 Solicitations that have been changed show an amber **Amended** badge (with a **×N** count for multiple amendments); click it for a change timeline. SAM.gov rows that carry attachments show a documents button with the attachment count. Fast-award candidates carry a green **lightning bolt** — these can be awarded before their close date, so quoting early matters; see [Solicitation type indicators](/help/solicitations-and-contracts#solicitation-type-indicators). To learn more about viewing a solicitation PDF or amendment history, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
 
 *Note: on the Free plan this tab shows a count of recent solicitations and an upgrade prompt rather than the full table. It isn't shown at all on Basic — the full table is available on Advanced.*
+
+## Procurement History tab
+
+The Procurement History tab shows past contract awards for the part. Columns are **Contract #**, **Date**, **CAGE**, **Vendor**, **Qty**, **Unit Price**, and **Total** (the total contract value).
+
+The **CAGE** column links to the awarded vendor's profile — useful for researching competitive history on the part — and the **Contract #** cell has an icon button that opens the award document as a PDF. To learn more about viewing contract documents, see [Viewing solicitations and contracts](/help/solicitations-and-contracts).
+
+*Note: this tab is available on the Advanced plan.*
 
 ## Manufacturers tab
 

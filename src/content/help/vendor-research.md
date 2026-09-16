@@ -39,7 +39,11 @@ GPH can present a vendor profile two ways, and you choose which in **Account →
 - **Tabs** (the default) — Each section is its own tab, and you view one at a time. Sections load as you open them, keeping the page compact.  
 - **One page** — Every section is stacked on a single scrollable page with a jump-to navigation rail, so you can scan the whole profile at once. On the Advanced plan, this view also lets you print or export the entire profile together.
 
-The setting applies to both vendor profiles and part records, and you can switch back and forth at any time. The section descriptions below are the same regardless of which layout you choose. For more on changing preferences, see [Managing your account](/help/account-settings#results-layout).
+You don't have to go to Preferences to switch. Every vendor profile carries a **layout toggle** in the top-right corner of the profile — two small buttons, one for tabs and one for one page. Click either to redraw the profile in that layout straight away. The toggle is available on every plan.
+
+Switching from the profile also saves your choice: the next vendor or part you open uses the layout you last picked, and **Account → Preferences** shows the same value. (If you're signed out, the switch still works for as long as you stay on the page, but there's no account to save it to.)
+
+The setting applies to both vendor profiles and part records. The section descriptions below are the same regardless of which layout you choose. For more on changing preferences, see [Managing your account](/help/account-settings#results-layout).
 
 ## Demographics tab
 
