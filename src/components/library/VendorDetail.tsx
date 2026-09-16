@@ -36,15 +36,18 @@ import {
 } from "@/lib/library/types";
 import type { VendorInventory } from "@/lib/inventory/types";
 import { VendorInventoryPanel } from "@/components/library/VendorInventoryPanel";
-import { DetailSections, DetailToolbar } from "@/components/library/DetailSections";
+import {
+  DetailSections,
+  DetailToolbar,
+  ResultsLayoutToggle,
+} from "@/components/library/DetailSections";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { DataTable, type ColumnDef } from "@/components/ui/DataTable";
 import { Modal } from "@/components/ui/Modal";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveVendorTier, tierMeets } from "@/lib/library/tier";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
-import { usePreferences } from "@/lib/hooks/usePreferences";
-import { resolveResultsLayout } from "@/lib/preferences/resultsLayout";
+import { useResultsLayout } from "@/lib/hooks/useResultsLayout";
 import { buildCsv, buildCombinedCsv, triggerDownload, todayIsoDate } from "@/lib/library/csv";
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
@@ -132,8 +135,7 @@ interface VendorDetailProps {
 export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: VendorDetailProps) {
   const { hasAnyProductAccess } = useAuth();
   const tier = resolveVendorTier(hasAnyProductAccess);
-  const { preferences } = usePreferences();
-  const layout = resolveResultsLayout(preferences);
+  const { layout, changeLayout } = useResultsLayout();
 
   const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? "demographics");
 
@@ -616,14 +618,21 @@ export function VendorDetail({ vendor, prefetchedTabCounts, initialTab }: Vendor
   // whole record prints even from the tabbed layout.
   const effectiveLayout = expandForPrint ? "linear" : layout;
 
-  const toolbar =
-    tierMeets(tier, "advanced") ? (
-      <DetailToolbar
-        onPrint={handlePrint}
-        onExportAll={layout === "linear" ? handleExportAll : undefined}
-        printPreparing={preparingPrint}
-      />
-    ) : undefined;
+  // The layout toggle sits in the same cluster as Print in both layouts, so
+  // it stays under the cursor across a switch. It is not tier-gated the way
+  // DetailToolbar is — every tier can choose how the record is laid out.
+  const toolbar = (
+    <>
+      <ResultsLayoutToggle layout={layout} onChange={changeLayout} />
+      {tierMeets(tier, "advanced") && (
+        <DetailToolbar
+          onPrint={handlePrint}
+          onExportAll={layout === "linear" ? handleExportAll : undefined}
+          printPreparing={preparingPrint}
+        />
+      )}
+    </>
+  );
 
   return (
     <div className="print-root print-landscape bg-card-bg rounded-lg border border-border overflow-hidden">

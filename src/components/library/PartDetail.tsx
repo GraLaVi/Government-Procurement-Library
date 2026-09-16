@@ -49,7 +49,11 @@ import {
   EXCLUDED_VENDOR_WARNING,
 } from "@/lib/library/types";
 import { PendingOutcomeFlag } from "@/components/library/PendingOutcomeFlag";
-import { DetailSections, DetailToolbar } from "@/components/library/DetailSections";
+import {
+  DetailSections,
+  DetailToolbar,
+  ResultsLayoutToggle,
+} from "@/components/library/DetailSections";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { KPICard } from "@/components/analytics/KPICard";
 import { CHART_COLORS } from "@/components/analytics/ChartColors";
@@ -67,8 +71,7 @@ import { resolvePartsTier, tierMeets } from "@/lib/library/tier";
 import { hasAnalyticsAccess } from "@/lib/analytics/tier";
 import { HELP_SLUGS } from "@/lib/help";
 import { ExportCsvButton, CustomReportLink, type CsvColumn } from "@/components/library/ExportCsvButton";
-import { usePreferences } from "@/lib/hooks/usePreferences";
-import { resolveResultsLayout } from "@/lib/preferences/resultsLayout";
+import { useResultsLayout } from "@/lib/hooks/useResultsLayout";
 import { buildCsv, buildCombinedCsv, triggerDownload, todayIsoDate } from "@/lib/library/csv";
 import { useAmendmentSummaries } from "@/lib/hooks/useAmendmentSummaries";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
@@ -384,7 +387,7 @@ interface PartDetailProps {
   part: PartDetailType;
 }
 
-type TabId = "overview" | "procurement" | "solicitations" | "manufacturers" | "inventory" | "technical" | "enduse" | "packaging" | "procurementitemdesc";
+type TabId = "overview" | "solicitations" | "procurement" | "manufacturers" | "inventory" | "technical" | "enduse" | "packaging" | "procurementitemdesc";
 
 export function PartDetail({ part }: PartDetailProps) {
   const { hasProductAccess, hasAnyProductAccess } = useAuth();
@@ -393,8 +396,7 @@ export function PartDetail({ part }: PartDetailProps) {
   // Demand & Stock is gated by the gph_analytics add-on, not by a search
   // tier — it's per-user, so two people on the same Advanced org can differ.
   const canSeeDemand = hasAnalyticsAccess(hasProductAccess, hasAnyProductAccess);
-  const { preferences } = usePreferences();
-  const layout = resolveResultsLayout(preferences);
+  const { layout, changeLayout } = useResultsLayout();
 
   // Print-the-whole-record support (used from both layouts). In tabs mode we
   // load + expand every section before printing so the printout is complete.
@@ -964,8 +966,8 @@ export function PartDetail({ part }: PartDetailProps) {
     : solicitationsLabel;
   const allTabs: Array<{ id: TabId; label: string; disabled: boolean; visible: boolean }> = [
     { id: "overview", label: "Overview", disabled: false, visible: true },
-    { id: "procurement", label: procurementLabel, disabled: false, visible: tierMeets(tier, "advanced") },
     { id: "solicitations", label: solicitationsLabelForTier, disabled: false, visible: isFreeOnly || tierMeets(tier, "advanced") },
+    { id: "procurement", label: procurementLabel, disabled: false, visible: tierMeets(tier, "advanced") },
     { id: "manufacturers", label: manufacturersLabel, disabled: false, visible: tierMeets(tier, "basic") },
     // Supplier Stock is visible at every tier: my_stock always renders, and
     // the panel itself shows the unlock prompt when network access is absent.
@@ -1225,14 +1227,21 @@ export function PartDetail({ part }: PartDetailProps) {
   // whole record prints even from the tabbed layout.
   const effectiveLayout = expandForPrint ? "linear" : layout;
 
-  const toolbar =
-    tierMeets(tier, "advanced") ? (
-      <DetailToolbar
-        onPrint={handlePrint}
-        onExportAll={layout === "linear" ? handleExportAll : undefined}
-        printPreparing={preparingPrint}
-      />
-    ) : undefined;
+  // The layout toggle sits in the same cluster as Print in both layouts, so
+  // it stays under the cursor across a switch. It is not tier-gated the way
+  // DetailToolbar is — every tier can choose how the record is laid out.
+  const toolbar = (
+    <>
+      <ResultsLayoutToggle layout={layout} onChange={changeLayout} />
+      {tierMeets(tier, "advanced") && (
+        <DetailToolbar
+          onPrint={handlePrint}
+          onExportAll={layout === "linear" ? handleExportAll : undefined}
+          printPreparing={preparingPrint}
+        />
+      )}
+    </>
+  );
 
   return (
     <div className="print-root print-landscape bg-card-bg rounded-lg border border-border overflow-hidden">

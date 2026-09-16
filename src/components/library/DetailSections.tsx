@@ -3,7 +3,10 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { PrintButton, toolbarButtonClass } from "@/components/ui/PrintButton";
-import type { ResultsLayout } from "@/lib/preferences/resultsLayout";
+import {
+  RESULTS_LAYOUT_OPTIONS,
+  type ResultsLayout,
+} from "@/lib/preferences/resultsLayout";
 
 export interface DetailSection {
   /** Stable section id — used for the tab id, the jump-rail target, and the
@@ -26,7 +29,8 @@ interface DetailSectionsProps {
   /** Active tab id (tabs mode). Also seeds the jump-rail highlight. */
   activeTab: string;
   onTabChange: (id: string) => void;
-  /** Linear-only page actions (Print / Export all). Ignored in tabs mode. */
+  /** Page-level actions (layout toggle, Print / Export all), rendered in the
+   *  same right-hand cluster in both layouts so they stay put across a switch. */
   toolbar?: ReactNode;
 }
 
@@ -152,7 +156,9 @@ function LinearSections({
               );
             })}
           </div>
-          {toolbar && <div className="flex-shrink-0">{toolbar}</div>}
+          {toolbar && (
+            <div className="flex-shrink-0 flex items-center gap-2">{toolbar}</div>
+          )}
         </div>
       </div>
 
@@ -246,6 +252,62 @@ export function DetailToolbar({
           <span aria-live="polite">{justExported ? "Downloaded" : "Export all"}</span>
         </button>
       )}
+    </div>
+  );
+}
+
+
+/**
+ * On-demand switch between the two detail layouts, for users who want the
+ * other one for just this record. Deliberately lives outside DetailToolbar:
+ * that toolbar is Advanced-tier only, and the layout switch is not gated.
+ *
+ * Icon-only and sized to match toolbarButtonClass so it sits flush beside
+ * Print rather than reading as a differently-sized control.
+ */
+export function ResultsLayoutToggle({
+  layout,
+  onChange,
+}: {
+  layout: ResultsLayout;
+  onChange: (next: ResultsLayout) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Layout"
+      className="no-print inline-flex items-center rounded border border-border bg-card-bg overflow-hidden"
+    >
+      {RESULTS_LAYOUT_OPTIONS.map((opt) => {
+        const isActive = layout === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            aria-pressed={isActive}
+            title={`${opt.label} — ${opt.description}`}
+            className={`inline-flex items-center px-2 py-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset ${
+              isActive
+                ? "bg-primary/10 text-primary"
+                : "text-muted hover:bg-muted-light hover:text-foreground"
+            }`}
+          >
+            {opt.value === "tabs" ? (
+              // A tab strip sitting on a panel.
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9h18v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9zM3 9V5a1 1 0 011-1h5a1 1 0 011 1v4" />
+              </svg>
+            ) : (
+              // Stacked sections on one page.
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4h16v6H4zM4 14h16v6H4z" />
+              </svg>
+            )}
+            <span className="sr-only">{opt.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
