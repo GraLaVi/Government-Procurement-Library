@@ -58,7 +58,7 @@ Each match row shows:
 Badges can appear next to the NSN:
 
 - **FAT** — the solicitation requires a contractor First Article Test. Click it for what that commits you to. See [First article requirements](#first-article-requirements).  
-- **TD** or **SPEC** — DLA holds technical documentation for the part. Click it for what you can expect to get. See [Technical documentation](#technical-documentation).  
+- **TDP** or **SPEC** — DLA holds technical documentation for the part. Click it for what you can expect to get. See [Technical documentation](#technical-documentation).  
 - **A trophy with a number** — you have won this part before, that many times. Click it for your award history, including what you charged. See [Parts you have won before](#parts-you-have-won-before).
 
 **Which profile matched, and why,** now lives in the expanded row rather than its own columns. Click the arrow at the left of any row to see the profile name, the **Hard** or **Soft** badge, and the reason the match fired — for example *keyword 'carabiner' in description* — alongside the full line-item list.
@@ -98,7 +98,7 @@ is a separate process.
 
 Rows whose part has documentation carry a badge next to the NSN:
 
-- **TD** — a full technical data package: drawings *and* specifications. The
+- **TDP** — a full technical data package: drawings *and* specifications. The
   item can be quoted by building to the documents rather than only by being an
   approved source.  
 - **SPEC** — a specification or standard, but **no drawings**. You can still

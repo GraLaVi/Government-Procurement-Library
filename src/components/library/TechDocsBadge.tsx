@@ -37,7 +37,7 @@ const BADGE: Record<
   { short: string; title: string; heading: string; body: string }
 > = {
   full: {
-    short: "TD",
+    short: "TDP",
     title: "Full technical data package",
     heading: "Full technical data package:",
     body:
