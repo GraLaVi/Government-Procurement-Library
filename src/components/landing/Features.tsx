@@ -41,7 +41,7 @@ const heroFeatures: Array<{
   },
   {
     icon: SendIcon,
-    title: "Requests for Quote",
+    title: "Request for Quote",
     badge: { label: "Add-on", tone: "addon" },
     description:
       "Send structured RFQs to manufacturers and stocking suppliers without leaving the part record, and collect every quote in one place — shared batch cart, private vendor contact book, response tracking.",

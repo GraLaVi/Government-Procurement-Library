@@ -1,7 +1,7 @@
 ---
 title: "Sending RFQs to vendors"
 meta_title: "Sending RFQs to Vendors | GPH Help"
-description: "Create and send Requests for Quote to vendors from a part's Manufacturers tab, track responses, and collect structured quotes in Government Procurement Hub."
+description: "Create and send RFQs to vendors from a part's Manufacturers tab, track responses, and collect structured quotes in Government Procurement Hub."
 ---
 
 A Request for Quote (RFQ) lets you ask vendors for pricing on a part and collect their answers in one place. You start an RFQ from a part's manufacturers, send it to one or more vendors, and GPH gathers each vendor's structured quote — unit price, lead time, alternates, and notes — back on the RFQ.

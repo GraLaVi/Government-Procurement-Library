@@ -92,7 +92,7 @@ const groups: Group[] = [
   {
     title: "Add-ons",
     rows: [
-      { label: "Requests for Quote", free: no, basic: addon, advanced: addon },
+      { label: "Request for Quote", free: no, basic: addon, advanced: addon },
       { label: "Procurement Analytics", free: no, basic: no, advanced: addon },
     ],
   },

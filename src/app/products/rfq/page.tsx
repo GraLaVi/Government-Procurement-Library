@@ -16,7 +16,7 @@ import { resolveDemoRfq } from "@/lib/demo/rfq";
 import { resolveDemoWorklist } from "@/lib/demo/rfqWorklist";
 
 export const metadata: Metadata = {
-  title: "Requests for Quote | Government Procurement Hub",
+  title: "Request for Quote | Government Procurement Hub",
   description:
     "Send structured RFQs to manufacturers and your own vendors from any part, collect every quote on one record, price the winner to the government, and see what's ready to bid. Try the live mock-up.",
 };
@@ -36,7 +36,7 @@ export default function RfqProductPage() {
       <Navbar />
       <main>
         <ProductHero
-          eyebrow="Requests for Quote"
+          eyebrow="Request for Quote"
           title={
             <>
               Get vendor quotes

@@ -32,7 +32,7 @@ export const PRODUCT_PAGES: ProductPage[] = [
   },
   {
     slug: "rfq",
-    name: "Requests for Quote",
+    name: "Request for Quote",
     blurb:
       "Send structured RFQs to your vendors and track every response, with a shared batch cart and a private contact book.",
     href: "/products/rfq",
