@@ -28,6 +28,39 @@ function formatBytes(bytes: number | null | undefined): string {
 // land on a different portal; the badge says so before the click.
 const NECO_HOST = /(^|\.)neco\.navy\.mil$/i;
 
+// Dropdown geometry. These mirror the panel's `w-80 max-h-80` classes and are
+// only used to keep it inside the viewport — if those classes change, change
+// these with them.
+const PANEL_WIDTH = 320;
+const PANEL_MAX_HEIGHT = 320;
+const VIEWPORT_MARGIN = 8;
+
+/**
+ * Where to pin the portaled panel, clamped to the viewport.
+ *
+ * The panel is position:fixed and was anchored to the button's left edge, which
+ * is fine until the button IS near an edge. In the solicitation results table
+ * Documents is the last column, so a 320px panel hung off the button's left ran
+ * straight off the right of the window and took most of the file names with it.
+ *
+ * Horizontally: shift left until it fits, never past the left margin.
+ * Vertically: open downwards, but flip to sit ABOVE the button when there is
+ * not enough room below and more room above — anchored by its bottom edge, so a
+ * short list still sits against the button rather than floating away from it.
+ */
+function panelPosition(rect: DOMRect): { top?: number; bottom?: number; left: number } {
+  const left = Math.max(
+    VIEWPORT_MARGIN,
+    Math.min(rect.left, window.innerWidth - PANEL_WIDTH - VIEWPORT_MARGIN)
+  );
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const spaceAbove = rect.top;
+  if (spaceBelow < Math.min(PANEL_MAX_HEIGHT, 200) && spaceAbove > spaceBelow) {
+    return { bottom: window.innerHeight - rect.top + 4, left };
+  }
+  return { top: rect.bottom + 4, left };
+}
+
 // What a NECO link is really addressing, read off its query string. The `soln`
 // parameter carries the solicitation number the link opens — including the
 // revision suffix (…FE380001), which is how one notice can link to several
@@ -61,7 +94,7 @@ export function SamDocumentsButton({ oppId, count, label }: { oppId: number; cou
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfDoc, setPdfDoc] = useState<{ url: string; name: string } | null>(null);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [coords, setCoords] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +119,7 @@ export function SamDocumentsButton({ oppId, count, label }: { oppId: number; cou
     setOpen(next);
     if (next) {
       const rect = btnRef.current?.getBoundingClientRect();
-      if (rect) setCoords({ top: rect.bottom + 4, left: rect.left });
+      if (rect) setCoords(panelPosition(rect));
       if (docs === null && !loading) fetchDocs();
     }
   };
@@ -103,11 +136,19 @@ export function SamDocumentsButton({ oppId, count, label }: { oppId: number; cou
       }
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    // Recompute on resize: the clamp is relative to the viewport, so a window
+    // that got narrower leaves the panel hanging off the edge again.
+    const onResize = () => {
+      const rect = btnRef.current?.getBoundingClientRect();
+      if (rect) setCoords(panelPosition(rect));
+    };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onResize);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
     };
   }, [open]);
 
@@ -144,7 +185,7 @@ export function SamDocumentsButton({ oppId, count, label }: { oppId: number; cou
       {open && coords && createPortal(
         <div
           ref={panelRef}
-          style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 60 }}
+          style={{ position: "fixed", ...coords, zIndex: 60 }}
           className="w-80 max-h-80 overflow-y-auto rounded-md border border-border bg-background shadow-lg py-1"
           onClick={(e) => e.stopPropagation()}
         >

@@ -59,6 +59,43 @@ const BIDDABLE: Record<string, string> = {
   "Combined Synopsis/Solicitation": "Combined",
 };
 
+/**
+ * Notice-stage predicates, exported so callers can explain a row in prose
+ * without keeping a second copy of SAM's vocabulary. The badge marks one row;
+ * these let a surface say something about a whole result set — the
+ * solicitation-number fallback uses them to avoid describing an already-awarded
+ * contract as "a service or repair buy you might quote".
+ *
+ * NULL is treated as biddable: a DIBBS row carries no notice_type and IS a
+ * solicitation on the street, which is the same assumption the badge makes.
+ */
+export function isBiddableNoticeType(noticeType?: string | null): boolean {
+  return !noticeType || noticeType in BIDDABLE;
+}
+
+export function isEarlyStageNoticeType(noticeType?: string | null): boolean {
+  return !!noticeType && noticeType in EARLY_STAGE;
+}
+
+/**
+ * What KIND of number a row's identifier is, for a column that can hold more
+ * than one kind — "Award", "Pre-solicitation", "Sources sought".
+ *
+ * Returns null for an ordinary solicitation, and for an untyped row, following
+ * the same rule as the badge above: label the exception, not the default. Every
+ * row on the keyword-search surface is a solicitation, so labelling those would
+ * put the same word on every line and train the eye to skip it — which is
+ * exactly what would hide the one row that says Award.
+ */
+export function numberKindLabel(noticeType?: string | null): string | null {
+  if (!noticeType || noticeType in BIDDABLE) return null;
+  if (noticeType === "Award Notice") return "Award";
+  if (noticeType === "Presolicitation") return "Pre-solicitation";
+  if (noticeType === "Sources Sought") return "Sources sought";
+  // Anything SAM adds later names itself rather than going unlabelled.
+  return noticeType;
+}
+
 interface NoticeTypeBadgeProps {
   /** sam_opportunities.notice_type, verbatim. NULL on DIBBS rows. */
   noticeType?: string | null;

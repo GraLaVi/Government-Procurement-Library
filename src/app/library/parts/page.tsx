@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PartsSearchForm, PartsSearchFormRef } from "@/components/library/PartsSearchForm";
 import { PartsResultsList } from "@/components/library/PartsResultsList";
 import { PartDetail } from "@/components/library/PartDetail";
+import { SolicitationSearchPanel } from "@/components/library/SolicitationSearchPanel";
+import { SolicitationNumberFallback } from "@/components/library/SolicitationNumberFallback";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { RecentSearchesChips } from "@/components/library/RecentSearchesChips";
 import { resolvePartsTier, tierMeets } from "@/lib/library/tier";
@@ -160,8 +162,53 @@ function PartsSearchPageContent() {
     }
   }, [selectedNSN]);
 
+  // Recording a search that the SAM surfaces resolved rather than this page.
+  //
+  // The parts path saves a search only once it knows it produced results, and
+  // it learns that from its own response. The two SAM-backed surfaces resolve
+  // their own queries — solicitation keyword search, and the number lookups
+  // that fall through when a solicitation or contract has no parts — so this
+  // page never sees their outcome and, until they called back, their searches
+  // were simply missing from Recent searches.
+  const recordSamSearch = useCallback(async (type: PartsSearchType, query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    try {
+      await addAction({ query_type: type, query: trimmed } as PartsSearchActionData);
+    } catch (err) {
+      // Never fail a search because its bookkeeping failed — same as the
+      // parts path.
+      console.error('Failed to save search to recent actions:', err);
+    }
+  }, [addAction]);
+
   // Handle search
   const handleSearch = useCallback(async (type: PartsSearchType, query: string) => {
+    // Solicitation keyword search returns SAM.gov notices, not parts, so none
+    // of what follows applies to it: no parts endpoint, no part cache, no
+    // auto-select of a single part. SolicitationSearchPanel owns the request
+    // and its own paging and filters; all this page does is record what was
+    // searched and hand the keyword over.
+    //
+    // Recorded as a recent search by SolicitationSearchPanel once it knows the
+    // keyword returned something — this page hands the keyword over and never
+    // sees the outcome, and saving blindly here would start offering
+    // zero-result searches back as suggestions.
+    if (type === "solicitation_keyword") {
+      setSearchError(null);
+      setHasSearched(true);
+      setSelectedNSN(null);
+      setPartDetail(null);
+      setSearchResults([]);
+      setTotalResults(0);
+      setLastSearchType(type);
+      setLastSearchQuery(query);
+      setInitialSearchType(type);
+      setInitialSearchQuery(query);
+      setIsSearchExpanded(false);
+      return;
+    }
+
     // Check client-side cache first — no spinner on hit (instant).
     const cacheKey = `${type}:${query.trim().toUpperCase()}`;
     const cached = searchCache.current.get(cacheKey);
@@ -463,7 +510,11 @@ function PartsSearchPageContent() {
       )}
 
       {/* Results Section - Full Width Layout */}
-      {hasSearched && !searchError && (
+      {hasSearched && !searchError && lastSearchType === "solicitation_keyword" && (
+        <SolicitationSearchPanel keyword={lastSearchQuery} />
+      )}
+
+      {hasSearched && !searchError && lastSearchType !== "solicitation_keyword" && (
         <>
           {/* Show part detail when selected */}
           {selectedNSN ? (
@@ -513,6 +564,26 @@ function PartsSearchPageContent() {
                 <PartDetail part={partDetail} />
               ) : null}
             </div>
+          ) : (lastSearchType === "solicitation" || lastSearchType === "contract_number") &&
+            !isSearching && searchResults.length === 0 ? (
+            /* Two search types resolve a number to parts and can legitimately
+               find none, for the same underlying reason: the record lives in
+               sam_opportunities rather than in a parts table.
+               
+               A solicitation number with no parts is almost always a services,
+               repair or construction notice, which has no NSN to resolve to. A
+               contract number with no parts is usually a civilian award —
+               order_details is DLA order history and holds no VA, DHS,
+               Interior, HHS or USDA numbers at all.
+               
+               Each asks SAM.gov its own question and must not answer with the
+               other's rows. Every other search type is genuinely about parts,
+               so an empty result there means what it says. */
+            <SolicitationNumberFallback
+              solicitationNumber={lastSearchQuery}
+              mode={lastSearchType === "contract_number" ? "contract" : "solicitation"}
+              onResultsFound={(num) => recordSamSearch(lastSearchType, num)}
+            />
           ) : (
             /* Show results list when no part selected - Full Width */
             <PartsResultsList
@@ -548,7 +619,8 @@ function PartsSearchPageContent() {
             Search for Parts
           </h3>
           <p className="text-xs text-muted max-w-sm mx-auto">
-            Search by NSN/NIIN, solicitation, mfg part number, contract number, description, or keywords
+            Search by NSN/NIIN, solicitation, mfg part number, contract number or description —
+            or use Solicitation keyword to find solicitations with no part number, such as services and repairs
           </p>
         </div>
       )}
