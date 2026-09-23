@@ -2,14 +2,17 @@
 title: "Searching for parts"
 meta_title: "Searching for Parts | GPH Help"
 description: "Learn how to search for parts in Government Procurement Hub, read part records, and use the data tabs that provide complete part intelligence."
+last_updated: "2026-09-23"
 ---
 
 Parts Search lets you look up any part in the federal procurement catalog by its NSN, NIIN, solicitation number, manufacturer part number, contract number, or description. Once you've found a part, GPH shows everything it knows about that item across a set of detailed tabs — from procurement history and recent solicitations to manufacturers, technical specs, and packaging requirements. How many tabs you see depends on your plan; the tabs below are listed in the order they appear.
 
+The same page also carries a sixth search type that does not look for parts at all: **Solicitation keyword** finds SAM.gov solicitations with no NSN attached — services, repairs, construction, and supply buys posted without a part number. That search has its own article, [Finding Solicitations With No Part Number](/help/solicitation-search).
+
 ## In this article
 
 - [Where to search](#where-to-search)  
-- [The five search types](#the-five-search-types)  
+- [The six search types](#the-six-search-types)  
 - [Reading a part record](#reading-a-part-record)  
 - [Tabs or one page](#tabs-or-one-page)  
 - [Overview tab](#overview-tab)  
@@ -31,15 +34,24 @@ GPH offers two entry points for part search.
 
 **Parts Search.** For full search options, open **Library → Parts Search** in the main navigation. The Parts Search page lets you search by any of five fields, view recent searches, and pin frequently used searches.
 
-## The five search types
+## The six search types
 
-On the Parts Search page, choose a search type using the radio buttons above the search bar:
+On the Parts Search page, choose a search type using the dropdown beside the search bar:
 
 - **NSN/NIIN** — Search by National Stock Number or National Item Identification Number. Either format works. You can paste a full 13-digit NSN (e.g., `5306-001234567`) or just the 9-digit NIIN (e.g., `00-001-0882`).  
 - **Solicitation number** — Look up a specific solicitation by its identifier.  
 - **Mfg Part Number** — Find a part by its manufacturer part number. Useful when you know the OEM part code but not the NSN.  
-- **Contract number** — Find parts associated with a specific contract.  
-- **Description** — Search by keywords in the part description. Use this when you know what the part is but not what it's called in the system.
+- **Contract number** — Find parts associated with a specific contract. If the number has no parts behind it, GPH looks for a matching award on SAM.gov instead and shows you who won it and for how much — useful for civilian agencies, whose contracts are not in the DLA order history this search normally reads.  
+- **Description** — Search by keywords in the part description. Use this when you know what the part is but not what it's called in the system.  
+- **Solicitation keyword** — The odd one out: this searches *solicitations* rather than parts, covering SAM.gov notices that have no NSN attached at all — services, repairs, construction, and supply buys the government posted without a part number. The keyword is optional, and a filter rail lets you narrow by agency, NAICS, PSC, set-aside and closing date. Results are solicitations, not parts, so they open in their own panel rather than a part record. See [Finding Solicitations With No Part Number](/help/solicitation-search).
+
+### If a solicitation number returns nothing
+
+Searching a **solicitation number** looks for the parts on that solicitation. A services or repair solicitation has none, so those searches used to come back empty.
+
+They no longer do. When a number has no parts behind it, GPH checks SAM.gov and shows you the notice itself, with every version of that number listed newest first so you can see its amendment history. Dashes, spaces and capitalisation are ignored.
+
+If you paste an award or order number rather than a solicitation number — the ninth character tells you which: `Q` and `R` are solicitations, `F` and `C` are orders and contracts — the search says so rather than reporting no match. See [Finding Solicitations With No Part Number](/help/solicitation-search).
 
 ## Reading a part record
 

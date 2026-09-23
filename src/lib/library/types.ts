@@ -436,7 +436,7 @@ export function formatAwardDate(dateStr: string | null | undefined): string {
 // Parts Search Types
 // ============================================================================
 
-export type PartsSearchType = 'nsn_niin' | 'solicitation' | 'mfg_part_number' | 'contract_number' | 'description';
+export type PartsSearchType = 'nsn_niin' | 'solicitation' | 'mfg_part_number' | 'contract_number' | 'description' | 'solicitation_keyword';
 
 export interface PartSearchResult {
   id: number;
@@ -909,6 +909,24 @@ export const PARTS_SEARCH_TYPE_CONFIGS: PartsSearchTypeConfig[] = [
     placeholder: 'Enter part description (min 3 chars)',
     minLength: 3,
     maxLength: 255,
+  },
+  {
+    // The only search type here that does not return parts. Everything above
+    // resolves to a part and renders the parts results list; this one searches
+    // SAM.gov notices that have NO part link and renders its own table, because
+    // the part detail page's nine tabs would all be empty for a notice with no
+    // part behind it.
+    //
+    // minLength is 0 on purpose: the keyword is optional. "Every open Navy
+    // solicitation closing this month" is a filters-only search, and requiring
+    // a keyword would block the browse case this surface exists to serve.
+    value: 'solicitation_keyword',
+    label: 'Solicitation keyword',
+    shortLabel: 'Sol. keyword',
+    description: 'Solicitations with no part/NSN — services, repairs, construction and unlinked supply buys',
+    placeholder: 'Keyword, or leave blank and use the filters',
+    minLength: 0,
+    maxLength: 200,
   },
 ];
 

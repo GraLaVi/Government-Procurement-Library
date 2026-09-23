@@ -65,6 +65,17 @@ export const HELP_ARTICLES: HelpArticleMeta[] = [
     group: "platform",
   },
   {
+    // Spoke of parts-search: it is reached from the same page, via the
+    // "Solicitation keyword" search type, and only makes sense once the reader
+    // knows what the part-driven search does and does not cover.
+    slug: "solicitation-search",
+    title: "Finding Solicitations With No Part Number",
+    blurb:
+      "Search SAM.gov solicitations that aren't tied to an NSN — services, repairs, construction, and supply buys posted without a part number.",
+    group: "platform",
+    spokeOf: "parts-search",
+  },
+  {
     slug: "vendor-research",
     title: "Researching Vendors",
     blurb:
