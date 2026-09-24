@@ -176,6 +176,9 @@ const SOLICITATIONS_CSV_COLUMNS: CsvColumn<PartSolicitation>[] = [
   { header: "Qty Unit", value: (r) => r.quantity_unit ?? "" },
   { header: "Unit Price", value: (r) => r.unit_price ?? "" },
   { header: "Estimated Value", value: (r) => r.estimated_value ?? "" },
+  // Blank on any SAM notice whose description has not been parsed, or that
+  // states no PR — the column is only ever populated where the source gives it.
+  { header: "Purchase Req", value: (r) => r.purchase_req ?? "" },
   { header: "Status", value: (r) => r.status ?? "" },
   { header: "Contract #", value: (r) => r.award?.contract_number ?? "" },
   { header: "Awardee", value: (r) => r.award?.awardee_name ?? "" },
