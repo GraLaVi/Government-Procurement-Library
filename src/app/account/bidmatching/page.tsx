@@ -9,6 +9,9 @@ import { ChipInput } from "@/components/ui/ChipInput";
 import { normalizeNiin, previewNiin } from "@/lib/niin";
 import { useCodeDefinitions } from "@/lib/hooks/useCodeDefinitions";
 import type { CodeDefinition } from "@/lib/codeDefinitions";
+import { useAgencies } from "@/lib/hooks/useAgencies";
+import { agencyValues } from "@/lib/agencies";
+import type { AgencyDirectory } from "@/lib/agencies";
 import {
   rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
 } from "@/components/rfq/TableCard";
@@ -42,7 +45,8 @@ interface BidMatchProfile {
 
 // In-form representation of a condition row. `chips` is the
 // canonical list state for `match_operator === 'in'`; we serialize it
-// to a comma-separated `match_value` at save time. For other operators
+// to a delimiter-joined `match_value` at save time — a comma for every
+// condition type but AGENCY (see chipDelimiterFor). For other operators
 // `chips` is ignored and `match_value` is the source of truth.
 interface ConditionForm {
   condition_type: string;
@@ -91,7 +95,17 @@ const IDENTIFIER_CONDITION_TYPES = [
   "NAICS_CODE",
   "SET_ASIDE_CODE",
   "PSC_CODE",
+  "AGENCY",
 ];
+
+// The one condition type whose `in` list is NOT comma-separated: SAM spells
+// department names with commas in them ('INTERIOR, DEPARTMENT OF THE'), so a
+// comma-joined agency list splits inside the names and matches nothing. The
+// live value ships with the agency list itself (useAgencies); the constant
+// below is only a fallback for the moments before it loads.
+function chipDelimiterFor(condition_type: string, agencyDelimiter: string): string {
+  return condition_type === "AGENCY" ? agencyDelimiter : ",";
+}
 
 const ALLOWED_CONDITION_TYPES = [
   ...TSQUERY_CONDITION_TYPES,
@@ -123,6 +137,7 @@ const CONDITION_TYPE_LABELS: Record<string, string> = {
   NAICS_CODE: "NAICS code",
   SET_ASIDE_CODE: "Set-Aside",
   PSC_CODE: "PSC",
+  AGENCY: "Buying agency",
   // Retired — kept only so a not-yet-migrated legacy row renders a name.
   SET_ASIDE: "Set-Aside (legacy — remove)",
   STATUS: "Status (retired — remove)",
@@ -153,6 +168,7 @@ const CONDITION_TYPE_OPERATOR_MATRIX: Record<string, string[]> = {
   NAICS_CODE: ["eq", "like", "ilike", "in"],
   SET_ASIDE_CODE: ["eq", "like", "ilike", "in"],
   PSC_CODE: ["eq", "like", "ilike", "in"],
+  AGENCY: ["eq", "like", "ilike", "in"],
   PART_DESCRIPTION: ["tsquery"],
   PID: ["tsquery"],
   TECHNICAL_CHARACTERISTICS: ["tsquery"],
@@ -168,6 +184,7 @@ const CONDITION_TYPE_DEFAULT_OPERATOR: Record<string, string> = {
   NAICS_CODE: "eq",
   SET_ASIDE_CODE: "eq",
   PSC_CODE: "eq",
+  AGENCY: "eq",
   PART_DESCRIPTION: "tsquery",
   PID: "tsquery",
   TECHNICAL_CHARACTERISTICS: "tsquery",
@@ -208,6 +225,7 @@ const CONDITION_TYPE_HINTS: Record<string, string> = {
   NAICS_CODE: "NAICS classification of a vendor tied to the part (via the part's CAGEs) — not the solicitation's own NAICS. DIBBS + SAM.",
   SET_ASIDE_CODE: "The solicitation/opportunity set-aside code (e.g. SDVOSB, HUBZone, WOSB). DIBBS + SAM.",
   PSC_CODE: "The SAM opportunity's Product Service Code. SAM only.",
+  AGENCY: "Who is buying. Picking a department takes every bureau under it (all of Interior); picking a bureau takes only that one. DIBBS solicitations all count as Defense Logistics Agency.",
   // Retired — displayed only for not-yet-migrated legacy rows.
   SET_ASIDE: "Retired condition — the worker no longer matches it. Delete it and add a current Set-Aside condition.",
   STATUS: "Retired condition — the worker no longer matches it. Delete it.",
@@ -222,10 +240,12 @@ function operatorExample(condition_type: string, operator: string): string {
     if (condition_type === "NAICS_CODE") return "332710, 336413";
     if (condition_type === "PSC_CODE") return "5945, 5950";
     if (condition_type === "SET_ASIDE_CODE") return "HZC, SDVOSBC, WOSB";
+    if (condition_type === "AGENCY") return "INTERIOR, DEPARTMENT OF THE | DEPT OF THE NAVY";
     return "value1, value2, value3";
   }
   if (operator === "like" || operator === "ilike") {
     if (condition_type === "MFG_PART_NUMBER") return "MS27%";
+    if (condition_type === "AGENCY") return "%NAVY%";
     return "%pattern%";
   }
   if (operator === "tsquery") return condition_type === "END_USE" ? "arleigh burke" : "pump relay";
@@ -236,6 +256,7 @@ function operatorExample(condition_type: string, operator: string): string {
   if (condition_type === "NAICS_CODE") return "332710";
   if (condition_type === "PSC_CODE") return "5945";
   if (condition_type === "SET_ASIDE_CODE") return "SDVOSBC";
+  if (condition_type === "AGENCY") return "DEPT OF THE NAVY";
   return "value";
 }
 
@@ -314,6 +335,199 @@ function SetAsideCodeChipPicker({
   );
 }
 
+// --- Agency pickers ------------------------------------------------------
+//
+// SAM publishes ~70 departments and ~175 bureaus under them, which is far too
+// many for one flat list. So the control is two steps: pick the department,
+// then optionally narrow to one bureau inside it. That mirrors what the value
+// means — a department takes every bureau under it, a bureau takes only
+// itself — and keeps either choice one click away.
+//
+// The one thing the nesting must not imply is scoping. A condition stores the
+// bare string and the worker compares it against a notice's department OR its
+// sub_tier, with no pairing between them, so a bureau name that two
+// departments share matches both. Those are labelled (`also_under`).
+
+/** The department a stored value belongs to: the department itself, or the
+ *  one carrying a bureau of that name. Display only — where two departments
+ *  share a bureau name, the first is as good as the second. */
+function departmentOf(directory: AgencyDirectory | null, value: string): string {
+  if (!value || !directory) return "";
+  for (const d of directory.departments) {
+    if (d.department === value) return d.department;
+    if (d.sub_tiers.some((s) => s.name === value)) return d.department;
+  }
+  return "";
+}
+
+function departmentLabel(name: string, notices90d: number): string {
+  return notices90d > 0
+    ? `${name} (${notices90d.toLocaleString()})`
+    : `${name} (none in 90 days)`;
+}
+
+// Department, then bureau. Calls onSelect with whichever the user settles on.
+function AgencyPicker({
+  directory,
+  value,
+  onSelect,
+  emptyHint,
+}: {
+  directory: AgencyDirectory | null;
+  /** Current value, when the control is showing one (the `eq` case). */
+  value: string;
+  onSelect: (next: string) => void;
+  emptyHint?: string;
+}) {
+  // The department the user has clicked, or — until they click one — the one
+  // the current value belongs to. Derived rather than stored so it is right on
+  // the first render after the directory loads, which is when a value read
+  // from a saved profile can first be placed under its department.
+  const [pickedDepartment, setPickedDepartment] = useState<string | null>(null);
+  const department = pickedDepartment ?? departmentOf(directory, value);
+
+  const current = directory?.departments.find((d) => d.department === department) ?? null;
+  const selectClass =
+    "w-full text-sm border border-border bg-card-bg text-foreground rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary";
+
+  return (
+    <div className="space-y-1.5">
+      <select
+        value={department}
+        onChange={(e) => {
+          const next = e.target.value;
+          setPickedDepartment(next);
+          // Choosing a department IS a choice — the whole department. Narrowing
+          // to a bureau is the optional second step.
+          if (next) onSelect(next);
+        }}
+        className={selectClass}
+      >
+        <option value="" disabled>
+          {directory ? "Select a department…" : "Loading agencies…"}
+        </option>
+        {(directory?.departments ?? []).map((d) => (
+          <option key={d.department} value={d.department}>
+            {departmentLabel(d.department, d.notices_90d)}
+          </option>
+        ))}
+      </select>
+
+      {current && current.sub_tiers.length > 0 && (
+        <select
+          value={value === department ? "" : value}
+          onChange={(e) => onSelect(e.target.value || department)}
+          className={selectClass}
+        >
+          <option value="">All of {current.department}</option>
+          {current.sub_tiers.map((sub) => (
+            <option key={`${current.department}:${sub.name}`} value={sub.name}>
+              {sub.name} ({sub.notices_90d.toLocaleString()})
+              {sub.also_under.length > 0
+                ? ` — also matches ${sub.also_under.join(", ")}`
+                : ""}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {current && current.sub_tiers.length === 0 && (
+        <p className="text-[11px] text-muted">
+          SAM lists no separate bureaus under this department.
+        </p>
+      )}
+      {!current && emptyHint && <p className="text-[11px] text-muted">{emptyHint}</p>}
+    </div>
+  );
+}
+
+// Single agency, for the `is exactly` operator.
+function AgencySelect({
+  directory,
+  value,
+  onChange,
+}: {
+  directory: AgencyDirectory | null;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  // A legacy or hand-edited row can hold a value SAM no longer publishes.
+  // Say so rather than silently swapping it for something else.
+  const known = value !== "" && agencyValues(directory).has(value);
+  return (
+    <div className="space-y-1">
+      <AgencyPicker directory={directory} value={value} onSelect={onChange} />
+      {value && (
+        <p className="text-[11px] text-muted">
+          Matching <span className="text-foreground font-medium">{value}</span>
+          {!known && directory ? " — not in SAM's current list" : ""}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Several agencies, for the `is any of` operator: the same two-step picker,
+// with each selection added as a chip.
+function AgencyChipPicker({
+  directory,
+  selected,
+  onChange,
+  delimiter,
+  maxValueLength,
+}: {
+  directory: AgencyDirectory | null;
+  selected: string[];
+  onChange: (next: string[]) => void;
+  delimiter: string;
+  maxValueLength: number;
+}) {
+  // What the row will actually store, so the length warning below reflects the
+  // saved string rather than a guess at it.
+  const storedLength = selected.join(delimiter).length;
+  const overCap = storedLength > maxValueLength;
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-1 min-h-[28px]">
+        {selected.length === 0 && (
+          <span className="text-xs text-muted italic">No agencies selected.</span>
+        )}
+        {selected.map((name) => (
+          <span
+            key={name}
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-accent/10 text-foreground border border-accent/20"
+          >
+            {name}
+            <button
+              type="button"
+              onClick={() => onChange(selected.filter((n) => n !== name))}
+              className="text-muted hover:text-foreground"
+              aria-label={`Remove ${name}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <AgencyPicker
+        directory={directory}
+        value=""
+        onSelect={(next) => {
+          if (next && !selected.includes(next)) onChange([...selected, next]);
+        }}
+        emptyHint="Pick the department to add it, or narrow to one bureau."
+      />
+      {overCap && (
+        <p className="text-[11px] text-error">
+          This list is {storedLength} characters; the limit is {maxValueLength}. Remove an
+          agency, or use one “is exactly” condition per agency in an OR profile — same
+          meaning, no limit.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function BidMatchingPage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -327,6 +541,14 @@ export default function BidMatchingPage() {
   // Canonical set-aside vocab — one fetch per session via module cache.
   // Powers the SET_ASIDE_CODE condition dropdown and chip-picker.
   const { codes: setAsideCodes, byCode: setAsideByCode } = useCodeDefinitions("SET_ASIDE");
+
+  // Agency vocabulary, delimiter and length cap — all three come from the API
+  // so the editor can never disagree with the matcher about them.
+  const {
+    directory: agencyDirectory,
+    delimiter: agencyDelimiter,
+    maxValueLength: agencyMaxLength,
+  } = useAgencies();
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -434,19 +656,29 @@ export default function BidMatchingPage() {
           match_value: c.match_value,
           match_operator: op,
           is_negated: !!c.is_negated,
-          chips: op === "in" ? c.match_value.split(",").map((s) => s.trim()).filter(Boolean) : [],
+          chips:
+            op === "in"
+              ? c.match_value
+                  .split(chipDelimiterFor(c.condition_type, agencyDelimiter))
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+              : [],
         };
       })
     );
     setShowModal(true);
   };
 
-  // Serialize a ConditionForm row into the API request shape. For `in`
-  // rows we join chips with a bare comma; the API rejects whitespace in
-  // the in-list (the worker SQL splits on `,` directly).
+  // Serialize a ConditionForm row into the API request shape. For `in` rows we
+  // join chips with the type's bare delimiter and no whitespace — the worker
+  // SQL splits on that character directly, so a stray space becomes part of the
+  // value it precedes.
   const serializeCondition = (c: ConditionForm) => ({
     condition_type: c.condition_type,
-    match_value: c.match_operator === "in" ? c.chips.join(",") : c.match_value.trim(),
+    match_value:
+      c.match_operator === "in"
+        ? c.chips.join(chipDelimiterFor(c.condition_type, agencyDelimiter))
+        : c.match_value.trim(),
     match_operator: c.match_operator,
     is_negated: c.is_negated,
   });
@@ -460,6 +692,16 @@ export default function BidMatchingPage() {
       const isIn = c.match_operator === "in";
       const empty = isIn ? c.chips.length === 0 : !c.match_value.trim();
       if (empty) return `Each ${CONDITION_TYPE_LABELS[c.condition_type] || c.condition_type} condition needs a value.`;
+      // Caught here as well as by the API, because the API's message arrives
+      // after the whole profile is rejected and names no row.
+      if (c.condition_type === "AGENCY") {
+        const stored = isIn
+          ? c.chips.join(chipDelimiterFor(c.condition_type, agencyDelimiter))
+          : c.match_value.trim();
+        if (stored.length > agencyMaxLength) {
+          return `That agency list is ${stored.length} characters; the limit is ${agencyMaxLength}. Use one "is exactly" condition per agency in an OR profile instead.`;
+        }
+      }
     }
     return null;
   };
@@ -651,17 +893,35 @@ export default function BidMatchingPage() {
           if (!allowed.includes(next.match_operator)) {
             next.match_operator = defaultOperatorFor(next.condition_type);
           }
+          // Switching into or out of AGENCY drops the value. Agency names are
+          // picked from a list and are never a valid FSC or NIIN (nor the
+          // reverse), so carrying them over would only produce a row that
+          // fails on save, with the old value still on screen.
+          if (patch.condition_type === "AGENCY" || c.condition_type === "AGENCY") {
+            next.match_value = "";
+            next.chips = [];
+          }
         }
         if (patch.match_operator && patch.match_operator !== c.match_operator) {
           // Switching to/from `in` swaps the value representation. Keep
           // a best-effort conversion so the user doesn't lose what they
           // typed: chips -> comma-joined, or comma-joined -> chips.
+          const delimiter = chipDelimiterFor(c.condition_type, agencyDelimiter);
           if (patch.match_operator === "in" && c.match_operator !== "in") {
-            const parts = c.match_value.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+            // Split on the delimiter only for agencies: their names contain
+            // both commas and spaces, so the general "any separator" split
+            // would shred one department into five dead values.
+            const parts = (
+              c.condition_type === "AGENCY"
+                ? c.match_value.split(delimiter)
+                : c.match_value.split(/[,\s]+/)
+            )
+              .map((s) => s.trim())
+              .filter(Boolean);
             next.chips = parts;
-            next.match_value = parts.join(",");
+            next.match_value = parts.join(delimiter);
           } else if (patch.match_operator !== "in" && c.match_operator === "in") {
-            next.match_value = c.chips.join(",");
+            next.match_value = c.chips.join(delimiter);
             next.chips = [];
           }
         }
@@ -981,7 +1241,15 @@ export default function BidMatchingPage() {
                             {OPERATOR_LABELS[cond.match_operator] || cond.match_operator}
                           </td>
                           <td className={`${tdClass} text-card-foreground ${cond.is_negated ? "line-through opacity-70" : ""}`}>
-                            {cond.match_value}
+                            {/* Agency lists get their separator spaced out.
+                                Raw, the pipe runs two department names
+                                together, and the names contain commas of their
+                                own — so the eye cannot find the boundary. */}
+                            {cond.condition_type === "AGENCY" && cond.match_operator === "in"
+                              ? cond.match_value
+                                  .split(chipDelimiterFor(cond.condition_type, agencyDelimiter))
+                                  .join("  ·  ")
+                              : cond.match_value}
                           </td>
                         </tr>
                       ))}
@@ -1215,6 +1483,7 @@ export default function BidMatchingPage() {
                     const isNiin = cond.condition_type === "NIIN";
                     const isIn = cond.match_operator === "in";
                     const isSetAsideCode = cond.condition_type === "SET_ASIDE_CODE";
+                    const isAgency = cond.condition_type === "AGENCY";
                     const isLegacySetAside = cond.condition_type === "SET_ASIDE";
                     const niinPreview = isNiin && !isIn ? previewNiin(cond.match_value) : null;
                     // Build the type-picker options. Tier-restricted users
@@ -1323,7 +1592,34 @@ export default function BidMatchingPage() {
                         </div>
                         {/* Row 2: value input — full width so chips and
                             paste-friendly inputs have room to breathe. */}
-                        {isSetAsideCode && isIn ? (
+                        {isAgency && isIn ? (
+                          <AgencyChipPicker
+                            directory={agencyDirectory}
+                            selected={cond.chips}
+                            onChange={(next) =>
+                              updateCondition(idx, {
+                                chips: next,
+                                match_value: next.join(agencyDelimiter),
+                              })
+                            }
+                            delimiter={agencyDelimiter}
+                            maxValueLength={agencyMaxLength}
+                          />
+                        ) : isAgency && (cond.match_operator === "like" || cond.match_operator === "ilike") ? (
+                          <input
+                            type="text"
+                            value={cond.match_value}
+                            onChange={(e) => updateCondition(idx, { match_value: e.target.value })}
+                            className="w-full text-sm border border-border bg-card-bg text-foreground rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary"
+                            placeholder="%NAVY%"
+                          />
+                        ) : isAgency ? (
+                          <AgencySelect
+                            directory={agencyDirectory}
+                            value={cond.match_value}
+                            onChange={(next) => updateCondition(idx, { match_value: next })}
+                          />
+                        ) : isSetAsideCode && isIn ? (
                           <SetAsideCodeChipPicker
                             codes={setAsideCodes}
                             byCode={setAsideByCode}
@@ -1378,6 +1674,32 @@ export default function BidMatchingPage() {
                                   : "Match value"
                             }
                           />
+                        )}
+                        {isAgency && formLogic === "OR" && formConditions.length > 1 && (
+                          <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                            ⚠ In an OR profile this matches <span className="font-medium">every</span>{" "}
+                            opportunity from the agency — the other conditions stop narrowing it.
+                            That is the right way to say “everything from this agency”. To bid only
+                            certain items from it, switch this profile to AND, or put the agency in
+                            a profile of its own.
+                          </p>
+                        )}
+                        {isAgency && !formUnlinkedSam && (
+                          <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                            ⚠ Civilian agencies publish no NSNs, so their notices are rarely linked
+                            to a part. Turn on{" "}
+                            <span className="font-medium">Include SAM notices with no part link</span>{" "}
+                            above or this condition will reach almost nothing outside DLA.
+                          </p>
+                        )}
+                        {isAgency && cond.match_operator === "eq" && cond.match_value &&
+                          agencyDirectory &&
+                          !agencyValues(agencyDirectory).has(cond.match_value) && (
+                          <p className="text-[11px] text-error">
+                            SAM has not published a notice from “{cond.match_value}” in the last{" "}
+                            {agencyDirectory.validation_window_days} days. Pick a name from the list —
+                            agency matching is exact, so this one can never fire.
+                          </p>
                         )}
                         {isSetAsideCode && (cond.match_operator === "like" || cond.match_operator === "ilike") && (
                           <p className="text-[11px] text-amber-700 dark:text-amber-300">
