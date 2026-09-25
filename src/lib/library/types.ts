@@ -104,6 +104,13 @@ export interface VendorSolicitation {
   // Nullable because SAM.gov rows may lack a response deadline.
   close_date: string | null;
   status: string;
+  // Served by the API but DORMANT on this tab: it only lists notices that are
+  // active and inside their deadline, so no row here is ever closed and this is
+  // always false. There is also no Status column to hang it off — status
+  // reaches the UI only through the CSV export. Both would change together if
+  // the tab ever shows recently-closed solicitations; see SamListedActiveFlag,
+  // which renders this on the parts Recent Solicitations tab.
+  sam_listed_active?: boolean;
   // Legacy raw set-aside string. Kept for one release; prefer set_aside_label.
   set_aside: string | null;
   set_aside_code?: string | null;
@@ -633,6 +640,13 @@ export interface PartSolicitation {
   // stops at the close date regardless. So this marks a PENDING OUTCOME and must
   // never be worded as "you can still quote it". Always false on SAM rows.
   dibbs_listed_open?: boolean;
+  // True when `status` is "closed" because the deadline passed, while SAM.gov
+  // still shows the notice as Active. SAM keeps a notice listed until its
+  // archive_date (~15 days after the deadline), so the listing outlives the
+  // solicitation — the customer following sam_url sees "Active" and concludes
+  // our badge is wrong. Marks a DISPLAY-STATE disagreement to explain, never a
+  // still-biddable solicitation. Always false on DLA rows.
+  sam_listed_active?: boolean;
   // When update_solicitation_statuses last resolved this solicitation on DIBBS.
   // A confirmation writes only this column, so it is the only measure of how
   // fresh `status` is. Null/absent means never checked.
