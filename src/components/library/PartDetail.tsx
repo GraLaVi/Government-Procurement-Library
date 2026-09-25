@@ -49,6 +49,7 @@ import {
   EXCLUDED_VENDOR_WARNING,
 } from "@/lib/library/types";
 import { PendingOutcomeFlag } from "@/components/library/PendingOutcomeFlag";
+import { SamListedActiveFlag } from "@/components/library/SamListedActiveFlag";
 import {
   DetailSections,
   DetailToolbar,
@@ -2369,6 +2370,13 @@ export function SolicitationsPanel({ solicitations, isLoading, error, onRetry, d
                 dibbsListedOpen={row.original.dibbs_listed_open}
                 closeDate={row.original.close_date}
                 lastStatusCheckAt={row.original.last_status_check_at}
+              />
+              {/* The SAM counterpart. Mutually exclusive with the flag above —
+                  each is always false on the other source's rows — so at most
+                  one glyph ever renders here. */}
+              <SamListedActiveFlag
+                samListedActive={row.original.sam_listed_active}
+                closeDate={row.original.close_date}
               />
             </span>
           );
