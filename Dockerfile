@@ -1,5 +1,10 @@
 # Use the official Node.js runtime as a parent image
-FROM node:20-alpine AS base
+# Pinned to an exact patch. The floating 'node:20-alpine' tag resolves at build
+# time to whatever is newest, so a rebuild can change the runtime with no diff —
+# the same way an unpinned SQLAlchemy took the API down on 2026-09-24. Next 16
+# needs >=20.9.0, which this satisfies. Bump it deliberately, and rebuild to
+# check: the native modules in this tree (sharp) are built against musl.
+FROM node:20.20.2-alpine AS base
 
 # Set the working directory in the container
 WORKDIR /app
@@ -28,7 +33,8 @@ ENV NEXT_PUBLIC_ENV=$NEXT_PUBLIC_ENV
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine AS runner
+# Same pin as the base stage above; the two must not drift apart.
+FROM node:20.20.2-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV production

@@ -29,7 +29,10 @@ services:
 
   # Nginx Reverse Proxy
   nginx:
-    image: nginx:alpine
+    # Pinned to the 1.30 stable branch rather than an exact patch: this
+    # terminates TLS, so patch releases carrying CVE fixes should still
+    # arrive on a rebuild. It is the major/minor drift that gets stopped.
+    image: nginx:1.30-alpine
     container_name: govtlib-nginx-prod
     restart: unless-stopped
     ports:
