@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Hosts allowed to request dev-only resources (/_next/hmr and friends).
+  // These apps are served from a remote box and browsed over its public IP, so
+  // every HMR request looks cross-origin to Next. That began being blocked by
+  // default somewhere in the 16.1 -> 16.3.6 bump taken for the npm advisories.
+  // Dev only: production runs the standalone server, which has no HMR at all.
+  allowedDevOrigins: ['137.184.108.143', '10.116.0.2'],
   // Dev defaults to Turbopack (small, split chunks — usable over a remote
   // connection). An older Turbopack version had a bug where fetch() hung in
   // API routes; if it resurfaces, fall back with `npm run dev:webpack`.
