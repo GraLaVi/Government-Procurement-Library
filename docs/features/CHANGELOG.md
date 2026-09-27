@@ -40,6 +40,18 @@ moves. Naming them turns "the product changed" into a list of things to fix.
 
 ---
 
+2026-09-27 — Bid matching: longer Buying agency lists
+Changed: an "is any of" agency list now holds roughly 14 agency names, up
+from 2. The stored value cap for AGENCY went 200 → 1000 characters, which
+had been held at 200 until migration 054 (varchar → text) reached prod.
+Not in scope: no change to any other condition type, which keep the shared
+200-character cap — they hold codes, not names. No plan boundary.
+Public terms: none needed; nothing in the help articles states a character
+limit, and the editor surfaces the cap itself.
+Affects: nothing downstream. The overflow error still points customers at
+several "is exactly" rows in an OR profile as the alternative, which
+remains the right advice past ~14 agencies.
+
 2026-09-24 — Bid matching: Buying agency condition
 Added: an AGENCY condition type naming who is buying. Picking a department
 takes every bureau under it, picking a bureau takes only that one; values
