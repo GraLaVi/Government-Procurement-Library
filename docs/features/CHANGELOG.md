@@ -40,6 +40,44 @@ moves. Naming them turns "the product changed" into a list of things to fix.
 
 ---
 
+2026-09-24 — Bid matching: Buying agency condition
+Added: an AGENCY condition type naming who is buying. Picking a department
+takes every bureau under it, picking a bureau takes only that one; values
+come from a picker built live from SAM.gov notices and annotated with each
+agency's notice count over the last 90 days. Supports all four identifier
+operators. Every DLA/DIBBS solicitation is scored as DEPT OF DEFENSE /
+DEFENSE LOGISTICS AGENCY, so one condition covers both sources.
+Not in scope: no plan boundary — like every condition type it is available
+on Free, Basic and Advanced; what varies by plan is the profile and
+condition count, unchanged here. It does not filter Parts Search or
+Solicitation keyword search, only bid matching.
+Public terms: "Buying agency" is the label in the editor. Not "Agency
+condition", not AGENCY — that is the stored value.
+Affects: bid-matching-profiles and bid-matching-recipes articles (updated
+2026-09-27). Whether an agency hit reads Hard or Soft on the results page
+is set by the worker and is NOT yet documented — the Strong vs. weak table
+in the recipes article deliberately omits it pending an answer.
+
+2026-09-23 — Solicitation keyword search
+Added: keyword search over SAM.gov notices that carry no part link —
+services, repairs, construction, and the supply buys posted without an NSN
+(roughly six in ten of what this surfaces). Reached from Parts Search via
+the "Solicitation keyword" search type. Filters, a detail panel, attachment
+access, and direct lookup by solicitation or award number. A part-number
+search that finds no parts now falls back to the SAM.gov notice instead of
+coming back empty.
+Not in scope: no plan boundary — every parts-search tier including Free.
+Coverage is DoD-oriented: the in-scope filter is a solicitation-number
+prefix rule, which currently excludes about 24% of unlinked notices,
+including civilian-agency buying. Not a tier limit and not stated in the
+article.
+Public terms: "Solicitation keyword" is the search-type label;
+"Finding solicitations with no part number" is the article title. Never
+"non-NSN search" in customer copy.
+Affects: parts-search article (updated at ship), help index. Landing and
+pricing copy still describe search as part-driven and do not mention this
+at all.
+
 2026-09-21 — Request for Quote (naming)
 Changed: the base add-on reads "Request for Quote" everywhere customers
 see it — Products menu, /products/rfq, landing feature card, plan

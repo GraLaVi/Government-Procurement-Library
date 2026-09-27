@@ -49,7 +49,8 @@ These match against a specific code or identifier. They support the four operato
 - **CAGE code** — Matches the part's manufacturer CAGE, or any CAGE linked to the part (approved manufacturer or prior supplier). (DLA/DIBBS and SAM.gov)  
 - **NAICS code** — Matches the NAICS classification of a vendor tied to the part (through the part's CAGEs) — not the solicitation's own NAICS. (DLA/DIBBS and SAM.gov)  
 - **Set-Aside** — Matches solicitations reserved for specific business categories. Choose the set-aside codes from a picker (for example, `SDVOSBC`, `HZC` for HUBZone, or `WOSB`) — GPH stores canonical codes for you. Set-aside data is drawn from both DLA/DIBBS and SAM.gov, so a single Set-Aside condition covers solicitations from either source.  
-- **PSC** — Matches a SAM.gov opportunity's Product Service Code. (SAM.gov only)
+- **PSC** — Matches a SAM.gov opportunity's Product Service Code. (SAM.gov only)  
+- **Buying agency** — Matches who is buying. Pick a department to take every bureau under it — `INTERIOR, DEPARTMENT OF THE` covers all of Interior — or pick a single bureau to take only that one, such as `DEPT OF THE NAVY`. Choose values from the picker rather than typing them: an agency condition matches the name exactly, so a value that differs by one character is a condition that silently never fires. The picker is built from live SAM.gov data and shows how many notices each agency posted in the last 90 days, busiest first. A few bureau names exist under more than one department; where that happens the picker tells you, because selecting the name matches all of them. Every DLA/DIBBS solicitation counts as `DEPT OF DEFENSE` / `DEFENSE LOGISTICS AGENCY`, so this condition covers both sources. (DLA/DIBBS and SAM.gov)
 
 ## Operators
 
@@ -58,7 +59,7 @@ The **identifier / code** condition types support four operators:
 - **is exactly** — Matches one exact value.  
 - **matches pattern (case-sensitive)** — Matches a wildcard pattern, respecting capitalization. You supply the `%` wildcard yourself: `5945%` matches anything beginning with 5945\. A pattern with no `%` behaves the same as **is exactly**.  
 - **matches pattern (case-insensitive)** — The same, but capitalization is ignored. Most useful for names.  
-- **is any of** — Matches any value from a list. Enter values comma-separated (for example, `5945,5950,5955`); you can also paste a comma-separated list. Useful when one condition needs to cover several variants. (For **Set-Aside**, "is any of" uses a code picker instead of free text.)
+- **is any of** — Matches any value from a list. Enter values comma-separated (for example, `5945,5950,5955`); you can also paste a comma-separated list. Useful when one condition needs to cover several variants. (For **Set-Aside** and **Buying agency**, "is any of" uses a picker instead of free text. Agency lists are separated by a pipe `|` rather than a comma, because agency names contain commas — the picker handles this for you.)
 
 The **keyword match** condition types all use a single operator, **full-text match**, which searches for your keywords anywhere in the target text. It handles word order and word stems, so "pumps" also matches "pump." Enter one or more words — all of them must appear.
 

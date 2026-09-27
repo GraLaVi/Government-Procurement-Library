@@ -53,6 +53,16 @@ Use this when you only want solicitations reserved for a business category you q
 - **NAICS code** matches the NAICS classification of a vendor tied to the part — useful when you think in terms of the industry code you compete under rather than specific parts.  
 - **PSC** matches a SAM.gov opportunity's Product Service Code, so it only narrows SAM.gov opportunities. Pair it with other conditions if you also care about DIBBS.
 
+### When to use Buying agency
+
+Use this when your business is oriented around *who* buys rather than what they buy — you hold a relationship, a facility clearance, or past performance with one customer and want everything they post. Pick the department to take the whole organization, or a single bureau to stay narrow.
+
+It is a broad condition on its own: a department like `DEPT OF DEFENSE` covers an enormous volume, and every DLA/DIBBS solicitation counts as Defense. Treat it as a *narrowing* condition under AND rather than a profile's only rule — pair it with an FSC, a set-aside, or a keyword so you get "Navy buys in my category" instead of "everything the Navy buys."
+
+The reverse is often more useful: use **Exclude matches** to drop an agency you never sell to, leaving the rest of a broad profile intact.
+
+To watch several agencies at once, use **is any of** and pick them from the list. This is the only way to cover multiple agencies inside an AND profile — two separate "is exactly" agency conditions joined by AND can never both be true, since a solicitation has one buyer.
+
 ## Strong vs. weak conditions
 
 The condition type you pick determines whether a match is labeled **Hard** or **Soft** on your results page. The rule of thumb: conditions that pinpoint a **specific part** produce Hard hits; broader **category, code, and keyword** conditions produce Soft hits.
@@ -96,6 +106,15 @@ Three conditions under **AND**:
 1. **FSC** · **is exactly** · `5945`  
 2. **Part description keyword** · **full-text match** · `prototype` · **Exclude**  
 3. **Part description keyword** · **full-text match** · `sample` · **Exclude**
+
+### Watch one agency in your category
+
+You sell to a single customer and want their buys in your category, not everything they post.
+
+1. **Buying agency** · **is exactly** · `DEPT OF THE NAVY`
+2. **FSC** · **is any of** · `5945,5950,5955`
+
+Match logic **AND**. Swap the FSC row for a Set-Aside or keyword condition if your category is better described that way. To cover more than one customer, change row 1 to **is any of** and pick them from the list.
 
 ### Watch small-business set-asides
 
