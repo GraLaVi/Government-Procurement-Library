@@ -26,12 +26,58 @@ export type DateSelection =
   | { source: "dibbs"; runDate: string; issueDate: string | null }
   | { source: "sam"; runDate: string };
 
+// The selection as a URL, so each menu row can be a real link — right-click
+// "Open in new tab", middle-click and Ctrl/Cmd-click all work. `run` is the
+// run date, `posted` narrows DIBBS to one posted date, and `source=sam` picks
+// the run's SAM bucket.
+export function dateSelectionHref(
+  selection: DateSelection,
+  basePath = "/bidmatching",
+): string {
+  const params = new URLSearchParams({ run: selection.runDate });
+  if (selection.source === "sam") params.set("source", "sam");
+  else if (selection.issueDate) params.set("posted", selection.issueDate);
+  return `${basePath}?${params.toString()}`;
+}
+
+// The selection a URL asks for, or null when it names nothing the tree holds
+// (a stale link to a run that has aged out, a hand-edited date), so the page
+// falls back to its default instead of opening on an empty list.
+export function parseDateSelection(
+  search: string,
+  dateTree: RunDateGroup[],
+): DateSelection | null {
+  const params = new URLSearchParams(search);
+  const runDate = params.get("run");
+  const group = runDate ? dateTree.find((g) => g.run_date === runDate) : undefined;
+  if (!group) return null;
+  if (params.get("source") === "sam") {
+    return group.sam_bucket?.match_count ? { source: "sam", runDate: group.run_date } : null;
+  }
+  const posted = params.get("posted");
+  if (posted) {
+    return group.issue_dates.some((e) => e.issue_date === posted)
+      ? { source: "dibbs", runDate: group.run_date, issueDate: posted }
+      : null;
+  }
+  return runWideSelection(group);
+}
+
+// A plain left click selects in place; anything asking for a new tab or
+// window (modifier keys, middle button) is left to the browser.
+function isPlainClick(e: React.MouseEvent): boolean {
+  return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+}
+
 interface BidMatchDateMenuProps {
   dateTree: RunDateGroup[];
   selectedRunDate: string | null;
   selectedIssueDate: string | null;
   selectedSource: "dibbs" | "sam";
   onSelect: (selection: DateSelection) => void;
+  /** Page the row links point at. The /products demo passes its own path so
+   *  a new-tab click doesn't land a visitor on the login-gated page. */
+  basePath?: string;
 }
 
 const PANEL_WIDTH = 320;
@@ -87,6 +133,7 @@ export function BidMatchDateMenu({
   selectedIssueDate,
   selectedSource,
   onSelect,
+  basePath,
 }: BidMatchDateMenuProps) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
@@ -176,6 +223,14 @@ export function BidMatchDateMenu({
     setOpen(false);
   };
 
+  // Click handler for a row link: select in place on a plain click, and let
+  // the browser handle new-tab/new-window clicks on the href.
+  const onRowClick = (selection: DateSelection) => (e: React.MouseEvent) => {
+    if (!isPlainClick(e)) return;
+    e.preventDefault();
+    choose(selection);
+  };
+
   return (
     <>
       <button
@@ -247,9 +302,10 @@ export function BidMatchDateMenu({
             return (
               <div key={group.run_date}>
                 {/* Two controls, one row: the chevron opens the posted-date
-                    breakdown, the rest of the row selects the whole run. They
-                    are siblings rather than nested because a button inside a
-                    button is invalid HTML and unreachable by keyboard. */}
+                    breakdown, the rest of the row is a link to the whole run.
+                    They are siblings rather than nested because interactive
+                    elements inside one another are invalid HTML and
+                    unreachable by keyboard. */}
                 <div
                   className={`
                     flex items-stretch border-b border-border/50
@@ -290,10 +346,10 @@ export function BidMatchDateMenu({
                     </span>
                   )}
 
-                  <button
-                    type="button"
-                    aria-pressed={wholeRunSelected}
-                    onClick={() => choose(runSelection)}
+                  <a
+                    href={dateSelectionHref(runSelection, basePath)}
+                    aria-current={wholeRunSelected ? "page" : undefined}
+                    onClick={onRowClick(runSelection)}
                     className={`
                       flex-1 min-w-0 flex items-center gap-2 pl-2 pr-4 py-2.5 text-left transition-colors cursor-pointer
                       ${wholeRunSelected ? "" : "hover:bg-muted-light/50"}
@@ -317,7 +373,7 @@ export function BidMatchDateMenu({
                     >
                       {formatCount(runWideCount(group))}
                     </span>
-                  </button>
+                  </a>
                 </div>
 
                 {/* `expandable` gates this as well as the chevron: the panel
@@ -332,18 +388,17 @@ export function BidMatchDateMenu({
                         selectedRunDate === group.run_date &&
                         selectedIssueDate === entry.issue_date;
 
+                      const selection: DateSelection = {
+                        source: "dibbs",
+                        runDate: group.run_date,
+                        issueDate: entry.issue_date,
+                      };
                       return (
-                        <button
+                        <a
                           key={entry.issue_date}
-                          type="button"
-                          aria-pressed={isActive}
-                          onClick={() =>
-                            choose({
-                              source: "dibbs",
-                              runDate: group.run_date,
-                              issueDate: entry.issue_date,
-                            })
-                          }
+                          href={dateSelectionHref(selection, basePath)}
+                          aria-current={isActive ? "page" : undefined}
+                          onClick={onRowClick(selection)}
                           className={`
                             w-full flex items-center gap-2 pl-10 pr-4 py-2 text-left transition-colors cursor-pointer
                             ${isActive
@@ -364,7 +419,7 @@ export function BidMatchDateMenu({
                           >
                             {formatCount(entry.match_count)}
                           </span>
-                        </button>
+                        </a>
                       );
                     })}
 
@@ -373,11 +428,12 @@ export function BidMatchDateMenu({
                       const isActive =
                         selectedSource === "sam" &&
                         selectedRunDate === group.run_date;
+                      const selection: DateSelection = { source: "sam", runDate: group.run_date };
                       return (
-                        <button
-                          type="button"
-                          aria-pressed={isActive}
-                          onClick={() => choose({ source: "sam", runDate: group.run_date })}
+                        <a
+                          href={dateSelectionHref(selection, basePath)}
+                          aria-current={isActive ? "page" : undefined}
+                          onClick={onRowClick(selection)}
                           className={`
                             w-full flex items-center gap-2 pl-10 pr-4 py-2 text-left transition-colors cursor-pointer
                             ${isActive
@@ -398,7 +454,7 @@ export function BidMatchDateMenu({
                           >
                             {formatCount(group.sam_bucket.match_count)}
                           </span>
-                        </button>
+                        </a>
                       );
                     })()}
                   </div>
