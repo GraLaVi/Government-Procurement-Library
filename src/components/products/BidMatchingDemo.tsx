@@ -301,6 +301,7 @@ export function BidMatchingDemo({ data }: { data: DemoBidMatchingData }) {
               selectedIssueDate={state.issueDate}
               selectedSource={state.source}
               onSelect={onDateSelect}
+              basePath="/products/bid-matching"
             />
             <div className="w-px self-stretch bg-border" aria-hidden="true" />
             <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground">

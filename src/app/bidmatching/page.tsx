@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
-import { BidMatchDateMenu, type DateSelection } from "@/components/bidmatching/BidMatchDateMenu";
+import {
+  BidMatchDateMenu,
+  dateSelectionHref,
+  parseDateSelection,
+  type DateSelection,
+} from "@/components/bidmatching/BidMatchDateMenu";
 import { BidMatchResultsTable, type BidSortKey } from "@/components/bidmatching/BidMatchResultsTable";
 import { formatDateMmDdYyyy } from "@/lib/dates";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
@@ -344,12 +349,21 @@ export default function BidMatchingPage() {
         if (!res.ok) throw new Error("Failed to load match dates");
         const data: RunDateGroup[] = await res.json();
         setDateTree(data);
-        // Auto-select the newest run date, whole: a null issue date is the
-        // run-wide view, so the page opens on everything that run produced
-        // rather than only the slice posted that same day. Same selection the
-        // menu's run row makes, so the row reads as selected on arrival.
-        // Runs with no DIBBS matches fall back to their SAM bucket.
-        if (data.length > 0) {
+        // A date named in the URL wins — that is how a menu row opened in a
+        // new tab lands on its date. Read once, here, rather than through
+        // useSearchParams: the tree is what validates it, and later
+        // selections write the URL themselves (handleDateSelect).
+        const fromUrl = parseDateSelection(window.location.search, data);
+        if (fromUrl) {
+          setSelectedRunDate(fromUrl.runDate);
+          setSelectedSource(fromUrl.source);
+          setSelectedIssueDate(fromUrl.source === "dibbs" ? fromUrl.issueDate : null);
+        } else if (data.length > 0) {
+          // Otherwise the newest run date, whole: a null issue date is the
+          // run-wide view, so the page opens on everything that run produced
+          // rather than only the slice posted that same day. Same selection
+          // the menu's run row makes, so the row reads as selected on arrival.
+          // Runs with no DIBBS matches fall back to their SAM bucket.
           const first = data[0];
           if (first.issue_dates.length > 0) {
             setSelectedRunDate(first.run_date);
@@ -458,6 +472,10 @@ export default function BidMatchingPage() {
     // user comes back to a SAM bucket several selections later.
     if (selection.source !== "sam") setBiddableOnly(false);
     setPage(1);
+    // Keep the address bar on the selection, so a reload or a copied link
+    // reopens the same date. Replace rather than push: picking dates is
+    // browsing within the page, not navigation Back should step through.
+    window.history.replaceState(null, "", dateSelectionHref(selection));
   };
 
   const handlePageChange = (newPage: number) => {
