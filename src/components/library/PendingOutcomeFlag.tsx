@@ -6,27 +6,20 @@ import { formatContractDate } from "@/lib/library/types";
 import { timeAgo } from "@/lib/amendments";
 
 /**
- * "Closed by its deadline, but DIBBS says the outcome is still pending."
+ * "The return-by date has passed, but DIBBS still lists this as open."
  *
- * The row reads Closed and that is correct — DIBBS stops accepting quotes at
- * the close date. But update_solicitation_statuses resolved this solicitation
- * on DIBBS within the last day and DIBBS still listed it as open, which there
- * means only that it has not been awarded or cancelled yet.
+ * DIBBS rows show their stored status (decided 2026-10-01), so a solicitation
+ * stored 'open' keeps reading Open after its return-by date. This flag is the
+ * warning that goes with it: the date has passed, DIBBS still lists it as
+ * open, so it may not have been awarded yet and may still be accepting quotes.
  *
- * That distinction is the whole point of the flag, and the copy has to carry
- * it: a buyer who reads "still open on DIBBS" as "I can still quote" would go
- * to DIBBS and find they cannot. So the popover leads with quoting being
- * closed, and explains what DIBBS's "Open" actually means. Do not reword it to
- * lead with the listing.
+ * The server sets `dibbs_listed_open` on every such row, whether or not
+ * update_solicitation_statuses has re-checked it. "(checked …)" appears only
+ * when it has; with no check, the copy says nothing about one.
  *
  * Shared by the parts Recent Solicitations tab and the bid-matching results
- * table, which reach it from opposite directions — the parts tab already
- * derived a status and this adds the nuance; bid matching used to render
- * `solicitations.status` raw, so there the derivation is the fix and this is
- * the explanation for why ~13.8k rows changed.
- *
- * Takes primitives rather than a row object: the two tables have different row
- * shapes and neither should have to grow the other's fields.
+ * table. Takes primitives rather than a row object: the two tables have
+ * different row shapes and neither should have to grow the other's fields.
  *
  * Click, not hover, matching the win/First Article badges — this is several
  * sentences of consequential copy, not a label expansion.
@@ -36,7 +29,7 @@ export function PendingOutcomeFlag({
   closeDate,
   lastStatusCheckAt,
 }: {
-  /** Server-derived. False whenever we have no fresh DIBBS reading. */
+  /** Server-derived: stored open, return-by date passed. */
   dibbsListedOpen?: boolean;
   closeDate: string | null;
   lastStatusCheckAt?: string | null;
@@ -52,7 +45,7 @@ export function PendingOutcomeFlag({
         type="button"
         onClick={toggle}
         aria-expanded={open}
-        aria-label="DIBBS still lists this solicitation as open — what that means"
+        aria-label="Return-by date passed, still open on DIBBS — what that means"
         className="inline-flex items-center text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 cursor-pointer shrink-0"
       >
         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -66,14 +59,13 @@ export function PendingOutcomeFlag({
           className="w-80 rounded-md border border-border bg-background shadow-lg p-3"
         >
           <div className="text-xs font-semibold text-foreground mb-1">
-            Award still pending
+            Return-by date passed
           </div>
           <p className="text-xs text-foreground leading-relaxed">
-            Quoting closed on {formatContractDate(closeDate)}. DIBBS still
-            lists this solicitation as Open
-            {lastStatusCheckAt ? ` (checked ${timeAgo(lastStatusCheckAt)})` : ""}
-            {" "}— on DIBBS that means it has not been awarded or cancelled yet,
-            not that it is still accepting quotes.
+            The return-by date ({formatContractDate(closeDate)}) has passed, but
+            DIBBS still lists this solicitation as Open
+            {lastStatusCheckAt ? ` (checked ${timeAgo(lastStatusCheckAt)})` : ""}.
+            It may not have been awarded yet and may still be accepting quotes.
           </p>
         </div>,
         document.body

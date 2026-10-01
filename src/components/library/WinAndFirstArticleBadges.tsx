@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { formatCurrency } from "@/lib/library/types";
 
@@ -80,6 +80,18 @@ export function useAnchoredPopover() {
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  // Opened at the trigger's left edge, a panel on a right-hand column runs
+  // off the viewport (Status on /bidmatching is the last column). Once it has
+  // rendered, measure it and pull it back inside. Layout effect, so the
+  // correction lands before paint and the panel never shows clipped.
+  useLayoutEffect(() => {
+    if (!open || !coords || !panelRef.current) return;
+    const max = window.innerWidth - panelRef.current.offsetWidth - 8;
+    if (coords.left > max) {
+      setCoords({ top: coords.top, left: Math.max(8, max) });
+    }
+  }, [open, coords]);
 
   const toggle = (e: React.MouseEvent) => {
     e.stopPropagation();

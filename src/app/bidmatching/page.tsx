@@ -93,11 +93,11 @@ interface BidMatchResult {
   issue_date: string | null;
   posted_date?: string | null;
   close_date: string | null;
-  // DERIVED server-side, not solicitations.status verbatim — a stored 'open'
-  // that nothing has confirmed is overruled by a close date in the past.
+  // DIBBS rows: solicitations.status as stored — a past close date does not
+  // close a stored 'open'. SAM rows close at the response deadline.
   status: string | null;
-  // Deadline-closed, but DIBBS still lists it as open on a check inside 24h:
-  // the outcome is pending, NOT still quotable. See PendingOutcomeFlag.
+  // Stored open, return-by date passed: `status` still reads "open" and
+  // PendingOutcomeFlag warns. Not gated on a recent check. False on SAM rows.
   dibbs_listed_open?: boolean;
   last_status_check_at?: string | null;
   buyer_name: string | null;

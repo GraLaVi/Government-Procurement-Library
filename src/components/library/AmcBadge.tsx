@@ -21,8 +21,6 @@ import {
  * session); otherwise the vocabulary loads on first open.
  */
 
-const PANEL_WIDTH = 288; // w-72
-
 export function AmcBadge({
   code,
   definitions,
@@ -64,14 +62,7 @@ export function AmcBadge({
       {open && coords && createPortal(
         <div
           ref={panelRef}
-          style={{
-            position: "fixed",
-            top: coords.top,
-            // The column sits near the right edge of the table, so keep the
-            // panel from running off the viewport.
-            left: Math.max(8, Math.min(coords.left, window.innerWidth - PANEL_WIDTH - 8)),
-            zIndex: 60,
-          }}
+          style={{ position: "fixed", top: coords.top, left: coords.left, zIndex: 60 }}
           className="w-72 max-w-[90vw] rounded shadow-lg overflow-hidden border border-border bg-card-bg text-foreground text-xs whitespace-normal break-words"
         >
           <div className="font-bold px-2 py-1.5 bg-muted-light text-foreground">
