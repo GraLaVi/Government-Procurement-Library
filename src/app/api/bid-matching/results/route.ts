@@ -51,6 +51,14 @@ export async function GET(request: NextRequest) {
       params.set('search_field', searchField);
       params.set('search', search);
     }
+    // Condition filters, repeatable. Forwarded verbatim for the same reason
+    // sort_by is: the backend's compiler is the real boundary — field, operator
+    // and value are validated against its own registry and a bad one comes back
+    // as a 400 naming the field. A second allowlist here could only drift from
+    // it, which is exactly how `interested` was silently dropped from sort_by.
+    for (const f of searchParams.getAll('f')) {
+      if (f) params.append('f', f);
+    }
     if (searchParams.get('interested_only') === 'true') params.set('interested_only', 'true');
     // Hides early-stage SAM notices (Presolicitation / Sources Sought). The
     // backend ignores it on source=dibbs.

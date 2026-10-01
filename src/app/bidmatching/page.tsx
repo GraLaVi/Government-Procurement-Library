@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import {
@@ -11,17 +11,14 @@ import {
   type DateSelection,
 } from "@/components/bidmatching/BidMatchDateMenu";
 import { BidMatchResultsTable, type BidSortKey } from "@/components/bidmatching/BidMatchResultsTable";
+import {
+  BidMatchFilterBar,
+  serializeFilters,
+  type FilterRow,
+} from "@/components/bidmatching/BidMatchFilterBar";
 import { formatDateMmDdYyyy } from "@/lib/dates";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
 
-/** Fields the results search can target. Values match the API's search_field. */
-const SEARCH_FIELDS = [
-  { value: "reason", label: "Match reason", placeholder: "Search match reason…" },
-  { value: "description", label: "Description", placeholder: "Search item description…" },
-  { value: "nsn", label: "NSN / part #", placeholder: "Search NSN, NIIN or part #…" },
-  { value: "solicitation", label: "Solicitation #", placeholder: "Search solicitation #…" },
-] as const;
-type SearchField = (typeof SEARCH_FIELDS)[number]["value"];
 
 interface IssueDateEntry {
   issue_date: string;
@@ -210,13 +207,15 @@ export default function BidMatchingPage() {
   const [printRequested, setPrintRequested] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasProfiles, setHasProfiles] = useState<boolean | null>(null);
-  const [hardOnly, setHardOnly] = useState(false);
-  // Debounced search — pushes to `appliedSearch` after typing pauses so we
-  // don't refetch on every keystroke. The field selector says which column
-  // the term applies to; match reason is the historical default.
-  const [searchField, setSearchField] = useState<SearchField>("reason");
-  const [searchInput, setSearchInput] = useState("");
-  const [appliedSearch, setAppliedSearch] = useState("");
+  // Condition filters, applied on the Apply button rather than per keystroke:
+  // these reach every line item on every solicitation in the bucket, so a
+  // request per character is not something the query can afford.
+  const [filters, setFilters] = useState<FilterRow[]>([]);
+  // The conditions as the API will receive them. Used as the effect's
+  // dependency so a new array holding the same conditions does not refetch,
+  // and as the only thing the fetch has to be handed.
+  const filterParams = useMemo(() => serializeFilters(filters), [filters]);
+  const filterKey = filterParams.join("|");
   // Sorting is server-side: the page holds one slice of N rows, so sorting
   // here would only reorder the slice already on screen.
   const [sortBy, setSortBy] = useState<BidSortKey>(DEFAULT_SORT_BY);
@@ -233,11 +232,6 @@ export default function BidMatchingPage() {
   // response. Null when the bucket has none, or on the DIBBS path.
   const [nonBiddableCount, setNonBiddableCount] = useState<number | null>(null);
 
-  useEffect(() => {
-    const t = setTimeout(() => setAppliedSearch(searchInput.trim()), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
-
   // Validate against the option list rather than trusting the stored number:
   // it is user-editable, and anything above the API's le=200 would 422 every
   // results fetch until the user cleared their storage.
@@ -253,7 +247,7 @@ export default function BidMatchingPage() {
     // Reset to page 1 whenever the filters or sort change so we don't land on
     // an empty out-of-range page after narrowing results.
     setPage(1);
-  }, [hardOnly, appliedSearch, searchField, sortBy, sortDir, interestedOnly, biddableOnly]);
+  }, [filterKey, sortBy, sortDir, interestedOnly, biddableOnly]);
 
   // Optimistic: the star flips immediately and reverts if the write fails.
   // Flags are customer-scoped, so a teammate's flag can arrive on the next
@@ -392,9 +386,7 @@ export default function BidMatchingPage() {
       issueDate: string | null,
       pg: number,
       size: number,
-      strength: boolean,
-      search: string,
-      field: SearchField,
+      conditions: string[],
       sort: BidSortKey,
       dir: "asc" | "desc",
       onlyInterested: boolean,
@@ -410,11 +402,9 @@ export default function BidMatchingPage() {
           source,
         });
         if (source === "dibbs" && issueDate) params.set("date", issueDate);
-        if (strength) params.set("strength", "HARD");
-        if (search) {
-          params.set("search_field", field);
-          params.set("search", search);
-        }
+        // Repeated, not comma-joined: a value may legitimately contain a comma
+        // (an `is any of` list), so one parameter per condition.
+        for (const f of conditions) params.append("f", f);
         if (sort) {
           params.set("sort_by", sort);
           params.set("sort_dir", dir);
@@ -422,7 +412,10 @@ export default function BidMatchingPage() {
         if (onlyInterested) params.set("interested_only", "true");
         if (onlyBiddable) params.set("biddable_only", "true");
         const res = await fetch(`/api/bid-matching/results?${params}`);
-        if (!res.ok) throw new Error("Failed to load match results");
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.error || "Failed to load match results");
+        }
         const data: ResultsResponse = await res.json();
         setResults(data.results);
         setTotal(data.total);
@@ -453,13 +446,17 @@ export default function BidMatchingPage() {
     // dates" selection, which the API answers from run_date alone.
     if (!selectedRunDate) return;
     fetchResults(
-      selectedSource, selectedRunDate, selectedIssueDate, page, pageSize, hardOnly,
-      appliedSearch, searchField, sortBy, sortDir, interestedOnly, biddableOnly,
+      selectedSource, selectedRunDate, selectedIssueDate, page, pageSize,
+      filterParams, sortBy, sortDir, interestedOnly, biddableOnly,
     );
+    // filterKey, not filterParams: the array is rebuilt on every render and
+    // would retrigger the fetch forever; the key only changes with the
+    // conditions themselves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     pageSizeInitialized,
-    selectedSource, selectedRunDate, selectedIssueDate, page, pageSize, hardOnly,
-    appliedSearch, searchField, sortBy, sortDir, interestedOnly, biddableOnly,
+    selectedSource, selectedRunDate, selectedIssueDate, page, pageSize,
+    filterKey, sortBy, sortDir, interestedOnly, biddableOnly,
     fetchResults,
   ]);
 
@@ -648,15 +645,6 @@ export default function BidMatchingPage() {
               onSelect={handleDateSelect}
             />
             <div className="w-px self-stretch bg-border" aria-hidden="true" />
-            <label className="inline-flex items-center gap-2 text-sm text-foreground cursor-pointer">
-              <input
-                type="checkbox"
-                checked={hardOnly}
-                onChange={(e) => setHardOnly(e.target.checked)}
-                className="rounded border-border"
-              />
-              Hard hits only
-            </label>
             {/* Flags are shared across the account, so this is "what the team
                 marked", not "what I marked". */}
             <button
@@ -705,61 +693,27 @@ export default function BidMatchingPage() {
                 )}
               </button>
             )}
-            {/* Field selector + term, joined into one control so it reads as a
-                single search rather than two unrelated inputs. */}
-            {/* ONE border, on the wrapper — the select and input are
-                border-0, so there is no second edge to see at the seam or on
-                focus. The select also needs appearance-none: a native select
-                paints its own frame inside an author border, which is the
-                other half of the doubling. Its chevron is drawn back in. */}
-            <div className="flex-1 min-w-[280px] max-w-lg flex items-stretch rounded-lg border border-border overflow-hidden focus-within:border-primary">
-              <div className="relative flex items-stretch">
-                <select
-                  value={searchField}
-                  onChange={(e) => setSearchField(e.target.value as SearchField)}
-                  aria-label="Field to search"
-                  title="Which field the search term applies to"
-                  className="appearance-none border-0 bg-muted-light text-foreground text-sm pl-2.5 pr-7 py-1.5 focus:outline-none cursor-pointer"
-                >
-                  {SEARCH_FIELDS.map((f) => (
-                    <option key={f.value} value={f.value}>{f.label}</option>
-                  ))}
-                </select>
-                <svg
-                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted"
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-              {/* The seam: a 1px element, not two adjacent borders. */}
-              <span className="w-px bg-border shrink-0" aria-hidden="true" />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder={SEARCH_FIELDS.find((f) => f.value === searchField)?.placeholder}
-                className="flex-1 min-w-0 border-0 bg-card-bg text-foreground text-sm px-3 py-1.5 focus:outline-none"
-              />
-            </div>
-            {(hardOnly || appliedSearch || interestedOnly || biddableOnly
-              || sortBy !== DEFAULT_SORT_BY || sortDir !== DEFAULT_SORT_DIR) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setHardOnly(false);
-                  setSearchInput("");
-                  setAppliedSearch("");
-                  setSortBy(DEFAULT_SORT_BY);
-                  setSortDir(DEFAULT_SORT_DIR);
-                  setInterestedOnly(false);
-                  setBiddableOnly(false);
-                }}
-                className="text-xs text-muted hover:text-foreground cursor-pointer"
-              >
-                Clear filters
-              </button>
-            )}
+            {/* The condition filter. Replaces the single field-scoped search
+                box: description, NSN, solicitation # and match reason are all
+                fields on it, so nothing the box could ask is lost, and the
+                things it could never ask — AMC, quantity, estimated value,
+                TDP holdings, prior wins, fast-award — are now sayable in the
+                same breath. */}
+            <BidMatchFilterBar
+              source={selectedSource}
+              applied={filters}
+              onApply={setFilters}
+              hasOtherFilters={
+                interestedOnly || biddableOnly
+                || sortBy !== DEFAULT_SORT_BY || sortDir !== DEFAULT_SORT_DIR
+              }
+              onClearAll={() => {
+                setSortBy(DEFAULT_SORT_BY);
+                setSortDir(DEFAULT_SORT_DIR);
+                setInterestedOnly(false);
+                setBiddableOnly(false);
+              }}
+            />
           </div>
 
           {/* Results */}
