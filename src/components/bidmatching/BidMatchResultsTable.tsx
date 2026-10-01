@@ -110,14 +110,11 @@ interface BidMatchResult {
   issue_date: string | null;
   posted_date?: string | null;
   close_date: string | null;
-  // DERIVED server-side, not solicitations.status verbatim — a stored 'open'
-  // that nothing has confirmed is overruled by a close date in the past.
+  // DIBBS rows: solicitations.status as stored — a past close date does not
+  // close a stored 'open'. SAM rows close at the response deadline.
   status: string | null;
-  // True when `status` is "closed" only because the deadline passed, while
-  // DIBBS — checked within the last 24h — still lists the solicitation as open.
-  // On DIBBS that means only that it has not been awarded or cancelled; quoting
-  // stops at the close date regardless. So this marks a PENDING OUTCOME and must
-  // never be worded as "you can still quote it". Always false on SAM rows.
+  // Stored open, return-by date passed: `status` still reads "open" and
+  // PendingOutcomeFlag warns. Not gated on a recent check. False on SAM rows.
   dibbs_listed_open?: boolean;
   // When update_solicitation_statuses last resolved this solicitation on DIBBS.
   // The only measure of how fresh `status` is. Null/absent means never checked.
@@ -697,16 +694,11 @@ export function BidMatchResultsTable({
                         "—"
                       )}
                     </td>
-                    {/* Muted rather than red when the award is merely pending:
-                        a solicitation past its deadline with no outcome yet is
-                        an ordinary lifecycle stage, and on prod that is ~97% of
-                        the rows this column newly reads "closed" on. */}
+                    {/* Stored status as-is; the flag warns when a row still
+                        reads Open past its return-by date. */}
                     <td className={tdClass}>
                       <div className="flex items-center gap-1">
-                        <SolStatusBadge
-                          status={result.status}
-                          muted={result.dibbs_listed_open}
-                        />
+                        <SolStatusBadge status={result.status} />
                         <PendingOutcomeFlag
                           dibbsListedOpen={result.dibbs_listed_open}
                           closeDate={result.close_date}

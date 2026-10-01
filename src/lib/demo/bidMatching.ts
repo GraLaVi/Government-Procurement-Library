@@ -3083,8 +3083,7 @@ export function resolveDemoBidMatching(baseISO: string): DemoBidMatchingData {
       posted_date: posted_date_offset === null ? null : shiftDate(base, posted_date_offset),
       close_date: shiftDate(base, close_date_offset),
       created_at: shiftDate(base, run_date_offset) + "T12:00:00Z",
-      // Stamped as of the run, so the status column reads as freshly checked
-      // rather than raising PendingOutcomeFlag's stale-check warning.
+      // Stamped as of the run, so a row reads as freshly checked.
       last_status_check_at: shiftDate(base, run_date_offset) + "T12:00:00Z",
     };
   });
