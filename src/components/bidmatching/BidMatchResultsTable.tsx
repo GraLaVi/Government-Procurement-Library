@@ -8,6 +8,7 @@ import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimeli
 import { BidMatchLineItems } from "@/components/bidmatching/BidMatchLineItems";
 import { PartIdentityLink } from "@/components/bidmatching/PartIdentityLink";
 import { TechDocsBadge } from "@/components/library/TechDocsBadge";
+import { AmcBadge } from "@/components/library/AmcBadge";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
 import { PendingOutcomeFlag } from "@/components/library/PendingOutcomeFlag";
 import { NoticeTypeBadge } from "@/components/library/NoticeTypeBadge";
@@ -18,6 +19,7 @@ import {
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
 import { PrintButton } from "@/components/ui/PrintButton";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
+import type { AmcDefinitions } from "@/lib/library/amcDefinitions";
 import { formatCurrency } from "@/lib/library/types";
 import { techDocsCellLabel } from "@/lib/library/techDocs";
 import {
@@ -137,6 +139,9 @@ interface BidMatchResult {
   // labels. NULL when the solicitation states none, and always NULL on
   // SAM-source rows. Rendered in the expanded row by BidTermsPanel.
   bid_terms?: SolicitationBidTerms | null;
+  // The primary part's Acquisition Method Code (parts.acquisition_method_code),
+  // e.g. "3H" = AQM 3 + AMS H. Resolved client-side like the Overview tab.
+  acquisition_method_code?: string | null;
   sam_url?: string | null;
   // DLA demand signal (gph_analytics add-on) — strongest across the
   // opportunity's NIINs ('on_backorder' | 'below_reorder_point' |
@@ -277,6 +282,9 @@ interface BidMatchResultsTableProps {
   // Vocabulary for the codes in results[].bid_terms, sent once per page
   // rather than repeated on every row.
   bidTermDefinitions?: BidTermDefinitions;
+  // AMC vocabulary for the demo, which has no session. Omit it and each AMC
+  // pill fetches /api/library/code-definitions on first open.
+  amcDefinitions?: AmcDefinitions;
   isLoading: boolean;
   total: number;
   page: number;
@@ -380,6 +388,7 @@ function ConditionBadge({ condition }: { condition: MatchedCondition }) {
 export function BidMatchResultsTable({
   results,
   bidTermDefinitions,
+  amcDefinitions,
   isLoading,
   total,
   page,
@@ -496,6 +505,7 @@ export function BidMatchResultsTable({
               <SortHeader label="Posted" sortKey="posted" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
               <SortHeader label="Close Date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
               <th className={thClass}>Set-Aside</th>
+              <th className={thClass}>AMC</th>
               <th className={thClass}>Status</th>
             </tr>
           </thead>
@@ -614,7 +624,7 @@ export function BidMatchResultsTable({
                       <div className="flex items-center gap-1.5">
                         <PartIdentityLink part={result} className="data-field font-medium" />
                         <FirstArticleBadge firstArticle={result.first_article} />
-                        <TechDocsBadge techDocs={result.tech_docs} />
+                        <TechDocsBadge techDocs={result.tech_docs} solicitationNumber={result.solicitation_number} />
                         <WinHistoryBadge
                           count={result.win_count ?? 0}
                           lastWonOn={result.last_won_on}
@@ -675,6 +685,18 @@ export function BidMatchResultsTable({
                         result.set_aside_label || result.set_aside || "—"
                       )}
                     </td>
+                    {/* The primary part's AMC, as the part Overview tab shows
+                        it. Code in the pill, definition on click. */}
+                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                      {result.acquisition_method_code ? (
+                        <AmcBadge
+                          code={result.acquisition_method_code}
+                          definitions={amcDefinitions}
+                        />
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     {/* Muted rather than red when the award is merely pending:
                         a solicitation past its deadline with no outcome yet is
                         an ordinary lifecycle stage, and on prod that is ~97% of
@@ -698,7 +720,7 @@ export function BidMatchResultsTable({
                       {/* Set-aside has its own column now. This row carries the
                           full line-item list plus the match detail that used to
                           sit in the dropped Profile and Match columns. */}
-                      <td colSpan={12} className="px-3 py-3">
+                      <td colSpan={13} className="px-3 py-3">
                         <div className="space-y-4">
                           {/* Can I bid on this at all, and what does bidding
                               cost me — ahead of the line items, because it

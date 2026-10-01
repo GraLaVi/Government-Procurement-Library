@@ -34,7 +34,7 @@ import { resolveTechDocs, type TechDocs } from "@/lib/library/techDocs";
 
 const BADGE: Record<
   Exclude<TechDocs, "none">,
-  { short: string; title: string; heading: string; body: string }
+  { short: string; title: string; heading: string; body: string; linkText: string }
 > = {
   full: {
     short: "TDP",
@@ -42,6 +42,7 @@ const BADGE: Record<
     heading: "Full technical data package:",
     body:
       "DLA holds drawings and specifications for this NSN, so the item can be quoted by building to the documents rather than only by being an approved source.",
+    linkText: "Tech docs - full package",
   },
   spec_only: {
     short: "SPEC",
@@ -49,10 +50,28 @@ const BADGE: Record<
     heading: "Specification only:",
     body:
       "DLA holds a specification or standard for this NSN, but no drawings. You can build to the spec, though without dimensioned drawings expect to carry more of the design risk yourself.",
+    linkText: "Tech docs - specs Only",
   },
 };
 
-export function TechDocsBadge({ techDocs }: { techDocs?: string | null }) {
+/**
+ * DLA's Technical Data Management Transformation (TDMT) lookup for one
+ * solicitation. TDMT keys on the dashless number (SPE4A726T792W), so strip
+ * the punctuation some rows carry (SPE4A7-26-T-792W).
+ */
+function tdmtUrl(solicitationNumber: string): string {
+  const dashless = solicitationNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  return `https://tdmt.dla.mil/tdmt/Client/?StartItem=DSP_TDP_Acquisition_Doc%3AbySolicitation%3A${encodeURIComponent(dashless)}`;
+}
+
+export function TechDocsBadge({
+  techDocs,
+  solicitationNumber,
+}: {
+  techDocs?: string | null;
+  /** Omit it and the popover renders without the TDMT link. */
+  solicitationNumber?: string | null;
+}) {
   const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
 
   const state = resolveTechDocs(techDocs);
@@ -84,6 +103,19 @@ export function TechDocsBadge({ techDocs }: { techDocs?: string | null }) {
             depends on the solicitation&apos;s acquisition method and any
             export-control restrictions.
           </p>
+          {solicitationNumber?.trim() && (
+            <a
+              href={tdmtUrl(solicitationNumber)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
+            >
+              {b.linkText}
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14 3h7v7m0-7L10 14m-7 7h7" />
+              </svg>
+            </a>
+          )}
         </div>,
         document.body
       )}
