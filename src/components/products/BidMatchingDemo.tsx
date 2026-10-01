@@ -6,6 +6,7 @@ import { BidMatchResultsTable, type BidSortKey } from "@/components/bidmatching/
 import { DemoSurface } from "@/components/products/DemoSurface";
 import {
   DEMO_BID_TERM_DEFINITIONS,
+  DEMO_AMC_DEFINITIONS,
   type DemoBidMatchingData,
   type DemoRow,
 } from "@/lib/demo/bidMatching";
@@ -345,7 +346,7 @@ export function BidMatchingDemo({ data }: { data: DemoBidMatchingData }) {
             </div>
           </div>
 
-          {/* Twelve columns do not fit a phone. The app puts this behind a
+          {/* Thirteen columns do not fit a phone. The app puts this behind a
               login and an app shell built for desktop; a marketing page cannot,
               so the table scrolls inside its own box and says so. */}
           <p className="mb-2 text-xs text-muted sm:hidden">
@@ -356,6 +357,7 @@ export function BidMatchingDemo({ data }: { data: DemoBidMatchingData }) {
             key={tableKey}
             results={pageRows}
             bidTermDefinitions={DEMO_BID_TERM_DEFINITIONS}
+            amcDefinitions={DEMO_AMC_DEFINITIONS}
             isLoading={false}
             total={filtered.length}
             page={state.page}

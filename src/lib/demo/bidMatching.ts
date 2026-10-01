@@ -35,6 +35,7 @@
  */
 
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
+import type { AmcDefinitions } from "@/lib/library/amcDefinitions";
 
 /** One reason a solicitation matched: a profile and the conditions that fired. */
 export interface DemoMatchedCondition {
@@ -97,6 +98,7 @@ export interface DemoRowSeed {
   solicitation_type: string | null;
   solicitation_type_label: string | null;
   bid_terms: SolicitationBidTerms | null;
+  acquisition_method_code: string | null;
   demand_signal: string | null;
   nsn: string | null;
   niin: string | null;
@@ -218,6 +220,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "D",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3D",
     demand_signal: null,
     nsn: "4720-01-425-1217",
     niin: "01-425-1217",
@@ -349,6 +352,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "D",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3D",
     demand_signal: "on_backorder",
     nsn: "4810-01-614-4712",
     niin: "01-614-4712",
@@ -482,6 +486,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "R",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3R",
     demand_signal: "on_backorder",
     nsn: "4330-01-331-2949",
     niin: "01-331-2949",
@@ -600,6 +605,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "C",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3C",
     demand_signal: "on_backorder",
     nsn: "4820-01-317-9684",
     niin: "01-317-9684",
@@ -705,6 +711,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "G",
       rating: "DO-C9"
     },
+    acquisition_method_code: "1G",
     demand_signal: "below_reorder_point",
     nsn: "4820-01-538-3563",
     niin: "01-538-3563",
@@ -804,6 +811,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "C",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3C",
     demand_signal: null,
     nsn: "4720-01-324-0233",
     niin: "01-324-0233",
@@ -922,6 +930,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "D",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3D",
     demand_signal: "recurring",
     nsn: "5330-01-324-0927",
     niin: "01-324-0927",
@@ -1024,6 +1033,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "C",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3C",
     demand_signal: null,
     nsn: "4820-01-547-9506",
     niin: "01-547-9506",
@@ -1132,6 +1142,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "D",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3D",
     demand_signal: "recurring",
     nsn: "5925-01-593-0761",
     niin: "01-593-0761",
@@ -1227,6 +1238,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "D",
       rating: "DO-A3"
     },
+    acquisition_method_code: "3D",
     demand_signal: null,
     nsn: "5925-01-481-5874",
     niin: "01-481-5874",
@@ -1322,6 +1334,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "C",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3C",
     demand_signal: "recurring",
     nsn: "5925-01-318-9547",
     niin: "01-318-9547",
@@ -1425,6 +1438,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "G",
       rating: "DO-C9"
     },
+    acquisition_method_code: "1G",
     demand_signal: "below_reorder_point",
     nsn: "5340-00-202-1511",
     niin: "00-202-1511",
@@ -1528,6 +1542,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "G",
       rating: "DO-C9"
     },
+    acquisition_method_code: "1G",
     demand_signal: "recurring",
     nsn: "5340-01-119-3981",
     niin: "01-119-3981",
@@ -1620,6 +1635,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "D",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3D",
     demand_signal: null,
     nsn: "2040-01-420-3393",
     niin: "01-420-3393",
@@ -1737,6 +1753,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       contract_maximum: 350000.0,
       annual_freq_buys: 1
     },
+    acquisition_method_code: "3D",
     demand_signal: null,
     nsn: "5920-01-583-1256",
     niin: "01-583-1256",
@@ -1818,6 +1835,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "D",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3D",
     demand_signal: "on_backorder",
     nsn: "6220-01-620-1410",
     niin: "01-620-1410",
@@ -1899,6 +1917,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "P",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3P",
     demand_signal: "on_backorder",
     nsn: "1680-01-540-9068",
     niin: "01-540-9068",
@@ -1993,6 +2012,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "B",
       rating: "DO-C9"
     },
+    acquisition_method_code: "3B",
     demand_signal: "on_backorder",
     nsn: "2530-01-668-7616",
     niin: "01-668-7616",
@@ -2074,6 +2094,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       amsc: "G",
       rating: "DO-C9"
     },
+    acquisition_method_code: "1G",
     demand_signal: "recurring",
     nsn: "9535-00-230-7546",
     niin: "00-230-7546",
@@ -2176,6 +2197,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
       clause_fillins: "N",
       amsc: "G"
     },
+    acquisition_method_code: "1G",
     demand_signal: null,
     nsn: "5340-00-517-4014",
     niin: "00-517-4014",
@@ -2246,6 +2268,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
     solicitation_type: null,
     solicitation_type_label: null,
     bid_terms: null,
+    acquisition_method_code: null,
     demand_signal: null,
     nsn: "3040-01-640-8035",
     niin: "01-640-8035",
@@ -2330,6 +2353,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
     solicitation_type: null,
     solicitation_type_label: null,
     bid_terms: null,
+    acquisition_method_code: null,
     demand_signal: null,
     nsn: "4730-01-310-7831",
     niin: "01-310-7831",
@@ -2422,6 +2446,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
     solicitation_type: null,
     solicitation_type_label: null,
     bid_terms: null,
+    acquisition_method_code: null,
     demand_signal: null,
     nsn: "5340-01-640-9858",
     niin: "01-640-9858",
@@ -2506,6 +2531,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
     solicitation_type: null,
     solicitation_type_label: null,
     bid_terms: null,
+    acquisition_method_code: null,
     demand_signal: null,
     nsn: "4820-01-057-8958",
     niin: "01-057-8958",
@@ -2576,6 +2602,7 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
     solicitation_type: null,
     solicitation_type_label: null,
     bid_terms: null,
+    acquisition_method_code: null,
     demand_signal: null,
     nsn: "2530-01-587-6141",
     niin: "01-587-6141",
@@ -2594,6 +2621,21 @@ export const DEMO_ROW_SEEDS: DemoRowSeed[] = [
     recent_awards: []
   }
 ];
+
+/**
+ * AMC vocabulary for the rows' acquisition_method_code, in the `TYPE:code`
+ * shape the AMC pill reads, worded as library_code_definitions words it.
+ */
+export const DEMO_AMC_DEFINITIONS: AmcDefinitions = {
+  "AQM:1": "Suitable for acquisition for 2nd/subsequent time",
+  "AQM:3": "Acquire 2nd/subsequent time from the actual manufacturer",
+  "AMS:B": "Source control drawing",
+  "AMS:C": "Requires engineering source approval",
+  "AMS:D": "Data not available",
+  "AMS:G": "Complete data available",
+  "AMS:P": "Data proprietary",
+  "AMS:R": "Uneconomical to purchase data",
+};
 
 /**
  * Vocabulary for the codes carried in each row's bid_terms, taken verbatim
