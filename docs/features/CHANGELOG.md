@@ -40,6 +40,59 @@ moves. Naming them turns "the product changed" into a list of things to fix.
 
 ---
 
+2026-10-01 — Bid matching: date menu rows open in a new tab
+Added: every run date, posted date and SAM bucket in the date menu is a
+link, so right-click "Open in new tab", Ctrl/⌘-click and middle-click work.
+The address bar now carries the selected date (?run=, &posted=,
+&source=sam), so a reload or a shared link reopens the same date; a link to
+a date no longer in the menu falls back to the newest run.
+Not in scope: choosing dates does not add Back-button history — Back leaves
+the page rather than stepping through dates. The /products/bid-matching demo
+links to itself and always opens on its default date.
+Public terms: none needed.
+Affects: solicitation-matching article (updated 2026-10-01).
+
+2026-10-01 — Solicitation status: DIBBS status shown as stored
+Changed: on /bidmatching and the Parts Search Solicitations tab, a DIBBS
+solicitation now shows its stored status. One still stored "open" after its
+return-by date reads Open (it used to be derived to Closed), with an amber
+warning: the return-by date has passed but DIBBS still lists it as open, so
+it may not have been awarded yet and may still be accepting quotes. "Checked
+<when>" appears only where GPH has re-checked it on DIBBS. On dev about 39.7k
+matched solicitations (182k overall) change from Closed to Open-with-warning.
+Not in scope: SAM.gov solicitations still read Closed once their response
+deadline passes. Awarded, closed, canceled and removed show as stored, no
+warning. No plan boundary.
+Public terms: "return-by date" in the warning copy; the column header stays
+"Close Date".
+Affects: solicitation-matching and parts-search articles (updated
+2026-10-01). Reverses the 2026-08 "the deadline closes it" rule for DIBBS —
+anything downstream describing past-deadline DIBBS rows as Closed is stale.
+
+2026-10-01 — Row popovers stay on screen
+Changed: badge popovers (status warning, TDP/SPEC, AMC, FAT, wins) no longer
+run off the right edge of the window on right-hand columns; they shift left
+to fit.
+Affects: nothing downstream.
+
+2026-10-01 — Bid matching: AMC column
+Added: an AMC column after Set-Aside showing the part's Acquisition Method
+Code (e.g. 3G). Clicking it shows the AQM and AMS meanings, worded as on the
+Parts Search Overview tab, with a link to the code definitions page. The
+solicitation's AMSC stays in the expanded row's bid qualification terms.
+Not in scope: no filter or sort on AMC. No plan boundary.
+Public terms: "AMC" / "Acquisition Method Code", as on the Overview tab.
+Affects: solicitation-matching article (updated 2026-10-01).
+
+2026-10-01 — Bid matching: TDMT links on TDP / SPEC badges
+Added: the TDP and SPEC popovers end with a link to the solicitation's
+documents on DLA TDMT — "Tech docs - full package" on TDP, "Tech docs -
+specs Only" on SPEC — keyed by the dashless solicitation number.
+Not in scope: GPH does not fetch or host the documents; what TDMT releases
+still depends on the acquisition method and export controls.
+Public terms: link text as quoted above.
+Affects: solicitation-matching article (updated 2026-10-01).
+
 2026-09-27 — Bid matching: longer Buying agency lists
 Changed: an "is any of" agency list now holds roughly 14 agency names, up
 from 2. The stored value cap for AGENCY went 200 → 1000 characters, which

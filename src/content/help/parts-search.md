@@ -2,7 +2,7 @@
 title: "Searching for parts"
 meta_title: "Searching for Parts | GPH Help"
 description: "Learn how to search for parts in Government Procurement Hub, read part records, and use the data tabs that provide complete part intelligence."
-last_updated: "2026-09-23"
+last_updated: "2026-10-01"
 ---
 
 Parts Search lets you look up any part in the federal procurement catalog by its NSN, NIIN, solicitation number, manufacturer part number, contract number, or description. Once you've found a part, GPH shows everything it knows about that item across a set of detailed tabs — from procurement history and recent solicitations to manufacturers, technical specs, and packaging requirements. How many tabs you see depends on your plan; the tabs below are listed in the order they appear.
@@ -89,7 +89,7 @@ The Solicitations tab shows active and recently closed solicitations for the par
 - **Close Date** — When the bid window closes  
 - **Solicitation \#** — The solicitation identifier. DLA solicitations with a PDF open it in a viewer; SAM.gov opportunities open on SAM.gov.  
 - **Purchase req** — The internal purchase requisition number  
-- **Status** — Solicitation status (open, closed, and so on)  
+- **Status** — Solicitation status as DIBBS reports it (open, closed, and so on). An amber warning icon beside **Open** means the return-by date has passed but DIBBS still lists the solicitation as open: it may not have been awarded yet and may still be accepting quotes. Click it for details. SAM.gov solicitations read **Closed** once their response deadline passes.  
 - **Set-Aside** — The set-aside category, shown as a code badge; hover it for the full label  
 - **Qty** — Required quantity (with unit of measure)  
 - **Est. Value** — Estimated contract value  

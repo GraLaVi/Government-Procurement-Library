@@ -2,6 +2,7 @@
 title: "How solicitation matching works"
 meta_title: "How Solicitation Matching Works | GPH Help"
 description: "Understand how Government Procurement Hub matches federal solicitations to your bid-matching profiles, where to find your matches, and how to interpret match results."
+last_updated: "2026-10-01"
 ---
 
 GPH's matching engine connects your bid-matching profiles to incoming federal solicitations. Once you've created a profile, you don't need to search for opportunities — they surface automatically.
@@ -21,6 +22,8 @@ Click **Bid-Matching** in the main navigation to open your match history. The pa
 The date picker at the left of the toolbar lists each run date with the number of matches that run produced. Select a run date to load everything it found. The page opens on your most recent run, so the newest matches are the first thing you see. Keeping the dates in a dropdown rather than a fixed sidebar gives the results table the full width of the page.
 
 A run that turned up solicitations posted on more than one day carries an expand arrow. Click the arrow to break the run out by posted date and pick one to narrow the list; click the run date itself to go back to the whole run. Runs that found everything on a single posted date have nothing to expand, so they show no arrow.
+
+Every date in the picker is a link. Right-click one and choose **Open in new tab** (or Ctrl-click, ⌘-click on a Mac, or middle-click) to open that run or posted date in its own tab, so you can work two dates side by side. The address bar always carries the date you're looking at, so reloading the page or sharing the link with a colleague opens the same date.
 
 New matches also appear in the in-app notification bell (🔔) at the top of the page, so you're alerted without opening the Bid-Matching tab. See [Notifications](/help/notifications#the-notification-bell-in-app-alerts) to turn the bell on or off and choose how matches are grouped.
 
@@ -53,7 +56,8 @@ Each match row shows:
 - **Est. Value.** Line quantities × the government acquisition cost, so the same solicitation reports the same figure here and in the Send RFQs queue.  
 - **Posted** and **Close Date.** When the solicitation was issued and the deadline for your bid. Use the close date to prioritize by urgency.  
 - **Set-Aside.** The set-aside code (for example **HZC**). Hover for the full name.  
-- **Status.** The current state of the solicitation (most commonly **open**, meaning it's still accepting bids).
+- **AMC.** The part's Acquisition Method Code (for example **3G**), the same code shown on the part's Overview tab in Parts Search. Click it for what the code means: the first character is the acquisition method (AQM), the second the suffix (AMS). See [Acquisition Method Code](#acquisition-method-code).  
+- **Status.** The solicitation's status as DIBBS reports it, most commonly **open**. An amber warning icon beside **Open** means the return-by date has already passed — see [Open past the return-by date](#open-past-the-return-by-date).
 
 Badges can appear next to the NSN:
 
@@ -105,10 +109,12 @@ Rows whose part has documentation carry a badge next to the NSN:
   build to the spec; without dimensioned drawings, expect to carry more of the
   design risk yourself.
 
-Click either badge for the full explanation. Request the documents themselves
-through DIBBS — what you actually receive depends on the solicitation's
-acquisition method and any export-control restrictions, so the badge tells you
-what DLA holds, not what will clear for release to you.
+Click either badge for the full explanation. The popover ends with a link to
+the solicitation's documents on DLA's Technical Data Management (TDMT) site —
+**Tech docs - full package** on a TDP badge, **Tech docs - specs Only** on a
+SPEC badge — which opens in a new tab. What you actually receive still depends
+on the solicitation's acquisition method and any export-control restrictions,
+so the badge tells you what DLA holds, not what will clear for release to you.
 
 Where a part has **no** documentation, no badge appears. To see that stated
 outright — and to see it for every part on a multi-item solicitation rather than
@@ -130,6 +136,23 @@ Documentation follows the **part**, not the solicitation. A part that shows
 **Full** here shows **Full** on the next solicitation it appears on, and two
 parts on the same solicitation can easily differ — which is why the badge on a
 collapsed row speaks only for the item shown in the NSN column.
+
+## Acquisition Method Code
+
+The **AMC** column shows the Acquisition Method Code DLA assigns the part on the row — two characters, such as **1G** or **3C**:
+
+- The first character, the **AQM**, says how the government expects to buy the part — for example **1** (suitable for competitive acquisition again) or **3** (buy again from the actual manufacturer).
+- The second character, the **AMS**, says why — for example **G** (complete data available) or **C** (engineering source approval required).
+
+Click the code for both meanings in full, and for a link to the complete list of codes. Like technical documentation, the AMC follows the **part**, so it speaks for the item shown in the NSN column.
+
+The AMSC in the expanded row's **Bid qualification terms** is a separate value: it is stated on the solicitation itself, where the AMC belongs to the part.
+
+## Open past the return-by date
+
+The **Status** column shows each solicitation's status as DIBBS reports it. A solicitation can therefore read **Open** after its return-by date (the **Close Date** column) has passed. When it does, an amber warning icon appears beside the status. Click it for details: the return-by date has passed, but DIBBS still lists the solicitation as open, so it may not have been awarded yet and may still be accepting quotes. When GPH has recently re-checked the solicitation on DIBBS, the popover says when.
+
+SAM.gov solicitations work differently: they read **Closed** once their response deadline passes.
 
 ## Amended and updated solicitations
 
