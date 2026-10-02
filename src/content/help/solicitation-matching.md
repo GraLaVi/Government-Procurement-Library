@@ -2,7 +2,7 @@
 title: "How solicitation matching works"
 meta_title: "How Solicitation Matching Works | GPH Help"
 description: "Understand how Government Procurement Hub matches federal solicitations to your bid-matching profiles, where to find your matches, and how to interpret match results."
-last_updated: "2026-10-01"
+last_updated: "2026-10-02"
 ---
 
 GPH's matching engine connects your bid-matching profiles to incoming federal solicitations. Once you've created a profile, you don't need to search for opportunities — they surface automatically.
@@ -165,17 +165,46 @@ Click either badge to open a timeline showing every recorded change on the solic
 
 ## Filtering and searching matches
 
-The toolbar above the match list carries:
+Everything in the toolbar above the match list sits on one line, left to right:
 
-- **Hard hits only.** Limits the results to your highest-confidence matches. A match is **Hard** when it fired on a strong identifier that pinpoints a specific part — **NIIN, Mfr part #, or CAGE code**. It's **Soft** when it came from a broader filter — **FSC, NAICS code, PSC, Set-Aside, or any keyword condition**. Soft hits are useful for discovery; Hard hits are usually parts you already bid on. For how condition choice drives this, see [Bid-Matching Recipes and Tuning](/help/bid-matching-recipes#strong-vs-weak-conditions).  
+- **Date picker.** Which run, or which posted date within it — see [Where to find your matches](#where-to-find-your-matches).  
 - **Flagged only.** Shows just the solicitations your organization has flagged — see [Flagging solicitations to work later](#flagging-solicitations-to-work-later).  
-- **Search.** Pick which field to search, then type your term. The options are:
-  - **Match reason** — find matches that triggered on a specific term or condition.
-  - **Description** — find solicitations by what the item *is*. This searches every line item on the solicitation, not only the one shown on the row, so a search for *bearing* finds a solicitation that lists one anywhere.
-  - **NSN / part #** — search by NSN, NIIN, or manufacturer part number, again across every line item.
-  - **Solicitation #** — jump straight to a known solicitation number.
+- **Biddable only** (SAM.gov dates only). Hides notices you can't quote yet, such as presolicitations and sources-sought notices.  
+- **Find on this page.** A quick find over the rows you're looking at — see [Finding a row on this page](#finding-a-row-on-this-page).  
+- **Filters.** Conditions that narrow the whole run — see [Filters](#filters).
 
-Searching and sorting apply to the whole run, not just the page you are looking at, and the results reset to page 1 whenever you change either.
+**Clear filters** appears whenever anything is narrowing the list, and resets all of it: filters, the quick find, Flagged only, Biddable only, and the sort.
+
+### Finding a row on this page
+
+Type in **Find on this page** to narrow the rows already on screen as you type. One box checks every text column at once — solicitation number, NSN or NIIN, part number and CAGE, description, match reason, profile name, set-aside, and AMC — including the other parts on a multi-part solicitation. NSNs and solicitation numbers match with or without their dashes, so `5310012849917` finds `5310-01-284-9917`.
+
+It only looks at the **current page**. While it's active it shows how many rows it kept (for example *12 of 50 on this page*), and a find with no hits says so rather than suggesting the run is empty. To search every match in the run, use [Filters](#filters). Clear the find with the **×**, the **Esc** key, or **Clear filters**.
+
+### Filters
+
+Click **Filters**, then **+ Add condition** for each thing you want to narrow by: pick a field, an operator, and a value, then click **Apply**. Nothing changes until you apply. Conditions combine with **AND** — a row must satisfy all of them — and you can add up to 12.
+
+| Field | What it narrows by |
+| --- | --- |
+| **Description** | Words in the item description (contains / does not contain) |
+| **NSN / part #** | An NSN, NIIN, or manufacturer part number |
+| **Solicitation #** | Part of a solicitation number |
+| **Match reason** | The reason the match fired |
+| **FSC** | One or more Federal Supply Classes |
+| **Quantity** | At least, at most, or exactly a quantity |
+| **Est. value** | At least, at most, or exactly an estimated value |
+| **Won before** | Whether you have been awarded the part before |
+| **AMC (first NSN)** | The Acquisition Method Code of the solicitation's first line item (DLA only) |
+| **AMSC (solicitation)** | The suffix code stated on the solicitation (DLA only) |
+| **TDP / specs** | Whether DLA holds technical documentation (DLA only) |
+| **Fast award** | Whether it is a fast-award candidate (DLA only) |
+
+Text and part-number conditions reach every line item on the solicitation, not only the one shown on the row, so *Description contains bearing* finds a solicitation that lists a bearing anywhere. On SAM.gov dates the DLA-only fields aren't offered.
+
+The **AMC** filter reads the solicitation's *first* line item, while the **AMC** column shows the part in the row's NSN column. On a small share of multi-part solicitations those are different parts, so the column and the filter can disagree.
+
+Filters and sorting apply to the whole run, not just the page you are looking at, and the results reset to page 1 whenever you change either. When filters are applied, a summary of them sits beside the **Filters** button.
 
 You can also narrow the list to a single posted date from the date picker — see [Run date and posted date](#run-date-and-posted-date).
 

@@ -168,59 +168,64 @@ export function BidMatchFilterBar({
     return <p className="text-xs text-muted">{loadError}</p>;
   }
 
+  // The wrapper is `contents`, so the button, the summary and Clear
+  // filters are items of the parent's command bar: the button sits on the
+  // same line as the date menu and Flagged only (a w-full wrapper pushed it
+  // onto a line of its own), and a long summary wraps on its own without
+  // dragging the button down with it. The editor panel takes basis-full, so
+  // it wraps to a full-width row under the bar, and order-last keeps it below
+  // anything the page places after this component (the search box).
   return (
-    <div className="w-full">
-      <div className="flex items-center gap-3 flex-wrap">
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          className={`inline-flex items-center gap-1.5 text-sm px-2.5 py-1.5 rounded-lg border cursor-pointer ${
-            appliedCount > 0
-              ? "border-primary text-primary"
-              : "border-border text-muted hover:text-foreground"
-          }`}
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-               strokeWidth={2} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round"
-                  d="M3 4h18M7 12h10M11 20h2" />
-          </svg>
-          Filters
-          {appliedCount > 0 && (
-            <span className="ml-0.5 px-1.5 rounded-full bg-primary text-white text-[11px] leading-5">
-              {appliedCount}
-            </span>
-          )}
-        </button>
-
-        {/* The summary is muted on purpose — it is read, not clicked. Clear
-            filters must therefore NOT be muted too, or the two run together
-            into one grey line and the control disappears into the text it
-            sits beside. */}
-        {appliedCount > 0 && !open && (
-          <span className="text-xs text-muted">
-            {serializeFilters(applied).map((f) => {
-              const [field, op, ...rest] = f.split(":");
-              const def = byField[field];
-              return `${def?.label ?? field} ${OP_LABELS[op] ?? op} ${rest.join(":")}`.trim();
-            }).join("  ·  ")}
+    <div className="contents">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={`inline-flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-lg border cursor-pointer ${
+          appliedCount > 0
+            ? "border-primary text-primary"
+            : "border-border text-muted hover:text-foreground"
+        }`}
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+             strokeWidth={2} aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round"
+                d="M3 4h18M7 12h10M11 20h2" />
+        </svg>
+        Filters
+        {appliedCount > 0 && (
+          <span className="ml-0.5 px-1.5 rounded-full bg-primary text-white text-[11px] leading-5">
+            {appliedCount}
           </span>
         )}
+      </button>
 
-        {(appliedCount > 0 || hasOtherFilters) && (
-          <button
-            type="button"
-            onClick={() => { clearRows(); onClearAll?.(); }}
-            className="text-xs font-medium text-primary hover:text-primary-hover underline underline-offset-2 cursor-pointer"
-          >
-            Clear filters
-          </button>
-        )}
-      </div>
+      {/* The summary is muted on purpose — it is read, not clicked. Clear
+          filters must therefore NOT be muted too, or the two run together
+          into one grey line and the control disappears into the text it
+          sits beside. */}
+      {appliedCount > 0 && !open && (
+        <span className="text-xs text-muted">
+          {serializeFilters(applied).map((f) => {
+            const [field, op, ...rest] = f.split(":");
+            const def = byField[field];
+            return `${def?.label ?? field} ${OP_LABELS[op] ?? op} ${rest.join(":")}`.trim();
+          }).join("  ·  ")}
+        </span>
+      )}
+
+      {(appliedCount > 0 || hasOtherFilters) && (
+        <button
+          type="button"
+          onClick={() => { clearRows(); onClearAll?.(); }}
+          className="text-xs font-medium text-primary hover:text-primary-hover underline underline-offset-2 cursor-pointer"
+        >
+          Clear filters
+        </button>
+      )}
 
       {open && (
-        <div className="mt-3 rounded-lg border border-border bg-card-bg p-3 space-y-2">
+        <div className="basis-full order-last rounded-lg border border-border bg-card-bg p-3 space-y-2">
           {rows.length === 0 && (
             <p className="text-xs text-muted">
               No conditions yet. Add one to narrow these matches.

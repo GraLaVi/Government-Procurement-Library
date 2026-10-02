@@ -40,6 +40,38 @@ moves. Naming them turns "the product changed" into a list of things to fix.
 
 ---
 
+2026-10-02 — Bid matching: quick-find on this page, toolbar tidied
+Added: a "Find on this page" box that narrows the rows already loaded, as
+you type, with no request. One box checks every text column (solicitation
+#, NSN/NIIN, part # and CAGE, description, match reason, profile, set-aside,
+AMC), including the other parts on a multi-part solicitation; NSNs and
+solicitation numbers match with or without dashes. Shows "N of M on this
+page" while active.
+Changed: the toolbar is one left-aligned line — date, Flagged only,
+Biddable only (SAM), the find box, then Filters with its summary and Clear
+filters. Filters used to drop onto a line of its own under the others.
+Clear filters also clears the find.
+Not in scope: the find covers the current page only; Filters are the
+whole-run search. The API's `search`/`search_field` parameters remain but
+the customer page no longer sends them.
+Public terms: "Find on this page".
+Affects: solicitation-matching article (updated 2026-10-02).
+
+2026-10-01 — Bid matching: condition filters replace the search box
+Added: a Filters panel on the results page — field + operator + value
+conditions, ANDed, up to 12, applied with Apply. Fields: description, NSN /
+part #, solicitation #, match reason, FSC, quantity, est. value, won before,
+plus DLA-only AMC (first line item), AMSC, TDP / specs and fast award.
+Removed: the field-scoped search box (all four of its fields are filter
+conditions) and the Hard hits only toggle on the customer page; the API's
+`strength` parameter stays for the admin dashboard.
+Not in scope: no plan boundary. The AMC filter reads the FIRST line item,
+the AMC column the largest-quantity part; they differ on ~1.4% of open
+multi-part solicitations.
+Public terms: "Filters", "Add condition", "Apply", "Clear filters".
+Affects: solicitation-matching article (rewritten 2026-10-02) and the
+bid-matching-recipes "Too many matches" tip, which pointed at Hard hits only.
+
 2026-10-01 — Bid matching: date menu rows open in a new tab
 Added: every run date, posted date and SAM bucket in the date menu is a
 link, so right-click "Open in new tab", Ctrl/⌘-click and middle-click work.
