@@ -17,6 +17,7 @@ import {
   type FilterRow,
 } from "@/components/bidmatching/BidMatchFilterBar";
 import { formatDateMmDdYyyy } from "@/lib/dates";
+import { quickFindRows } from "@/lib/bidmatching/quickFind";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
 
 
@@ -216,6 +217,9 @@ export default function BidMatchingPage() {
   // and as the only thing the fetch has to be handed.
   const filterParams = useMemo(() => serializeFilters(filters), [filters]);
   const filterKey = filterParams.join("|");
+  // Quick-find: narrows the rows already on screen, in the browser. It never
+  // reaches the API — the filters are the server-side, whole-bucket search.
+  const [quickFind, setQuickFind] = useState("");
   // Sorting is server-side: the page holds one slice of N rows, so sorting
   // here would only reorder the slice already on screen.
   const [sortBy, setSortBy] = useState<BidSortKey>(DEFAULT_SORT_BY);
@@ -460,6 +464,9 @@ export default function BidMatchingPage() {
     fetchResults,
   ]);
 
+  const shownResults = useMemo(() => quickFindRows(results, quickFind), [results, quickFind]);
+  const quickFindActive = quickFind.trim() !== "";
+
   const handleDateSelect = (selection: DateSelection) => {
     setSelectedRunDate(selection.runDate);
     setSelectedSource(selection.source);
@@ -693,6 +700,46 @@ export default function BidMatchingPage() {
                 )}
               </button>
             )}
+            {/* Quick-find, then Filters: everything in the bar sits left. The
+                box narrows ONLY the rows on screen (this page), instantly and
+                without a request; the count beside it says so, so nobody
+                reads "no hits" as "not in this run". Filters are the
+                whole-bucket search. */}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <svg
+                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted"
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+                <input
+                  type="text"
+                  value={quickFind}
+                  onChange={(e) => setQuickFind(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Escape") setQuickFind(""); }}
+                  placeholder="Find on this page…"
+                  aria-label="Find in the rows on this page"
+                  title="Narrows the rows on this page by solicitation #, NSN, part #, description, match reason, set-aside or AMC. Use Filters to search every match."
+                  className="w-60 rounded-lg border border-border bg-card-bg text-foreground text-sm pl-8 pr-7 py-1 focus:outline-none focus:border-primary"
+                />
+                {quickFindActive && (
+                  <button
+                    type="button"
+                    onClick={() => setQuickFind("")}
+                    aria-label="Clear find"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground text-base leading-none px-1 cursor-pointer"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              {quickFindActive && (
+                <span className="text-xs text-muted whitespace-nowrap" aria-live="polite">
+                  {shownResults.length} of {results.length} on this page
+                </span>
+              )}
+            </div>
             {/* The condition filter. Replaces the single field-scoped search
                 box: description, NSN, solicitation # and match reason are all
                 fields on it, so nothing the box could ask is lost, and the
@@ -704,10 +751,11 @@ export default function BidMatchingPage() {
               applied={filters}
               onApply={setFilters}
               hasOtherFilters={
-                interestedOnly || biddableOnly
+                interestedOnly || biddableOnly || quickFindActive
                 || sortBy !== DEFAULT_SORT_BY || sortDir !== DEFAULT_SORT_DIR
               }
               onClearAll={() => {
+                setQuickFind("");
                 setSortBy(DEFAULT_SORT_BY);
                 setSortDir(DEFAULT_SORT_DIR);
                 setInterestedOnly(false);
@@ -720,7 +768,8 @@ export default function BidMatchingPage() {
           <div className="bg-card-bg rounded-lg border border-border p-4">
             {selectedRunDate ? (
               <BidMatchResultsTable
-                results={results}
+                results={shownResults}
+                emptyMessage={quickFindActive ? "No rows on this page match your find." : undefined}
                 bidTermDefinitions={bidTermDefinitions}
                 isLoading={isLoadingResults}
                 total={total}

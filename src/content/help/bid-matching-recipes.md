@@ -137,7 +137,7 @@ In rough order of how much they help:
 1. **Switch to AND** if you're on OR.  
 2. **Add a narrowing condition** — Set-Aside or FSC if you're matching on a keyword.  
 3. **Add an Exclude** for the noise words you keep seeing.  
-4. **Use Hard hits only** on the results page as a quick filter without changing the profile.  
+4. **Narrow on the results page instead.** [Filters](/help/solicitation-matching#filters) trim the list without changing the profile — for example *Match reason contains NIIN* keeps the rows that fired on a NIIN.  
 5. **Split one busy profile into two** narrower ones.
 
 ### Too few matches, or none
