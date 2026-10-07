@@ -7,7 +7,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { Button } from "@/components/ui/Button";
 import { Tabs } from "@/components/ui/Tabs";
-import { StartBidButton } from "@/components/bidding/StartBidButton";
 import {
   TableCard, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
 } from "@/components/rfq/TableCard";
@@ -24,7 +23,6 @@ import {
   type BidContributor,
   type BidCreateResponse,
   type BidPage,
-  type BidReadyRow,
   type BidSendResult,
   type BidSummary,
   type BidTab,
@@ -85,7 +83,6 @@ export default function SendBidsPage() {
   const [tab, setTab] = useState<BidTab>("ready");
   const [page, setPage] = useState<BidPage | null>(null);
   const [contributors, setContributors] = useState<BidContributor[]>([]);
-  const [ready, setReady] = useState<BidReadyRow[]>([]);
   const [filterUser, setFilterUser] = useState<string>(ALL);
   const [filterInitialized, setFilterInitialized] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -94,8 +91,6 @@ export default function SendBidsPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [failures, setFailures] = useState<BidSendResult["failed"]>([]);
-  const [solNumber, setSolNumber] = useState("");
-  const [starting, setStarting] = useState(false);
 
   // Like the RFQ batch cart: default to the current user's own drafts.
   useEffect(() => {
@@ -118,14 +113,12 @@ export default function SendBidsPage() {
     const qs = new URLSearchParams({ tab });
     if (filterUser !== ALL) qs.set("added_by_user_id", filterUser);
     try {
-      const [p, c, r] = await Promise.all([
+      const [p, c] = await Promise.all([
         bidFetch<BidPage>(`/api/bidding?${qs}`),
         bidFetch<BidContributor[]>("/api/bidding/contributors"),
-        bidFetch<BidReadyRow[]>("/api/bidding/ready").catch(() => [] as BidReadyRow[]),
       ]);
       setPage(p);
       setContributors(c);
-      setReady(r);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -219,23 +212,6 @@ export default function SendBidsPage() {
     }
   };
 
-  const startBySolicitation = async () => {
-    const n = solNumber.trim();
-    if (!n) return;
-    setStarting(true);
-    setError(null);
-    try {
-      const data = await bidFetch<BidCreateResponse>("/api/bidding", {
-        method: "POST",
-        json: { solicitation_number: n },
-      });
-      router.push(`/bidmanager/${data.bid.id}`);
-    } catch (e) {
-      setError((e as Error).message);
-      setStarting(false);
-    }
-  };
-
   if (authLoading) return <div className="p-6 text-sm text-muted">Loading…</div>;
 
   if (!hasAccess) {
@@ -257,17 +233,12 @@ export default function SendBidsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Send bids</h1>
-          <p className="text-muted mt-1 text-sm max-w-3xl">
-            Your team&apos;s DIBBS quotes. Sending a bid queues it for our upload to DIBBS; it reaches DLA
-            when we upload it, and each bid shows what DIBBS made of it.
-          </p>
-        </div>
-        <Link href="/bidmanager/settings" className="text-xs text-primary hover:underline whitespace-nowrap">
-          Bid Manager settings
-        </Link>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Send bids</h1>
+        <p className="text-muted mt-1 text-sm max-w-3xl">
+          Your team&apos;s DIBBS quotes. Sending a bid queues it for our upload to DIBBS; it reaches DLA
+          when we upload it, and each bid shows what DIBBS made of it.
+        </p>
       </div>
 
       {error && (
@@ -298,57 +269,6 @@ export default function SendBidsPage() {
           </ul>
         </div>
       )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="bg-card-bg rounded-xl border border-border p-4">
-          <label htmlFor="start-sol" className="block text-sm font-medium text-card-foreground mb-2">
-            Start a bid
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="start-sol"
-              value={solNumber}
-              onChange={(e) => setSolNumber(e.target.value.toUpperCase())}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") startBySolicitation();
-              }}
-              placeholder="Solicitation number, e.g. SPE7M5-26-Q-0821"
-              className="flex-1 min-w-0 px-3 py-2 rounded-md border border-border bg-card-bg text-sm font-mono"
-            />
-            <Button variant="primary" size="sm" onClick={startBySolicitation} disabled={starting || !solNumber.trim()}>
-              {starting ? "Opening…" : "Start"}
-            </Button>
-          </div>
-          <p className="text-xs text-muted mt-2">
-            Opens the bid if your team already started one on that solicitation.
-          </p>
-        </div>
-
-        {ready.length > 0 && (
-          <div className="lg:col-span-2 bg-card-bg rounded-xl border border-border p-4">
-            <p className="text-sm font-medium text-card-foreground mb-2">
-              Priced in your RFQ worklist, not bid yet ({ready.length})
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {ready.slice(0, 12).map((r) => (
-                <span
-                  key={r.rfq_solicitation_work_id}
-                  className="inline-flex items-center gap-2 rounded-md border border-border px-2 py-1 text-xs"
-                >
-                  <span className="font-mono">{displaySolicitationNumber(r.solicitation_number)}</span>
-                  <span className={closeDateClass(r.close_date)}>{formatDateMmDdYyyy(r.close_date)}</span>
-                  <StartBidButton solicitationId={r.solicitation_id} fromRfq />
-                </span>
-              ))}
-              {ready.length > 12 && (
-                <Link href="/rfq/worklist" className="text-xs text-primary hover:underline self-center">
-                  {ready.length - 12} more in the worklist
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
 
       <Tabs
         tabs={BID_TABS.map((t) => ({ id: t.id, label: t.label, badge: page?.counts?.[t.id] || undefined }))}
@@ -399,9 +319,17 @@ export default function SendBidsPage() {
           <div className="text-sm text-muted">Loading bids…</div>
         ) : items.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted">
-            {isReady
-              ? "No draft bids. Start one above, or use Add to bids on a priced row of the RFQ worklist."
-              : "Nothing here."}
+            {isReady ? (
+              <>
+                No draft bids. Start one from{" "}
+                <Link href="/bidmanager/matches" className="text-primary hover:underline">
+                  Bid on matches
+                </Link>
+                .
+              </>
+            ) : (
+              "Nothing here."
+            )}
           </div>
         ) : (
           <div className={tableWrapClass}>

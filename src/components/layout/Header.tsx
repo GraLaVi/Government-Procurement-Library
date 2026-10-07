@@ -266,7 +266,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               )}
               {!isRfqResponderOnly && showBidding && (
               <Link
-                href="/bidmanager"
+                href="/bidmanager/matches"
                 className={topLinkClass(isLinkActive("/bidmanager", pathname))}
               >
                 Bid Manager
@@ -402,7 +402,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               )}
               {!isRfqResponderOnly && showBidding && (
                 <Link
-                  href="/bidmanager"
+                  href="/bidmanager/matches"
                   className={mobileRowClass(isLinkActive("/bidmanager", pathname))}
                   onClick={closeMobileMenu}
                 >
