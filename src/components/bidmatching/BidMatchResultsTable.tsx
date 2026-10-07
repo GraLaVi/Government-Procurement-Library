@@ -25,6 +25,7 @@ import { techDocsCellLabel } from "@/lib/library/techDocs";
 import {
   SortHeader, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
 } from "@/components/rfq/TableCard";
+import { StartBidButton } from "@/components/bidding/StartBidButton";
 
 interface MatchedCondition {
   condition_type: string;
@@ -597,6 +598,11 @@ export function BidMatchResultsTable({
                             the date menu has already said which, and repeating
                             it on all fifty rows only crowded the column. */}
                         <NoticeTypeBadge noticeType={result.notice_type} />
+                        {/* Start a DIBBS quote (Bidding, plan 4.1). Seat
+                            holders only; DIBBS solicitations only. */}
+                        {result.source !== "sam" && result.solicitation_id && (
+                          <StartBidButton solicitationId={result.solicitation_id} />
+                        )}
                         {/* Amendment pill + fast-award badge, shared with the
                             Send RFQs work queue (SolicitationRowBadges) so the
                             two pages read identically. One pill: the component

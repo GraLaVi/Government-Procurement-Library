@@ -267,7 +267,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               )}
               {!isRfqResponderOnly && showBidding && (
               <Link
-                href="/bidding/settings"
+                href="/bidding"
                 className={topLinkClass(isLinkActive("/bidding", pathname))}
               >
                 Bidding
@@ -403,7 +403,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               )}
               {!isRfqResponderOnly && showBidding && (
                 <Link
-                  href="/bidding/settings"
+                  href="/bidding"
                   className={mobileRowClass(isLinkActive("/bidding", pathname))}
                   onClick={closeMobileMenu}
                 >

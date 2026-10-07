@@ -14,6 +14,7 @@ import { WorkStatusSelect } from "@/components/rfq/WorkStatusSelect";
 import { RfqComposeModal } from "@/components/rfq/RfqComposeModal";
 import { QuoteVendorPickerModal } from "@/components/rfq/QuoteVendorPickerModal";
 import { QuoteComparisonModal } from "@/components/rfq/QuoteComparisonModal";
+import { StartBidButton } from "@/components/bidding/StartBidButton";
 import {
   SortHeader, TableCard, filterSelectClass, rowClass, tableClass, tableHeadRowClass,
   tableWrapClass, tdClass, thClass,
@@ -1010,6 +1011,12 @@ export default function RfqWorklistPage() {
                               </svg>
                               {item.quote_count}
                             </button>
+                          )}
+                          {/* Priced = ready to bid: start the DIBBS quote with
+                              the vendor prices filled in (Bidding, plan 4.1).
+                              Renders only for Bidding seat holders. */}
+                          {item.work_status === "priced" && (
+                            <StartBidButton solicitationId={item.solicitation_id} fromRfq />
                           )}
                           {item.staged_count > 0 && (
                             <Link

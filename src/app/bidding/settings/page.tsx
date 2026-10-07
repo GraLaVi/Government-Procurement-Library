@@ -8,6 +8,7 @@ import { DateField } from "@/components/ui/DateField";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { BIDDING_PRODUCT_KEY } from "@/lib/bidding/access";
+import { errorText } from "@/lib/bidding/api";
 import {
   AFFIRMATIVE_ACTION_OPTIONS,
   ALTERNATE_DISPUTES_OPTIONS,
@@ -26,20 +27,6 @@ import {
 } from "@/lib/bidding/types";
 
 const NOT_SET = { value: "", label: "Not set" };
-
-// The proxy passes FastAPI's `detail` through as `error`; on a 422 that is
-// pydantic's list of {loc, msg} objects rather than a string.
-function errorText(data: unknown, fallback: string): string {
-  const err = (data as { error?: unknown })?.error;
-  if (typeof err === "string") return err;
-  if (Array.isArray(err)) {
-    return err
-      .map((e) => String((e as { msg?: string })?.msg ?? "").replace(/^Value error, /, ""))
-      .filter(Boolean)
-      .join(" ");
-  }
-  return fallback;
-}
 
 function pickFields(src: BiddingProfileFields): BiddingProfileFields {
   const out = { ...EMPTY_PROFILE_FIELDS };
@@ -349,6 +336,24 @@ export default function BiddingSettingsPage() {
                     AIDC solicitations (type I) need at least 90; fewer makes the quote a Bid With
                     Exception.
                     {source("default_days_quote_valid") && <> {source("default_days_quote_valid")}</>}
+                  </Hint>
+                </div>
+                <div>
+                  <Input
+                    id="bp-default_handling_days"
+                    label="Handling days added to a vendor's lead time"
+                    type="number"
+                    min={0}
+                    max={999}
+                    value={form.default_handling_days ?? ""}
+                    disabled={disabled}
+                    onChange={(e) =>
+                      set("default_handling_days", e.target.value ? parseInt(e.target.value, 10) : null)
+                    }
+                  />
+                  <Hint>
+                    When a bid starts from a priced RFQ, its delivery days are the vendor&apos;s lead time
+                    plus these days. Not sent to DLA.
                   </Hint>
                 </div>
                 {select(
