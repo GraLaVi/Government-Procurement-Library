@@ -2,7 +2,7 @@
 title: "How solicitation matching works"
 meta_title: "How Solicitation Matching Works | GPH Help"
 description: "Understand how Government Procurement Hub matches federal solicitations to your bid-matching profiles, where to find your matches, and how to interpret match results."
-last_updated: "2026-10-02"
+last_updated: "2026-10-05"
 ---
 
 GPH's matching engine connects your bid-matching profiles to incoming federal solicitations. Once you've created a profile, you don't need to search for opportunities — they surface automatically.
@@ -66,6 +66,7 @@ Badges can appear next to the NSN:
 - **A trophy with a number** — you have won this part before, that many times. Click it for your award history, including what you charged. See [Parts you have won before](#parts-you-have-won-before).
 
 **Which profile matched, and why,** now lives in the expanded row rather than its own columns. Click the arrow at the left of any row to see the profile name, the **Hard** or **Soft** badge, and the reason the match fired — for example *keyword 'carabiner' in description* — alongside the full line-item list.
+The expanded row also opens with the solicitation's [bid qualification terms](#bid-qualification-terms) — the codes that decide whether you can bid and what it will cost.
 
 ## Sorting the results
 
@@ -147,6 +148,60 @@ The **AMC** column shows the Acquisition Method Code DLA assigns the part on the
 Click the code for both meanings in full, and for a link to the complete list of codes. Like technical documentation, the AMC follows the **part**, so it speaks for the item shown in the NSN column.
 
 The AMSC in the expanded row's **Bid qualification terms** is a separate value: it is stated on the solicitation itself, where the AMC belongs to the part.
+
+## Bid qualification terms
+
+Expand a row with the arrow at its left and the first thing you see is the **Bid qualification terms** panel — the solicitation's codes, translated. These are the terms that decide whether you can bid at all (approved-source and quality gates) and what bidding will cost you (freight, inspection, paperwork). They come ahead of the line items because they decide whether the line items matter.
+
+### Reading a term
+
+Each term in the panel shows three things:
+
+- **The term's name** in small capitals — for example **FOB POINT**.
+- **What the solicitation says**, in plain English — for example *Origin* — followed by the raw DLA code in a small box (**O**). The code is what you'll see in DIBBS and on the solicitation PDF, so you can match the two up. Hover the plain-English value for DLA's full definition.
+- **A one-line hint** underneath saying what the term governs — for example *Who pays and owns freight to the ship-to*.
+
+Most values are the ordinary case and display quietly. A value that changes your bid decision — a gate you have to clear or a cost you have to price in — is shown in **bold amber with an amber bar** down its left side. Scan for amber first.
+
+### The terms
+
+The panel reads left to right, top to bottom, roughly in order of importance: what can disqualify you, then what it costs you, then the competitive factors and paperwork.
+
+| Term | What it tells you | Highlighted when |
+| --- | --- | --- |
+| **Item description** | How the item is described, and therefore what you must prove to supply it | **P** Approved source required, **Q** QPL item, or **B** Source-controlled item |
+| **Technical data (AMSC)** | The Acquisition Method Suffix Code: whether the government holds a data package it can release, and whether supply is restricted | The source is restricted (**B**, **C**, **P**, **R**), the data is missing or inadequate (**D**, **H**, **Q**), or you must already be an approved or QPL source (**S**, **T**) |
+| **Higher-level quality** | The quality system the contract requires beyond standard inspection | **6** SAE AS9003 or **7** ISO 9001:2015 |
+| **Buy American** | Whether the end product must pass the domestic-content test | **Y** Applicable |
+| **Free trade agreements** | Country-of-origin eligibility | **Y** FTA applies, **A** Buy American, or **B** FTA ALT IV |
+| **FOB point** | Who pays for and owns the freight to the ship-to address | **O** Origin |
+| **Inspection point** | Where the government inspects the goods | **O** Origin — plan for a government inspector at your facility |
+| **HUBZone preference** | Whether a HUBZone price-evaluation preference applies at award | **Y** Applies |
+| **Clause fill-ins** | Whether the quote needs extra clause entries before it can go out | **Y** Required |
+| **DPAS rating** | The order's Defense Priorities and Allocations System rating, such as `DO-C9`. The value shows the priority; the hint line shows the program it supports | **DX** — the highest national priority, which outranks every other order in your shop |
+
+A few things that aren't highlighted are still worth knowing:
+
+- **FOB destination** and **inspection at destination** are the normal case, so they stay quiet.
+- On **Technical data (AMSC)**, **G** (complete data) and **Z** (commercial / off the shelf) are the open cases. Codes that add cost without stopping you from bidding stay quiet too.
+- **DO** ratings aren't highlighted because they cover the large majority of rated orders. A rated order still carries a scheduling obligation once you win it.
+
+### Automated IDC contract terms
+
+Automated Indefinite Delivery Contracts (a small share of DLA solicitations) add a second block below the codes, separated by a dashed line. Rather than a single buy, these award delivery orders across the contract's life, so the block gives you the numbers that shape it:
+
+- **Guaranteed minimum** — the quantity guaranteed over the life of the contract. A guaranteed minimum of **0** is shown on purpose: it means the contract guarantees you nothing.
+- **Delivery-order minimum** — the smallest quantity per order.
+- **Contract ceiling** — the contract's maximum value.
+- **Orders per year** — the government's estimate of how often it will order.
+
+### When a term is missing
+
+The panel shows only the terms a solicitation actually states. A term that's absent wasn't stated — it **doesn't** mean "no" or "not required," so check the solicitation itself before relying on its absence. When a solicitation states none of these terms, the panel doesn't appear at all.
+
+SAM.gov notices don't carry these coded fields, so the panel never appears on SAM.gov rows.
+
+First article requirements aren't in this panel on the Bid-Matching page; they're shown as the **FAT** badge next to the NSN instead — see [First article requirements](#first-article-requirements).
 
 ## Open past the return-by date
 
