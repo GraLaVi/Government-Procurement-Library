@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
@@ -160,8 +161,55 @@ function TextInput({ value, onSave, disabled, type = "text", maxLength, upper, p
   );
 }
 
-function ReadOnly({ value }: { value: React.ReactNode }) {
-  return <p className="text-sm text-foreground py-1.5">{value ?? "—"}</p>;
+/** A value that is set and cannot be changed (from the solicitation, or fixed
+ *  by DLA's rules): shown as the form field it is, disabled. */
+function ReadOnly({ value, className = "" }: { value: React.ReactNode; className?: string }) {
+  const shown = value == null || value === "" ? "—" : String(value);
+  return (
+    <input className={`${inputClass} cursor-not-allowed ${className}`} value={shown} disabled readOnly
+      title="Set by the solicitation; it cannot be changed" />
+  );
+}
+
+type TabKey = "lines" | "items" | "terms" | "reps" | "review";
+
+// The editor's tabs. Parts is what changes on every bid; the rest is mostly
+// filled from the bid profile and saved part answers.
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "lines", label: "Parts" },
+  { key: "terms", label: "Solicitation & terms" },
+  { key: "items", label: "Items" },
+  { key: "reps", label: "Representations" },
+  { key: "review", label: "Review" },
+];
+
+// Header fields shown on the Representations tab.
+const REP_FIELDS = [13, 18, 19, 21, 22, 23, 29, 30, 31];
+
+const PDF_DOCKED_KEY = "bidmanager.editor.pdfDocked";
+const PDF_MEDIA = "(min-width: 1280px)"; // Tailwind xl: room for the form and the PDF side by side
+
+/** "Enter it from the PDF", with a way to open it when we have it. */
+function PdfHint({ onOpen, short }: { onOpen?: () => void; short?: boolean }) {
+  return (
+    <>
+      Not on file — enter it from the {short ? "" : "solicitation "}PDF.
+      {onOpen && (
+        <button type="button" className="ml-1 text-primary hover:underline" onClick={onOpen}>Open PDF</button>
+      )}
+    </>
+  );
+}
+
+/** How many things on a tab to fix (red) or check (amber). */
+function CountBadge({ n, tone = "error" }: { n: number; tone?: "error" | "warning" }) {
+  return (
+    <span className={`min-w-[1.25rem] px-1.5 rounded-full text-[11px] leading-5 text-center font-semibold ${
+      tone === "error" ? "bg-error text-white" : "bg-amber-100 text-amber-800"
+    }`}>
+      {n}
+    </span>
+  );
 }
 
 // Field-number groups for the product block (plan 1.3), mirroring the
@@ -198,7 +246,17 @@ export default function BidEditorPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [preview, setPreview] = useState<BidPreview | null>(null);
   const [confirm, setConfirm] = useState<"delete" | "withdraw" | null>(null);
-  const [showReps, setShowReps] = useState(false);
+  const [tab, setTab] = useState<TabKey>("lines");
+  const [itemKey, setItemKey] = useState<string | null>(null);
+  // The PDF sits beside the form on wide screens (remembered), in a modal otherwise.
+  const [pdfDocked, setPdfDocked] = useState(false);
+  const [pdfModal, setPdfModal] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(PDF_DOCKED_KEY) === "1" && window.matchMedia(PDF_MEDIA).matches) setPdfDocked(true);
+    } catch { /* storage unavailable */ }
+  }, []);
 
   const load = useCallback(async () => {
     if (!bidId) return;
@@ -300,7 +358,7 @@ export default function BidEditorPage() {
   const lineIssues = (line: BidLine) => issues.filter((i) => i.line_id === line.id);
   const productIssues = (p: BidProduct, field?: number) =>
     issues.filter((i) => i.product_key === p.nsn_part_key && (field == null || i.field === field));
-  const generalIssues = issues.filter((i) => i.line_id == null && i.product_key == null);
+  const generalIssues = issues.filter((i) => i.line_id == null && i.product_key == null && i.field == null);
 
   if (authLoading) return <div className="p-6 text-sm text-muted">Loading…</div>;
   if (!hasAccess) {
@@ -329,6 +387,42 @@ export default function BidEditorPage() {
   const errors = issues.filter((i) => i.severity === "error");
   const warnings = issues.filter((i) => i.severity === "warning");
   const editableSol = new Set(bid.editable_solicitation_fields);
+  const pdfUrl = bid.has_pdf && bid.solicitation_id ? `/api/library/solicitations/${bid.solicitation_id}/pdf` : null;
+  const setDocked = (on: boolean) => {
+    setPdfDocked(on);
+    try { localStorage.setItem(PDF_DOCKED_KEY, on ? "1" : "0"); } catch { /* storage unavailable */ }
+  };
+  const openPdf = pdfUrl
+    ? () => (window.matchMedia(PDF_MEDIA).matches ? setDocked(true) : setPdfModal(true))
+    : undefined;
+
+  // A first-article line is a question about the solicitation, not a part to
+  // price: it is answered in the Solicitation section, not the Lines table.
+  const fatLines = bid.lines.filter((ln) => ln.is_first_article);
+  const partLines = bid.lines.filter((ln) => !ln.is_first_article);
+  const fatLineIds = new Set(fatLines.map((ln) => ln.id));
+  // Item blocks. A first-article item is not a real item: its answers come
+  // from the main item (quote.effective_products), so it gets no block.
+  const fatOnlyKeys = new Set(
+    bid.products
+      .filter((p) => p.is_pseudo_item && bid.lines.filter((ln) => ln.nsn_part_key === p.nsn_part_key).every((ln) => fatLineIds.has(ln.id)))
+      .map((p) => p.nsn_part_key),
+  );
+  const items = bid.products.filter((p) => !fatOnlyKeys.has(p.nsn_part_key));
+  const item = items.find((p) => p.nsn_part_key === itemKey) ?? items[0];
+
+  const tabOf = (i: BidIssue): TabKey => {
+    if (i.product_key != null) return fatOnlyKeys.has(i.product_key) ? "terms" : "items";
+    if (i.line_id != null) return fatLineIds.has(i.line_id) ? "terms" : "lines";
+    if (i.field == null || i.field === 96) return "lines";
+    return REP_FIELDS.includes(i.field) ? "reps" : "terms";
+  };
+  const tabCounts = (key: TabKey, severity: BidIssue["severity"]) =>
+    issues.filter((i) => i.severity === severity && tabOf(i) === key).length;
+  const goTo = (i: BidIssue) => {
+    setTab(tabOf(i));
+    if (i.product_key != null && !fatOnlyKeys.has(i.product_key)) setItemKey(i.product_key);
+  };
 
   const select = (field: string, number: number, label: string, options: CodeOption[], hint?: React.ReactNode) => (
     <Field label={label} field={number} hint={hint} issues={headerIssues(number)}>
@@ -351,7 +445,7 @@ export default function BidEditorPage() {
    *  confirms it from the PDF. */
   const solValue = (field: string, number: number, label: string, display: React.ReactNode, options?: CodeOption[], type?: "date") =>
     editableSol.has(field) && draft ? (
-      <Field label={label} field={number} hint="Not on file — enter it from the solicitation PDF." issues={headerIssues(number)}>
+      <Field label={label} field={number} hint={<PdfHint onOpen={openPdf} />} issues={headerIssues(number)}>
         {options ? (
           <SelectInput value={h[field] as Value} options={options} disabled={off} onSave={(v) => saveHeader(field, v)} />
         ) : (
@@ -365,346 +459,479 @@ export default function BidEditorPage() {
     );
 
   return (
-    <div className="space-y-6">
-      {/* Title row */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <Link href="/bidmanager" className="text-xs text-primary hover:underline">← Send bids</Link>
-          <h1 className="text-2xl font-bold text-foreground mt-1">
-            {bidReference(bid)}{" "}
-            <span className="font-mono text-lg text-muted">{displaySolicitationNumber(String(h.solicitation_number ?? ""))}</span>
-          </h1>
-          <p className="text-sm text-muted mt-1">
-            {BID_STATUS_LABELS[bid.status]} · quoting as CAGE <span className="font-mono">{bid.quote_for_cage}</span> ·
-            closes {formatDateMmDdYyyy(h.return_by_date as string | null)}
-            {saving && <span className="ml-2 text-xs">Saving…</span>}
-          </p>
-          {bid.dibbs_reason && <p className="text-sm text-error mt-1">DIBBS: {bid.dibbs_reason}</p>}
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {draft && (
-            <>
-              <Button variant="outline" size="sm" disabled={saving} onClick={() => setConfirm("delete")}>
-                Delete draft
+    <div className={pdfDocked && pdfUrl ? "xl:grid xl:grid-cols-2 xl:gap-6 xl:items-start" : ""}>
+      <div className="space-y-6 min-w-0">
+        {/* Title row */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <Link href="/bidmanager" className="text-xs text-primary hover:underline">← Send bids</Link>
+            <h1 className="text-2xl font-bold text-foreground mt-1">
+              {bidReference(bid)}{" "}
+              <span className="font-mono text-lg text-muted">{displaySolicitationNumber(String(h.solicitation_number ?? ""))}</span>
+            </h1>
+            <p className="text-sm text-muted mt-1">
+              {BID_STATUS_LABELS[bid.status]} · quoting as CAGE <span className="font-mono">{bid.quote_for_cage}</span> ·
+              closes {formatDateMmDdYyyy(h.return_by_date as string | null)}
+              {saving && <span className="ml-2 text-xs">Saving…</span>}
+            </p>
+            {bid.dibbs_reason && <p className="text-sm text-error mt-1">DIBBS: {bid.dibbs_reason}</p>}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {openPdf ? (
+              <Button variant="outline" size="sm" aria-pressed={pdfDocked}
+                onClick={() => (pdfDocked ? setDocked(false) : openPdf())}>
+                {pdfDocked ? "Hide PDF" : "Solicitation PDF"}
               </Button>
-              <Button variant="primary" size="sm" disabled={saving || !bid.can_send} onClick={send}
-                title={bid.can_send ? "Queue for our upload to DIBBS" : "Fix the errors below first"}>
-                Send bid
+            ) : (
+              <span className="text-xs text-muted">PDF not on file</span>
+            )}
+            {draft && (
+              <>
+                <Button variant="outline" size="sm" disabled={saving} onClick={() => setConfirm("delete")}>
+                  Delete draft
+                </Button>
+                <Button variant="primary" size="sm" disabled={saving || !bid.can_send} onClick={send}
+                  title={bid.can_send ? "Queue for our upload to DIBBS" : "Fix the errors below first"}>
+                  Send bid
+                </Button>
+              </>
+            )}
+            {bid.status === "queued" && (
+              <Button variant="outline" size="sm" disabled={saving} onClick={() => setConfirm("withdraw")}>
+                Withdraw
               </Button>
-            </>
-          )}
-          {bid.status === "queued" && (
-            <Button variant="outline" size="sm" disabled={saving} onClick={() => setConfirm("withdraw")}>
-              Withdraw
-            </Button>
-          )}
-          {["withdrawn", "rejected", "submitted", "expired"].includes(bid.status) && (
-            <Button variant="primary" size="sm" disabled={saving} onClick={() => lifecycle("revise")}>
-              Revise
-            </Button>
-          )}
+            )}
+            {["withdrawn", "rejected", "submitted", "expired"].includes(bid.status) && (
+              <Button variant="primary" size="sm" disabled={saving} onClick={() => lifecycle("revise")}>
+                Revise
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {error && <div className="rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">{error}</div>}
-      {toast && <div className="rounded-lg border border-success/30 bg-success/10 px-4 py-2.5 text-sm text-success">{toast}</div>}
-      {!draft && (
-        <div className="rounded-lg border border-border bg-muted-light px-4 py-3 text-sm text-muted">
-          A sent bid is locked. {bid.status === "queued" ? "Withdraw it, then revise it, to make changes." : "Revise it to send a corrected quote."}
-        </div>
-      )}
+        {error && <div className="rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">{error}</div>}
+        {toast && <div className="rounded-lg border border-success/30 bg-success/10 px-4 py-2.5 text-sm text-success">{toast}</div>}
+        {!draft && (
+          <div className="rounded-lg border border-border bg-muted-light px-4 py-3 text-sm text-muted">
+            A sent bid is locked. {bid.status === "queued" ? "Withdraw it, then revise it, to make changes." : "Revise it to send a corrected quote."}
+          </div>
+        )}
 
-      {/* Bid type — derived, never chosen (plan 1.5) */}
-      <div className="bg-card-bg rounded-xl border border-border p-5 flex flex-wrap items-start gap-4">
-        <div className="shrink-0">
-          <p className="text-xs text-muted">Bid type (024)</p>
-          <p className="text-xl font-bold text-foreground">
-            {bid.bid_type_code} <span className="text-sm font-medium text-muted">{bid.bid_type_name}</span>
-          </p>
+        {/* Bid type — derived, never chosen (plan 1.5) */}
+        <div className="bg-card-bg rounded-xl border border-border p-5 flex flex-wrap items-start gap-4">
+          <div className="shrink-0">
+            <p className="text-xs text-muted">Bid type (024)</p>
+            <p className="text-xl font-bold text-foreground">
+              {bid.bid_type_code} <span className="text-sm font-medium text-muted">{bid.bid_type_name}</span>
+            </p>
+          </div>
+          <div className="flex-1 min-w-[240px] text-sm">
+            {bid.bid_type_reasons.length === 0 ? (
+              <p className="text-muted">Nothing in this quote departs from the solicitation.</p>
+            ) : (
+              <ul className="list-disc pl-5 space-y-0.5 text-foreground">
+                {bid.bid_type_reasons.map((r) => <li key={r}>{r}</li>)}
+              </ul>
+            )}
+            <p className="text-[11px] text-muted mt-2">
+              Worked out from your answers. DIBBS rejects a bid type the quote does not need, so it cannot be set by hand.
+            </p>
+          </div>
+          <div className="text-sm">
+            <p className={errors.length ? "text-error font-medium" : "text-success font-medium"}>
+              {errors.length ? `${errors.length} to fix before sending` : "Ready to send"}
+            </p>
+            {warnings.length > 0 && <p className="text-amber-700">{warnings.length} to check</p>}
+          </div>
         </div>
-        <div className="flex-1 min-w-[240px] text-sm">
-          {bid.bid_type_reasons.length === 0 ? (
-            <p className="text-muted">Nothing in this quote departs from the solicitation.</p>
-          ) : (
-            <ul className="list-disc pl-5 space-y-0.5 text-foreground">
-              {bid.bid_type_reasons.map((r) => <li key={r}>{r}</li>)}
-            </ul>
-          )}
-          <p className="text-[11px] text-muted mt-2">
-            Worked out from your answers. DIBBS rejects a bid type the quote does not need, so it cannot be set by hand.
-          </p>
-        </div>
-        <div className="text-sm">
-          <p className={errors.length ? "text-error font-medium" : "text-success font-medium"}>
-            {errors.length ? `${errors.length} to fix before sending` : "Ready to send"}
-          </p>
-          {warnings.length > 0 && <p className="text-amber-700">{warnings.length} to check</p>}
-        </div>
-      </div>
 
-      {generalIssues.length > 0 && (
-        <div className="rounded-lg border border-border bg-card-bg px-4 py-3">
-          <IssueText issues={generalIssues} />
-        </div>
-      )}
+        {generalIssues.length > 0 && (
+          <div className="rounded-lg border border-border bg-card-bg px-4 py-3">
+            <IssueText issues={generalIssues} />
+          </div>
+        )}
 
-      {bid.variance_question && (
-        <Section title="Quantity variance" description="You quoted a quantity variance on this solicitation.">
-          <Field label="Does your quoted variance exceed what the RFQ permits?" issues={issues.filter((i) => i.field === 96 && !i.product_key)}
-            hint="Check the PDF's QTY VARIANCE clause. Yes makes this a Bid With Exception. DIBBS rejects a wrong answer either way.">
-            <div className="flex gap-4 text-sm">
-              {[{ v: true, l: "Yes, it exceeds" }, { v: false, l: "No, it is within" }].map((o) => (
-                <label key={String(o.v)} className="inline-flex items-center gap-1.5">
-                  <input type="radio" name="variance" checked={h.variance_exceeds_rfq === o.v} disabled={off}
-                    onChange={() => saveHeader("variance_exceeds_rfq", o.v)} />
-                  {o.l}
-                </label>
-              ))}
+        <nav role="tablist" aria-label="Bid sections" className="flex items-center gap-1 border-b border-border overflow-x-auto">
+          {TABS.map((t) => {
+            const errs = t.key === "review" ? errors.length : tabCounts(t.key, "error");
+            const warns = t.key === "review" ? warnings.length : tabCounts(t.key, "warning");
+            return (
+              <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors inline-flex items-center gap-1.5 ${
+                  tab === t.key ? "border-primary text-primary" : "border-transparent text-muted hover:text-foreground"
+                }`}>
+                {t.label}
+                {errs > 0 ? <CountBadge n={errs} /> : warns > 0 ? <CountBadge n={warns} tone="warning" /> : null}
+              </button>
+            );
+          })}
+        </nav>
+
+        {tab === "lines" && (
+          <div role="tabpanel" className="space-y-6">
+            {bid.variance_question && (
+              <Section title="Quantity variance" description="You quoted a quantity variance on this solicitation.">
+                <Field label="Does your quoted variance exceed what the RFQ permits?" issues={issues.filter((i) => i.field === 96 && !i.product_key)}
+                  hint="Check the PDF's QTY VARIANCE clause. Yes makes this a Bid With Exception. DIBBS rejects a wrong answer either way.">
+                  <div className="flex gap-4 text-sm">
+                    {[{ v: true, l: "Yes, it exceeds" }, { v: false, l: "No, it is within" }].map((o) => (
+                      <label key={String(o.v)} className="inline-flex items-center gap-1.5">
+                        <input type="radio" name="variance" checked={h.variance_exceeds_rfq === o.v} disabled={off}
+                          onChange={() => saveHeader("variance_exceeds_rfq", o.v)} />
+                        {o.l}
+                      </label>
+                    ))}
+                  </div>
+                </Field>
+              </Section>
+            )}
+
+            {/* Lines */}
+            <Section title="Parts" description="One row per solicitation line. Price and delivery days are yours; the rest comes from the solicitation.">
+              <div className={tableWrapClass}>
+                <table className={tableClass}>
+                  <thead>
+                    <tr className={tableHeadRowClass}>
+                      <th className={thClass}>Line</th>
+                      <th className={thClass}>PR</th>
+                      <th className={thClass}>NSN / part</th>
+                      <th className={thClass}>UI</th>
+                      <th className={`${thClass} text-right`}>Solicited</th>
+                      <th className={`${thClass} text-right`}>Quantity (049)</th>
+                      <th className={`${thClass} text-right`}>Unit price (050)</th>
+                      <th className={`${thClass} text-right`}>Required days</th>
+                      <th className={`${thClass} text-right`}>Delivery days (051)</th>
+                      <th className={thClass}>No bid</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {partLines.map((ln) => {
+                      const editable = new Set(ln.editable_solicitation_fields);
+                      const solCell = (field: keyof BidLine, max: number, display: React.ReactNode) =>
+                        editable.has(field) && draft ? (
+                          <TextInput value={ln[field] as Value} maxLength={max} upper disabled={off}
+                            placeholder="From PDF" onSave={(v) => saveLine(ln, field, v)} />
+                        ) : display;
+                      const li = lineIssues(ln);
+                      return (
+                        <tr key={ln.id} className={`${rowClass} align-top`}>
+                          <td className={`${tdClass} font-mono`}>{solCell("line_number", 4, ln.line_number)}</td>
+                          <td className={`${tdClass} font-mono`}>{solCell("pr_number", 10, ln.pr_number)}</td>
+                          <td className={`${tdClass} font-mono whitespace-nowrap`}>
+                            {solCell("nsn_part", 45, displayNsn(ln.nsn_part))}
+                            <IssueText issues={li} />
+                          </td>
+                          <td className={`${tdClass} font-mono`}>{solCell("unit_of_issue", 2, ln.unit_of_issue)}</td>
+                          <td className={`${tdClass} text-right font-mono tabular-nums`}>{ln.solicited_quantity ?? "—"}</td>
+                          <td className={`${tdClass} text-right w-28`}>
+                            <TextInput type="number" value={ln.quantity} step="1" disabled={off}
+                              onSave={(v) => saveLine(ln, "quantity", v == null ? null : parseInt(v, 10))} />
+                          </td>
+                          <td className={`${tdClass} text-right w-36`}>
+                            {ln.is_no_bid ? <span className="text-muted">0 (no bid)</span> : (
+                              <TextInput type="number" value={ln.unit_price} step="0.00001" disabled={off}
+                                onSave={(v) => saveLine(ln, "unit_price", v)} />
+                            )}
+                            {ln.rfq_price_changed && draft && (
+                              <button type="button" className="mt-1 text-[11px] text-amber-700 hover:underline"
+                                disabled={off} onClick={() => saveLine(ln, "unit_price", ln.rfq_price_now)}>
+                                RFQ repriced to {money(ln.rfq_price_now)} — update
+                              </button>
+                            )}
+                          </td>
+                          <td className={`${tdClass} text-right font-mono tabular-nums`}>{ln.required_delivery_days ?? "—"}</td>
+                          <td className={`${tdClass} text-right w-28`}>
+                            {ln.is_no_bid ? <span className="text-muted">0</span> : (
+                              <TextInput type="number" value={ln.delivery_days} step="1" disabled={off}
+                                onSave={(v) => saveLine(ln, "delivery_days", v == null ? null : parseInt(v, 10))} />
+                            )}
+                          </td>
+                          <td className={tdClass}>
+                            <input type="checkbox" checked={ln.is_no_bid} disabled={off}
+                              onChange={(e) => saveLine(ln, "is_no_bid", e.target.checked)}
+                              aria-label={`No bid on line ${ln.line_number ?? ""}`} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+          </div>
+        )}
+
+        {tab === "items" && (
+          <div role="tabpanel" className="space-y-6">
+            <div className="space-y-4">
+              {items.length > 1 && (
+                <div className="flex flex-wrap gap-2" role="tablist" aria-label="Items">
+                  {items.map((p) => {
+                    const n = productIssues(p).filter((i) => i.severity === "error").length;
+                    const active = p.nsn_part_key === item?.nsn_part_key;
+                    const ln = bid.lines.filter((l) => l.nsn_part_key === p.nsn_part_key);
+                    return (
+                      <button key={p.id} type="button" role="tab" aria-selected={active} onClick={() => setItemKey(p.nsn_part_key)}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium inline-flex items-center gap-1.5 ${
+                          active ? "border-primary bg-primary/5 text-primary" : "border-border bg-card-bg text-muted hover:text-foreground"
+                        }`}>
+                        <span className="font-mono">
+                          {p.is_pseudo_item ? p.nsn_part_key.replace(/^PN:/, "") : displayNsn(ln[0]?.nsn_part ?? null)}
+                        </span>
+                        <span>· line{ln.length > 1 ? "s" : ""} {ln.map((l) => l.line_number ?? "?").join(", ")}</span>
+                        {n > 0 && <CountBadge n={n} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {item && (
+                <ProductBlock
+                  key={item.id}
+                  product={item}
+                  header={h}
+                  disabled={off}
+                  issues={productIssues}
+                  onSave={(body) => saveProduct(item, body)}
+                  lines={bid.lines.filter((ln) => ln.nsn_part_key === item.nsn_part_key)}
+                  onOpenPdf={openPdf}
+                />
+              )}
             </div>
-          </Field>
-        </Section>
-      )}
+          </div>
+        )}
 
-      {/* Lines */}
-      <Section title="Lines" description="One row per solicitation line. Price and delivery days are yours; the rest comes from the solicitation.">
-        <div className={tableWrapClass}>
-          <table className={tableClass}>
-            <thead>
-              <tr className={tableHeadRowClass}>
-                <th className={thClass}>Line</th>
-                <th className={thClass}>PR</th>
-                <th className={thClass}>NSN / part</th>
-                <th className={thClass}>UI</th>
-                <th className={`${thClass} text-right`}>Solicited</th>
-                <th className={`${thClass} text-right`}>Quantity (049)</th>
-                <th className={`${thClass} text-right`}>Unit price (050)</th>
-                <th className={`${thClass} text-right`}>Required days</th>
-                <th className={`${thClass} text-right`}>Delivery days (051)</th>
-                <th className={thClass}>No bid</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bid.lines.map((ln) => {
-                const editable = new Set(ln.editable_solicitation_fields);
-                const solCell = (field: keyof BidLine, max: number, display: React.ReactNode) =>
-                  editable.has(field) && draft ? (
-                    <TextInput value={ln[field] as Value} maxLength={max} upper disabled={off}
-                      placeholder="From PDF" onSave={(v) => saveLine(ln, field, v)} />
-                  ) : display;
-                const li = lineIssues(ln);
-                return (
-                  <tr key={ln.id} className={`${rowClass} align-top`}>
-                    <td className={`${tdClass} font-mono`}>{solCell("line_number", 4, ln.line_number)}</td>
-                    <td className={`${tdClass} font-mono`}>{solCell("pr_number", 10, ln.pr_number)}</td>
-                    <td className={`${tdClass} font-mono whitespace-nowrap`}>
-                      {solCell("nsn_part", 45, displayNsn(ln.nsn_part))}
-                      {ln.is_first_article && (
-                        <div className="mt-1">
-                          <span className="text-[11px] text-muted">First article — waiver (064)</span>
-                          <SelectInput value={ln.first_article_waiver} disabled={off}
+        {tab === "terms" && (
+          <div role="tabpanel" className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+              {/* Solicitation */}
+              <Section title="Solicitation" description="From DLA's data. These must match the RFQ, so they are not edited — except where we could not read one.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {solValue("solicitation_type", 2, "Solicitation type", (SOLICITATION_TYPE_OPTIONS.find((o) => o.value === h.solicitation_type)?.label ?? h.solicitation_type ?? "Blank") as string, SOLICITATION_TYPE_OPTIONS)}
+                  {solValue("set_aside_indicator", 3, "Set-aside", SET_ASIDE_OPTIONS.find((o) => o.value === h.set_aside_indicator)?.label ?? "—", SET_ASIDE_OPTIONS)}
+                  {solValue("clause_fillins", 4, "Additional clause fill-ins", h.clause_fillins === "Y" ? "Yes" : h.clause_fillins === "N" ? "No" : "—", YES_NO_OPTIONS)}
+                  {solValue("return_by_date", 5, "Return by", formatDateMmDdYyyy(h.return_by_date as string | null), undefined, "date")}
+                  {solValue("hubzone_preference", 57, "HUBZone preference", h.hubzone_preference === "Y" ? "Yes" : h.hubzone_preference === "N" ? "No" : "—", YES_NO_OPTIONS)}
+                  <Field label="FOB required">
+                    <ReadOnly value={h.sol_fob_point === "O" ? "Origin" : h.sol_fob_point === "D" ? "Destination" : "Unknown"} />
+                  </Field>
+                  <Field label="Inspection required">
+                    <ReadOnly value={h.sol_inspection_point === "O" ? "Origin" : h.sol_inspection_point === "D" ? "Destination" : "Unknown"} />
+                  </Field>
+                  {(h.guaranteed_minimum != null || h.do_minimum != null || h.contract_maximum != null || h.annual_freq_buys != null) && (
+                    <>
+                      <Field label="Guaranteed minimum" field={52}><ReadOnly value={h.guaranteed_minimum as Value} /></Field>
+                      <Field label="Delivery order minimum" field={53}><ReadOnly value={h.do_minimum as Value} /></Field>
+                      <Field label="Contract maximum" field={54}><ReadOnly value={h.contract_maximum as Value} /></Field>
+                      <Field label="Annual frequency of buys" field={55}><ReadOnly value={h.annual_freq_buys as Value} /></Field>
+                    </>
+                  )}
+                </div>
+                {fatLines.map((ln) => {
+                  const waiver = ln.first_article_waiver;
+                  const li = lineIssues(ln);
+                  const at = (n: number) => li.filter((i) => i.field === n);
+                  const lineEditable = new Set(ln.editable_solicitation_fields);
+                  return (
+                    <div key={ln.id} className="mt-5 pt-4 border-t border-border">
+                      <h3 className="text-sm font-semibold text-secondary">First article testing</h3>
+                      <p className="text-xs text-muted mt-0.5">
+                        Line {ln.line_number ?? "?"}
+                      </p>
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Request waiver of first article testing?" field={64} issues={at(64)}
+                          hint={waiver === "Y"
+                            ? "Quoted at 0 price and 0 days. DLA treats a waiver request as an exception, so the bid goes in as Bid With Exception."
+                            : waiver === "N" ? "Enter the price and delivery days for the test itself." : undefined}>
+                          <SelectInput value={waiver} disabled={off}
                             options={[{ value: "Y", label: "Yes, request waiver" }, { value: "N", label: "No waiver requested" }]}
                             onSave={(v) => saveLine(ln, "first_article_waiver", v)} />
-                        </div>
-                      )}
-                      <IssueText issues={li} />
-                    </td>
-                    <td className={`${tdClass} font-mono`}>{solCell("unit_of_issue", 2, ln.unit_of_issue)}</td>
-                    <td className={`${tdClass} text-right font-mono tabular-nums`}>{ln.solicited_quantity ?? "—"}</td>
-                    <td className={`${tdClass} text-right w-28`}>
-                      <TextInput type="number" value={ln.quantity} step="1" disabled={off}
-                        onSave={(v) => saveLine(ln, "quantity", v == null ? null : parseInt(v, 10))} />
-                    </td>
-                    <td className={`${tdClass} text-right w-36`}>
-                      {ln.is_no_bid ? <span className="text-muted">0 (no bid)</span> : (
-                        <TextInput type="number" value={ln.unit_price} step="0.00001" disabled={off}
-                          onSave={(v) => saveLine(ln, "unit_price", v)} />
-                      )}
-                      {ln.rfq_price_changed && draft && (
-                        <button type="button" className="mt-1 text-[11px] text-amber-700 hover:underline"
-                          disabled={off} onClick={() => saveLine(ln, "unit_price", ln.rfq_price_now)}>
-                          RFQ repriced to {money(ln.rfq_price_now)} — update
+                        </Field>
+                        <Field label="Quantity" field={49} issues={at(49)}>
+                          <ReadOnly value={ln.quantity} />
+                        </Field>
+                        {waiver === "N" && (
+                          <>
+                            <Field label="Test price" field={50} issues={at(50)}>
+                              <TextInput type="number" value={ln.unit_price} step="0.00001" disabled={off}
+                                onSave={(v) => saveLine(ln, "unit_price", v)} />
+                            </Field>
+                            <Field label="Test delivery days" field={51} issues={at(51)}
+                              hint={ln.required_delivery_days != null ? `${ln.required_delivery_days} days required` : undefined}>
+                              <TextInput type="number" value={ln.delivery_days} step="1" disabled={off}
+                                onSave={(v) => saveLine(ln, "delivery_days", v == null ? null : parseInt(v, 10))} />
+                            </Field>
+                          </>
+                        )}
+                        {draft && ([["line_number", 44, "Line number", 4], ["pr_number", 46, "Purchase request", 10], ["unit_of_issue", 48, "Unit of issue", 2]] as const)
+                          .filter(([attr]) => lineEditable.has(attr))
+                          .map(([attr, n, label, max]) => (
+                            <Field key={attr} label={label} field={n} issues={at(n)} hint={<PdfHint onOpen={openPdf} />}>
+                              <TextInput value={ln[attr] as Value} maxLength={max} upper disabled={off} onSave={(v) => saveLine(ln, attr, v)} />
+                            </Field>
+                          ))}
+                      </div>
+                      <IssueText issues={[
+                  ...li.filter((i) => ![44, 46, 48, 49, 50, 51, 64].includes(i.field ?? -1)),
+                  ...issues.filter((i) => i.product_key === ln.nsn_part_key),
+                ]} />
+                    </div>
+                  );
+                })}
+              </Section>
+
+              {/* Quote terms */}
+              <Section title="Quote terms" description="Changing FOB, inspection, packaging or days valid away from the RFQ makes this a Bid With Exception.">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {text("days_quote_valid", 27, "Days quote valid", { type: "number" })}
+                  {select("meets_packaging", 28, "Meets packaging requirement", MEETS_PACKAGING_OPTIONS)}
+                  {select("fob_point", 32, "FOB point", POINT_OPTIONS)}
+                  {select("inspection_point", 36, "Inspection point", POINT_OPTIONS)}
+                  {h.fob_point === "O" && (
+                    <>
+                      {text("fob_city", 33, "FOB city", { max: 30, upper: true })}
+                      <div className="grid grid-cols-2 gap-3">
+                        {(h.fob_country === "US" || h.fob_country === "CA") && text("fob_state", 34, "State", { max: 2, upper: true })}
+                        {text("fob_country", 35, "Country", { max: 2, upper: true })}
+                      </div>
+                    </>
+                  )}
+                  {h.inspection_point === "O" && (
+                    <>
+                      {text("inspection_packaging_cage", 37, "Packaging inspection CAGE", { max: 5, upper: true })}
+                      {text("inspection_supplies_cage", 38, "Supplies inspection CAGE", { max: 5, upper: true })}
+                    </>
+                  )}
+                  {select("payment_discount_terms", 25, "Prompt payment discount", PAYMENT_TERMS_OPTIONS)}
+                  {text("vendor_quote_number", 26, "Your quote number", { max: 15, hint: "Optional, for your reference." })}
+                  {h.solicitation_type === "I" && select("no_do_minimum", 56, "Accept orders without a minimum quantity?", NO_DO_MINIMUM_OPTIONS)}
+                  {applies.hubzoneWaiver(h) && select("hubzone_waiver", 58, "HUBZone preference waiver", HUBZONE_WAIVER_OPTIONS)}
+                </div>
+                <div className="mt-4">
+                  {text("quote_remarks", 121, "Quote remarks", { max: 255, hint: "Any remark makes this a Bid With Exception, and DLA's automated evaluation cannot read it." })}
+                </div>
+              </Section>
+            </div>
+          </div>
+        )}
+
+        {tab === "reps" && (
+          <div role="tabpanel" className="space-y-6">
+            <Section
+              title="Representations"
+              description="From your bid profile when the bid started. Change them here for this bid only."
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {select("small_business_rep", 13, "Small business representation", SMALL_BUSINESS_REP_OPTIONS)}
+                {applies.jointVenture(h) && select("joint_venture", 18, "Joint venture", JOINT_VENTURE_OPTIONS)}
+                {applies.jointVenture(h) && h.joint_venture === "JV" && text("joint_venture_remarks", 19, "Joint venture participants", { max: 255 })}
+                {select("affirmative_action", 21, "Affirmative action compliance", AFFIRMATIVE_ACTION_OPTIONS)}
+                {select("previous_contracts", 22, "Previous contracts and reports", PREVIOUS_CONTRACTS_OPTIONS)}
+                {select("alternate_disputes", 23, "Alternate dispute resolution", ALTERNATE_DISPUTES_OPTIONS)}
+                {select("boa_fss_bpa", 29, "Ordering agreement", BOA_FSS_BPA_OPTIONS)}
+                {h.boa_fss_bpa && h.boa_fss_bpa !== "NAP" && text("boa_contract_number", 30, "Agreement number", { max: 17, upper: true })}
+                {h.boa_fss_bpa && h.boa_fss_bpa !== "NAP" && text("boa_expiration_date", 31, "Agreement expires", { type: "date" })}
+              </div>
+            </Section>
+          </div>
+        )}
+
+        {tab === "review" && (
+          <div role="tabpanel" className="space-y-6">
+            {/* Review */}
+            <Section
+              title="Review"
+              description="Everything to fix or check, and the exact rows this bid puts in the upload file."
+              right={<Button variant="outline" size="sm" onClick={loadPreview}>Show file rows</Button>}
+            >
+              {issues.length === 0 ? (
+                <p className="text-sm text-success">Nothing to fix.</p>
+              ) : (
+                <ul className="space-y-1 text-sm">
+                  {[...errors, ...warnings].map((i, n) => (
+                    <li key={n} className={i.severity === "error" ? "text-error" : "text-amber-700"}>
+                      {i.severity === "error" ? "Fix: " : "Check: "}
+                      {i.message}
+                      {tabOf(i) !== "review" && (
+                        <button type="button" className="ml-2 text-xs text-primary hover:underline" onClick={() => goTo(i)}>
+                          Go to {TABS.find((t) => t.key === tabOf(i))?.label}
                         </button>
                       )}
-                    </td>
-                    <td className={`${tdClass} text-right font-mono tabular-nums`}>{ln.required_delivery_days ?? "—"}</td>
-                    <td className={`${tdClass} text-right w-28`}>
-                      {ln.is_no_bid ? <span className="text-muted">0</span> : (
-                        <TextInput type="number" value={ln.delivery_days} step="1" disabled={off}
-                          onSave={(v) => saveLine(ln, "delivery_days", v == null ? null : parseInt(v, 10))} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {preview && (
+                <div className="mt-4">
+                  {preview.error ? (
+                    <p className="text-sm text-error">{preview.error}</p>
+                  ) : (
+                    <>
+                      <div className="overflow-x-auto rounded-lg border border-border bg-muted-light">
+                        <pre className="p-3 text-[11px] font-mono whitespace-pre">{preview.text}</pre>
+                      </div>
+                      {Object.keys(preview.import_view).length > 0 && (
+                        <div className="mt-2 text-xs text-muted">
+                          <p className="font-medium text-foreground">What DIBBS says it keeps of these fields:</p>
+                          <ul className="mt-1 space-y-0.5">
+                            {Object.entries(preview.import_view).flatMap(([row, fields]) =>
+                              Object.entries(fields).map(([f, v]) => (
+                                <li key={`${row}-${f}`}>
+                                  Row {Number(row) + 1}, field {fmt(Number(f))}: <span className="font-mono">{v || "(empty)"}</span>
+                                </li>
+                              )),
+                            )}
+                          </ul>
+                        </div>
                       )}
-                    </td>
-                    <td className={tdClass}>
-                      <input type="checkbox" checked={ln.is_no_bid} disabled={off}
-                        onChange={(e) => saveLine(ln, "is_no_bid", e.target.checked)}
-                        aria-label={`No bid on line ${ln.line_number ?? ""}`} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Section>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-        {/* Solicitation */}
-        <Section title="Solicitation" description="From DLA's data. These must match the RFQ, so they are not edited — except where we could not read one.">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {solValue("solicitation_type", 2, "Solicitation type", (SOLICITATION_TYPE_OPTIONS.find((o) => o.value === h.solicitation_type)?.label ?? h.solicitation_type ?? "Blank") as string, SOLICITATION_TYPE_OPTIONS)}
-            {solValue("set_aside_indicator", 3, "Set-aside", SET_ASIDE_OPTIONS.find((o) => o.value === h.set_aside_indicator)?.label ?? "—", SET_ASIDE_OPTIONS)}
-            {solValue("clause_fillins", 4, "Additional clause fill-ins", h.clause_fillins === "Y" ? "Yes" : h.clause_fillins === "N" ? "No" : "—", YES_NO_OPTIONS)}
-            {solValue("return_by_date", 5, "Return by", formatDateMmDdYyyy(h.return_by_date as string | null), undefined, "date")}
-            {solValue("hubzone_preference", 57, "HUBZone preference", h.hubzone_preference === "Y" ? "Yes" : h.hubzone_preference === "N" ? "No" : "—", YES_NO_OPTIONS)}
-            <Field label="FOB / inspection required">
-              <ReadOnly value={`${h.sol_fob_point === "O" ? "Origin" : h.sol_fob_point === "D" ? "Destination" : "Unknown"} / ${h.sol_inspection_point === "O" ? "Origin" : h.sol_inspection_point === "D" ? "Destination" : "Unknown"}`} />
-            </Field>
-            {(h.guaranteed_minimum != null || h.do_minimum != null || h.contract_maximum != null || h.annual_freq_buys != null) && (
-              <Field label="AIDC terms (052–055)">
-                <ReadOnly value={`Guaranteed min ${h.guaranteed_minimum ?? "—"} · DO min ${h.do_minimum ?? "—"} · Max ${h.contract_maximum ?? "—"} · Buys/yr ${h.annual_freq_buys ?? "—"}`} />
-              </Field>
-            )}
-          </div>
-        </Section>
-
-        {/* Quote terms */}
-        <Section title="Quote terms" description="Changing FOB, inspection, packaging or days valid away from the RFQ makes this a Bid With Exception.">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {text("days_quote_valid", 27, "Days quote valid", { type: "number" })}
-            {select("meets_packaging", 28, "Meets packaging requirement", MEETS_PACKAGING_OPTIONS)}
-            {select("fob_point", 32, "FOB point", POINT_OPTIONS)}
-            {select("inspection_point", 36, "Inspection point", POINT_OPTIONS)}
-            {h.fob_point === "O" && (
-              <>
-                {text("fob_city", 33, "FOB city", { max: 30, upper: true })}
-                <div className="grid grid-cols-2 gap-3">
-                  {(h.fob_country === "US" || h.fob_country === "CA") && text("fob_state", 34, "State", { max: 2, upper: true })}
-                  {text("fob_country", 35, "Country", { max: 2, upper: true })}
+                    </>
+                  )}
                 </div>
-              </>
-            )}
-            {h.inspection_point === "O" && (
-              <>
-                {text("inspection_packaging_cage", 37, "Packaging inspection CAGE", { max: 5, upper: true })}
-                {text("inspection_supplies_cage", 38, "Supplies inspection CAGE", { max: 5, upper: true })}
-              </>
-            )}
-            {select("payment_discount_terms", 25, "Prompt payment discount", PAYMENT_TERMS_OPTIONS)}
-            {text("vendor_quote_number", 26, "Your quote number", { max: 15, hint: "Optional, for your reference." })}
-            {h.solicitation_type === "I" && select("no_do_minimum", 56, "Accept orders without a minimum quantity?", NO_DO_MINIMUM_OPTIONS)}
-            {applies.hubzoneWaiver(h) && select("hubzone_waiver", 58, "HUBZone preference waiver", HUBZONE_WAIVER_OPTIONS)}
+              )}
+            </Section>
           </div>
-          <div className="mt-4">
-            {text("quote_remarks", 121, "Quote remarks", { max: 255, hint: "Any remark makes this a Bid With Exception, and DLA's automated evaluation cannot read it." })}
-          </div>
-        </Section>
+        )}
+
+        <ConfirmDialog
+          isOpen={confirm !== null}
+          title={confirm === "delete" ? "Delete this draft?" : "Withdraw this bid?"}
+          message={
+            confirm === "delete"
+              ? `${bidReference(bid)} will be deleted. Saved part answers are kept.`
+              : `${bidReference(bid)} will not be uploaded. You can revise it and send it again.`
+          }
+          confirmLabel={confirm === "delete" ? "Delete" : "Withdraw"}
+          onConfirm={() => {
+            if (confirm) lifecycle(confirm);
+          }}
+          onClose={() => setConfirm(null)}
+          isLoading={saving}
+        />
       </div>
 
-      {/* Representations */}
-      <Section
-        title="Representations"
-        description="From your bid profile when the bid started. Change them here for this bid only."
-        right={
-          <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowReps((s) => !s)}>
-            {showReps ? "Hide" : "Show"}
-          </button>
-        }
-      >
-        {showReps || [13, 18, 19, 21, 22, 23, 29, 30, 31].some((n) => headerIssues(n).some((i) => i.severity === "error")) ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {select("small_business_rep", 13, "Small business representation", SMALL_BUSINESS_REP_OPTIONS)}
-            {applies.jointVenture(h) && select("joint_venture", 18, "Joint venture", JOINT_VENTURE_OPTIONS)}
-            {applies.jointVenture(h) && h.joint_venture === "JV" && text("joint_venture_remarks", 19, "Joint venture participants", { max: 255 })}
-            {select("affirmative_action", 21, "Affirmative action compliance", AFFIRMATIVE_ACTION_OPTIONS)}
-            {select("previous_contracts", 22, "Previous contracts and reports", PREVIOUS_CONTRACTS_OPTIONS)}
-            {select("alternate_disputes", 23, "Alternate dispute resolution", ALTERNATE_DISPUTES_OPTIONS)}
-            {select("boa_fss_bpa", 29, "Ordering agreement", BOA_FSS_BPA_OPTIONS)}
-            {h.boa_fss_bpa && h.boa_fss_bpa !== "NAP" && text("boa_contract_number", 30, "Agreement number", { max: 17, upper: true })}
-            {h.boa_fss_bpa && h.boa_fss_bpa !== "NAP" && text("boa_expiration_date", 31, "Agreement expires", { type: "date" })}
+      {pdfDocked && pdfUrl && (
+        <aside className="hidden xl:flex flex-col sticky top-4 h-[calc(100vh-2rem)] bg-card-bg rounded-xl border border-border overflow-hidden">
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border text-xs">
+            <span className="font-medium text-secondary">
+              Solicitation {displaySolicitationNumber(String(h.solicitation_number ?? ""))}
+            </span>
+            <span className="flex items-center gap-3">
+              <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Open in new tab</a>
+              <button type="button" className="text-muted hover:text-foreground" onClick={() => setDocked(false)}>Close</button>
+            </span>
           </div>
-        ) : (
-          <p className="text-sm text-muted">
-            Small business {String(h.small_business_rep ?? "not set")} · affirmative action {String(h.affirmative_action ?? "not set")} ·
-            previous contracts {String(h.previous_contracts ?? "not set")} · ADR {String(h.alternate_disputes ?? "not set")} ·
-            agreement {String(h.boa_fss_bpa ?? "not set")}
-          </p>
-        )}
-      </Section>
+          <iframe src={pdfUrl} title={`Solicitation ${h.solicitation_number ?? ""}`} className="flex-1 w-full" />
+        </aside>
+      )}
 
-      {/* Products */}
-      {bid.products.map((p) => (
-        <ProductBlock
-          key={p.id}
-          product={p}
-          header={h}
-          disabled={off}
-          issues={productIssues}
-          onSave={(body) => saveProduct(p, body)}
-          lines={bid.lines.filter((ln) => ln.nsn_part_key === p.nsn_part_key)}
-        />
-      ))}
-
-      {/* Review */}
-      <Section
-        title="Review"
-        description="Everything to fix or check, and the exact rows this bid puts in the upload file."
-        right={<Button variant="outline" size="sm" onClick={loadPreview}>Show file rows</Button>}
-      >
-        {issues.length === 0 ? (
-          <p className="text-sm text-success">Nothing to fix.</p>
-        ) : (
-          <ul className="space-y-1 text-sm">
-            {[...errors, ...warnings].map((i, n) => (
-              <li key={n} className={i.severity === "error" ? "text-error" : "text-amber-700"}>
-                {i.severity === "error" ? "Fix: " : "Check: "}
-                {i.message}
-              </li>
-            ))}
-          </ul>
-        )}
-        {preview && (
-          <div className="mt-4">
-            {preview.error ? (
-              <p className="text-sm text-error">{preview.error}</p>
-            ) : (
-              <>
-                <div className="overflow-x-auto rounded-lg border border-border bg-muted-light">
-                  <pre className="p-3 text-[11px] font-mono whitespace-pre">{preview.text}</pre>
-                </div>
-                {Object.keys(preview.import_view).length > 0 && (
-                  <div className="mt-2 text-xs text-muted">
-                    <p className="font-medium text-foreground">What DIBBS says it keeps of these fields:</p>
-                    <ul className="mt-1 space-y-0.5">
-                      {Object.entries(preview.import_view).flatMap(([row, fields]) =>
-                        Object.entries(fields).map(([f, v]) => (
-                          <li key={`${row}-${f}`}>
-                            Row {Number(row) + 1}, field {fmt(Number(f))}: <span className="font-mono">{v || "(empty)"}</span>
-                          </li>
-                        )),
-                      )}
-                    </ul>
-                  </div>
-                )}
-              </>
-            )}
+      {pdfModal && pdfUrl && (
+        <Modal isOpen={true} onClose={() => setPdfModal(false)} title={`Solicitation ${displaySolicitationNumber(String(h.solicitation_number ?? ""))}`} size="full">
+          <div className="flex flex-col gap-2">
+            <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">Open in new tab</a>
+            <iframe src={pdfUrl} title={`Solicitation ${h.solicitation_number ?? ""}`} className="w-full border border-border rounded min-h-[70vh]" />
           </div>
-        )}
-      </Section>
-
-      <ConfirmDialog
-        isOpen={confirm !== null}
-        title={confirm === "delete" ? "Delete this draft?" : "Withdraw this bid?"}
-        message={
-          confirm === "delete"
-            ? `${bidReference(bid)} will be deleted. Saved part answers are kept.`
-            : `${bidReference(bid)} will not be uploaded. You can revise it and send it again.`
-        }
-        confirmLabel={confirm === "delete" ? "Delete" : "Withdraw"}
-        onConfirm={() => {
-          if (confirm) lifecycle(confirm);
-        }}
-        onClose={() => setConfirm(null)}
-        isLoading={saving}
-      />
+        </Modal>
+      )}
     </div>
   );
 }
@@ -712,7 +939,7 @@ export default function BidEditorPage() {
 // --- One product block --------------------------------------------------------
 
 function ProductBlock({
-  product: p, header: h, disabled, issues, onSave, lines,
+  product: p, header: h, disabled, issues, onSave, lines, onOpenPdf,
 }: {
   product: BidProduct;
   header: BidDetail["header"];
@@ -720,6 +947,7 @@ function ProductBlock({
   issues: (p: BidProduct, field?: number) => BidIssue[];
   onSave: (body: Record<string, unknown>) => void;
   lines: BidLine[];
+  onOpenPdf?: () => void;
 }) {
   const v = p.values;
   const inherited = new Set(p.inherited);
@@ -740,7 +968,7 @@ function ProductBlock({
   );
   const solInd = (attr: string, number: number, label: string) =>
     editableSol.has(attr) && !disabled ? (
-      txt(attr, number, label, { max: 1, upper: true, extra: "Not on file — enter it from the PDF." })
+      txt(attr, number, label, { max: 1, upper: true, extra: <PdfHint onOpen={onOpenPdf} short /> })
     ) : (
       <Field label={label} field={number} issues={issues(p, number)}>
         <ReadOnly value={v[attr] ?? "Unknown"} />

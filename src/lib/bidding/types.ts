@@ -239,6 +239,7 @@ export interface BidDetail {
   status: BidStatus;
   version: number;
   solicitation_id: number | null;
+  has_pdf: boolean;
   quote_for_cage: string;
   supersedes_bid_id: number | null;
   rfq_solicitation_work_id: number | null;
