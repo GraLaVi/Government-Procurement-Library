@@ -86,9 +86,8 @@ export function Header({ showAccountLink = true }: HeaderProps) {
   // which uses the same helper. Shows only to seat-holders until the add-on
   // is announced (ANALYTICS_ADDON_PUBLIC), then becomes an upsell surface.
   const showAnalytics = showAnalyticsNav(hasProductAccess, hasAnyProductAccess);
-  // Bidding: seat-holders only until the add-on launches (BIDDING_ADDON_PUBLIC).
-  // Only the settings page exists so far; the link moves to /bidding with the
-  // bid queue.
+  // Bid Manager (the bidding module): seat-holders only until the add-on
+  // launches (BIDDING_ADDON_PUBLIC).
   const showBidding = showBiddingNav(hasProductAccess);
   // Enterprise RFQ entries only for holders — unlike the base RFQ menu,
   // these are not an upsell surface.
@@ -267,10 +266,10 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               )}
               {!isRfqResponderOnly && showBidding && (
               <Link
-                href="/bidding"
-                className={topLinkClass(isLinkActive("/bidding", pathname))}
+                href="/bidmanager"
+                className={topLinkClass(isLinkActive("/bidmanager", pathname))}
               >
-                Bidding
+                Bid Manager
               </Link>
               )}
               {/* RFQ: the full menu shows for everyone as an upsell surface. Received
@@ -403,11 +402,11 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               )}
               {!isRfqResponderOnly && showBidding && (
                 <Link
-                  href="/bidding"
-                  className={mobileRowClass(isLinkActive("/bidding", pathname))}
+                  href="/bidmanager"
+                  className={mobileRowClass(isLinkActive("/bidmanager", pathname))}
                   onClick={closeMobileMenu}
                 >
-                  Bidding
+                  Bid Manager
                 </Link>
               )}
 

@@ -1,4 +1,4 @@
-// Frontend access resolution for the Bidding add-on.
+// Frontend access resolution for the Bid Manager add-on (the bidding module).
 //
 // Mirrors the backend's src/bidding/access.py: `bidding` is a standalone
 // per-seat add-on with no prerequisite. Resolved client-side from useAuth()'s
@@ -8,7 +8,7 @@
 //     const { hasProductAccess } = useAuth();
 //     const canBid = hasProductAccess(BIDDING_PRODUCT_KEY);
 
-export const BIDDING_PRODUCT_KEY = "bidding";
+export const BIDDING_PRODUCT_KEY = "gph_bid_manager";
 
 // Launch switch for the add-on's public surfaces — today only the nav entry
 // for non-holders. Off while Bidding is being built: the backend product row

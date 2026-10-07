@@ -74,7 +74,7 @@ export default function BiddingSettingsPage() {
       const res = await fetch("/api/bidding/profiles");
       const data = await res.json();
       if (!res.ok) {
-        setError(errorText(data, "Failed to load bidding profiles."));
+        setError(errorText(data, "Failed to load bid profiles."));
         return;
       }
       const ov = data as BiddingProfilesOverview;
@@ -129,7 +129,7 @@ export default function BiddingSettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(errorText(data, "Failed to save the bidding profile."));
+        setError(errorText(data, "Failed to save the bid profile."));
         return;
       }
       const saved = data as BiddingProfile;
@@ -138,9 +138,9 @@ export default function BiddingSettingsPage() {
       setOverview((ov) =>
         ov ? { ...ov, profiles: [saved, ...ov.profiles.filter((p) => p.cage_code !== saved.cage_code)] } : ov,
       );
-      setToast("Bidding profile saved.");
+      setToast("Bid profile saved.");
     } catch {
-      setError("Network error saving the bidding profile.");
+      setError("Network error saving the bid profile.");
     } finally {
       setSaving(false);
     }
@@ -151,7 +151,7 @@ export default function BiddingSettingsPage() {
   if (!hasAccess) {
     return (
       <AccessDeniedPage
-        featureName="Bidding"
+        featureName="Bid Manager"
         featureKey={BIDDING_PRODUCT_KEY}
         description="Submit quotes to DLA DIBBS from your priced solicitations."
         benefits={[
@@ -220,7 +220,7 @@ export default function BiddingSettingsPage() {
   return (
     <div className="w-full">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-secondary">Bidding Settings</h1>
+        <h1 className="text-2xl font-bold text-secondary">Bid Manager Settings</h1>
         <p className="text-muted mt-1">
           Your representations to DLA. Every new bid starts from these answers, and you can change
           them on an individual bid. Changing them here never alters a bid you have already started.
@@ -237,7 +237,7 @@ export default function BiddingSettingsPage() {
       )}
 
       {loading ? (
-        <div className="text-sm text-muted">Loading bidding profile…</div>
+        <div className="text-sm text-muted">Loading bid profile…</div>
       ) : !cage ? (
         <div className="bg-card-bg rounded-xl border border-border p-6 text-sm text-muted">
           Your account has no CAGE code on file, so there is nothing to quote under yet. Contact
@@ -257,7 +257,7 @@ export default function BiddingSettingsPage() {
 
           {!canEdit && (
             <div className="mb-6 p-4 bg-muted-light border border-border rounded-lg text-sm text-muted">
-              Only a customer admin can change your company&apos;s bidding profile.
+              Only a customer admin can change your company&apos;s bid profile.
             </div>
           )}
 
@@ -414,7 +414,7 @@ export default function BiddingSettingsPage() {
                   size="md"
                   className="w-full sm:w-auto touch-manipulation"
                 >
-                  {saving ? "Saving…" : isNew ? "Save bidding profile" : "Save changes"}
+                  {saving ? "Saving…" : isNew ? "Save bid profile" : "Save changes"}
                 </Button>
               </div>
             )}

@@ -4,7 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { AppFooter } from "@/components/layout/AppFooter";
 import { RequireNotResponder } from "@/components/auth/RequireNotResponder";
 
-// Bidding pages (settings now; the bid queue and editor follow). Same chrome
+// Bid Manager pages (Send bids, the bid editor, settings). Same chrome
 // and responder guard as the RFQ buyer pages.
 export default function BiddingLayout({ children }: { children: React.ReactNode }) {
   return (

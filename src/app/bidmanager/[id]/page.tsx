@@ -268,7 +268,7 @@ export default function BidEditorPage() {
     try {
       if (action === "delete") {
         await bidFetch(`/api/bidding/${bid.id}`, { method: "DELETE" });
-        router.push("/bidding");
+        router.push("/bidmanager");
         return;
       }
       if (action === "withdraw") {
@@ -276,7 +276,7 @@ export default function BidEditorPage() {
         setToast(`${bidReference(bid)} withdrawn. Revise it to change it and send it again.`);
       } else {
         const data = await bidFetch<BidCreateResponse>(`/api/bidding/${bid.id}/revise`, { method: "POST" });
-        router.push(`/bidding/${data.bid.id}`);
+        router.push(`/bidmanager/${data.bid.id}`);
       }
     } catch (e) {
       setError((e as Error).message);
@@ -306,7 +306,7 @@ export default function BidEditorPage() {
   if (!hasAccess) {
     return (
       <AccessDeniedPage
-        featureName="Bidding"
+        featureName="Bid Manager"
         featureKey={BIDDING_PRODUCT_KEY}
         description="Submit quotes to DLA DIBBS from your priced solicitations."
         benefits={["Send many quotes at once", "Bid type worked out for you", "Saved answers for every part"]}
@@ -318,7 +318,7 @@ export default function BidEditorPage() {
     return (
       <div className="space-y-4">
         <div className="rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">{error ?? "Bid not found."}</div>
-        <Link href="/bidding" className="text-sm text-primary hover:underline">← Send bids</Link>
+        <Link href="/bidmanager" className="text-sm text-primary hover:underline">← Send bids</Link>
       </div>
     );
   }
@@ -369,7 +369,7 @@ export default function BidEditorPage() {
       {/* Title row */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <Link href="/bidding" className="text-xs text-primary hover:underline">← Send bids</Link>
+          <Link href="/bidmanager" className="text-xs text-primary hover:underline">← Send bids</Link>
           <h1 className="text-2xl font-bold text-foreground mt-1">
             {bidReference(bid)}{" "}
             <span className="font-mono text-lg text-muted">{displaySolicitationNumber(String(h.solicitation_number ?? ""))}</span>
@@ -602,7 +602,7 @@ export default function BidEditorPage() {
       {/* Representations */}
       <Section
         title="Representations"
-        description="From your bidding profile when the bid started. Change them here for this bid only."
+        description="From your bid profile when the bid started. Change them here for this bid only."
         right={
           <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowReps((s) => !s)}>
             {showReps ? "Hide" : "Show"}

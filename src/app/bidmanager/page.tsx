@@ -210,7 +210,7 @@ export default function SendBidsPage() {
         await load();
       } else {
         const data = await bidFetch<BidCreateResponse>(`/api/bidding/${bid.id}/revise`, { method: "POST" });
-        router.push(`/bidding/${data.bid.id}`);
+        router.push(`/bidmanager/${data.bid.id}`);
       }
     } catch (e) {
       setError((e as Error).message);
@@ -229,7 +229,7 @@ export default function SendBidsPage() {
         method: "POST",
         json: { solicitation_number: n },
       });
-      router.push(`/bidding/${data.bid.id}`);
+      router.push(`/bidmanager/${data.bid.id}`);
     } catch (e) {
       setError((e as Error).message);
       setStarting(false);
@@ -241,7 +241,7 @@ export default function SendBidsPage() {
   if (!hasAccess) {
     return (
       <AccessDeniedPage
-        featureName="Bidding"
+        featureName="Bid Manager"
         featureKey={BIDDING_PRODUCT_KEY}
         description="Submit quotes to DLA DIBBS from your priced solicitations."
         benefits={[
@@ -265,8 +265,8 @@ export default function SendBidsPage() {
             when we upload it, and each bid shows what DIBBS made of it.
           </p>
         </div>
-        <Link href="/bidding/settings" className="text-xs text-primary hover:underline whitespace-nowrap">
-          Bidding settings
+        <Link href="/bidmanager/settings" className="text-xs text-primary hover:underline whitespace-nowrap">
+          Bid Manager settings
         </Link>
       </div>
 
@@ -285,7 +285,7 @@ export default function SendBidsPage() {
             {failures.map((f) => (
               <li key={f.id}>
                 {f.reference_number ? (
-                  <Link href={`/bidding/${f.id}`} className="text-primary hover:underline font-medium">
+                  <Link href={`/bidmanager/${f.id}`} className="text-primary hover:underline font-medium">
                     BID-{f.reference_number}
                   </Link>
                 ) : (
@@ -451,7 +451,7 @@ export default function SendBidsPage() {
                         </td>
                       )}
                       <td className={`${tdClass} whitespace-nowrap`}>
-                        <Link href={`/bidding/${b.id}`} className="text-primary hover:underline font-medium">
+                        <Link href={`/bidmanager/${b.id}`} className="text-primary hover:underline font-medium">
                           {bidReference(b)}
                         </Link>
                       </td>
@@ -501,7 +501,7 @@ export default function SendBidsPage() {
                       <td className={`${tdClass} max-w-[320px]`}>
                         {isReady ? (
                           blocked ? (
-                            <Link href={`/bidding/${b.id}`} className="text-error hover:underline" title={b.first_error ?? undefined}>
+                            <Link href={`/bidmanager/${b.id}`} className="text-error hover:underline" title={b.first_error ?? undefined}>
                               {b.error_count} to fix
                               <span className="block text-[11px] text-muted truncate">{b.first_error}</span>
                             </Link>

@@ -43,7 +43,7 @@ export function StartBidButton({ solicitationId, fromRfq = false, label, classNa
         method: "POST",
         json: { solicitation_id: solicitationId, use_rfq_quotes: fromRfq },
       });
-      router.push(`/bidding/${data.bid.id}`);
+      router.push(`/bidmanager/${data.bid.id}`);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);
@@ -56,7 +56,7 @@ export function StartBidButton({ solicitationId, fromRfq = false, label, classNa
         type="button"
         onClick={start}
         disabled={busy}
-        title={title ?? (holder ? "Start a DIBBS quote for this solicitation" : "Requires the Bidding add-on")}
+        title={title ?? (holder ? "Start a DIBBS quote for this solicitation" : "Requires the Bid Manager add-on")}
         className={
           className ||
           "inline-flex items-center gap-1 rounded-md border border-primary/40 px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10 disabled:opacity-50 cursor-pointer whitespace-nowrap"
