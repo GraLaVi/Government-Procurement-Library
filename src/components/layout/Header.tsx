@@ -9,6 +9,7 @@ import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanne
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { showAnalyticsNav } from "@/lib/analytics/tier";
+import { showBiddingNav } from "@/lib/bidding/access";
 import { showInventorySurfaces } from "@/lib/inventory/launch";
 
 const libraryItems = [
@@ -85,6 +86,10 @@ export function Header({ showAccountLink = true }: HeaderProps) {
   // which uses the same helper. Shows only to seat-holders until the add-on
   // is announced (ANALYTICS_ADDON_PUBLIC), then becomes an upsell surface.
   const showAnalytics = showAnalyticsNav(hasProductAccess, hasAnyProductAccess);
+  // Bidding: seat-holders only until the add-on launches (BIDDING_ADDON_PUBLIC).
+  // Only the settings page exists so far; the link moves to /bidding with the
+  // bid queue.
+  const showBidding = showBiddingNav(hasProductAccess);
   // Enterprise RFQ entries only for holders — unlike the base RFQ menu,
   // these are not an upsell surface.
   const isRfqEnterprise = hasAnyProductAccess([RFQ_ENTERPRISE_PRODUCT_KEY]);
@@ -260,6 +265,14 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 Analytics
               </Link>
               )}
+              {!isRfqResponderOnly && showBidding && (
+              <Link
+                href="/bidding/settings"
+                className={topLinkClass(isLinkActive("/bidding", pathname))}
+              >
+                Bidding
+              </Link>
+              )}
               {/* RFQ: the full menu shows for everyone as an upsell surface. Received
                   works for all tiers; sender pages self-gate to the upgrade CTA for
                   customers without the request_for_quote add-on. */}
@@ -386,6 +399,15 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   onClick={closeMobileMenu}
                 >
                   Analytics
+                </Link>
+              )}
+              {!isRfqResponderOnly && showBidding && (
+                <Link
+                  href="/bidding/settings"
+                  className={mobileRowClass(isLinkActive("/bidding", pathname))}
+                  onClick={closeMobileMenu}
+                >
+                  Bidding
                 </Link>
               )}
 
