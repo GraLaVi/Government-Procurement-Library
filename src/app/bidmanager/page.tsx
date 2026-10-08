@@ -337,8 +337,8 @@ export default function SendBidsPage() {
             {isReady ? (
               <>
                 No draft bids. Start one from{" "}
-                <Link href="/bidmanager/matches" className="text-primary hover:underline">
-                  Bid on matches
+                <Link href="/bidmatching" className="text-primary hover:underline">
+                  Bid Worklist
                 </Link>
                 .
               </>

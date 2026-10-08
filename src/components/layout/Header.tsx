@@ -9,7 +9,7 @@ import { AnnouncementBanner } from "@/components/announcements/AnnouncementBanne
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { RFQ_ENTERPRISE_PRODUCT_KEY } from "@/lib/rfq/tier";
 import { showAnalyticsNav } from "@/lib/analytics/tier";
-import { showBiddingNav } from "@/lib/bidding/access";
+import { BIDDING_PRODUCT_KEY } from "@/lib/bidding/access";
 import { showInventorySurfaces } from "@/lib/inventory/launch";
 
 const libraryItems = [
@@ -36,16 +36,21 @@ const mainNavItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/bidmatching", label: "Bid-Matching" },
 ];
+const BID_MATCHING_HREF = "/bidmatching";
 
 // One ordered menu; `enterprise: true` entries only render for holders of
 // request_for_quote_enterprise. The Assignments page is admin-only but listed
 // for every Enterprise holder — non-admins get the page's own admins-only
 // notice rather than a hidden feature.
-// Bid Manager pages, as a dropdown. The bid editor (/bidmanager/[id]) is
-// reached from these and has its own back link. "/bidmanager" is a path parent
-// of the others, so items use isGroupItemActive.
+// Bid Manager add-on holders get a Bid Manager dropdown in Bid-Matching's
+// place, and Bid-Matching itself becomes its Bid Worklist: the same page, with
+// a Bid column and a "Not yet bid" filter (see /bidmatching). Everyone else
+// gets Bid-Matching as a plain link, so cancelling the add-on just collapses
+// the menu again. The bid editor (/bidmanager/[id]) is reached from these and
+// has its own back link. "/bidmanager" is a path parent of the others, so
+// items use isGroupItemActive.
 const bidManagerItems = [
-  { href: "/bidmanager/matches", label: "Bid on matches" },
+  { href: BID_MATCHING_HREF, label: "Bid Worklist" },
   { href: "/bidmanager", label: "Send bids" },
   { href: "/bidmanager/settings", label: "Settings" },
 ];
@@ -95,9 +100,9 @@ export function Header({ showAccountLink = true }: HeaderProps) {
   // which uses the same helper. Shows only to seat-holders until the add-on
   // is announced (ANALYTICS_ADDON_PUBLIC), then becomes an upsell surface.
   const showAnalytics = showAnalyticsNav(hasProductAccess, hasAnyProductAccess);
-  // Bid Manager (the bidding module): seat-holders only until the add-on
-  // launches (BIDDING_ADDON_PUBLIC).
-  const showBidding = showBiddingNav(hasProductAccess);
+  // Bid Manager (the bidding module) add-on holders: Bid-Matching moves into
+  // the Bid Manager dropdown. Holders only — the menu is not an upsell.
+  const showBidding = hasProductAccess(BIDDING_PRODUCT_KEY);
   // Enterprise RFQ entries only for holders — unlike the base RFQ menu,
   // these are not an upsell surface.
   const isRfqEnterprise = hasAnyProductAccess([RFQ_ENTERPRISE_PRODUCT_KEY]);
@@ -264,7 +269,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 )}
               </div>
               )}
-              {!isRfqResponderOnly && (
+              {!isRfqResponderOnly && !showBidding && (
               <Link
                 href="/bidmatching"
                 className={topLinkClass(isLinkActive("/bidmatching", pathname))}
@@ -272,19 +277,11 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 Bid-Matching
               </Link>
               )}
-              {!isRfqResponderOnly && showAnalytics && (
-              <Link
-                href="/analytics"
-                className={topLinkClass(isLinkActive("/analytics", pathname))}
-              >
-                Analytics
-              </Link>
-              )}
               {!isRfqResponderOnly && showBidding && (
               <div className="relative" ref={bidDropdownRef}>
                 <button
                   onClick={() => setIsBidDropdownOpen(!isBidDropdownOpen)}
-                  className={`flex items-center gap-1 ${topLinkClass(isLinkActive("/bidmanager", pathname))}`}
+                  className={`flex items-center gap-1 ${topLinkClass(isGroupActive(bidManagerItems, pathname))}`}
                 >
                   Bid Manager
                   <svg
@@ -312,6 +309,14 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   </div>
                 )}
               </div>
+              )}
+              {!isRfqResponderOnly && showAnalytics && (
+              <Link
+                href="/analytics"
+                className={topLinkClass(isLinkActive("/analytics", pathname))}
+              >
+                Analytics
+              </Link>
               )}
               {/* RFQ: the full menu shows for everyone as an upsell surface. Received
                   works for all tiers; sender pages self-gate to the upgrade CTA for
@@ -422,7 +427,9 @@ export function Header({ showAccountLink = true }: HeaderProps) {
         {isMobileMenuOpen && (
           <div ref={mobileMenuRef} className="md:hidden border-t border-border py-4">
             <nav className="flex flex-col gap-1">
-              {!isRfqResponderOnly && mainNavItems.map((item) => (
+              {!isRfqResponderOnly && mainNavItems
+                .filter((item) => !(showBidding && item.href === BID_MATCHING_HREF))
+                .map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -432,20 +439,11 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                   {item.label}
                 </Link>
               ))}
-              {!isRfqResponderOnly && showAnalytics && (
-                <Link
-                  href="/analytics"
-                  className={mobileRowClass(isLinkActive("/analytics", pathname))}
-                  onClick={closeMobileMenu}
-                >
-                  Analytics
-                </Link>
-              )}
               {!isRfqResponderOnly && showBidding && (
                 <>
                   <button
                     onClick={() => setIsMobileBidOpen(!isMobileBidOpen)}
-                    className={`flex items-center justify-between w-full text-left ${mobileRowClass(isLinkActive("/bidmanager", pathname))}`}
+                    className={`flex items-center justify-between w-full text-left ${mobileRowClass(isGroupActive(bidManagerItems, pathname))}`}
                   >
                     <span>Bid Manager</span>
                     <svg
@@ -475,6 +473,15 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 </>
               )}
 
+              {!isRfqResponderOnly && showAnalytics && (
+                <Link
+                  href="/analytics"
+                  className={mobileRowClass(isLinkActive("/analytics", pathname))}
+                  onClick={closeMobileMenu}
+                >
+                  Analytics
+                </Link>
+              )}
               {/* Library expandable section */}
               {!isRfqResponderOnly && (
               <>

@@ -7,9 +7,6 @@
 // validates every code against the same spec, so a list here that drifts
 // fails loudly on save rather than silently.
 
-import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
-import type { RfqWonPart } from "@/lib/rfq/types";
-
 export interface BiddingProfileFields {
   small_business_rep: string | null; // 013
   joint_venture: string | null; // 018
@@ -308,72 +305,6 @@ export interface BidContributor {
 export interface BidSendResult {
   queued: number[];
   failed: { id: number; reference_number: number | null; errors: string[] }[];
-}
-
-/** Bid on matches: the views over the team's matched solicitations. */
-export type MatchView = "to_bid" | "starred" | "all";
-
-/** One matched DIBBS solicitation (GET /bidding/matches): the Send RFQs row's
- *  solicitation facts and badges, plus the latest bid on it. */
-export interface MatchRow {
-  solicitation_id: number;
-  solicitation_number: string | null;
-  agency_code: string | null;
-  issue_date: string | null;
-  close_date: string | null;
-  status: string | null;
-  buyer_name: string | null;
-  set_aside: string | null;
-  set_aside_code: string | null;
-  set_aside_label: string | null;
-  solicitation_type: string | null;
-  solicitation_type_label: string | null;
-  bid_terms?: SolicitationBidTerms | null;
-  has_pdf: boolean;
-  has_amendment_indicator: boolean;
-  has_post_match_amendment: boolean;
-  latest_post_match_amendment_at: string | null;
-  match_count: number;
-  last_matched_at: string | null;
-  estimated_value: number | null;
-  pr_numbers: string[];
-  first_article: boolean;
-  won_part_count: number;
-  last_won_on: string | null;
-  won_parts: RfqWonPart[];
-  /** RFQ Enterprise priced it: "Bid" starts from those prices. */
-  rfq_priced: boolean;
-  /** Starred on /bidmatching or here: one customer-wide flag per solicitation. */
-  interested?: boolean;
-  /** DLA's approved sources across the solicitation's parts (capped). */
-  approved_sources?: { cage_code: string; part_number: string; nsn?: string | null }[];
-  /** Primary part, as on /bidmatching: the quotable part with the largest
-   *  quantity. part_count counts the solicitation's quotable parts. */
-  nsn?: string | null;
-  niin?: string | null;
-  mfg_cage?: string | null;
-  mfg_part_number?: string | null;
-  part_description?: string | null;
-  acquisition_method_code?: string | null;
-  part_count?: number;
-  bid_id: number | null;
-  bid_reference_number: number | null;
-  bid_status: BidStatus | null;
-  /** The Send bids tab that lists the bid. */
-  bid_tab: BidTab | null;
-  bid_created_by_name: string | null;
-}
-
-export interface MatchPage {
-  items: MatchRow[];
-  total: number;
-  page: number;
-  page_size: number;
-  to_bid_count: number;
-  starred_count: number;
-  /** Every matched solicitation, bid or not. */
-  matched_count: number;
-  bid_term_definitions?: BidTermDefinitions;
 }
 
 export interface BidPreview {

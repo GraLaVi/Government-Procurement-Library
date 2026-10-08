@@ -10,16 +10,18 @@
 
 export const BIDDING_PRODUCT_KEY = "gph_bid_manager";
 
-// Launch switch for the add-on's public surfaces — today only the nav entry
-// for non-holders. Off while Bidding is being built: the backend product row
-// has billing_enabled = false, so there is nothing to sell yet, and seat
-// holders (admin grants) see the nav entry regardless. Flip together with
-// billing_enabled and the /pricing copy (plan step 4).
+// Launch switch for the add-on's public surfaces — today only the Start bid
+// button for non-holders. Not the nav: the Bid Manager menu is for holders
+// only (Header), and non-holders keep Bid-Matching as a plain link. Off while
+// Bidding is being built: the backend product row has billing_enabled =
+// false, so there is nothing to sell yet, and seat holders (admin grants) see
+// the button regardless. Flip together with billing_enabled and the /pricing
+// copy (plan step 4).
 export const BIDDING_ADDON_PUBLIC = false;
 
 type HasAccess = (key: string) => boolean;
 
-/** Whether to surface Bidding in the nav. Holders always see it. */
+/** Whether to surface the add-on's bidding controls. Holders always see them. */
 export function showBiddingNav(hasProductAccess: HasAccess): boolean {
   return BIDDING_ADDON_PUBLIC || hasProductAccess(BIDDING_PRODUCT_KEY);
 }

@@ -5,7 +5,7 @@ import { useAnchoredPopover } from "@/components/library/WinAndFirstArticleBadge
 import { tdClass } from "@/components/rfq/TableCard";
 
 /** One entry on DLA's approved source list (manufacturer_parts.source_dla).
- *  `nsn` is set where a row spans several parts (/bidmanager/matches). */
+ *  `nsn` is optional, for a row that spans several parts. */
 export interface ApprovedSource {
   cage_code: string;
   part_number: string;
@@ -13,7 +13,7 @@ export interface ApprovedSource {
 }
 
 /**
- * The "Appr. Source" cell on /bidmatching and /bidmanager/matches: the first
+ * The "Appr. Source" cell on /bidmatching: the first
  * approved source's CAGE. With more than one, "+N" opens a popover listing
  * every CAGE and part number (and NSN, when the row's sources span more than
  * one part); with one, its part number is in the tooltip.

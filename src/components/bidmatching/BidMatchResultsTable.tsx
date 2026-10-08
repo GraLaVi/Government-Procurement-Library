@@ -11,6 +11,7 @@ import { TechDocsBadge } from "@/components/library/TechDocsBadge";
 import { AmcBadge } from "@/components/library/AmcBadge";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
 import { PendingOutcomeFlag } from "@/components/library/PendingOutcomeFlag";
+import { BidStatusCell } from "@/components/bidding/BidStatusCell";
 import { NoticeTypeBadge } from "@/components/library/NoticeTypeBadge";
 import { RowBadge, ROW_BADGE_BASE, rowBadgeClass } from "@/components/library/RowBadge";
 import { ApprovedSourceCell, type ApprovedSource } from "@/components/library/ApprovedSourceCell";
@@ -94,6 +95,13 @@ interface BidMatchResult {
   // DLA's approved sources for the primary part (manufacturer_parts.source_dla),
   // capped server-side.
   approved_sources?: ApprovedSource[];
+  // Bid Manager add-on holders only, DIBBS rows only (null otherwise): the
+  // team's latest bid on the solicitation, and whether their RFQ team priced
+  // it. Feeds the Bid column of the Bid Worklist.
+  bid_id?: number | null;
+  bid_reference_number?: number | null;
+  bid_status?: string | null;
+  rfq_priced?: boolean | null;
   created_at: string;
   match_reason: string | null;
   match_strength: "HARD" | "SOFT" | null;
@@ -318,6 +326,11 @@ interface BidMatchResultsTableProps {
    * hoping a visitor discovers the chevron.
    */
   defaultExpandedKeys?: readonly string[];
+  /**
+   * The Bid column: start a bid, or the bid the team already has. On for Bid
+   * Manager add-on holders, for whom this page is the Bid Worklist.
+   */
+  showBidColumn?: boolean;
 }
 
 /**
@@ -412,6 +425,7 @@ export function BidMatchResultsTable({
   onSort,
   onToggleInterest,
   defaultExpandedKeys,
+  showBidColumn = false,
 }: BidMatchResultsTableProps) {
   const totalPages = Math.ceil(total / pageSize);
   // Lazy initializer, so a later render of defaultExpandedKeys cannot reopen a
@@ -518,6 +532,7 @@ export function BidMatchResultsTable({
               <th className={thClass}>Set-Aside</th>
               <th className={thClass}>AMC</th>
               <th className={thClass}>Status</th>
+              {showBidColumn && <th className={`${thClass} no-print`}>Bid</th>}
             </tr>
           </thead>
           <tbody>
@@ -722,13 +737,29 @@ export function BidMatchResultsTable({
                         />
                       </div>
                     </td>
+                    {/* SAM rows cannot be bid: no DIBBS solicitation. */}
+                    {showBidColumn && (
+                      <td className={`${tdClass} no-print`}>
+                        {result.source === "dibbs" && result.solicitation_id != null ? (
+                          <BidStatusCell
+                            solicitationId={result.solicitation_id}
+                            bidId={result.bid_id}
+                            bidReferenceNumber={result.bid_reference_number}
+                            bidStatus={result.bid_status}
+                            rfqPriced={result.rfq_priced}
+                          />
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                   {isOpen && (
                     <tr className="border-b border-border last:border-0 bg-muted-light/30">
                       {/* Set-aside has its own column now. This row carries the
                           full line-item list plus the match detail that used to
                           sit in the dropped Profile and Match columns. */}
-                      <td colSpan={14} className="px-3 py-3">
+                      <td colSpan={showBidColumn ? 15 : 14} className="px-3 py-3">
                         <div className="space-y-4">
                           {/* Can I bid on this at all, and what does bidding
                               cost me — ahead of the line items, because it

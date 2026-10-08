@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { BIDDING_PRODUCT_KEY } from "@/lib/bidding/access";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import {
   BidMatchDateMenu,
@@ -182,7 +183,11 @@ const DEFAULT_SORT_BY: BidSortKey = "close_date";
 const DEFAULT_SORT_DIR: "asc" | "desc" = "asc";
 
 export default function BidMatchingPage() {
-  const { isLoading: authLoading, hasProductAccessByPrefix } = useAuth();
+  const { isLoading: authLoading, hasProductAccess, hasProductAccessByPrefix } = useAuth();
+  // Bid Manager add-on holders work this page as their Bid Worklist: the same
+  // matches, plus a Bid column and a "Not yet bid" filter. Everyone else gets
+  // Bid-Matching exactly as before.
+  const isWorklist = hasProductAccess(BIDDING_PRODUCT_KEY);
 
   const [dateTree, setDateTree] = useState<RunDateGroup[]>([]);
   const [selectedRunDate, setSelectedRunDate] = useState<string | null>(null);
@@ -225,6 +230,9 @@ export default function BidMatchingPage() {
   const [sortBy, setSortBy] = useState<BidSortKey>(DEFAULT_SORT_BY);
   const [sortDir, setSortDir] = useState<"asc" | "desc">(DEFAULT_SORT_DIR);
   const [interestedOnly, setInterestedOnly] = useState(false);
+  // Bid Worklist only: solicitations the team has no bid on yet. DIBBS
+  // buckets only — a SAM posting cannot be bid here.
+  const [notBidOnly, setNotBidOnly] = useState(false);
   // Keep only postings that can actually be quoted. SAM buckets only — every
   // DIBBS row is a solicitation on the street, so the backend ignores it there
   // and the control isn't rendered. Defaults OFF: pre-solicitations and
@@ -251,7 +259,7 @@ export default function BidMatchingPage() {
     // Reset to page 1 whenever the filters or sort change so we don't land on
     // an empty out-of-range page after narrowing results.
     setPage(1);
-  }, [filterKey, sortBy, sortDir, interestedOnly, biddableOnly]);
+  }, [filterKey, sortBy, sortDir, interestedOnly, biddableOnly, notBidOnly]);
 
   // Optimistic: the star flips immediately and reverts if the write fails.
   // Flags are customer-scoped, so a teammate's flag can arrive on the next
@@ -395,6 +403,7 @@ export default function BidMatchingPage() {
       dir: "asc" | "desc",
       onlyInterested: boolean,
       onlyBiddable: boolean,
+      onlyNotBid: boolean,
     ) => {
       setIsLoadingResults(true);
       setError(null);
@@ -415,6 +424,7 @@ export default function BidMatchingPage() {
         }
         if (onlyInterested) params.set("interested_only", "true");
         if (onlyBiddable) params.set("biddable_only", "true");
+        if (onlyNotBid) params.set("not_bid_only", "true");
         const res = await fetch(`/api/bid-matching/results?${params}`);
         if (!res.ok) {
           const body = await res.json().catch(() => null);
@@ -451,7 +461,7 @@ export default function BidMatchingPage() {
     if (!selectedRunDate) return;
     fetchResults(
       selectedSource, selectedRunDate, selectedIssueDate, page, pageSize,
-      filterParams, sortBy, sortDir, interestedOnly, biddableOnly,
+      filterParams, sortBy, sortDir, interestedOnly, biddableOnly, notBidOnly,
     );
     // filterKey, not filterParams: the array is rebuilt on every render and
     // would retrigger the fetch forever; the key only changes with the
@@ -460,7 +470,7 @@ export default function BidMatchingPage() {
   }, [
     pageSizeInitialized,
     selectedSource, selectedRunDate, selectedIssueDate, page, pageSize,
-    filterKey, sortBy, sortDir, interestedOnly, biddableOnly,
+    filterKey, sortBy, sortDir, interestedOnly, biddableOnly, notBidOnly,
     fetchResults,
   ]);
 
@@ -475,6 +485,8 @@ export default function BidMatchingPage() {
     // Clearing it on the way out keeps it from silently reapplying when the
     // user comes back to a SAM bucket several selections later.
     if (selection.source !== "sam") setBiddableOnly(false);
+    // Likewise "Not yet bid", which is DIBBS-only.
+    if (selection.source !== "dibbs") setNotBidOnly(false);
     setPage(1);
     // Keep the address bar on the selection, so a reload or a copied link
     // reopens the same date. Replace rather than push: picking dates is
@@ -557,9 +569,13 @@ export default function BidMatchingPage() {
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Bid-Matching</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            {isWorklist ? "Bid Worklist" : "Bid-Matching"}
+          </h1>
           <p className="mt-1 text-muted no-print">
-            Solicitations matched to your bid-matching profiles.
+            {isWorklist
+              ? "Solicitations matched to your bid-matching profiles, ready to bid."
+              : "Solicitations matched to your bid-matching profiles."}
           </p>
           {/* On paper the date selector is gone, so the printout has to say
               for itself which run it is. */}
@@ -668,6 +684,23 @@ export default function BidMatchingPage() {
               <span className={interestedOnly ? "text-amber-500" : "text-muted/50"}>★</span>
               Starred only
             </button>
+            {/* Bid Worklist only, on DIBBS buckets: what still needs a bid.
+                Any bid counts, drafts included — those are on Send bids. */}
+            {isWorklist && selectedSource === "dibbs" && (
+              <button
+                type="button"
+                onClick={() => setNotBidOnly((v) => !v)}
+                aria-pressed={notBidOnly}
+                title="Show only solicitations your team has not started a bid on"
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm transition-colors cursor-pointer ${
+                  notBidOnly
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted hover:text-foreground"
+                }`}
+              >
+                Not yet bid
+              </button>
+            )}
             {/* Stage filter — SAM buckets only, because every DIBBS row IS a
                 solicitation on the street. Hidden when the bucket holds
                 nothing early-stage (nothing to hide), but kept visible while
@@ -751,7 +784,7 @@ export default function BidMatchingPage() {
               applied={filters}
               onApply={setFilters}
               hasOtherFilters={
-                interestedOnly || biddableOnly || quickFindActive
+                interestedOnly || biddableOnly || notBidOnly || quickFindActive
                 || sortBy !== DEFAULT_SORT_BY || sortDir !== DEFAULT_SORT_DIR
               }
               onClearAll={() => {
@@ -760,6 +793,7 @@ export default function BidMatchingPage() {
                 setSortDir(DEFAULT_SORT_DIR);
                 setInterestedOnly(false);
                 setBiddableOnly(false);
+                setNotBidOnly(false);
               }}
             />
           </div>
@@ -783,6 +817,7 @@ export default function BidMatchingPage() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 onToggleInterest={handleToggleInterest}
+                showBidColumn={isWorklist}
               />
             ) : (
               <div className="text-center py-16">
