@@ -341,10 +341,10 @@ function InterestStar({
       aria-pressed={on}
       title={
         on
-          ? "Flagged — everyone on your account sees this. Click to remove."
-          : "Flag this solicitation to come back to it"
+          ? "Starred — everyone on your account sees this. Click to remove."
+          : "Star this solicitation to come back to it"
       }
-      aria-label={on ? "Remove flag" : "Flag this solicitation"}
+      aria-label={on ? "Remove star" : "Star this solicitation"}
       className={`text-sm leading-none cursor-pointer transition-colors ${
         on ? "text-amber-500 hover:text-amber-600" : "text-muted/30 hover:text-amber-500"
       }`}

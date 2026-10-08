@@ -283,11 +283,11 @@ export default function BidMatchingPage() {
         });
         if (!res.ok) {
           apply(!interested);
-          setError("Could not save the flag. Please try again.");
+          setError("Could not save the star. Please try again.");
         }
       } catch {
         apply(!interested);
-        setError("Could not save the flag. Please try again.");
+        setError("Could not save the star. Please try again.");
       }
     },
     [],
@@ -652,13 +652,13 @@ export default function BidMatchingPage() {
               onSelect={handleDateSelect}
             />
             <div className="w-px self-stretch bg-border" aria-hidden="true" />
-            {/* Flags are shared across the account, so this is "what the team
+            {/* Stars are shared across the account, so this is "what the team
                 marked", not "what I marked". */}
             <button
               type="button"
               onClick={() => setInterestedOnly((v) => !v)}
               aria-pressed={interestedOnly}
-              title="Show only solicitations your team flagged to come back to"
+              title="Show only solicitations your team starred to come back to"
               className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm transition-colors cursor-pointer ${
                 interestedOnly
                   ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
@@ -666,7 +666,7 @@ export default function BidMatchingPage() {
               }`}
             >
               <span className={interestedOnly ? "text-amber-500" : "text-muted/50"}>★</span>
-              Flagged only
+              Starred only
             </button>
             {/* Stage filter — SAM buckets only, because every DIBBS row IS a
                 solicitation on the street. Hidden when the bucket holds

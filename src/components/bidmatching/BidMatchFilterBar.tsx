@@ -170,7 +170,7 @@ export function BidMatchFilterBar({
 
   // The wrapper is `contents`, so the button, the summary and Clear
   // filters are items of the parent's command bar: the button sits on the
-  // same line as the date menu and Flagged only (a w-full wrapper pushed it
+  // same line as the date menu and Starred only (a w-full wrapper pushed it
   // onto a line of its own), and a long summary wraps on its own without
   // dragging the button down with it. The editor panel takes basis-full, so
   // it wraps to a full-width row under the bar, and order-last keeps it below

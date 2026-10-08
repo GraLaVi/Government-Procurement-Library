@@ -180,7 +180,7 @@ export default function BidMatchingProductPage() {
                 <>
                   <p>
                     Yes. Profiles belong to the organization, not to one login, and the
-                    flag on a row is shared — when someone stars a solicitation to come
+                    star on a row is shared — when someone stars a solicitation to come
                     back to, everyone sees it. The number of profiles you can run and
                     how much solicitation detail each match carries are what differ by
                     plan.
