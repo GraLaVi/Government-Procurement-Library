@@ -311,7 +311,7 @@ export interface BidSendResult {
 }
 
 /** Bid on matches: the views over the team's matched solicitations. */
-export type MatchView = "to_bid" | "started" | "all";
+export type MatchView = "to_bid" | "starred" | "all";
 
 /** One matched DIBBS solicitation (GET /bidding/matches): the Send RFQs row's
  *  solicitation facts and badges, plus the latest bid on it. */
@@ -343,6 +343,19 @@ export interface MatchRow {
   won_parts: RfqWonPart[];
   /** RFQ Enterprise priced it: "Bid" starts from those prices. */
   rfq_priced: boolean;
+  /** Starred on /bidmatching or here: one customer-wide flag per solicitation. */
+  interested?: boolean;
+  /** DLA's approved sources across the solicitation's parts (capped). */
+  approved_sources?: { cage_code: string; part_number: string; nsn?: string | null }[];
+  /** Primary part, as on /bidmatching: the quotable part with the largest
+   *  quantity. part_count counts the solicitation's quotable parts. */
+  nsn?: string | null;
+  niin?: string | null;
+  mfg_cage?: string | null;
+  mfg_part_number?: string | null;
+  part_description?: string | null;
+  acquisition_method_code?: string | null;
+  part_count?: number;
   bid_id: number | null;
   bid_reference_number: number | null;
   bid_status: BidStatus | null;
@@ -351,20 +364,15 @@ export interface MatchRow {
   bid_created_by_name: string | null;
 }
 
-export interface MatchBidder {
-  user_id: number;
-  name: string;
-  count: number;
-}
-
 export interface MatchPage {
   items: MatchRow[];
   total: number;
   page: number;
   page_size: number;
   to_bid_count: number;
-  started_count: number;
-  bidders: MatchBidder[];
+  starred_count: number;
+  /** Every matched solicitation, bid or not. */
+  matched_count: number;
   bid_term_definitions?: BidTermDefinitions;
 }
 

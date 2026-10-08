@@ -172,8 +172,8 @@ export interface ResolvedBidTerm {
   /** Field key, also the React list key. Widened past BidTermField for the
    *  DPAS rating, which is two codes in one column rather than one, and for
    *  First Article, which DIBBS carries as a placeholder line item rather
-   *  than a coded BQ field. */
-  field: BidTermField | "rating" | "first_article";
+   *  than a coded BQ field, and for the fast-award solicitation type. */
+  field: BidTermField | "rating" | "first_article" | "solicitation_type";
   name: string;
   hint: string;
   /** The raw DLA value. Absent on a term that has no code to show. */

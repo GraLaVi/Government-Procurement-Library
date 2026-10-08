@@ -52,6 +52,7 @@ import {
   type BidSendResult,
   type CodeOption,
 } from "@/lib/bidding/types";
+import { FLASH_KEY } from "@/lib/bidding/flash";
 
 type Value = string | number | boolean | null;
 
@@ -335,6 +336,19 @@ export default function BidEditorPage() {
     }
   };
 
+  // Every field saves as it is edited, so "Send later" has nothing to save:
+  // the draft already sits on Send bids' Ready tab, to go out with "Send
+  // selected" or "Send all ready". Takes the bidder there with a note.
+  const sendLater = () => {
+    if (!bid) return;
+    try {
+      sessionStorage.setItem(FLASH_KEY, `${bidReference(bid)} saved to Ready. Send it from here when you're ready.`);
+    } catch {
+      // Storage blocked: skip the note.
+    }
+    router.push("/bidmanager");
+  };
+
   const lifecycle = async (action: "delete" | "withdraw" | "revise") => {
     if (!bid) return;
     setSaving(true);
@@ -506,9 +520,13 @@ export default function BidEditorPage() {
                 <Button variant="outline" size="sm" disabled={saving} onClick={() => setConfirm("delete")}>
                   Delete draft
                 </Button>
+                <Button variant="outline" size="sm" disabled={saving} onClick={sendLater}
+                  title="Keep it on the Ready tab of Send bids and send it later">
+                  Send later
+                </Button>
                 <Button variant="primary" size="sm" disabled={saving || !bid.can_send} onClick={send}
-                  title={bid.can_send ? "Queue for our upload to DIBBS" : "Fix the errors below first"}>
-                  Send bid
+                  title={bid.can_send ? "Queue it now for our next upload to DIBBS" : "Fix the errors below first"}>
+                  Send now
                 </Button>
               </>
             )}

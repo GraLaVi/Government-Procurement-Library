@@ -5,7 +5,11 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
-import { ROW_BADGE_BASE } from "@/components/library/RowBadge";
+import { RowBadge, ROW_BADGE_BASE, rowBadgeClass } from "@/components/library/RowBadge";
+import { ApprovedSourceCell } from "@/components/library/ApprovedSourceCell";
+import { AmcBadge } from "@/components/library/AmcBadge";
+import { PartIdentityLink } from "@/components/bidmatching/PartIdentityLink";
+import { BadgeKey, TROPHY_ICON } from "@/components/library/BadgeKey";
 import { WinHistoryBadge } from "@/components/library/WinAndFirstArticleBadges";
 import { AmendmentTimelineModal } from "@/components/bidmatching/AmendmentTimelineModal";
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
@@ -37,7 +41,6 @@ import {
 // one the team already has.
 
 const PAGE_SIZE = 50;
-const ALL = "all";
 const VIEW_STORAGE_KEY = "bidmanager-matches-view";
 const SOL_STATUS_STORAGE_KEY = "bidmanager-matches-sol-status";
 
@@ -53,12 +56,12 @@ const SEARCH_FIELDS = [
 ] as const;
 type SearchField = (typeof SEARCH_FIELDS)[number]["value"];
 
-type SortKey = "posted" | "close_date" | "solicitation_number" | "sol_status" | "set_aside" | "bid_status";
+type SortKey = "posted" | "close_date" | "solicitation_number" | "set_aside" | "bid_status";
 
 const VIEWS: { id: MatchView; label: string }[] = [
   { id: "to_bid", label: "To bid" },
-  { id: "started", label: "Bid started" },
-  { id: "all", label: "All" },
+  // Started bids live on Send bids. This tab is the /bidmatching star.
+  { id: "starred", label: "Starred" },
 ];
 
 /** DIBBS First Article placeholder lines (pseudo-CAGE 0001S, no NSN) are not
@@ -128,7 +131,6 @@ export default function BidOnMatchesPage() {
   const [view, setView] = useState<MatchView>("to_bid");
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [solStatus, setSolStatus] = useState<SolStatusFilter>("open");
-  const [startedBy, setStartedBy] = useState<string>(ALL);
   const [searchField, setSearchField] = useState<SearchField>("solicitation");
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
@@ -173,7 +175,7 @@ export default function BidOnMatchesPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [view, solStatus, startedBy, sortBy, sortDir, appliedSearch, searchField]);
+  }, [view, solStatus, sortBy, sortDir, appliedSearch, searchField]);
 
   const toggleSort = (key: SortKey) => {
     if (sortBy === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -183,9 +185,6 @@ export default function BidOnMatchesPage() {
     }
   };
 
-  // "Started by" narrows to bids, so it does nothing on the To bid view.
-  const startedByActive = view !== "to_bid" && startedBy !== ALL;
-
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -193,7 +192,6 @@ export default function BidOnMatchesPage() {
       view, page: String(page), page_size: String(PAGE_SIZE),
       sort_by: sortBy, sort_dir: sortDir, sol_status: solStatus,
     });
-    if (startedByActive) qs.set("started_by_user_id", startedBy);
     if (appliedSearch) {
       qs.set("search_field", searchField);
       qs.set("search", appliedSearch);
@@ -205,7 +203,33 @@ export default function BidOnMatchesPage() {
     } finally {
       setLoading(false);
     }
-  }, [view, page, sortBy, sortDir, solStatus, startedBy, startedByActive, appliedSearch, searchField]);
+  }, [view, page, sortBy, sortDir, solStatus, appliedSearch, searchField]);
+
+  // The /bidmatching star, saved through the same endpoint: the flag is per
+  // customer and solicitation, so it shows on both pages. Optimistic, rolled
+  // back on failure. Unstarring on the Starred tab leaves the row in place
+  // until the next load, so a mis-click is easy to undo.
+  const toggleStar = useCallback(async (item: MatchRow) => {
+    const interested = !item.interested;
+    const apply = (value: boolean) =>
+      setData((prev) => prev && {
+        ...prev,
+        starred_count: prev.starred_count + (value ? 1 : -1),
+        items: prev.items.map((r) => (r.solicitation_id === item.solicitation_id ? { ...r, interested: value } : r)),
+      });
+    apply(interested);
+    try {
+      const res = await fetch("/api/bid-matching/results/interest", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ solicitation_id: item.solicitation_id, sam_opportunity_id: null, interested }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      apply(!interested);
+      setError("Could not save the star. Please try again.");
+    }
+  }, []);
 
   useEffect(() => {
     if (prefsLoaded && !authLoading && hasAccess) load();
@@ -242,7 +266,7 @@ export default function BidOnMatchesPage() {
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
   // Nothing matched at all (not merely filtered away): Bid Matching feeds this page.
   const noMatchesAtAll =
-    data != null && data.to_bid_count + data.started_count === 0 && !appliedSearch && solStatus === "open";
+    data != null && data.matched_count === 0 && !appliedSearch && solStatus === "open";
 
   if (authLoading) return <div className="p-6 text-sm text-muted">Loading…</div>;
 
@@ -263,7 +287,7 @@ export default function BidOnMatchesPage() {
 
   const counts: Partial<Record<MatchView, number>> = {
     to_bid: data?.to_bid_count,
-    started: data?.started_count,
+    starred: data?.starred_count,
   };
 
   return (
@@ -347,19 +371,6 @@ export default function BidOnMatchesPage() {
                   <option value="all">All</option>
                 </select>
               </label>
-              {view !== "to_bid" && (
-                <label className="inline-flex items-center gap-1.5 text-[11px] text-muted whitespace-nowrap">
-                  Started by
-                  <select className={filterSelectClass} value={startedBy} onChange={(e) => setStartedBy(e.target.value)}>
-                    <option value={ALL}>Everyone</option>
-                    {(data?.bidders ?? []).map((b) => (
-                      <option key={b.user_id} value={String(b.user_id)}>
-                        {b.name} ({b.count})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
               <div className="flex-1 min-w-[240px] max-w-md flex items-stretch rounded-lg border border-border overflow-hidden focus-within:border-primary">
                 <div className="relative flex items-stretch">
                   <select
@@ -411,8 +422,10 @@ export default function BidOnMatchesPage() {
             </div>
           ) : items.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted">
-              {view === "to_bid" && (data?.started_count ?? 0) > 0 && !appliedSearch
-                ? "Every matched solicitation has a bid. See Bid started."
+              {view === "starred" && !appliedSearch
+                ? "No starred solicitations. Star one here or on Bid Matching to keep it on this tab."
+                : view === "to_bid" && (data?.matched_count ?? 0) > 0 && !appliedSearch
+                ? "Every matched solicitation has a bid. See Send bids."
                 : "No solicitations match these filters."}
             </div>
           ) : (
@@ -420,14 +433,18 @@ export default function BidOnMatchesPage() {
               <table className={tableClass}>
                 <thead>
                   <tr className={tableHeadRowClass}>
+                    <th className="px-2 py-2 w-8 text-center text-muted" aria-label="Starred">★</th>
                     <th className="px-2 py-2 w-8" aria-label="Expand" />
                     <SortHeader label="Solicitation" sortKey="solicitation_number" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
-                    <th className={`${thClass} whitespace-nowrap`}>PR #</th>
+                    <th className={thClass}>NSN</th>
+                    <th className={`${thClass} whitespace-nowrap`} title="Approved source (DLA), across the solicitation's parts">Appr. Source</th>
+                    <th className={thClass}>Description</th>
                     <SortHeader label="Posted" sortKey="posted" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
                     <SortHeader label="Close date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
                     <SortHeader label="Set-aside" sortKey="set_aside" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                     <th className={`${thClass} whitespace-nowrap !text-right`}>Est. value</th>
-                    <SortHeader label="Sol. Status" sortKey="sol_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
+                    <th className={thClass}>AMC</th>
+                    <th className={thClass}>Status</th>
                     <SortHeader label="Bid" sortKey="bid_status" sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
                   </tr>
                 </thead>
@@ -439,6 +456,22 @@ export default function BidOnMatchesPage() {
                     return (
                       <Fragment key={item.solicitation_id}>
                         <tr className={rowClass}>
+                          <td className="px-2 py-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleStar(item)}
+                              aria-pressed={Boolean(item.interested)}
+                              title={item.interested
+                                ? "Starred — everyone on your account sees this. Click to remove."
+                                : "Star this solicitation to come back to it"}
+                              aria-label={item.interested ? "Remove star" : "Star this solicitation"}
+                              className={`text-sm leading-none cursor-pointer transition-colors ${
+                                item.interested ? "text-amber-500 hover:text-amber-600" : "text-muted/30 hover:text-amber-500"
+                              }`}
+                            >
+                              {item.interested ? "★" : "☆"}
+                            </button>
+                          </td>
                           <td className="px-2 py-3 text-center">
                             <button
                               type="button"
@@ -483,9 +516,10 @@ export default function BidOnMatchesPage() {
                                 hasPostMatchAmendment={item.has_post_match_amendment}
                                 latestPostMatchAmendmentAt={item.latest_post_match_amendment_at}
                                 onShowAmendments={() => setAmendmentSol({ id: item.solicitation_id, number: item.solicitation_number })}
-                                solicitationType={item.solicitation_type}
-                                solicitationTypeLabel={item.solicitation_type_label}
-                                idcBadge={false}
+                                // Fast award and Automated IDC show in the
+                                // expanded row's bid terms panel instead.
+                                solicitationType={null}
+                                compact
                               />
                               <WinHistoryBadge
                                 count={item.won_part_count ?? 0}
@@ -496,21 +530,38 @@ export default function BidOnMatchesPage() {
                               {item.rfq_priced && (
                                 <span
                                   className={`${ROW_BADGE_BASE} border-success/40 text-success`}
-                                  title="Your RFQ team has priced this solicitation from vendor quotes"
+                                  title="RFQ priced: your RFQ team has priced this solicitation from vendor quotes"
                                 >
-                                  RFQ priced
+                                  R
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className={`${tdClass} font-mono whitespace-nowrap`}>
-                            {item.pr_numbers.length === 0 ? (
-                              <span className="text-muted">—</span>
-                            ) : (
-                              <span title={item.pr_numbers.length > 1 ? item.pr_numbers.join(", ") : undefined}>
-                                {item.pr_numbers[0]}
-                                {item.pr_numbers.length > 1 && <span className="text-muted"> +{item.pr_numbers.length - 1}</span>}
+                          {/* Primary part, as on /bidmatching. "+N more" expands
+                              the row, where every part is listed. */}
+                          <td className={`${tdClass} whitespace-nowrap`}>
+                            <div className="flex items-center gap-1.5">
+                              <PartIdentityLink part={item} className="data-field font-medium" />
+                              {(item.part_count ?? 0) > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpanded(item)}
+                                  title={`${item.part_count} parts on this solicitation`}
+                                  className="text-[10px] font-semibold text-muted hover:text-primary border border-border rounded px-1 py-0.5 cursor-pointer"
+                                >
+                                  +{(item.part_count ?? 0) - 1} more
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <ApprovedSourceCell sources={item.approved_sources ?? []} />
+                          <td className={`${tdClass} text-foreground`}>
+                            {item.part_description ? (
+                              <span className="block max-w-[260px] truncate" title={item.part_description}>
+                                {item.part_description}
                               </span>
+                            ) : (
+                              <span className="text-muted">—</span>
                             )}
                           </td>
                           <td className={`${tdClass} whitespace-nowrap text-muted`}>{formatDate(item.issue_date)}</td>
@@ -522,9 +573,27 @@ export default function BidOnMatchesPage() {
                               <div className="text-[11px] text-muted">{dtc === 0 ? "closes today" : `${dtc}d left`}</div>
                             )}
                           </td>
-                          <td className={tdClass}>{item.set_aside_label || item.set_aside || "—"}</td>
+                          {/* Short code in the pill, readable label in the tooltip,
+                              as on /bidmatching. Falls back to the label, then the
+                              raw string, so an unmapped row still shows something. */}
+                          <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                            {item.set_aside_code ? (
+                              <RowBadge title={item.set_aside_label || item.set_aside || undefined}>
+                                {item.set_aside_code}
+                              </RowBadge>
+                            ) : (
+                              item.set_aside_label || item.set_aside || "—"
+                            )}
+                          </td>
                           <td className={`${tdClass} text-right font-mono tabular-nums whitespace-nowrap`}>
                             {formatCurrency(item.estimated_value)}
+                          </td>
+                          <td className={`${tdClass} whitespace-nowrap`}>
+                            {item.acquisition_method_code ? (
+                              <AmcBadge code={item.acquisition_method_code} />
+                            ) : (
+                              <span className="text-muted">—</span>
+                            )}
                           </td>
                           <td className={`${tdClass} whitespace-nowrap`}>
                             <SolStatusBadge status={item.status} />
@@ -535,13 +604,14 @@ export default function BidOnMatchesPage() {
                         </tr>
                         {isOpen && (
                           <tr className="bg-muted-light/30">
-                            <td colSpan={9} className="px-6 py-3">
+                            <td colSpan={13} className="px-6 py-3">
                               <div className="space-y-4">
                                 <BidTermsPanel
                                   terms={item.bid_terms}
                                   definitions={data?.bid_term_definitions}
                                   firstArticle={item.first_article}
                                   solicitationType={item.solicitation_type}
+                                  fastAward
                                 />
                                 {!partsState || partsState.loading ? (
                                   <div className="flex items-center gap-2 py-2 text-xs text-muted">
@@ -581,8 +651,12 @@ export default function BidOnMatchesPage() {
                                                 <span className="text-foreground">{formatPartIdentity(p)}</span>
                                               )}
                                             </td>
-                                            <td className={`${tdClass} text-foreground truncate max-w-[380px]`} title={p.description || undefined}>
-                                              {p.description || "—"}
+                                            {/* A span, not the td: max-width on a table cell
+                                                does not stop it growing, so the text ran on. */}
+                                            <td className={`${tdClass} text-foreground`}>
+                                              <span className="block max-w-[260px] truncate" title={p.description || undefined}>
+                                                {p.description || "—"}
+                                              </span>
                                             </td>
                                             <td className={`${tdClass} text-right whitespace-nowrap font-mono tabular-nums`}>
                                               {p.quantity != null
@@ -609,6 +683,13 @@ export default function BidOnMatchesPage() {
               </table>
             </div>
           )}
+          {/* Key to the rows' one-letter badges: in the card, under the
+              table's scroll area. */}
+          {items.length > 0 && <BadgeKey items={[
+            { cls: rowBadgeClass("amber"), code: "A", label: "Amended" },
+            { cls: `${ROW_BADGE_BASE} border-success/40 text-success`, code: "R", label: "RFQ priced" },
+            { cls: rowBadgeClass("amber"), code: <>{TROPHY_ICON}N</>, label: "Parts here you've won before" },
+          ]} />}
         </TableCard>
       )}
 

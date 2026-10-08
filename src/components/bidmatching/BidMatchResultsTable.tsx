@@ -12,9 +12,11 @@ import { AmcBadge } from "@/components/library/AmcBadge";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
 import { PendingOutcomeFlag } from "@/components/library/PendingOutcomeFlag";
 import { NoticeTypeBadge } from "@/components/library/NoticeTypeBadge";
-import { RowBadge, ROW_BADGE_BASE } from "@/components/library/RowBadge";
+import { RowBadge, ROW_BADGE_BASE, rowBadgeClass } from "@/components/library/RowBadge";
+import { ApprovedSourceCell, type ApprovedSource } from "@/components/library/ApprovedSourceCell";
+import { BadgeKey, TROPHY_ICON } from "@/components/library/BadgeKey";
 import {
-  FirstArticleBadge, WinHistoryBadge, useAnchoredPopover,
+  WinHistoryBadge, useAnchoredPopover,
 } from "@/components/library/WinAndFirstArticleBadges";
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
 import { PrintButton } from "@/components/ui/PrintButton";
@@ -89,6 +91,9 @@ interface BidMatchResult {
   matched_conditions: MatchedCondition[];
   matches?: BidMatchDetail[];
   matched_parts?: BidMatchPart[];
+  // DLA's approved sources for the primary part (manufacturer_parts.source_dla),
+  // capped server-side.
+  approved_sources?: ApprovedSource[];
   created_at: string;
   match_reason: string | null;
   match_strength: "HARD" | "SOFT" | null;
@@ -237,6 +242,7 @@ const DEMAND_SIGNAL_CHIP: Record<
 // Click to open, not hover — the same click-anchored popover the fast-award,
 // win and First Article badges in these rows already use, so the whole cluster
 // behaves alike in a dense table.
+
 function DemandSignalChip({ signal }: { signal?: string | null }) {
   const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
 
@@ -252,9 +258,12 @@ function DemandSignalChip({ signal }: { signal?: string | null }) {
         onClick={toggle}
         aria-expanded={open}
         aria-label={`${c.label} — what this means`}
+        title={c.label}
         className={`${ROW_BADGE_BASE} ${c.cls} ${c.hover} cursor-pointer transition-colors`}
       >
-        {c.short}
+        {/* One letter, like the row's other flags: the chip's colour says
+            which signal, the tooltip and popover name it. */}
+        D
       </button>
       {open && coords && createPortal(
         <div
@@ -499,6 +508,7 @@ export function BidMatchResultsTable({
               <th className="w-6 px-1.5 py-1.5" aria-label="Expand"></th>
               <SortHeader label="Solicitation" sortKey="solicitation" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <SortHeader label="NSN" sortKey="nsn" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <th className={`${thClass} whitespace-nowrap`} title="Approved source (DLA)">Appr. Source</th>
               <th className={thClass}>Description</th>
               <SortHeader label="Qty" sortKey="quantity" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
               <th className={thClass}>UOM</th>
@@ -596,7 +606,7 @@ export function BidMatchResultsTable({
                             it: a bucket is entirely DIBBS or entirely SAM, so
                             the date menu has already said which, and repeating
                             it on all fifty rows only crowded the column. */}
-                        <NoticeTypeBadge noticeType={result.notice_type} />
+                        <NoticeTypeBadge noticeType={result.notice_type} compact />
                         {/* Amendment pill + fast-award badge, shared with the
                             Send RFQs work queue (SolicitationRowBadges) so the
                             two pages read identically. One pill: the component
@@ -609,8 +619,10 @@ export function BidMatchResultsTable({
                             setAmendmentSolId(result.solicitation_id);
                             setAmendmentSolNumber(result.solicitation_number);
                           }}
-                          solicitationType={result.solicitation_type}
-                          solicitationTypeLabel={result.solicitation_type_label}
+                          // Fast award and Automated IDC show in the expanded
+                          // row's bid terms panel instead (BidTermsPanel).
+                          solicitationType={null}
+                          compact
                         />
                         {/* DLA demand signal (analytics add-on) — strongest
                             across the opportunity's NIINs; informs the bid
@@ -624,8 +636,7 @@ export function BidMatchResultsTable({
                     <td className={`${tdClass} whitespace-nowrap`}>
                       <div className="flex items-center gap-1.5">
                         <PartIdentityLink part={result} className="data-field font-medium" />
-                        <FirstArticleBadge firstArticle={result.first_article} />
-                        <TechDocsBadge techDocs={result.tech_docs} solicitationNumber={result.solicitation_number} />
+                        <TechDocsBadge techDocs={result.tech_docs} solicitationNumber={result.solicitation_number} compact />
                         <WinHistoryBadge
                           count={result.win_count ?? 0}
                           lastWonOn={result.last_won_on}
@@ -644,6 +655,7 @@ export function BidMatchResultsTable({
                         )}
                       </div>
                     </td>
+                    <ApprovedSourceCell sources={result.approved_sources ?? []} />
                     <td className={`${tdClass} text-foreground`}>
                       {result.part_description ? (
                         <span
@@ -716,7 +728,7 @@ export function BidMatchResultsTable({
                       {/* Set-aside has its own column now. This row carries the
                           full line-item list plus the match detail that used to
                           sit in the dropped Profile and Match columns. */}
-                      <td colSpan={13} className="px-3 py-3">
+                      <td colSpan={14} className="px-3 py-3">
                         <div className="space-y-4">
                           {/* Can I bid on this at all, and what does bidding
                               cost me — ahead of the line items, because it
@@ -725,6 +737,11 @@ export function BidMatchResultsTable({
                           <BidTermsPanel
                             terms={result.bid_terms}
                             definitions={bidTermDefinitions}
+                            // Moved off the row: First Article, fast award
+                            // and Automated IDC are bid terms like the rest.
+                            firstArticle={result.first_article}
+                            solicitationType={result.solicitation_type}
+                            fastAward
                           />
 
                           {/* The parts that put this solicitation in the list.
@@ -838,6 +855,17 @@ export function BidMatchResultsTable({
           </tbody>
         </table>
       </div>
+      {/* Key to the rows' one-letter badges. */}
+      <BadgeKey items={[
+        { cls: rowBadgeClass("amber"), code: "A", label: "Amended" },
+        { cls: rowBadgeClass("amber"), code: "P", label: "Pre-solicitation" },
+        { cls: rowBadgeClass("amber"), code: "M", label: "Market research" },
+        { cls: rowBadgeClass("amber"), code: "N", label: "Not biddable" },
+        { cls: rowBadgeClass("neutral"), code: "D", label: "DLA demand signal" },
+        { cls: rowBadgeClass("neutral"), code: "T", label: "Tech data package" },
+        { cls: rowBadgeClass("neutral"), code: "S", label: "Spec only" },
+        { cls: rowBadgeClass("amber"), code: <>{TROPHY_ICON}N</>, label: "Times you've won this part" },
+      ]} />
 
       {/* Amendment timeline modal — opened from the "Amended" pill. */}
       <AmendmentTimelineModal

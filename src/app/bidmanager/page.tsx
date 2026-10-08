@@ -27,6 +27,7 @@ import {
   type BidSummary,
   type BidTab,
 } from "@/lib/bidding/types";
+import { FLASH_KEY } from "@/lib/bidding/flash";
 
 const ALL = "all";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -99,6 +100,20 @@ export default function SendBidsPage() {
       setFilterInitialized(true);
     }
   }, [user, filterInitialized]);
+
+  // A note handed over by the bid editor's "Send later" (FLASH_KEY), shown
+  // once on arrival.
+  useEffect(() => {
+    try {
+      const flash = sessionStorage.getItem(FLASH_KEY);
+      if (flash) {
+        sessionStorage.removeItem(FLASH_KEY);
+        setToast(flash);
+      }
+    } catch {
+      // Storage blocked: the note is a nicety, the bid is already saved.
+    }
+  }, []);
 
   useEffect(() => {
     if (!toast) return;

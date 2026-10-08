@@ -67,10 +67,13 @@ function tdmtUrl(solicitationNumber: string): string {
 export function TechDocsBadge({
   techDocs,
   solicitationNumber,
+  compact = false,
 }: {
   techDocs?: string | null;
   /** Omit it and the popover renders without the TDMT link. */
   solicitationNumber?: string | null;
+  /** One letter (T, S) for a dense table with a key under it. */
+  compact?: boolean;
 }) {
   const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
 
@@ -89,7 +92,7 @@ export function TechDocsBadge({
         title={b.title}
         className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0 bg-muted/15 text-foreground border-border hover:bg-muted/25 cursor-pointer transition-colors"
       >
-        {b.short}
+        {compact ? b.short[0] : b.short}
       </button>
       {open && coords && createPortal(
         <div

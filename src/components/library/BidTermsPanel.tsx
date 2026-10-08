@@ -1,6 +1,7 @@
 "use client";
 
 import { formatCurrency } from "@/lib/library/types";
+import { useCodeDefinitions } from "@/lib/hooks/useCodeDefinitions";
 import {
   resolveAidcTerms,
   resolveBidTerms,
@@ -82,6 +83,7 @@ export function BidTermsPanel({
   definitions,
   firstArticle,
   solicitationType,
+  fastAward = false,
   className = "",
 }: {
   terms: SolicitationBidTerms | null | undefined;
@@ -100,14 +102,26 @@ export function BidTermsPanel({
    * as firstArticle — pass it where the row does not badge it.
    */
   solicitationType?: string | null;
+  /**
+   * Show a fast-award ('F') solicitation type as a term. Opt-in, unlike the
+   * IDC block: /rfq/worklist keeps fast award as a row badge, because it is
+   * urgency — the award can come before the return date — and must read
+   * without expanding anything. /bidmatching moves it here.
+   */
+  fastAward?: boolean;
   className?: string;
 }) {
+  // Label and definition for the fast-award term, from the same vocabulary
+  // the row badge reads. Hooks run unconditionally; the cache is shared.
+  const { byCode } = useCodeDefinitions("SOLICITATION_TYPE");
   // First Article, then the nine coded fields, then the DPAS rating. The
   // established order holds — what disqualifies you, then what it costs you —
   // with the rating after it, since it binds you only once you have won.
   // First Article leads because it is the most expensive of the gates: a test
   // report before production delivery, priced into a bid or not at all.
   const rating = resolveRating(terms, definitions);
+  const typeCode = solicitationType?.trim().toUpperCase();
+  const fast = fastAward && typeCode === "F" ? byCode.get("F") : undefined;
   const resolved: ResolvedBidTerm[] = [
     ...(firstArticle
       ? [{
@@ -117,6 +131,19 @@ export function BidTermsPanel({
           hint: "Tested before production delivery",
           description:
             "The bidder must test initial sample units and submit a formal report under FAR 52.209-3 before full production delivery. Expect added cost and lead time.",
+          notable: true,
+        }]
+      : []),
+    // Fast award after First Article: it changes when you must bid, not
+    // whether you can.
+    ...(fastAward && typeCode === "F"
+      ? [{
+          field: "solicitation_type" as const,
+          name: "Solicitation type",
+          label: fast?.label ?? "Fast award",
+          code: "F",
+          hint: "Can be awarded before the return date",
+          description: fast?.description,
           notable: true,
         }]
       : []),

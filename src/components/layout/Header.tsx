@@ -41,6 +41,15 @@ const mainNavItems = [
 // request_for_quote_enterprise. The Assignments page is admin-only but listed
 // for every Enterprise holder — non-admins get the page's own admins-only
 // notice rather than a hidden feature.
+// Bid Manager pages, as a dropdown. The bid editor (/bidmanager/[id]) is
+// reached from these and has its own back link. "/bidmanager" is a path parent
+// of the others, so items use isGroupItemActive.
+const bidManagerItems = [
+  { href: "/bidmanager/matches", label: "Bid on matches" },
+  { href: "/bidmanager", label: "Send bids" },
+  { href: "/bidmanager/settings", label: "Settings" },
+];
+
 const rfqMenuSpec = [
   { href: "/rfq", label: "RFQ Pipeline" },
   { href: "/rfq/worklist", label: "Send RFQs", enterprise: true },
@@ -96,6 +105,9 @@ export function Header({ showAccountLink = true }: HeaderProps) {
   const [isLibraryDropdownOpen, setIsLibraryDropdownOpen] = useState(false);
   const [isHelpDropdownOpen, setIsHelpDropdownOpen] = useState(false);
   const [isRfqDropdownOpen, setIsRfqDropdownOpen] = useState(false);
+  const [isBidDropdownOpen, setIsBidDropdownOpen] = useState(false);
+  const [isMobileBidOpen, setIsMobileBidOpen] = useState(false);
+  const bidDropdownRef = useRef<HTMLDivElement>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileLibraryOpen, setIsMobileLibraryOpen] = useState(false);
   const [isMobileHelpOpen, setIsMobileHelpOpen] = useState(false);
@@ -157,6 +169,9 @@ export function Header({ showAccountLink = true }: HeaderProps) {
       if (rfqDropdownRef.current && !rfqDropdownRef.current.contains(event.target as Node)) {
         setIsRfqDropdownOpen(false);
       }
+      if (bidDropdownRef.current && !bidDropdownRef.current.contains(event.target as Node)) {
+        setIsBidDropdownOpen(false);
+      }
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
         setIsMobileMenuOpen(false);
       }
@@ -171,6 +186,7 @@ export function Header({ showAccountLink = true }: HeaderProps) {
     setIsMobileLibraryOpen(false);
     setIsMobileHelpOpen(false);
     setIsMobileRfqOpen(false);
+    setIsMobileBidOpen(false);
   };
 
   const userInitial = user?.first_name?.[0] || user?.email?.[0] || "U";
@@ -265,12 +281,37 @@ export function Header({ showAccountLink = true }: HeaderProps) {
               </Link>
               )}
               {!isRfqResponderOnly && showBidding && (
-              <Link
-                href="/bidmanager/matches"
-                className={topLinkClass(isLinkActive("/bidmanager", pathname))}
-              >
-                Bid Manager
-              </Link>
+              <div className="relative" ref={bidDropdownRef}>
+                <button
+                  onClick={() => setIsBidDropdownOpen(!isBidDropdownOpen)}
+                  className={`flex items-center gap-1 ${topLinkClass(isLinkActive("/bidmanager", pathname))}`}
+                >
+                  Bid Manager
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${isBidDropdownOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {isBidDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-card-bg rounded-lg shadow-xl border border-border py-2 z-[100]">
+                    {bidManagerItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={dropdownItemClass(isGroupItemActive(item, bidManagerItems, pathname))}
+                        onClick={() => setIsBidDropdownOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
               )}
               {/* RFQ: the full menu shows for everyone as an upsell surface. Received
                   works for all tiers; sender pages self-gate to the upgrade CTA for
@@ -401,13 +442,37 @@ export function Header({ showAccountLink = true }: HeaderProps) {
                 </Link>
               )}
               {!isRfqResponderOnly && showBidding && (
-                <Link
-                  href="/bidmanager/matches"
-                  className={mobileRowClass(isLinkActive("/bidmanager", pathname))}
-                  onClick={closeMobileMenu}
-                >
-                  Bid Manager
-                </Link>
+                <>
+                  <button
+                    onClick={() => setIsMobileBidOpen(!isMobileBidOpen)}
+                    className={`flex items-center justify-between w-full text-left ${mobileRowClass(isLinkActive("/bidmanager", pathname))}`}
+                  >
+                    <span>Bid Manager</span>
+                    <svg
+                      className={`w-4 h-4 transition-transform duration-200 ${isMobileBidOpen ? "rotate-180" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isMobileBidOpen && (
+                    <div className="pl-4">
+                      {bidManagerItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={mobileDropdownItemClass(isGroupItemActive(item, bidManagerItems, pathname))}
+                          onClick={closeMobileMenu}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Library expandable section */}
