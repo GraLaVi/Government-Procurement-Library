@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { BIDDING_PRODUCT_KEY } from "@/lib/bidding/access";
 import { errorText } from "@/lib/bidding/api";
+import { geoOptions, subdivisions, useGeo } from "@/lib/geo";
 import {
   AFFIRMATIVE_ACTION_OPTIONS,
   ALTERNATE_DISPUTES_OPTIONS,
@@ -59,6 +60,7 @@ export default function BiddingSettingsPage() {
   const [overview, setOverview] = useState<BiddingProfilesOverview | null>(null);
   const [cage, setCage] = useState<string | null>(null);
   const [form, setForm] = useState<BiddingProfileFields>(EMPTY_PROFILE_FIELDS);
+  const geo = useGeo();
   // Set while editing a profile that has not been saved yet; carries where
   // each suggested value came from.
   const [suggestedSources, setSuggestedSources] = useState<Record<string, string> | null>(null);
@@ -387,10 +389,11 @@ export default function BiddingSettingsPage() {
               >
                 {text("fob_city", "City (033)", 30, "", { upper: true })}
                 <div className="grid grid-cols-2 gap-4">
-                  {text("fob_state", "State or province (034)", 2, "Two letters. US and Canada only.", {
-                    upper: true,
-                  })}
-                  {text("fob_country", "Country (035)", 2, "Two-letter code, e.g. US.", { upper: true })}
+                  {select("fob_country", "Country (035)", geoOptions(geo?.countries ?? []), "")}
+                  {(form.fob_country === "US" || form.fob_country === "CA")
+                    ? select("fob_state", form.fob_country === "CA" ? "Province (034)" : "State (034)",
+                        geoOptions(subdivisions(geo, form.fob_country)), "")
+                    : <p className="text-xs text-muted self-end pb-2">No state or province outside the US and Canada.</p>}
                 </div>
               </Section>
 

@@ -231,6 +231,9 @@ export interface BidProduct {
   inherited: string[];
   price_breaks: BidPriceBreak[];
   editable_solicitation_fields: string[];
+  /** Field number -> the codes it accepts given this item's other answers
+   *  (070, 071, 072, 106, 118). Absent when the field does not apply. */
+  code_options: Record<string, string[]>;
 }
 
 export interface BidDetail {

@@ -14,6 +14,7 @@ import {
 import { BIDDING_PRODUCT_KEY } from "@/lib/bidding/access";
 import { bidFetch, money } from "@/lib/bidding/api";
 import { formatDateMmDdYyyy } from "@/lib/dates";
+import { geoOptions, subdivisions, useGeo, type GeoLists } from "@/lib/geo";
 import {
   AFFIRMATIVE_ACTION_OPTIONS,
   ALTERNATE_DISPUTES_OPTIONS,
@@ -201,6 +202,20 @@ function PdfHint({ onOpen, short }: { onOpen?: () => void; short?: boolean }) {
   );
 }
 
+/** Options for a code select, keeping a stored value that is not among them
+ *  (so the bidder sees it beside its error rather than a blank). */
+function withCurrent(options: CodeOption[], current: Value): CodeOption[] {
+  if (current == null || current === "" || options.some((o) => o.value === String(current))) return options;
+  return [...options, { value: String(current), label: `${current} (not valid here)` }];
+}
+
+/** Country options for the codes a field accepts, named from the geo list. */
+function countryOptions(geo: GeoLists | null, codes: string[] | undefined): CodeOption[] {
+  if (!geo) return [];
+  const rows = codes ? geo.countries.filter((c) => codes.includes(c.code)) : geo.countries;
+  return geoOptions(rows);
+}
+
 /** How many things on a tab to fix (red) or check (amber). */
 function CountBadge({ n, tone = "error" }: { n: number; tone?: "error" | "warning" }) {
   return (
@@ -251,6 +266,7 @@ export default function BidEditorPage() {
   // The PDF sits beside the form on wide screens (remembered), in a modal otherwise.
   const [pdfDocked, setPdfDocked] = useState(false);
   const [pdfModal, setPdfModal] = useState(false);
+  const geo = useGeo();
 
   useEffect(() => {
     try {
@@ -791,8 +807,10 @@ export default function BidEditorPage() {
                     <>
                       {text("fob_city", 33, "FOB city", { max: 30, upper: true })}
                       <div className="grid grid-cols-2 gap-3">
-                        {(h.fob_country === "US" || h.fob_country === "CA") && text("fob_state", 34, "State", { max: 2, upper: true })}
-                        {text("fob_country", 35, "Country", { max: 2, upper: true })}
+                        {(h.fob_country === "US" || h.fob_country === "CA") &&
+                          select("fob_state", 34, h.fob_country === "CA" ? "Province" : "State",
+                            withCurrent(geoOptions(subdivisions(geo, h.fob_country as string)), h.fob_state))}
+                        {select("fob_country", 35, "Country", withCurrent(countryOptions(geo, undefined), h.fob_country))}
                       </div>
                     </>
                   )}
@@ -949,15 +967,21 @@ function ProductBlock({
   lines: BidLine[];
   onOpenPdf?: () => void;
 }) {
+  const geo = useGeo();
   const v = p.values;
   const inherited = new Set(p.inherited);
+  // Only the codes this field accepts given the item's other answers.
+  const only = (number: number, options: CodeOption[]) => {
+    const codes = p.code_options[String(number)];
+    return codes ? options.filter((o) => codes.includes(o.value)) : options;
+  };
   const editableSol = new Set(p.editable_solicitation_fields);
   const hint = (attr: string, extra?: React.ReactNode) =>
     inherited.has(attr) ? <>From the main item{extra ? <> · {extra}</> : null}</> : extra;
 
   const sel = (attr: string, number: number, label: string, options: CodeOption[], extra?: React.ReactNode) => (
     <Field label={label} field={number} hint={hint(attr, extra)} issues={issues(p, number)}>
-      <SelectInput value={v[attr] as Value} options={options} disabled={disabled} onSave={(x) => onSave({ [attr]: x })} />
+      <SelectInput value={v[attr] as Value} options={withCurrent(only(number, options), v[attr] as Value)} disabled={disabled} onSave={(x) => onSave({ [attr]: x })} />
     </Field>
   );
   const txt = (attr: string, number: number, label: string, opts: { max?: number; upper?: boolean; type?: "text" | "number"; extra?: React.ReactNode } = {}) => (
@@ -999,12 +1023,20 @@ function ProductBlock({
         {sel("child_labor_cert", 120, "Child labor certification", CHILD_LABOR_OPTIONS)}
 
         {sel("end_product_code", 70, "End product", END_PRODUCT_OPTIONS)}
-        {applies.origin(v) && txt("country_of_origin", 71, "Country of origin", { max: 2, upper: true })}
-        {applies.qualifyingCountry(v) && txt("qualifying_country", 72, "Qualifying country", { max: 2, upper: true })}
+        {applies.origin(v) && sel("country_of_origin", 71, "Country of origin", countryOptions(geo, p.code_options["71"]))}
+        {applies.qualifyingCountry(v) && sel("qualifying_country", 72, "Qualifying country", countryOptions(geo, p.code_options["72"]))}
         {applies.dutyFree(v) && sel("duty_free_requested", 73, "Duty-free entry requested", YES_NO_OPTIONS)}
-        {applies.dutyFree(v) && v.duty_free_requested === "Y" && sel("duty_free_foreign_in_us", 74, "Foreign supplies already in the US?", YES_NO_OPTIONS)}
-        {applies.dutyFree(v) && v.duty_free_foreign_in_us === "Y" && sel("duty_paid", 75, "Duty paid?", YES_NO_OPTIONS)}
-        {applies.dutyFree(v) && v.duty_paid === "N" && txt("duty_paid_amount", 76, "Amount covering duty", { type: "number" })}
+        {applies.dutyFree(v) && v.duty_free_requested === "Y" && (
+          <>
+            {sel("duty_free_foreign_in_us", 74, "Foreign supplies already in the US?", YES_NO_OPTIONS)}
+            {v.duty_free_foreign_in_us === "Y" && (
+              <>
+                {sel("duty_paid", 75, "Duty paid?", YES_NO_OPTIONS)}
+                {v.duty_paid === "N" && txt("duty_paid_amount", 76, "Amount covering duty", { type: "number" })}
+              </>
+            )}
+          </>
+        )}
 
         {sel("manufacturer_dealer", 102, "Manufacturer or dealer", MANUFACTURER_DEALER_OPTIONS)}
         {v.manufacturer_dealer === "QD" && txt("source_of_supply_cage", 63, "Source of supply CAGE", { max: 5, upper: true })}
