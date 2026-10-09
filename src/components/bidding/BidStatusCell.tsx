@@ -4,6 +4,17 @@ import Link from "next/link";
 import { StartBidButton } from "@/components/bidding/StartBidButton";
 import { BID_STATUS_LABELS, type BidStatus } from "@/lib/bidding/types";
 
+const SHORT_STATUS: Record<string, string> = {
+  draft: "Draft",
+  queued: "Sent",
+  exported: "Sent",
+  verified: "Checked",
+  submitted: "Submitted",
+  rejected: "Rejected",
+  withdrawn: "Withdrawn",
+  expired: "Expired",
+};
+
 /**
  * The Bid Worklist's Bid column: start a bid, or the bid the team already
  * has. The Bid Worklist is /bidmatching as a Bid Manager add-on holder sees
@@ -44,14 +55,15 @@ export function BidStatusCell({
       : bidStatus === "draft"
       ? "text-amber-700 dark:text-amber-300"
       : "text-muted";
+  // Short word in the cell, full wording on hover: the long labels ("Sent —
+  // waiting for DIBBS upload") set the width of the whole column otherwise.
+  const full = BID_STATUS_LABELS[bidStatus as BidStatus] ?? bidStatus;
   return (
-    <div className="min-w-0">
-      <Link href={`/bidmanager/${bidId}`} className="text-primary hover:underline font-medium whitespace-nowrap">
+    <div className="whitespace-nowrap" title={full}>
+      <Link href={`/bidmanager/${bidId}`} className="text-primary hover:underline font-medium">
         BID-{bidReferenceNumber}
       </Link>
-      <div className={`text-[11px] ${tone}`}>
-        {BID_STATUS_LABELS[bidStatus as BidStatus] ?? bidStatus}
-      </div>
+      <span className={`ml-1.5 ${tone}`}>{SHORT_STATUS[bidStatus] ?? full}</span>
     </div>
   );
 }

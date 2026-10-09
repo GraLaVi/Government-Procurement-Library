@@ -518,8 +518,8 @@ export function BidMatchResultsTable({
         <table className={tableClass}>
           <thead>
             <tr className={tableHeadRowClass}>
-              <SortHeader label="★" sortKey="interested" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="w-8" />
-              <th className="w-6 px-1.5 py-1.5" aria-label="Expand"></th>
+              <SortHeader label="★" sortKey="interested" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="w-8 !pl-2 !pr-0.5" />
+              <th className="w-6 px-0.5 py-1.5" aria-label="Expand"></th>
               <SortHeader label="Solicitation" sortKey="solicitation" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <SortHeader label="NSN" sortKey="nsn" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
               <th className={`${thClass} whitespace-nowrap`} title="Approved source (DLA)">Appr. Source</th>
@@ -547,10 +547,10 @@ export function BidMatchResultsTable({
               return (
                 <Fragment key={key}>
                   <tr className={rowClass}>
-                    <td className="px-1.5 py-1.5 text-center">
+                    <td className="pl-2 pr-0.5 py-1.5 text-right">
                       <InterestStar result={result} onToggle={onToggleInterest} />
                     </td>
-                    <td className="px-1.5 py-1.5 text-center">
+                    <td className="px-0.5 py-1.5 text-center">
                       <button
                         type="button"
                         onClick={() => toggleExpanded(key)}
@@ -569,7 +569,9 @@ export function BidMatchResultsTable({
                       </button>
                     </td>
                     <td className={tdClass}>
-                      <div className="flex flex-wrap items-center gap-1.5 font-medium">
+                      {/* One line: the badges are one letter each now, so they
+                          sit beside the number rather than wrapping under it. */}
+                      <div className="flex items-center gap-1.5 font-medium whitespace-nowrap">
                         {/* Plain text — the drill-down lives on the NSN link now.
                             whitespace-nowrap keeps the number on one line when the
                             viewport narrows; the badges beside it still wrap. */}
