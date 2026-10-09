@@ -129,8 +129,11 @@ export function BidTermsPanel({
           name: "First article",
           label: "Required",
           hint: "Tested before production delivery",
+          // Both first article CLINs: contractor testing (0001S00000053,
+          // FAR 52.209-3) and government testing (0001S00000052, 52.209-4).
+          // The waiver rule is DLAD 9.306's.
           description:
-            "The bidder must test initial sample units and submit a formal report under FAR 52.209-3 before full production delivery. Expect added cost and lead time.",
+            "Initial units are tested and approved before production delivery: by you, with a test report (FAR 52.209-3), or by a government lab you ship them to (FAR 52.209-4). Price the testing separately on the first article line. A waiver needs the same or a similar item made and delivered within the last 5 years (3 for critical safety items) with no changes since (DLAD 9.306).",
           notable: true,
         }]
       : []),

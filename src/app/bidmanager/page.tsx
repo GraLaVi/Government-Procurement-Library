@@ -249,7 +249,7 @@ export default function SendBidsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Send bids</h1>
+        <h1 className="text-2xl font-bold text-foreground">Bid Pipeline</h1>
         <p className="text-muted mt-1 text-sm max-w-3xl">
           Your team&apos;s DIBBS quotes. Sending a bid queues it for our upload to DIBBS; it reaches DLA
           when we upload it, and each bid shows what DIBBS made of it.

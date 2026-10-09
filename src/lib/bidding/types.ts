@@ -258,6 +258,24 @@ export interface BidDetail {
   updated_at: string | null;
   queued_at: string | null;
   dibbs_reason: string | null;
+  /** Set only when the bid has a first-article line (DLAD 9.3 guidance). */
+  first_article?: FirstArticleContext | null;
+}
+
+export interface FirstArticleAward {
+  contract_number: string | null;
+  contract_date: string | null;
+  quantity: number | null;
+  unit_price: string | number | null;
+}
+
+/** The quoting CAGE's newest prime awards of the bid's parts, and the
+ *  solicitation's AMSC — what a first-article waiver decision turns on. */
+export interface FirstArticleContext {
+  amsc: string | null;
+  /** DLAD 9.304: first article testing does not normally apply (T, Z, D, H, P). */
+  amsc_exempt: boolean;
+  recent_awards: FirstArticleAward[];
 }
 
 export interface BidCreateResponse {

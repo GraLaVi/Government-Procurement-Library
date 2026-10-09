@@ -14,6 +14,10 @@ interface StartBidButtonProps {
   label?: string;
   className?: string;
   title?: string;
+  /** Runs just before going to the editor, and is added to its URL — the
+   *  Bid Worklist uses it to bring the bidder back to their place. */
+  beforeNavigate?: () => void;
+  editorQuery?: string;
 }
 
 /**
@@ -22,7 +26,9 @@ interface StartBidButtonProps {
  * and to everyone once the add-on is public, when non-holders are sent to
  * /pricing instead (plan 4.1).
  */
-export function StartBidButton({ solicitationId, fromRfq = false, label, className = "", title }: StartBidButtonProps) {
+export function StartBidButton({
+  solicitationId, fromRfq = false, label, className = "", title, beforeNavigate, editorQuery,
+}: StartBidButtonProps) {
   const router = useRouter();
   const { hasProductAccess } = useAuth();
   const [busy, setBusy] = useState(false);
@@ -43,7 +49,8 @@ export function StartBidButton({ solicitationId, fromRfq = false, label, classNa
         method: "POST",
         json: { solicitation_id: solicitationId, use_rfq_quotes: fromRfq },
       });
-      router.push(`/bidmanager/${data.bid.id}`);
+      beforeNavigate?.();
+      router.push(`/bidmanager/${data.bid.id}${editorQuery ? `?${editorQuery}` : ""}`);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { BIDDING_PRODUCT_KEY } from "@/lib/bidding/access";
 import { AccessDeniedPage } from "@/components/library/AccessDeniedPage";
@@ -14,11 +14,13 @@ import {
 import { BidMatchResultsTable, type BidSortKey } from "@/components/bidmatching/BidMatchResultsTable";
 import {
   BidMatchFilterBar,
+  parseFilterParams,
   serializeFilters,
   type FilterRow,
 } from "@/components/bidmatching/BidMatchFilterBar";
 import { formatDateMmDdYyyy } from "@/lib/dates";
 import { quickFindRows } from "@/lib/bidmatching/quickFind";
+import { clearWorklistReturn, readWorklistReturn, takeWorklistFlash } from "@/lib/bidding/worklistReturn";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
 
 
@@ -206,6 +208,8 @@ export default function BidMatchingPage() {
   const [pageSizeInitialized, setPageSizeInitialized] = useState(false);
   const [isLoadingDates, setIsLoadingDates] = useState(true);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
+  // Whether any results fetch has finished — the scroll restore waits for it.
+  const [resultsLoadedOnce, setResultsLoadedOnce] = useState(false);
   // Stamped when Print is clicked rather than during render — `new Date()` at
   // render time would mismatch between the server and client HTML. Same
   // pattern as the RFQ detail page.
@@ -255,11 +259,58 @@ export default function BidMatchingPage() {
     setPageSizeInitialized(true);
   }, []);
 
+  // Every filter and sort change goes back to page 1, so narrowing never
+  // lands on an empty out-of-range page. Done in the handlers rather than in
+  // an effect on the filters: an effect would also fire when the URL restores
+  // them, and throw away the page the URL restored with them.
+  const applyFilters = (rows: FilterRow[]) => { setFilters(rows); setPage(1); };
+  const toggleInterestedOnly = () => { setInterestedOnly((v) => !v); setPage(1); };
+  const toggleNotBidOnly = () => { setNotBidOnly((v) => !v); setPage(1); };
+  const toggleBiddableOnly = () => { setBiddableOnly((v) => !v); setPage(1); };
+
+  // Everything placeHref (below) writes besides the date. Unknown or stale
+  // values fall back to the defaults: the backend is the real check on sort
+  // keys and filters, and a bad one shows as its usual error.
+  const restoreFromUrl = (search: string, source: "dibbs" | "sam") => {
+    const params = new URLSearchParams(search);
+    const pg = Number(params.get("page"));
+    if (Number.isInteger(pg) && pg > 1) setPage(pg);
+    const sort = params.get("sort");
+    const dir = params.get("dir");
+    if (sort && (dir === "asc" || dir === "desc")) {
+      setSortBy(sort as BidSortKey);
+      setSortDir(dir);
+    }
+    setInterestedOnly(params.get("starred") === "1");
+    setNotBidOnly(source === "dibbs" && params.get("notbid") === "1");
+    setBiddableOnly(source === "sam" && params.get("biddable") === "1");
+    const f = params.getAll("f").filter(Boolean);
+    if (f.length) setFilters(parseFilterParams(f));
+  };
+
+  // Back from the bid editor: a note on what happened to the bid, and the
+  // scroll position and row the bidder left from (see worklistReturn).
+  const [toast, setToast] = useState<string | null>(null);
+  const [highlightSolicitationId, setHighlightSolicitationId] = useState<number | null>(null);
+  const pendingReturn = useRef<{ scrollY: number; solicitationId: number } | null>(null);
   useEffect(() => {
-    // Reset to page 1 whenever the filters or sort change so we don't land on
-    // an empty out-of-range page after narrowing results.
-    setPage(1);
-  }, [filterKey, sortBy, sortDir, interestedOnly, biddableOnly, notBidOnly]);
+    setToast(takeWorklistFlash());
+    const back = readWorklistReturn();
+    if (back && back.href === window.location.pathname + window.location.search) {
+      pendingReturn.current = { scrollY: back.scrollY, solicitationId: back.solicitationId };
+    }
+    clearWorklistReturn();
+  }, []);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
+  useEffect(() => {
+    if (!highlightSolicitationId) return;
+    const t = setTimeout(() => setHighlightSolicitationId(null), 2500);
+    return () => clearTimeout(t);
+  }, [highlightSolicitationId]);
 
   // Optimistic: the star flips immediately and reverts if the write fails.
   // Flags are customer-scoped, so a teammate's flag can arrive on the next
@@ -307,6 +358,7 @@ export default function BidMatchingPage() {
   // first, so ascending is what groups the same commodity class together.
   // Clicking again flips.
   const handleSort = (key: BidSortKey) => {
+    setPage(1);
     if (key === sortBy) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
@@ -364,6 +416,10 @@ export default function BidMatchingPage() {
           setSelectedRunDate(fromUrl.runDate);
           setSelectedSource(fromUrl.source);
           setSelectedIssueDate(fromUrl.source === "dibbs" ? fromUrl.issueDate : null);
+          // The rest of the place the URL names — page, sort and filters —
+          // set in the same batch as the date, so the first fetch is the
+          // right one. Only with a date: without one the URL is stale.
+          restoreFromUrl(window.location.search, fromUrl.source);
         } else if (data.length > 0) {
           // Otherwise the newest run date, whole: a null issue date is the
           // run-wide view, so the page opens on everything that run produced
@@ -447,10 +503,33 @@ export default function BidMatchingPage() {
         setNonBiddableCount(null);
       } finally {
         setIsLoadingResults(false);
+        setResultsLoadedOnce(true);
       }
     },
     [],
   );
+
+  // A restored page can be past the end by the time the bidder is back — a
+  // bid placed under "Not yet bid" takes its row off the list. Step back to
+  // the last page that has rows rather than show an empty one.
+  useEffect(() => {
+    if (!resultsLoadedOnce || isLoadingResults || results.length > 0 || page <= 1 || total === 0) return;
+    setPage(Math.max(1, Math.ceil(total / pageSize)));
+  }, [resultsLoadedOnce, isLoadingResults, results.length, page, total, pageSize]);
+
+  // Back from the bid editor to the same URL: once its rows are in, scroll to
+  // where the bidder was and point out the row they left from. One frame
+  // later, so the table has laid out its height first.
+  useEffect(() => {
+    if (!resultsLoadedOnce || isLoadingResults || !pendingReturn.current) return;
+    const back = pendingReturn.current;
+    pendingReturn.current = null;
+    const id = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: back.scrollY });
+      setHighlightSolicitationId(back.solicitationId);
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [resultsLoadedOnce, isLoadingResults]);
 
   useEffect(() => {
     // Wait for the stored page size, or the first load fetches 50 rows and
@@ -488,11 +567,39 @@ export default function BidMatchingPage() {
     // Likewise "Not yet bid", which is DIBBS-only.
     if (selection.source !== "dibbs") setNotBidOnly(false);
     setPage(1);
-    // Keep the address bar on the selection, so a reload or a copied link
-    // reopens the same date. Replace rather than push: picking dates is
-    // browsing within the page, not navigation Back should step through.
-    window.history.replaceState(null, "", dateSelectionHref(selection));
   };
+
+  // The URL a page of results lives at: the date, then the page, sort and
+  // filters. Kept in the address bar so a reload, a copied link, or coming
+  // back from the bid editor reopens the same place. Defaults are left out to
+  // keep plain links plain.
+  const placeHref = useMemo(() => {
+    if (!selectedRunDate) return null;
+    const selection: DateSelection = selectedSource === "sam"
+      ? { source: "sam", runDate: selectedRunDate }
+      : { source: "dibbs", runDate: selectedRunDate, issueDate: selectedIssueDate };
+    const url = new URL(dateSelectionHref(selection), "http://x");
+    if (page > 1) url.searchParams.set("page", String(page));
+    if (sortBy !== DEFAULT_SORT_BY || sortDir !== DEFAULT_SORT_DIR) {
+      url.searchParams.set("sort", sortBy);
+      url.searchParams.set("dir", sortDir);
+    }
+    if (interestedOnly) url.searchParams.set("starred", "1");
+    if (notBidOnly) url.searchParams.set("notbid", "1");
+    if (biddableOnly) url.searchParams.set("biddable", "1");
+    for (const f of filterParams) url.searchParams.append("f", f);
+    return url.pathname + url.search;
+    // filterKey stands in for filterParams, as in the fetch effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRunDate, selectedSource, selectedIssueDate, page, sortBy, sortDir,
+      interestedOnly, notBidOnly, biddableOnly, filterKey]);
+  // Replace rather than push: paging and filtering are browsing within the
+  // page, not navigation Back should step through.
+  useEffect(() => {
+    if (placeHref && placeHref !== window.location.pathname + window.location.search) {
+      window.history.replaceState(null, "", placeHref);
+    }
+  }, [placeHref]);
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -604,6 +711,10 @@ export default function BidMatchingPage() {
         </div>
       </div>
 
+      {toast && (
+        <div className="no-print rounded-lg border border-success/30 bg-success/10 px-4 py-2.5 text-sm text-success">{toast}</div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="rounded-lg border border-error/20 bg-error/5 p-4">
@@ -672,7 +783,7 @@ export default function BidMatchingPage() {
                 marked", not "what I marked". */}
             <button
               type="button"
-              onClick={() => setInterestedOnly((v) => !v)}
+              onClick={toggleInterestedOnly}
               aria-pressed={interestedOnly}
               title="Show only solicitations your team starred to come back to"
               className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm transition-colors cursor-pointer ${
@@ -685,11 +796,11 @@ export default function BidMatchingPage() {
               Starred only
             </button>
             {/* Bid Worklist only, on DIBBS buckets: what still needs a bid.
-                Any bid counts, drafts included — those are on Send bids. */}
+                Any bid counts, drafts included — those are on the Bid Pipeline. */}
             {isWorklist && selectedSource === "dibbs" && (
               <button
                 type="button"
-                onClick={() => setNotBidOnly((v) => !v)}
+                onClick={toggleNotBidOnly}
                 aria-pressed={notBidOnly}
                 title="Show only solicitations your team has not started a bid on"
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm transition-colors cursor-pointer ${
@@ -710,7 +821,7 @@ export default function BidMatchingPage() {
             {selectedSource === "sam" && ((nonBiddableCount ?? 0) > 0 || biddableOnly) && (
               <button
                 type="button"
-                onClick={() => setBiddableOnly((v) => !v)}
+                onClick={toggleBiddableOnly}
                 aria-pressed={biddableOnly}
                 title="Hide postings you cannot quote — Presolicitation and Sources Sought notices, and any award or special notice that matched"
                 className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm transition-colors cursor-pointer ${
@@ -782,7 +893,7 @@ export default function BidMatchingPage() {
             <BidMatchFilterBar
               source={selectedSource}
               applied={filters}
-              onApply={setFilters}
+              onApply={applyFilters}
               hasOtherFilters={
                 interestedOnly || biddableOnly || notBidOnly || quickFindActive
                 || sortBy !== DEFAULT_SORT_BY || sortDir !== DEFAULT_SORT_DIR
@@ -794,6 +905,7 @@ export default function BidMatchingPage() {
                 setInterestedOnly(false);
                 setBiddableOnly(false);
                 setNotBidOnly(false);
+                setPage(1);
               }}
             />
           </div>
@@ -818,6 +930,7 @@ export default function BidMatchingPage() {
                 onSort={handleSort}
                 onToggleInterest={handleToggleInterest}
                 showBidColumn={isWorklist}
+                highlightSolicitationId={highlightSolicitationId}
               />
             ) : (
               <div className="text-center py-16">

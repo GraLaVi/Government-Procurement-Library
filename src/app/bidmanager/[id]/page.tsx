@@ -53,6 +53,10 @@ import {
   type CodeOption,
 } from "@/lib/bidding/types";
 import { FLASH_KEY } from "@/lib/bidding/flash";
+import {
+  FROM_WORKLIST, openedFromWorklist, readWorklistReturn, setWorklistFlash,
+} from "@/lib/bidding/worklistReturn";
+import { FirstArticleGuide, FirstArticleKindNote } from "@/components/bidding/FirstArticleGuide";
 
 type Value = string | number | boolean | null;
 
@@ -260,6 +264,13 @@ export default function BidEditorPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // Opened from the Bid Worklist: back, Send now, Send later and Delete all
+  // return there, to the same place, rather than to the Bid Pipeline. Read
+  // after mount — the URL and sessionStorage are browser-only.
+  const [worklistHref, setWorklistHref] = useState<string | null>(null);
+  useEffect(() => {
+    if (openedFromWorklist()) setWorklistHref(readWorklistReturn()?.href ?? "/bidmatching");
+  }, []);
   const [preview, setPreview] = useState<BidPreview | null>(null);
   const [confirm, setConfirm] = useState<"delete" | "withdraw" | null>(null);
   const [tab, setTab] = useState<TabKey>("lines");
@@ -323,6 +334,11 @@ export default function BidEditorPage() {
     try {
       const result = await bidFetch<BidSendResult>("/api/bidding/send", { method: "POST", json: { bid_ids: [bid.id] } });
       if (result.queued.includes(bid.id)) {
+        if (worklistHref) {
+          setWorklistFlash(`${bidReference(bid)} sent. It is queued for our upload to DIBBS.`);
+          router.push(worklistHref);
+          return;
+        }
         setToast(`${bidReference(bid)} sent. It is queued for our upload to DIBBS.`);
         await load();
       } else {
@@ -337,10 +353,15 @@ export default function BidEditorPage() {
   };
 
   // Every field saves as it is edited, so "Send later" has nothing to save:
-  // the draft already sits on Send bids' Ready tab, to go out with "Send
+  // the draft already sits on the Bid Pipeline's Ready tab, to go out with "Send
   // selected" or "Send all ready". Takes the bidder there with a note.
   const sendLater = () => {
     if (!bid) return;
+    if (worklistHref) {
+      setWorklistFlash(`${bidReference(bid)} saved to Ready on the Bid Pipeline.`);
+      router.push(worklistHref);
+      return;
+    }
     try {
       sessionStorage.setItem(FLASH_KEY, `${bidReference(bid)} saved to Ready. Send it from here when you're ready.`);
     } catch {
@@ -356,7 +377,8 @@ export default function BidEditorPage() {
     try {
       if (action === "delete") {
         await bidFetch(`/api/bidding/${bid.id}`, { method: "DELETE" });
-        router.push("/bidmanager");
+        if (worklistHref) setWorklistFlash(`${bidReference(bid)} deleted.`);
+        router.push(worklistHref ?? "/bidmanager");
         return;
       }
       if (action === "withdraw") {
@@ -364,7 +386,7 @@ export default function BidEditorPage() {
         setToast(`${bidReference(bid)} withdrawn. Revise it to change it and send it again.`);
       } else {
         const data = await bidFetch<BidCreateResponse>(`/api/bidding/${bid.id}/revise`, { method: "POST" });
-        router.push(`/bidmanager/${data.bid.id}`);
+        router.push(`/bidmanager/${data.bid.id}${worklistHref ? `?${FROM_WORKLIST}` : ""}`);
       }
     } catch (e) {
       setError((e as Error).message);
@@ -406,7 +428,9 @@ export default function BidEditorPage() {
     return (
       <div className="space-y-4">
         <div className="rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">{error ?? "Bid not found."}</div>
-        <Link href="/bidmanager" className="text-sm text-primary hover:underline">← Send bids</Link>
+        <Link href={worklistHref ?? "/bidmanager"} className="text-sm text-primary hover:underline">
+          {worklistHref ? "← Bid Worklist" : "← Bid Pipeline"}
+        </Link>
       </div>
     );
   }
@@ -494,7 +518,9 @@ export default function BidEditorPage() {
         {/* Title row */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <Link href="/bidmanager" className="text-xs text-primary hover:underline">← Send bids</Link>
+            <Link href={worklistHref ?? "/bidmanager"} className="text-xs text-primary hover:underline">
+              {worklistHref ? "← Bid Worklist" : "← Bid Pipeline"}
+            </Link>
             <h1 className="text-2xl font-bold text-foreground mt-1">
               {bidReference(bid)}{" "}
               <span className="font-mono text-lg text-muted">{displaySolicitationNumber(String(h.solicitation_number ?? ""))}</span>
@@ -521,7 +547,7 @@ export default function BidEditorPage() {
                   Delete draft
                 </Button>
                 <Button variant="outline" size="sm" disabled={saving} onClick={sendLater}
-                  title="Keep it on the Ready tab of Send bids and send it later">
+                  title="Keep it on the Bid Pipeline's Ready tab and send it later">
                   Send later
                 </Button>
                 <Button variant="primary" size="sm" disabled={saving || !bid.can_send} onClick={send}
@@ -772,6 +798,7 @@ export default function BidEditorPage() {
                       <p className="text-xs text-muted mt-0.5">
                         Line {ln.line_number ?? "?"}
                       </p>
+                      <FirstArticleKindNote nsnPart={ln.nsn_part} />
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Field label="Request waiver of first article testing?" field={64} issues={at(64)}
                           hint={waiver === "Y"
@@ -805,6 +832,8 @@ export default function BidEditorPage() {
                             </Field>
                           ))}
                       </div>
+                      <FirstArticleGuide nsnPart={ln.nsn_part} waiver={waiver} context={bid.first_article}
+                        quoteForCage={bid.quote_for_cage} />
                       <IssueText issues={[
                   ...li.filter((i) => ![44, 46, 48, 49, 50, 51, 64].includes(i.field ?? -1)),
                   ...issues.filter((i) => i.product_key === ln.nsn_part_key),

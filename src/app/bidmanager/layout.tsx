@@ -4,7 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { AppFooter } from "@/components/layout/AppFooter";
 import { RequireNotResponder } from "@/components/auth/RequireNotResponder";
 
-// Bid Manager pages (Send bids, the bid editor, settings). The Bid Worklist
+// Bid Manager pages (Bid Pipeline, the bid editor, settings). The Bid Worklist
 // is /bidmatching, under its own layout.
 // Same chrome and responder guard as the RFQ buyer pages. The pages are
 // reached from the Bid Manager dropdown in the header.

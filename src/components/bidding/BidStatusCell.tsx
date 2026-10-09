@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { StartBidButton } from "@/components/bidding/StartBidButton";
 import { BID_STATUS_LABELS, type BidStatus } from "@/lib/bidding/types";
+import { FROM_WORKLIST, saveWorklistReturn } from "@/lib/bidding/worklistReturn";
 
 const SHORT_STATUS: Record<string, string> = {
   draft: "Draft",
@@ -44,6 +45,8 @@ export function BidStatusCell({
             ? "Start the DIBBS quote with the prices your RFQ team set"
             : "Start a DIBBS quote for this solicitation"
         }
+        beforeNavigate={() => saveWorklistReturn(solicitationId)}
+        editorQuery={FROM_WORKLIST}
       />
     );
   }
@@ -55,15 +58,18 @@ export function BidStatusCell({
       : bidStatus === "draft"
       ? "text-amber-700 dark:text-amber-300"
       : "text-muted";
-  // Short word in the cell, full wording on hover: the long labels ("Sent —
-  // waiting for DIBBS upload") set the width of the whole column otherwise.
+  // The status word alone, as the link to the bid: the bid number is in the
+  // tooltip. Full wording on hover too — the long labels ("Sent — waiting for
+  // DIBBS upload") would set the width of the whole column otherwise.
   const full = BID_STATUS_LABELS[bidStatus as BidStatus] ?? bidStatus;
   return (
-    <div className="whitespace-nowrap" title={full}>
-      <Link href={`/bidmanager/${bidId}`} className="text-primary hover:underline font-medium">
-        BID-{bidReferenceNumber}
-      </Link>
-      <span className={`ml-1.5 ${tone}`}>{SHORT_STATUS[bidStatus] ?? full}</span>
-    </div>
+    <Link
+      href={`/bidmanager/${bidId}?${FROM_WORKLIST}`}
+      onClick={() => saveWorklistReturn(solicitationId)}
+      title={`BID-${bidReferenceNumber}: ${full}`}
+      className={`font-medium whitespace-nowrap hover:underline ${tone}`}
+    >
+      {SHORT_STATUS[bidStatus] ?? full}
+    </Link>
   );
 }

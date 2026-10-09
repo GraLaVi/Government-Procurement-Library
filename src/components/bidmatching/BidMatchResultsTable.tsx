@@ -331,6 +331,8 @@ interface BidMatchResultsTableProps {
    * Manager add-on holders, for whom this page is the Bid Worklist.
    */
   showBidColumn?: boolean;
+  /** Briefly marks the row the bidder came back to from the bid editor. */
+  highlightSolicitationId?: number | null;
 }
 
 /**
@@ -426,6 +428,7 @@ export function BidMatchResultsTable({
   onToggleInterest,
   defaultExpandedKeys,
   showBidColumn = false,
+  highlightSolicitationId = null,
 }: BidMatchResultsTableProps) {
   const totalPages = Math.ceil(total / pageSize);
   // Lazy initializer, so a later render of defaultExpandedKeys cannot reopen a
@@ -546,7 +549,13 @@ export function BidMatchResultsTable({
               const matchedParts = result.matched_parts ?? [];
               return (
                 <Fragment key={key}>
-                  <tr className={rowClass}>
+                  <tr
+                    className={`${rowClass} ${
+                      highlightSolicitationId != null && result.solicitation_id === highlightSolicitationId
+                        ? "!bg-primary/10"
+                        : ""
+                    }`}
+                  >
                     <td className="pl-2 pr-0.5 py-1.5 text-right">
                       <InterestStar result={result} onToggle={onToggleInterest} />
                     </td>

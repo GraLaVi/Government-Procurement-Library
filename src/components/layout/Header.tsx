@@ -51,7 +51,7 @@ const BID_MATCHING_HREF = "/bidmatching";
 // items use isGroupItemActive.
 const bidManagerItems = [
   { href: BID_MATCHING_HREF, label: "Bid Worklist" },
-  { href: "/bidmanager", label: "Send bids" },
+  { href: "/bidmanager", label: "Bid Pipeline" },
   { href: "/bidmanager/settings", label: "Settings" },
 ];
 
