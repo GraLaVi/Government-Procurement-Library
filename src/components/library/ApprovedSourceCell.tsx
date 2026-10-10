@@ -2,7 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { useAnchoredPopover } from "@/components/library/WinAndFirstArticleBadges";
-import { tdClass } from "@/components/rfq/TableCard";
+import { tdDenseClass } from "@/components/rfq/TableCard";
 
 /** One entry on DLA's approved source list (manufacturer_parts.source_dla).
  *  `nsn` is optional, for a row that spans several parts. */
@@ -22,13 +22,13 @@ export function ApprovedSourceCell({ sources }: { sources: ApprovedSource[] }) {
   const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
 
   if (sources.length === 0) {
-    return <td className={`${tdClass} text-muted`}>—</td>;
+    return <td className={`${tdDenseClass} text-muted`}>—</td>;
   }
   const [first, ...rest] = sources;
   if (rest.length === 0) {
     return (
       <td
-        className={`${tdClass} data-field whitespace-nowrap`}
+        className={`${tdDenseClass} data-field whitespace-nowrap`}
         title={`Part number ${first.part_number}${first.nsn ? ` (NSN ${first.nsn})` : ""}`}
       >
         {first.cage_code}
@@ -37,7 +37,7 @@ export function ApprovedSourceCell({ sources }: { sources: ApprovedSource[] }) {
   }
   const showNsn = new Set(sources.map((s) => s.nsn).filter(Boolean)).size > 1;
   return (
-    <td className={`${tdClass} data-field whitespace-nowrap`}>
+    <td className={`${tdDenseClass} data-field whitespace-nowrap`}>
       {first.cage_code}
       <button
         ref={btnRef}

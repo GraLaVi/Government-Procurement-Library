@@ -26,7 +26,7 @@ import type { AmcDefinitions } from "@/lib/library/amcDefinitions";
 import { formatCurrency } from "@/lib/library/types";
 import { techDocsCellLabel } from "@/lib/library/techDocs";
 import {
-  SortHeader, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+  SortHeader, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, tdDenseClass, thDenseClass,
 } from "@/components/rfq/TableCard";
 
 interface MatchedCondition {
@@ -521,21 +521,21 @@ export function BidMatchResultsTable({
         <table className={tableClass}>
           <thead>
             <tr className={tableHeadRowClass}>
-              <SortHeader label="★" sortKey="interested" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="w-8 !pl-2 !pr-0.5" />
+              <SortHeader dense label="★" sortKey="interested" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="w-8 !pl-2 !pr-0.5" />
               <th className="w-6 px-0.5 py-1.5" aria-label="Expand"></th>
-              <SortHeader label="Solicitation" sortKey="solicitation" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-              <SortHeader label="NSN" sortKey="nsn" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-              <th className={`${thClass} whitespace-nowrap`} title="Approved source (DLA)">Appr. Source</th>
-              <th className={thClass}>Description</th>
-              <SortHeader label="Qty" sortKey="quantity" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
-              <th className={thClass}>UOM</th>
-              <SortHeader label="Est. Value" sortKey="estimated_value" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
-              <SortHeader label="Posted" sortKey="posted" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
-              <SortHeader label="Close Date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
-              <th className={thClass}>Set-Aside</th>
-              <th className={thClass}>AMC</th>
-              <th className={thClass}>Status</th>
-              {showBidColumn && <th className={`${thClass} no-print`}>Bid</th>}
+              <SortHeader dense label="Solicitation" sortKey="solicitation" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortHeader dense label="NSN" sortKey="nsn" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <th className={`${thDenseClass} whitespace-nowrap`} title="Approved source (DLA)">Appr. Source</th>
+              <th className={thDenseClass}>Description</th>
+              <SortHeader dense label="Qty" sortKey="quantity" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
+              <th className={thDenseClass}>UOM</th>
+              <SortHeader dense label="Est. Value" sortKey="estimated_value" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
+              <SortHeader dense label="Posted" sortKey="posted" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
+              <SortHeader dense label="Close Date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
+              <th className={thDenseClass}>Set-Aside</th>
+              <th className={thDenseClass}>AMC</th>
+              <th className={thDenseClass}>Status</th>
+              {showBidColumn && <th className={`${thDenseClass} no-print`}>Bid</th>}
             </tr>
           </thead>
           <tbody>
@@ -577,7 +577,7 @@ export function BidMatchResultsTable({
                         </svg>
                       </button>
                     </td>
-                    <td className={tdClass}>
+                    <td className={tdDenseClass}>
                       {/* One line: the badges are one letter each now, so they
                           sit beside the number rather than wrapping under it. */}
                       <div className="flex items-center gap-1.5 font-medium whitespace-nowrap">
@@ -659,7 +659,7 @@ export function BidMatchResultsTable({
                     </td>
                     {/* Primary line item. "+N more" expands the row rather than
                         opening a modal — the full list renders there. */}
-                    <td className={`${tdClass} whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} whitespace-nowrap`}>
                       <div className="flex items-center gap-1.5">
                         <PartIdentityLink part={result} className="data-field font-medium" />
                         <TechDocsBadge techDocs={result.tech_docs} solicitationNumber={result.solicitation_number} compact />
@@ -682,7 +682,7 @@ export function BidMatchResultsTable({
                       </div>
                     </td>
                     <ApprovedSourceCell sources={result.approved_sources ?? []} />
-                    <td className={`${tdClass} text-foreground`}>
+                    <td className={`${tdDenseClass} text-foreground`}>
                       {result.part_description ? (
                         <span
                           className="block max-w-[260px] truncate"
@@ -694,28 +694,28 @@ export function BidMatchResultsTable({
                         <span className="text-muted">—</span>
                       )}
                     </td>
-                    <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-right text-muted data-field whitespace-nowrap`}>
                       {result.quantity != null ? result.quantity.toLocaleString() : "—"}
                     </td>
-                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                       {result.unit_of_issue || "—"}
                     </td>
-                    <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-right text-muted data-field whitespace-nowrap`}>
                       {result.estimated_value != null ? formatCurrency(result.estimated_value) : "—"}
                     </td>
                     {/* Posted date. DIBBS rows carry it as issue_date; SAM rows
                         as posted_date. Neither source populates both. */}
-                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                       {formatDate(result.posted_date ?? result.issue_date)}
                     </td>
-                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                       {formatDate(result.close_date)}
                     </td>
                     {/* The short code carries the column; the readable label
                         moves to the tooltip, matching the vendor Open
                         Solicitations tab. Falls back to the label, then the raw
                         string, so an unmapped row still shows something. */}
-                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                       {result.set_aside_code ? (
                         <RowBadge title={result.set_aside_label || result.set_aside || undefined}>
                           {result.set_aside_code}
@@ -726,7 +726,7 @@ export function BidMatchResultsTable({
                     </td>
                     {/* The primary part's AMC, as the part Overview tab shows
                         it. Code in the pill, definition on click. */}
-                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                       {result.acquisition_method_code ? (
                         <AmcBadge
                           code={result.acquisition_method_code}
@@ -738,7 +738,7 @@ export function BidMatchResultsTable({
                     </td>
                     {/* Stored status as-is; the flag warns when a row still
                         reads Open past its return-by date. */}
-                    <td className={tdClass}>
+                    <td className={tdDenseClass}>
                       <div className="flex items-center gap-1">
                         <SolStatusBadge status={result.status} />
                         <PendingOutcomeFlag
@@ -750,7 +750,7 @@ export function BidMatchResultsTable({
                     </td>
                     {/* SAM rows cannot be bid: no DIBBS solicitation. */}
                     {showBidColumn && (
-                      <td className={`${tdClass} no-print`}>
+                      <td className={`${tdDenseClass} no-print`}>
                         {result.source === "dibbs" && result.solicitation_id != null ? (
                           <BidStatusCell
                             solicitationId={result.solicitation_id}
@@ -799,38 +799,38 @@ export function BidMatchResultsTable({
                                 <table className={tableClass}>
                                   <thead>
                                     <tr className={tableHeadRowClass}>
-                                      <th className={thClass}>NSN</th>
-                                      <th className={thClass}>Description</th>
-                                      <th className={`${thClass} !text-right whitespace-nowrap`}>Qty</th>
-                                      <th className={thClass}>UOM</th>
+                                      <th className={thDenseClass}>NSN</th>
+                                      <th className={thDenseClass}>Description</th>
+                                      <th className={`${thDenseClass} !text-right whitespace-nowrap`}>Qty</th>
+                                      <th className={thDenseClass}>UOM</th>
                                       {/* All four states spelled out per NSN
                                           here, where the collapsed row's badge
                                           can only speak for the one part it
                                           shows — and where "None" has room to
                                           be stated rather than inferred from
                                           an absent pill. */}
-                                      <th className={`${thClass} whitespace-nowrap`}>Tech docs</th>
+                                      <th className={`${thDenseClass} whitespace-nowrap`}>Tech docs</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {matchedParts.map((part, idx) => (
                                       <tr key={`${part.nsn ?? part.mfg_part_number ?? idx}`} className="border-b border-border/60 last:border-0">
-                                        <td className={`${tdClass} whitespace-nowrap`}>
+                                        <td className={`${tdDenseClass} whitespace-nowrap`}>
                                           <PartIdentityLink part={part} className="data-field font-semibold" />
                                         </td>
                                         <td
-                                          className={`${tdClass} text-foreground max-w-[420px] truncate`}
+                                          className={`${tdDenseClass} text-foreground max-w-[420px] truncate`}
                                           title={part.part_description || undefined}
                                         >
                                           {part.part_description || "—"}
                                         </td>
-                                        <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
+                                        <td className={`${tdDenseClass} text-right text-muted data-field whitespace-nowrap`}>
                                           {part.quantity != null ? part.quantity.toLocaleString() : "—"}
                                         </td>
-                                        <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                                        <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                                           {part.unit_of_issue || "—"}
                                         </td>
-                                        <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                                        <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                                           {techDocsCellLabel(part.tech_docs)}
                                         </td>
                                       </tr>

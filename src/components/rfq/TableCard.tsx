@@ -41,6 +41,11 @@ export const thClass = "text-left px-2.5 py-1.5 font-semibold text-foreground";
 /** Standard data <td>. Add text color / alignment per cell as needed. */
 export const tdClass = "px-2.5 py-1.5";
 
+/** Dense variants, 6px a side instead of 10: for wide tables whose columns
+ *  otherwise squeeze (the Bid-Matching / Bid Worklist results). */
+export const thDenseClass = "text-left px-1.5 py-1.5 font-semibold text-foreground";
+export const tdDenseClass = "px-1.5 py-1.5";
+
 /** Data row: separator plus hover. */
 export const rowClass = "border-b border-border last:border-0 hover:bg-muted-light/50 transition-colors";
 
@@ -49,20 +54,22 @@ export const rowClass = "border-b border-border last:border-0 hover:bg-muted-lig
  * keep their type safety.
  */
 export function SortHeader<K extends string>({
-  label, sortKey, sortBy, sortDir, onSort, align = "left", className = "", title,
+  label, sortKey, sortBy, sortDir, onSort, align = "left", className = "", title, dense = false,
 }: {
   label: string; sortKey: K; sortBy: K; sortDir: "asc" | "desc";
   onSort: (k: K) => void; align?: "left" | "right"; className?: string;
   /** What the column means, when the label alone is ambiguous ("Bid due" vs
    *  "Quote due"). Sits on the header; the button keeps its "Sort by …" hint. */
   title?: string;
+  /** Cell padding of thDenseClass rather than thClass. */
+  dense?: boolean;
 }) {
   const active = sortBy === sortKey;
   return (
     // Written out in full — Tailwind scans for complete class names, so a
     // `text-${align}` template would never be generated.
     <th
-      className={`${align === "right" ? "text-right" : "text-left"} px-2.5 py-1.5 font-semibold text-foreground ${className}`}
+      className={`${align === "right" ? "text-right" : "text-left"} ${dense ? "px-1.5" : "px-2.5"} py-1.5 font-semibold text-foreground ${className}`}
       title={title}
       aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
     >
