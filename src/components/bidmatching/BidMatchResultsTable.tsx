@@ -22,6 +22,7 @@ import {
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
 import { PrintButton } from "@/components/ui/PrintButton";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
+import { highlightHex, type HighlightBrush, type HighlightLabel } from "@/lib/bidmatching/highlights";
 import type { AmcDefinitions } from "@/lib/library/amcDefinitions";
 import { formatCurrency } from "@/lib/library/types";
 import { techDocsCellLabel } from "@/lib/library/techDocs";
@@ -183,6 +184,8 @@ interface BidMatchResult {
   // Customer-scoped "come back to this" flag — shared by every user on the
   // account, not per-user.
   interested?: boolean;
+  // The account's highlight color on this solicitation (a HighlightLabel id).
+  highlight_id?: number | null;
   // Prior awards to the customer's own CAGE for the row's primary part.
   // win_count is 0 rather than null when there is no history.
   win_count?: number;
@@ -333,6 +336,16 @@ interface BidMatchResultsTableProps {
   showBidColumn?: boolean;
   /** Briefly marks the row the bidder came back to from the bid editor. */
   highlightSolicitationId?: number | null;
+  /** The account's highlight colors, for tinting rows by highlight_id.
+   *  Omitted (the public demo) means rows are never tinted. */
+  highlightLabels?: readonly HighlightLabel[];
+  /** The highlighter: while set, a click anywhere on a row calls onPaintRow
+   *  and nothing inside the row (links, the star, Bid) acts. */
+  highlightBrush?: HighlightBrush;
+  onPaintRow?: (result: BidMatchResult) => void;
+  /** Rows changed since the "Show" filter was applied that no longer match
+   *  it: kept in view, faded, until the list refreshes. */
+  isRowStale?: (result: BidMatchResult) => boolean;
 }
 
 /**
@@ -429,7 +442,16 @@ export function BidMatchResultsTable({
   defaultExpandedKeys,
   showBidColumn = false,
   highlightSolicitationId = null,
+  highlightLabels,
+  highlightBrush = null,
+  onPaintRow,
+  isRowStale,
 }: BidMatchResultsTableProps) {
+  const painting = highlightBrush != null && onPaintRow != null;
+  const brushColor =
+    highlightBrush === "erase"
+      ? "var(--muted)"
+      : highlightLabels?.find((l) => l.id === highlightBrush)?.color;
   const totalPages = Math.ceil(total / pageSize);
   // Lazy initializer, so a later render of defaultExpandedKeys cannot reopen a
   // row the user has since collapsed — it is an initial state, not a control.
@@ -517,7 +539,10 @@ export function BidMatchResultsTable({
       {toolbar}
 
       {/* Table */}
-      <div className={tableWrapClass}>
+      <div
+        className={`${tableWrapClass} ${painting ? "highlighter-on" : ""}`}
+        style={painting && brushColor ? ({ "--brush": brushColor.startsWith("var(") ? brushColor : highlightHex(brushColor) } as React.CSSProperties) : undefined}
+      >
         <table className={tableClass}>
           <thead>
             <tr className={tableHeadRowClass}>
@@ -547,14 +572,27 @@ export function BidMatchResultsTable({
               // Parts this solicitation actually matched on. One is already in
               // the NSN column, so only list them when there is more than one.
               const matchedParts = result.matched_parts ?? [];
+              const label = result.highlight_id != null
+                ? highlightLabels?.find((l) => l.id === result.highlight_id)
+                : undefined;
               return (
                 <Fragment key={key}>
                   <tr
-                    className={`${rowClass} ${
+                    className={`${rowClass} ${label ? "row-highlight" : ""} ${
+                      isRowStale?.(result) ? "row-stale" : ""
+                    } ${painting ? "paint-target" : ""} ${
                       highlightSolicitationId != null && result.solicitation_id === highlightSolicitationId
                         ? "!bg-primary/10"
                         : ""
                     }`}
+                    style={label ? ({ "--row-hl": highlightHex(label.color) } as React.CSSProperties) : undefined}
+                    // Capture phase, so the click is the highlighter's before
+                    // any link or button in the row sees it.
+                    onClickCapture={painting ? (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onPaintRow?.(result);
+                    } : undefined}
                   >
                     <td className="pl-2 pr-0.5 py-1.5 text-right">
                       <InterestStar result={result} onToggle={onToggleInterest} />
@@ -746,6 +784,15 @@ export function BidMatchResultsTable({
                           closeDate={result.close_date}
                           lastStatusCheckAt={result.last_status_check_at}
                         />
+                        {label && (
+                          <span
+                            className="max-w-[7rem] truncate rounded-full px-1.5 text-[10px] font-semibold text-foreground"
+                            style={{ background: `color-mix(in srgb, ${highlightHex(label.color)} 30%, transparent)` }}
+                            title={`Highlight: ${label.name}`}
+                          >
+                            {label.name}
+                          </span>
+                        )}
                       </div>
                     </td>
                     {/* SAM rows cannot be bid: no DIBBS solicitation. */}

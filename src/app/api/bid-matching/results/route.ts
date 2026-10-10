@@ -66,6 +66,9 @@ export async function GET(request: NextRequest) {
     // Bid Worklist "Not yet bid". The backend ignores it without the Bid
     // Manager add-on and on source=sam.
     if (searchParams.get('not_bid_only') === 'true') params.set('not_bid_only', 'true');
+    // Highlight "Show" filter: a color's id, or "none" for rows with no color.
+    const highlight = searchParams.get('highlight');
+    if (highlight && /^(none|\d{1,9})$/.test(highlight)) params.set('highlight', highlight);
 
     const backendUrl = `${AUTH_CONFIG.API_BASE_URL}/bid-matching/results?${params.toString()}`;
 
