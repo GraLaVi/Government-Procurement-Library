@@ -784,15 +784,6 @@ export function BidMatchResultsTable({
                           closeDate={result.close_date}
                           lastStatusCheckAt={result.last_status_check_at}
                         />
-                        {label && (
-                          <span
-                            className="max-w-[7rem] truncate rounded-full px-1.5 text-[10px] font-semibold text-foreground"
-                            style={{ background: `color-mix(in srgb, ${highlightHex(label.color)} 30%, transparent)` }}
-                            title={`Highlight: ${label.name}`}
-                          >
-                            {label.name}
-                          </span>
-                        )}
                       </div>
                     </td>
                     {/* SAM rows cannot be bid: no DIBBS solicitation. */}
