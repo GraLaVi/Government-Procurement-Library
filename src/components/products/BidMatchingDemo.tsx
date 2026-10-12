@@ -124,9 +124,9 @@ const TOURS: Tour[] = [
   },
   {
     id: "flag",
-    chip: "What the team flagged",
+    chip: "What the team starred",
     caption:
-      "Flags are shared across the account, not private to one login. Anyone on the team can star a solicitation to come back to, and everyone else sees it.",
+      "Stars are shared across the account, not private to one login. Anyone on the team can star a solicitation to come back to, and everyone else sees it.",
     apply: (base, data) => ({ ...baseline(base, data), flaggedOnly: true }),
   },
 ];
@@ -324,7 +324,7 @@ export function BidMatchingDemo({ data }: { data: DemoBidMatchingData }) {
               }`}
             >
               <span className={state.flaggedOnly ? "text-amber-500" : "text-muted/50"}>★</span>
-              Flagged only
+              Starred only
             </button>
             <div className="flex min-w-[260px] max-w-lg flex-1 items-stretch overflow-hidden rounded-lg border border-border focus-within:border-primary">
               <select

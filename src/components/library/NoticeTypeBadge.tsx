@@ -35,15 +35,17 @@ import { RowBadge } from "@/components/library/RowBadge";
 // than SAM's jargon ("Sources Sought" tells a new customer nothing), and the
 // full official term is in the tooltip either way. Shorten here if the rows
 // get tight — nothing else reads these strings.
-const EARLY_STAGE: Record<string, { label: string; title: string }> = {
+const EARLY_STAGE: Record<string, { label: string; code: string; title: string }> = {
   Presolicitation: {
     label: "Pre-solicitation",
+    code: "P",
     title:
       "Presolicitation (SAM.gov) — the buyer has announced an upcoming " +
       "requirement, but no solicitation is on the street yet. Nothing to quote.",
   },
   "Sources Sought": {
     label: "Market research",
+    code: "M",
     title:
       "Sources Sought (SAM.gov) — market research, not a solicitation. " +
       "Responding tells the buyer you can supply this; it is not a bid, and " +
@@ -109,14 +111,20 @@ interface NoticeTypeBadgeProps {
    * other way should leave it off and let the badge stay an exception flag.
    */
   showBiddable?: boolean;
+  /**
+   * One-letter code instead of the label (P, M, N), for a dense table with a
+   * key under it — /bidmatching. The label moves to the
+   * front of the tooltip.
+   */
+  compact?: boolean;
 }
 
-export function NoticeTypeBadge({ noticeType, showBiddable = false }: NoticeTypeBadgeProps) {
+export function NoticeTypeBadge({ noticeType, showBiddable = false, compact = false }: NoticeTypeBadgeProps) {
   const early = noticeType ? EARLY_STAGE[noticeType] : undefined;
   if (early) {
     return (
-      <RowBadge tone="amber" title={early.title}>
-        {early.label}
+      <RowBadge tone="amber" title={compact ? `${early.label}. ${early.title}` : early.title}>
+        {compact ? early.code : early.label}
       </RowBadge>
     );
   }
@@ -134,8 +142,8 @@ export function NoticeTypeBadge({ noticeType, showBiddable = false }: NoticeType
     // looking biddable. No specific label to give it, so it says the one thing
     // that matters and puts the official term in the tooltip.
     return (
-      <RowBadge tone="amber" title={`${noticeType} (SAM.gov) — not a solicitation you can quote.`}>
-        Not biddable
+      <RowBadge tone="amber" title={`${compact ? "Not biddable. " : ""}${noticeType} (SAM.gov) — not a solicitation you can quote.`}>
+        {compact ? "N" : "Not biddable"}
       </RowBadge>
     );
   }

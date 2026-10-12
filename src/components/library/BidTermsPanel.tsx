@@ -1,6 +1,7 @@
 "use client";
 
 import { formatCurrency } from "@/lib/library/types";
+import { useCodeDefinitions } from "@/lib/hooks/useCodeDefinitions";
 import {
   resolveAidcTerms,
   resolveBidTerms,
@@ -82,6 +83,7 @@ export function BidTermsPanel({
   definitions,
   firstArticle,
   solicitationType,
+  fastAward = false,
   className = "",
 }: {
   terms: SolicitationBidTerms | null | undefined;
@@ -100,14 +102,26 @@ export function BidTermsPanel({
    * as firstArticle — pass it where the row does not badge it.
    */
   solicitationType?: string | null;
+  /**
+   * Show a fast-award ('F') solicitation type as a term. Opt-in, unlike the
+   * IDC block: /rfq/worklist keeps fast award as a row badge, because it is
+   * urgency — the award can come before the return date — and must read
+   * without expanding anything. /bidmatching moves it here.
+   */
+  fastAward?: boolean;
   className?: string;
 }) {
+  // Label and definition for the fast-award term, from the same vocabulary
+  // the row badge reads. Hooks run unconditionally; the cache is shared.
+  const { byCode } = useCodeDefinitions("SOLICITATION_TYPE");
   // First Article, then the nine coded fields, then the DPAS rating. The
   // established order holds — what disqualifies you, then what it costs you —
   // with the rating after it, since it binds you only once you have won.
   // First Article leads because it is the most expensive of the gates: a test
   // report before production delivery, priced into a bid or not at all.
   const rating = resolveRating(terms, definitions);
+  const typeCode = solicitationType?.trim().toUpperCase();
+  const fast = fastAward && typeCode === "F" ? byCode.get("F") : undefined;
   const resolved: ResolvedBidTerm[] = [
     ...(firstArticle
       ? [{
@@ -115,8 +129,24 @@ export function BidTermsPanel({
           name: "First article",
           label: "Required",
           hint: "Tested before production delivery",
+          // Both first article CLINs: contractor testing (0001S00000053,
+          // FAR 52.209-3) and government testing (0001S00000052, 52.209-4).
+          // The waiver rule is DLAD 9.306's.
           description:
-            "The bidder must test initial sample units and submit a formal report under FAR 52.209-3 before full production delivery. Expect added cost and lead time.",
+            "Initial units are tested and approved before production delivery: by you, with a test report (FAR 52.209-3), or by a government lab you ship them to (FAR 52.209-4). Price the testing separately on the first article line. A waiver needs the same or a similar item made and delivered within the last 5 years (3 for critical safety items) with no changes since (DLAD 9.306).",
+          notable: true,
+        }]
+      : []),
+    // Fast award after First Article: it changes when you must bid, not
+    // whether you can.
+    ...(fastAward && typeCode === "F"
+      ? [{
+          field: "solicitation_type" as const,
+          name: "Solicitation type",
+          label: fast?.label ?? "Fast award",
+          code: "F",
+          hint: "Can be awarded before the return date",
+          description: fast?.description,
           notable: true,
         }]
       : []),

@@ -83,15 +83,12 @@ the number opens it right there — same viewer as Parts Search.
 
 - **Amended** — the solicitation has changed. Click it for a timeline of
   every recorded change, before and since it was matched to you.
-- **A green lightning bolt** (fast award) and **IDC** — the DLA type
-  indicators. See
+- **A green lightning bolt** (fast award) — the buy can be awarded before
+  its close date. See
   [Solicitation type indicators](/help/solicitations-and-contracts#solicitation-type-indicators).
-- **FAT** — a contractor **First Article Test** is required: you must
-  produce initial sample units and have them approved before shipping full
-  production, which adds cost and lead time to the bid. Click for the
-  specifics and the FAR clause. This badge matters here because the
-  quotable-items list hides the placeholder line that carries the
-  requirement, so it would otherwise be invisible on this page.
+  On this page, a First Article Test requirement and the Automated IDC
+  contract vehicle aren't badged on the row; they're stated in the
+  expanded row's [bid qualification terms](#bid-qualification-terms).
 - **A trophy with a number** — you have previously been awarded contracts
   for that many of this solicitation's parts. Click it to see which parts,
   how many times, and the unit price you were awarded — usually the most
@@ -130,7 +127,9 @@ Nothing refreshes while a dialog is open or while the tab is in the
 background, so a row can't move out from under you mid-task. **Refresh**
 re-checks immediately.
 
-Click a solicitation number to see its quotable items — NSN, description,
+Click a solicitation number to expand it. The
+[bid qualification terms](#bid-qualification-terms) come first, then the
+quotable items — NSN, description,
 quantity, and unit price — with a **Get quotes** button on each row. Each NSN is
 a link that opens that part in Parts Search in a new tab. DIBBS "first
 article test" placeholder lines (GOVERNMENT/CONTRACTOR FIRST ARTICLE)
@@ -158,6 +157,46 @@ solicitation only reads *Priced* once its full solicited quantities are
 covered by priced quotes, so a partial stock quote never marks it done
 early.
 
+
+### Bid qualification terms
+
+Before you spend time getting quotes, the top of the expanded row tells you
+whether the solicitation is worth quoting: the **Bid qualification terms**
+panel. It translates the solicitation's DLA codes into plain English. These
+are the terms that decide whether you can bid at all (approved-source and
+quality gates) and what bidding will cost you (freight, inspection,
+paperwork).
+
+Each term shows its name, the value in plain English with the raw DLA code
+in a small box beside it (the code you'll see in DIBBS and on the PDF), and
+a one-line hint saying what the term governs. Hover the value for DLA's full
+definition. A value that changes your bid decision is shown in **bold amber
+with an amber bar** down its left side; ordinary values stay quiet.
+
+On this page the panel leads with **First article** whenever the
+solicitation requires a contractor First Article Test: you must produce
+initial sample units and have them approved before shipping full
+production, which adds cost and lead time to your price. The
+quotable-items list hides the placeholder line that carries this
+requirement, so the panel is the only place it shows here. Hover it for the
+FAR clause.
+
+The remaining terms are item description, technical data (AMSC),
+higher-level quality, Buy American, free trade agreements, FOB point,
+inspection point, HUBZone preference, clause fill-ins, and DPAS rating.
+Automated IDC solicitations add an **Automated IDC contract terms** block
+underneath with the guaranteed minimum, delivery-order minimum, contract
+ceiling, and orders per year. When none of those numbers are stated, the
+block is headed **Contract vehicle** and simply notes that awards run as
+delivery orders across the contract's life.
+For what each term means and which codes get highlighted, see
+[Bid qualification terms](/help/solicitation-matching#bid-qualification-terms)
+in How Solicitation Matching Works — the panel is the same on both pages.
+
+The panel shows only the terms a solicitation actually states. A term that's
+missing wasn't stated, which is **not** the same as "no" — check the
+solicitation before relying on its absence. If nothing is stated, the panel
+doesn't appear.
 
 ## Work status
 

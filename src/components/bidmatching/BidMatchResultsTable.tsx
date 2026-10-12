@@ -11,19 +11,23 @@ import { TechDocsBadge } from "@/components/library/TechDocsBadge";
 import { AmcBadge } from "@/components/library/AmcBadge";
 import { SolicitationRowBadges, SolStatusBadge } from "@/components/library/SolicitationRowBadges";
 import { PendingOutcomeFlag } from "@/components/library/PendingOutcomeFlag";
+import { BidStatusCell } from "@/components/bidding/BidStatusCell";
 import { NoticeTypeBadge } from "@/components/library/NoticeTypeBadge";
-import { RowBadge, ROW_BADGE_BASE } from "@/components/library/RowBadge";
+import { RowBadge, ROW_BADGE_BASE, rowBadgeClass } from "@/components/library/RowBadge";
+import { ApprovedSourceCell, type ApprovedSource } from "@/components/library/ApprovedSourceCell";
+import { BadgeKey, TROPHY_ICON } from "@/components/library/BadgeKey";
 import {
-  FirstArticleBadge, WinHistoryBadge, useAnchoredPopover,
+  WinHistoryBadge, useAnchoredPopover,
 } from "@/components/library/WinAndFirstArticleBadges";
 import { BidTermsPanel } from "@/components/library/BidTermsPanel";
 import { PrintButton } from "@/components/ui/PrintButton";
 import type { BidTermDefinitions, SolicitationBidTerms } from "@/lib/library/bidTerms";
+import { highlightHex, type HighlightBrush, type HighlightLabel } from "@/lib/bidmatching/highlights";
 import type { AmcDefinitions } from "@/lib/library/amcDefinitions";
 import { formatCurrency } from "@/lib/library/types";
 import { techDocsCellLabel } from "@/lib/library/techDocs";
 import {
-  SortHeader, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, thClass,
+  SortHeader, rowClass, tableClass, tableHeadRowClass, tableWrapClass, tdClass, tdDenseClass, thDenseClass,
 } from "@/components/rfq/TableCard";
 
 interface MatchedCondition {
@@ -89,6 +93,16 @@ interface BidMatchResult {
   matched_conditions: MatchedCondition[];
   matches?: BidMatchDetail[];
   matched_parts?: BidMatchPart[];
+  // DLA's approved sources for the primary part (manufacturer_parts.source_dla),
+  // capped server-side.
+  approved_sources?: ApprovedSource[];
+  // Bid Manager add-on holders only, DIBBS rows only (null otherwise): the
+  // team's latest bid on the solicitation, and whether their RFQ team priced
+  // it. Feeds the Bid column of the Bid Worklist.
+  bid_id?: number | null;
+  bid_reference_number?: number | null;
+  bid_status?: string | null;
+  rfq_priced?: boolean | null;
   created_at: string;
   match_reason: string | null;
   match_strength: "HARD" | "SOFT" | null;
@@ -170,6 +184,8 @@ interface BidMatchResult {
   // Customer-scoped "come back to this" flag — shared by every user on the
   // account, not per-user.
   interested?: boolean;
+  // The account's highlight color on this solicitation (a HighlightLabel id).
+  highlight_id?: number | null;
   // Prior awards to the customer's own CAGE for the row's primary part.
   // win_count is 0 rather than null when there is no history.
   win_count?: number;
@@ -237,6 +253,7 @@ const DEMAND_SIGNAL_CHIP: Record<
 // Click to open, not hover — the same click-anchored popover the fast-award,
 // win and First Article badges in these rows already use, so the whole cluster
 // behaves alike in a dense table.
+
 function DemandSignalChip({ signal }: { signal?: string | null }) {
   const { open, coords, btnRef, panelRef, toggle } = useAnchoredPopover();
 
@@ -252,9 +269,12 @@ function DemandSignalChip({ signal }: { signal?: string | null }) {
         onClick={toggle}
         aria-expanded={open}
         aria-label={`${c.label} — what this means`}
+        title={c.label}
         className={`${ROW_BADGE_BASE} ${c.cls} ${c.hover} cursor-pointer transition-colors`}
       >
-        {c.short}
+        {/* One letter, like the row's other flags: the chip's colour says
+            which signal, the tooltip and popover name it. */}
+        D
       </button>
       {open && coords && createPortal(
         <div
@@ -309,6 +329,23 @@ interface BidMatchResultsTableProps {
    * hoping a visitor discovers the chevron.
    */
   defaultExpandedKeys?: readonly string[];
+  /**
+   * The Bid column: start a bid, or the bid the team already has. On for Bid
+   * Manager add-on holders, for whom this page is the Bid Worklist.
+   */
+  showBidColumn?: boolean;
+  /** Briefly marks the row the bidder came back to from the bid editor. */
+  highlightSolicitationId?: number | null;
+  /** The account's highlight colors, for tinting rows by highlight_id.
+   *  Omitted (the public demo) means rows are never tinted. */
+  highlightLabels?: readonly HighlightLabel[];
+  /** The highlighter: while set, a click anywhere on a row calls onPaintRow
+   *  and nothing inside the row (links, the star, Bid) acts. */
+  highlightBrush?: HighlightBrush;
+  onPaintRow?: (result: BidMatchResult) => void;
+  /** Rows changed since the "Show" filter was applied that no longer match
+   *  it: kept in view, faded, until the list refreshes. */
+  isRowStale?: (result: BidMatchResult) => boolean;
 }
 
 /**
@@ -332,10 +369,10 @@ function InterestStar({
       aria-pressed={on}
       title={
         on
-          ? "Flagged — everyone on your account sees this. Click to remove."
-          : "Flag this solicitation to come back to it"
+          ? "Starred — everyone on your account sees this. Click to remove."
+          : "Star this solicitation to come back to it"
       }
-      aria-label={on ? "Remove flag" : "Flag this solicitation"}
+      aria-label={on ? "Remove star" : "Star this solicitation"}
       className={`text-sm leading-none cursor-pointer transition-colors ${
         on ? "text-amber-500 hover:text-amber-600" : "text-muted/30 hover:text-amber-500"
       }`}
@@ -403,7 +440,18 @@ export function BidMatchResultsTable({
   onSort,
   onToggleInterest,
   defaultExpandedKeys,
+  showBidColumn = false,
+  highlightSolicitationId = null,
+  highlightLabels,
+  highlightBrush = null,
+  onPaintRow,
+  isRowStale,
 }: BidMatchResultsTableProps) {
+  const painting = highlightBrush != null && onPaintRow != null;
+  const brushColor =
+    highlightBrush === "erase"
+      ? "var(--muted)"
+      : highlightLabels?.find((l) => l.id === highlightBrush)?.color;
   const totalPages = Math.ceil(total / pageSize);
   // Lazy initializer, so a later render of defaultExpandedKeys cannot reopen a
   // row the user has since collapsed — it is an initial state, not a control.
@@ -491,23 +539,28 @@ export function BidMatchResultsTable({
       {toolbar}
 
       {/* Table */}
-      <div className={tableWrapClass}>
+      <div
+        className={`${tableWrapClass} ${painting ? "highlighter-on" : ""}`}
+        style={painting && brushColor ? ({ "--brush": brushColor.startsWith("var(") ? brushColor : highlightHex(brushColor) } as React.CSSProperties) : undefined}
+      >
         <table className={tableClass}>
           <thead>
             <tr className={tableHeadRowClass}>
-              <SortHeader label="★" sortKey="interested" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="w-8" />
-              <th className="w-6 px-1.5 py-1.5" aria-label="Expand"></th>
-              <SortHeader label="Solicitation" sortKey="solicitation" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-              <SortHeader label="NSN" sortKey="nsn" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-              <th className={thClass}>Description</th>
-              <SortHeader label="Qty" sortKey="quantity" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
-              <th className={thClass}>UOM</th>
-              <SortHeader label="Est. Value" sortKey="estimated_value" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
-              <SortHeader label="Posted" sortKey="posted" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
-              <SortHeader label="Close Date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
-              <th className={thClass}>Set-Aside</th>
-              <th className={thClass}>AMC</th>
-              <th className={thClass}>Status</th>
+              <SortHeader dense label="★" sortKey="interested" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="w-8 !pl-2 !pr-0.5" />
+              <th className="w-6 px-0.5 py-1.5" aria-label="Expand"></th>
+              <SortHeader dense label="Solicitation" sortKey="solicitation" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <SortHeader dense label="NSN" sortKey="nsn" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              <th className={`${thDenseClass} whitespace-nowrap`} title="Approved source (DLA)">Appr. Source</th>
+              <th className={thDenseClass}>Description</th>
+              <SortHeader dense label="Qty" sortKey="quantity" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
+              <th className={thDenseClass}>UOM</th>
+              <SortHeader dense label="Est. Value" sortKey="estimated_value" sortBy={sortBy} sortDir={sortDir} onSort={onSort} align="right" className="whitespace-nowrap" />
+              <SortHeader dense label="Posted" sortKey="posted" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
+              <SortHeader dense label="Close Date" sortKey="close_date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} className="whitespace-nowrap" />
+              <th className={thDenseClass}>Set-Aside</th>
+              <th className={thDenseClass}>AMC</th>
+              <th className={thDenseClass}>Status</th>
+              {showBidColumn && <th className={`${thDenseClass} no-print`}>Bid</th>}
             </tr>
           </thead>
           <tbody>
@@ -519,13 +572,32 @@ export function BidMatchResultsTable({
               // Parts this solicitation actually matched on. One is already in
               // the NSN column, so only list them when there is more than one.
               const matchedParts = result.matched_parts ?? [];
+              const label = result.highlight_id != null
+                ? highlightLabels?.find((l) => l.id === result.highlight_id)
+                : undefined;
               return (
                 <Fragment key={key}>
-                  <tr className={rowClass}>
-                    <td className="px-1.5 py-1.5 text-center">
+                  <tr
+                    className={`${rowClass} ${label ? "row-highlight" : ""} ${
+                      isRowStale?.(result) ? "row-stale" : ""
+                    } ${painting ? "paint-target" : ""} ${
+                      highlightSolicitationId != null && result.solicitation_id === highlightSolicitationId
+                        ? "!bg-primary/10"
+                        : ""
+                    }`}
+                    style={label ? ({ "--row-hl": highlightHex(label.color) } as React.CSSProperties) : undefined}
+                    // Capture phase, so the click is the highlighter's before
+                    // any link or button in the row sees it.
+                    onClickCapture={painting ? (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onPaintRow?.(result);
+                    } : undefined}
+                  >
+                    <td className="pl-2 pr-0.5 py-1.5 text-right">
                       <InterestStar result={result} onToggle={onToggleInterest} />
                     </td>
-                    <td className="px-1.5 py-1.5 text-center">
+                    <td className="px-0.5 py-1.5 text-center">
                       <button
                         type="button"
                         onClick={() => toggleExpanded(key)}
@@ -543,8 +615,10 @@ export function BidMatchResultsTable({
                         </svg>
                       </button>
                     </td>
-                    <td className={tdClass}>
-                      <div className="flex flex-wrap items-center gap-1.5 font-medium">
+                    <td className={tdDenseClass}>
+                      {/* One line: the badges are one letter each now, so they
+                          sit beside the number rather than wrapping under it. */}
+                      <div className="flex items-center gap-1.5 font-medium whitespace-nowrap">
                         {/* Plain text — the drill-down lives on the NSN link now.
                             whitespace-nowrap keeps the number on one line when the
                             viewport narrows; the badges beside it still wrap. */}
@@ -596,7 +670,7 @@ export function BidMatchResultsTable({
                             it: a bucket is entirely DIBBS or entirely SAM, so
                             the date menu has already said which, and repeating
                             it on all fifty rows only crowded the column. */}
-                        <NoticeTypeBadge noticeType={result.notice_type} />
+                        <NoticeTypeBadge noticeType={result.notice_type} compact />
                         {/* Amendment pill + fast-award badge, shared with the
                             Send RFQs work queue (SolicitationRowBadges) so the
                             two pages read identically. One pill: the component
@@ -609,8 +683,10 @@ export function BidMatchResultsTable({
                             setAmendmentSolId(result.solicitation_id);
                             setAmendmentSolNumber(result.solicitation_number);
                           }}
-                          solicitationType={result.solicitation_type}
-                          solicitationTypeLabel={result.solicitation_type_label}
+                          // Fast award and Automated IDC show in the expanded
+                          // row's bid terms panel instead (BidTermsPanel).
+                          solicitationType={null}
+                          compact
                         />
                         {/* DLA demand signal (analytics add-on) — strongest
                             across the opportunity's NIINs; informs the bid
@@ -621,11 +697,10 @@ export function BidMatchResultsTable({
                     </td>
                     {/* Primary line item. "+N more" expands the row rather than
                         opening a modal — the full list renders there. */}
-                    <td className={`${tdClass} whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} whitespace-nowrap`}>
                       <div className="flex items-center gap-1.5">
                         <PartIdentityLink part={result} className="data-field font-medium" />
-                        <FirstArticleBadge firstArticle={result.first_article} />
-                        <TechDocsBadge techDocs={result.tech_docs} solicitationNumber={result.solicitation_number} />
+                        <TechDocsBadge techDocs={result.tech_docs} solicitationNumber={result.solicitation_number} compact />
                         <WinHistoryBadge
                           count={result.win_count ?? 0}
                           lastWonOn={result.last_won_on}
@@ -644,7 +719,8 @@ export function BidMatchResultsTable({
                         )}
                       </div>
                     </td>
-                    <td className={`${tdClass} text-foreground`}>
+                    <ApprovedSourceCell sources={result.approved_sources ?? []} />
+                    <td className={`${tdDenseClass} text-foreground`}>
                       {result.part_description ? (
                         <span
                           className="block max-w-[260px] truncate"
@@ -656,28 +732,28 @@ export function BidMatchResultsTable({
                         <span className="text-muted">—</span>
                       )}
                     </td>
-                    <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-right text-muted data-field whitespace-nowrap`}>
                       {result.quantity != null ? result.quantity.toLocaleString() : "—"}
                     </td>
-                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                       {result.unit_of_issue || "—"}
                     </td>
-                    <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-right text-muted data-field whitespace-nowrap`}>
                       {result.estimated_value != null ? formatCurrency(result.estimated_value) : "—"}
                     </td>
                     {/* Posted date. DIBBS rows carry it as issue_date; SAM rows
                         as posted_date. Neither source populates both. */}
-                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                       {formatDate(result.posted_date ?? result.issue_date)}
                     </td>
-                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                       {formatDate(result.close_date)}
                     </td>
                     {/* The short code carries the column; the readable label
                         moves to the tooltip, matching the vendor Open
                         Solicitations tab. Falls back to the label, then the raw
                         string, so an unmapped row still shows something. */}
-                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                       {result.set_aside_code ? (
                         <RowBadge title={result.set_aside_label || result.set_aside || undefined}>
                           {result.set_aside_code}
@@ -688,7 +764,7 @@ export function BidMatchResultsTable({
                     </td>
                     {/* The primary part's AMC, as the part Overview tab shows
                         it. Code in the pill, definition on click. */}
-                    <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                    <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                       {result.acquisition_method_code ? (
                         <AmcBadge
                           code={result.acquisition_method_code}
@@ -700,7 +776,7 @@ export function BidMatchResultsTable({
                     </td>
                     {/* Stored status as-is; the flag warns when a row still
                         reads Open past its return-by date. */}
-                    <td className={tdClass}>
+                    <td className={tdDenseClass}>
                       <div className="flex items-center gap-1">
                         <SolStatusBadge status={result.status} />
                         <PendingOutcomeFlag
@@ -710,13 +786,29 @@ export function BidMatchResultsTable({
                         />
                       </div>
                     </td>
+                    {/* SAM rows cannot be bid: no DIBBS solicitation. */}
+                    {showBidColumn && (
+                      <td className={`${tdDenseClass} no-print`}>
+                        {result.source === "dibbs" && result.solicitation_id != null ? (
+                          <BidStatusCell
+                            solicitationId={result.solicitation_id}
+                            bidId={result.bid_id}
+                            bidReferenceNumber={result.bid_reference_number}
+                            bidStatus={result.bid_status}
+                            rfqPriced={result.rfq_priced}
+                          />
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                   {isOpen && (
                     <tr className="border-b border-border last:border-0 bg-muted-light/30">
                       {/* Set-aside has its own column now. This row carries the
                           full line-item list plus the match detail that used to
                           sit in the dropped Profile and Match columns. */}
-                      <td colSpan={13} className="px-3 py-3">
+                      <td colSpan={showBidColumn ? 15 : 14} className="px-3 py-3">
                         <div className="space-y-4">
                           {/* Can I bid on this at all, and what does bidding
                               cost me — ahead of the line items, because it
@@ -725,6 +817,11 @@ export function BidMatchResultsTable({
                           <BidTermsPanel
                             terms={result.bid_terms}
                             definitions={bidTermDefinitions}
+                            // Moved off the row: First Article, fast award
+                            // and Automated IDC are bid terms like the rest.
+                            firstArticle={result.first_article}
+                            solicitationType={result.solicitation_type}
+                            fastAward
                           />
 
                           {/* The parts that put this solicitation in the list.
@@ -740,38 +837,38 @@ export function BidMatchResultsTable({
                                 <table className={tableClass}>
                                   <thead>
                                     <tr className={tableHeadRowClass}>
-                                      <th className={thClass}>NSN</th>
-                                      <th className={thClass}>Description</th>
-                                      <th className={`${thClass} !text-right whitespace-nowrap`}>Qty</th>
-                                      <th className={thClass}>UOM</th>
+                                      <th className={thDenseClass}>NSN</th>
+                                      <th className={thDenseClass}>Description</th>
+                                      <th className={`${thDenseClass} !text-right whitespace-nowrap`}>Qty</th>
+                                      <th className={thDenseClass}>UOM</th>
                                       {/* All four states spelled out per NSN
                                           here, where the collapsed row's badge
                                           can only speak for the one part it
                                           shows — and where "None" has room to
                                           be stated rather than inferred from
                                           an absent pill. */}
-                                      <th className={`${thClass} whitespace-nowrap`}>Tech docs</th>
+                                      <th className={`${thDenseClass} whitespace-nowrap`}>Tech docs</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {matchedParts.map((part, idx) => (
                                       <tr key={`${part.nsn ?? part.mfg_part_number ?? idx}`} className="border-b border-border/60 last:border-0">
-                                        <td className={`${tdClass} whitespace-nowrap`}>
+                                        <td className={`${tdDenseClass} whitespace-nowrap`}>
                                           <PartIdentityLink part={part} className="data-field font-semibold" />
                                         </td>
                                         <td
-                                          className={`${tdClass} text-foreground max-w-[420px] truncate`}
+                                          className={`${tdDenseClass} text-foreground max-w-[420px] truncate`}
                                           title={part.part_description || undefined}
                                         >
                                           {part.part_description || "—"}
                                         </td>
-                                        <td className={`${tdClass} text-right text-muted data-field whitespace-nowrap`}>
+                                        <td className={`${tdDenseClass} text-right text-muted data-field whitespace-nowrap`}>
                                           {part.quantity != null ? part.quantity.toLocaleString() : "—"}
                                         </td>
-                                        <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                                        <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                                           {part.unit_of_issue || "—"}
                                         </td>
-                                        <td className={`${tdClass} text-muted whitespace-nowrap`}>
+                                        <td className={`${tdDenseClass} text-muted whitespace-nowrap`}>
                                           {techDocsCellLabel(part.tech_docs)}
                                         </td>
                                       </tr>
@@ -838,6 +935,17 @@ export function BidMatchResultsTable({
           </tbody>
         </table>
       </div>
+      {/* Key to the rows' one-letter badges. */}
+      <BadgeKey items={[
+        { cls: rowBadgeClass("amber"), code: "A", label: "Amended" },
+        { cls: rowBadgeClass("amber"), code: "P", label: "Pre-solicitation" },
+        { cls: rowBadgeClass("amber"), code: "M", label: "Market research" },
+        { cls: rowBadgeClass("amber"), code: "N", label: "Not biddable" },
+        { cls: rowBadgeClass("neutral"), code: "D", label: "DLA demand signal" },
+        { cls: rowBadgeClass("neutral"), code: "T", label: "Tech data package" },
+        { cls: rowBadgeClass("neutral"), code: "S", label: "Spec only" },
+        { cls: rowBadgeClass("amber"), code: <>{TROPHY_ICON}N</>, label: "Times you've won this part" },
+      ]} />
 
       {/* Amendment timeline modal — opened from the "Amended" pill. */}
       <AmendmentTimelineModal

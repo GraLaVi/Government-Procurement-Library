@@ -51,6 +51,9 @@ interface SolicitationRowBadgesProps {
    * return date — so it must stay readable without expanding anything.
    */
   idcBadge?: boolean;
+  /** "A" instead of "Amended", for a dense table
+   * with a key under it (/bidmatching). The words move to the tooltip. */
+  compact?: boolean;
 }
 
 /**
@@ -66,6 +69,7 @@ export function SolicitationRowBadges({
   solicitationType,
   solicitationTypeLabel,
   idcBadge = true,
+  compact = false,
 }: SolicitationRowBadgesProps) {
   // ONE amber "Amended" pill, never two. The separate "Updated 3h ago" badge
   // said much the same thing and made an already-crowded column unreadable,
@@ -88,9 +92,10 @@ export function SolicitationRowBadges({
           : ""
       }`
     : "This solicitation was updated before this match was generated.";
-  const title = onShowAmendments
-    ? `${explanation} Click to see what changed.`
-    : explanation;
+  const title = `${compact ? "Amended. " : ""}${
+    onShowAmendments ? `${explanation} Click to see what changed.` : explanation
+  }`;
+  const amendedText = compact ? "A" : "Amended";
 
   return (
     <>
@@ -102,11 +107,11 @@ export function SolicitationRowBadges({
             className={rowBadgeClass("amber", { interactive: true })}
             title={title}
           >
-            Amended
+            {amendedText}
           </button>
         ) : (
           <span className={rowBadgeClass("amber")} title={title}>
-            Amended
+            {amendedText}
           </span>
         )
       )}

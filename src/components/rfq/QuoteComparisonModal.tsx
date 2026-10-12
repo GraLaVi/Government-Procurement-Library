@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { RowBadge } from "@/components/library/RowBadge";
 import { Button } from "@/components/ui/Button";
+import { StartBidButton } from "@/components/bidding/StartBidButton";
 import type { ComparisonQuote, QuoteComparisonResponse, RfqSettings } from "@/lib/rfq/types";
 
 interface QuoteComparisonModalProps {
@@ -160,6 +161,18 @@ export function QuoteComparisonModal({ isOpen, onClose, solicitationId, solicita
               {data.pending.length > 0 && (
                 <span className="text-muted">
                   Waiting on: {data.pending.map((p) => p.vendor_name || p.cage_code || "?").join(", ")}
+                </span>
+              )}
+              {/* Bidding (plan 4.1): bid from the priced quotes — the lowest
+                  price to government per item; the editor can change it. */}
+              {data.groups.some((g) => g.quotes.some((q) => q.price_to_gov != null && !q.is_no_bid)) && (
+                <span className="ml-auto">
+                  <StartBidButton
+                    solicitationId={solicitationId}
+                    fromRfq
+                    title="Start the DIBBS quote from the lowest priced quote per item"
+                    className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-hover disabled:opacity-50 cursor-pointer"
+                  />
                 </span>
               )}
             </div>

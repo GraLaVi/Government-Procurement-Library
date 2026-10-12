@@ -265,6 +265,44 @@ html {
 }
 
 /* ---------------------------------------------------------------------
+   Bid-Matching row highlights (src/lib/bidmatching/highlights.ts). The row
+   sets --row-hl to its color's hex; the tint is mixed against transparent so
+   it sits on whatever the card is in either theme, plus a solid stripe on the
+   first cell so colors stay tellable apart at a glance. Unlayered on purpose:
+   it has to outrank the row's hover:bg utility, which lives in a layer.
+   --------------------------------------------------------------------- */
+.row-highlight {
+  background-color: color-mix(in srgb, var(--row-hl) 14%, transparent);
+}
+.row-highlight:hover {
+  background-color: color-mix(in srgb, var(--row-hl) 22%, transparent);
+}
+:root[data-theme="dark"] .row-highlight {
+  background-color: color-mix(in srgb, var(--row-hl) 22%, transparent);
+}
+:root[data-theme="dark"] .row-highlight:hover {
+  background-color: color-mix(in srgb, var(--row-hl) 30%, transparent);
+}
+.row-highlight > td:first-child {
+  box-shadow: inset 4px 0 0 var(--row-hl);
+}
+/* Changed while a "Show" filter is on: kept in view until the list refreshes,
+   faded so it reads as on its way out. */
+.row-stale > td {
+  opacity: 0.55;
+}
+/* The highlighter is on: every row is a target, and nothing inside it (links,
+   the star, the Bid button) acts until the highlighter is put down. */
+.highlighter-on tbody tr.paint-target,
+.highlighter-on tbody tr.paint-target * {
+  cursor: copy !important;
+}
+.highlighter-on tbody tr.paint-target:hover {
+  outline: 2px solid var(--brush);
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------------
    Print — a "Print" button on a record page prints just that record.
    Everything outside `.print-root` is hidden via the visibility trick so
    we don't need to know every chrome selector (nav, sidebar, search form).
